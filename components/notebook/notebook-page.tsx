@@ -122,7 +122,7 @@ export default function RustInteractivePage({
     >
       <CollabChat messages={messages} sendChatMessage={sendChatMessage} />
       <LiveCursors collaborators={collaborators} />
-      <Refreshing isConnected={isConnected} hasSyncedOnce={hasSyncedOnce} />
+      <Refreshing isConnected={isConnected} />
       <Reorder.Group
         axis="y"
         values={blocks}
@@ -241,14 +241,8 @@ function getBlockTitle(
   return titles[language] ?? "Arquivo de Código";
 }
 
-const Refreshing = ({
-  isConnected,
-  hasSyncedOnce,
-}: {
-  isConnected: boolean;
-  hasSyncedOnce: boolean;
-}) => {
-  if (!isConnected && !hasSyncedOnce) {
+const Refreshing = ({ isConnected }: { isConnected: boolean }) => {
+  if (!isConnected) {
     return null;
   }
 
