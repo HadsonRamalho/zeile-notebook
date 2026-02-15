@@ -213,6 +213,7 @@ function getInitialCode(language: Language): string {
     typescript:
       "export default function App() {\n  return <h1>Olá React!</h1>\n}",
     python: 'import math \nprint(f"O valor de PI é {math.pi}")',
+    go: 'package main\nimport "fmt"\nfunc main() {\n\tfmt.Println("Hello, Go!")\n}',
   };
 
   return templates[language] ?? templates.python;
@@ -229,6 +230,7 @@ function getBlockTitle(
     typescript: `Componente_${blockCount}`,
     rust: "file.rs",
     python: "script.py",
+    go: "main.go",
   };
 
   return titles[language] ?? "Arquivo de Código";

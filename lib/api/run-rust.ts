@@ -61,3 +61,52 @@ export async function RunRust({
     setIsRunning(false);
   }
 }
+
+export async function RunGo({
+  setOutput,
+  setIsRunning,
+  setStatus,
+  code,
+}: RunRustProps) {
+  setIsRunning(true);
+  setStatus("idle");
+  setOutput("");
+
+  try {
+    const data: RustApiResponse = await api.post("/run/go", {
+      code,
+    });
+
+    const stderr = data.stderr || "";
+    const stdout = data.stdout || "";
+
+    const isCompileOrSecError =
+      stderr.includes("Erro de Compilação Go:") ||
+      stderr.includes("Falha ao invocar") ||
+      stderr.includes("Segurança:");
+
+    if (isCompileOrSecError) {
+      setStatus("error");
+      setOutput(stderr);
+      return;
+    }
+
+    let finalOutput = stdout;
+
+    if (stderr) {
+      finalOutput += finalOutput
+        ? `\n\n--- Erro de Execução ---\n${stderr}`
+        : stderr;
+    }
+
+    setOutput(finalOutput || "Código executado com sucesso.");
+
+    setStatus(stderr ? "error" : "success");
+  } catch (err) {
+    console.error(err);
+    setOutput("Erro: Não foi possível se comunicar com o servidor.");
+    setStatus("error");
+  } finally {
+    setIsRunning(false);
+  }
+}

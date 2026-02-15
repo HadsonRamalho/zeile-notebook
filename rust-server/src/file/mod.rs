@@ -20,12 +20,37 @@ pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
         );
         return ("".into(), format!("Erro interno: Binário não encontrado."));
     }
+    println!("CAMINHO RECEBIDO: {}", caminho_binario);
 
-    let child = match Command::new(caminho_binario)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
+    let is_wasm = caminho_binario.ends_with(".wasm");
+
+    let mut cmd = if is_wasm {
+        let mut c = Command::new("wasmtime");
+        c.arg("run").arg(caminho_binario);
+        c
+    } else {
+        let mut c = Command::new("bwrap");
+
+        c.args(["--ro-bind", "/usr", "/usr"]);
+        c.args(["--ro-bind-try", "/lib", "/lib"]);
+        c.args(["--ro-bind-try", "/lib64", "/lib64"]);
+        c.args(["--ro-bind-try", "/bin", "/bin"]);
+
+        c.args(["--dev", "/dev"]);
+        c.args(["--proc", "/proc"]);
+
+        c.args(["--unshare-all"]);
+
+        c.args(["--ro-bind", caminho_binario, caminho_binario]);
+
+        c.arg(caminho_binario);
+
+        c.env("GOMAXPROCS", "1");
+        c.env("CGO_ENABLED", "0");
+        c
+    };
+
+    let child = match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
         Ok(c) => c,
         Err(e) => {
             eprintln!("ERRO ao spawnar processo: {}", e);
@@ -50,6 +75,7 @@ pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
         }
         Err(_) => {
             eprintln!("TIMEOUT: Matando processo {}", pid);
+
             #[cfg(windows)]
             let _ = std::process::Command::new("taskkill")
                 .args(["/F", "/PID", &pid.to_string()])
@@ -60,7 +86,10 @@ pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
                 .args(["-9", &pid.to_string()])
                 .output();
 
-            ("".into(), "Erro: Tempo limite de execução excedido.".into())
+            (
+                "".into(),
+                "Erro: Tempo limite de execução (5s) excedido.".into(),
+            )
         }
     }
 }

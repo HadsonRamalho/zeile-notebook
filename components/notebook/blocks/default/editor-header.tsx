@@ -19,6 +19,10 @@ const getPythonFileName = (codeVal: string): string => {
   return match?.[1] ? `${match[1]}.py` : "script.py";
 };
 
+const getGoFileName = (): string => {
+  return "main.go";
+};
+
 const getTsxFileName = () => {
   return "App.tsx";
 };
@@ -81,7 +85,9 @@ export function EditorHeader({
       ? getRustFileName(block.content)
       : block.language === "python"
         ? getPythonFileName(block.content)
-        : getTsxFileName();
+        : block.language === "go"
+          ? getGoFileName()
+          : getTsxFileName();
 
   return (
     <div className="w-full grid p-2 grid-cols-1 md:flex">

@@ -1,5 +1,6 @@
 "use client";
 
+import { go } from "@codemirror/lang-go";
 import { javascript } from "@codemirror/lang-javascript";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
@@ -58,6 +59,8 @@ export const BlockEditor = React.memo(
           return javascript({ typescript: true, jsx: true });
         case "python":
           return python();
+        case "go":
+          return go();
         default:
           return [];
       }
