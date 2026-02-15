@@ -1,45 +1,42 @@
-# docs
+# Zeile Notebook
 
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+![Zeile Interface](public/zeile.png)
 
-Run development server:
+Zeile Notebook is a block-based platform for developers, educators, and students. It enables the creation of interactive notebooks that blend Markdown documentation, user interfaces, and native code execution (such as Rust and Go) within an isolated remote environment.
 
-```bash
-npm run dev
-# or
-pnpm dev
-# or
-yarn dev
-```
+Whether prototyping an API, teaching a programming language, or documenting architectures, Zeile provides an isolated and collaborative workspace.
 
-Open http://localhost:3000 with your browser to see the result.
+## Key Features
 
-## Explore
+* **Interactive Blocks:** Combined use of Markdown text and executable code on the same page.
+* **Privacy by Default:** User code and notes are not used for Artificial Intelligence model training.
+* **Collaboration and Forking:** Option to make notebooks public or clone (fork) notebooks from other users into your own environment.
+* **Shortcuts:** Keyboard-based navigation for structured block editing.
 
-In the project, you can see:
+## Security Architecture
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+Executing third-party code on the server utilizes isolation layers to maintain stability and protect the system against abuse (such as DoS, cryptocurrency mining, or unauthorized access):
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+1. **Static Analysis (AST/Regex):** Prior to compilation, the code is scanned to block compiler directives (e.g., `//go:generate`) and system imports (e.g., `include!` macros in Rust or `os/exec` subpackages in Go).
+2. **Container Isolation (Bubblewrap/Bwrap):** The compilation process and execution occur within a restricted environment.
+   * *Network Namespace:* Removal of network access (`--unshare-all`) to prevent external connections.
+   * *Filesystem Read-Only:* The base filesystem is mounted in read-only mode. The process only accesses a temporary virtual directory.
+3. **WebAssembly (WASI):** Rust code is compiled to Wasm and executed through the `wasmtime` engine, restricting direct access to the host architecture.
+4. **Kernel Limits (prlimit):** Processes have defined limits for CPU usage and thread count to mitigate resource exhaustion.
+5. **Process Management:** Use of *Process Groups* (PGID) with defined timeouts to terminate infinite loop processes and their respective child threads.
+6. **Session Isolation:** Compilation workspaces are generated and mapped via UUID, preventing file collision between users sharing the same network.
 
-### Fumadocs MDX
+## Local Development
 
-A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+*(Coming soon: Instructions to configure and run the Next.js frontend and the Rust/Axum execution engine).*
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+## Terms and Privacy
 
-## Learn More
+The system complies with data protection standards and collects only the data necessary for authentication and logging.
+* No inserted data is sold or used to train third-party Artificial Intelligence models.
+* Use of the infrastructure for malware, DDoS, or mining will result in account suspension and deletion of linked data.
+* Refer to the full [Privacy Policy](/docs/privacy) and [Terms of Use](/docs/terms).
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+To contribute to the development of the block interface or the execution engine, access the instructions in the repository at [HadsonRamalho/docs](https://github.com/HadsonRamalho/docs).

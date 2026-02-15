@@ -93,8 +93,9 @@ pub async fn verify_request(
         .to_string();
 
     let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-    let rustup_dir = format!("{}/.rustup", home_dir);
-    let cargo_dir = format!("{}/.cargo", home_dir);
+    let rustup_dir =
+        std::env::var("RUSTUP_HOME").unwrap_or_else(|_| format!("{}/.rustup", home_dir));
+    let cargo_dir = std::env::var("CARGO_HOME").unwrap_or_else(|_| format!("{}/.cargo", home_dir));
 
     if !is_main {
         let mut check_cmd = Command::new("bwrap");
