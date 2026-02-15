@@ -1,6 +1,6 @@
 # Zeile Notebook
 
-![Zeile Interface](public/zeile.png)
+![Zeile Interface](public/zeile-en.png)
 
 Zeile Notebook is a block-based platform for developers, educators, and students. It enables the creation of interactive notebooks that blend Markdown documentation, user interfaces, and native code execution (such as Rust and Go) within an isolated remote environment.
 
