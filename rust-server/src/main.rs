@@ -14,7 +14,8 @@ pub mod sec;
 
 #[derive(Deserialize)]
 pub struct CodeRequest {
-    code: String,
+    pub code: String,
+    pub session_id: String,
 }
 
 #[derive(Serialize)]

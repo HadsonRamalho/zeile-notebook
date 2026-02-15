@@ -5,91 +5,132 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::Command;
 use tokio::time::{Duration, timeout};
+use tracing::{error, info, warn};
 
 pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
-    println!(
-        "LOG: Tentando iniciar processo no caminho ABSOLUTO: {}",
-        caminho_binario
-    );
-
     let path_obj = Path::new(caminho_binario);
     if !path_obj.exists() {
-        eprintln!(
-            "ERRO CRÍTICO: O arquivo binário NÃO EXISTE no disco: {}",
-            caminho_binario
-        );
-        return ("".into(), format!("Erro interno: Binário não encontrado."));
+        error!("ERRO: Binário não existe: {}", caminho_binario);
+        return ("".into(), "Erro interno: Binário não encontrado.".into());
     }
-    println!("CAMINHO RECEBIDO: {}", caminho_binario);
 
     let is_wasm = caminho_binario.ends_with(".wasm");
 
-    let mut cmd = if is_wasm {
-        let mut c = Command::new("wasmtime");
-        c.arg("run").arg(caminho_binario);
-        c
+    let mut cmd = Command::new("prlimit");
+    cmd.args(["--cpu=10", "--"]);
+
+    cmd.arg("bwrap");
+
+    cmd.args(["--unshare-all"]);
+    cmd.args(["--die-with-parent"]);
+    cmd.args(["--new-session"]);
+
+    cmd.args(["--ro-bind", "/usr", "/usr"]);
+    cmd.args(["--ro-bind-try", "/lib", "/lib"]);
+    cmd.args(["--ro-bind-try", "/lib64", "/lib64"]);
+    cmd.args(["--ro-bind-try", "/bin", "/bin"]);
+
+    cmd.args(["--dir", "/tmp"]);
+    cmd.args(["--proc", "/proc"]);
+    cmd.args(["--dev", "/dev"]);
+    cmd.args(["--chdir", "/tmp"]);
+
+    if is_wasm {
+        let wasmtime_path = std::env::var("WASMTIME_PATH").unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_default();
+
+            let possible_paths = [
+                format!("{}/.wasmtime/bin/wasmtime", home),
+                "/usr/bin/wasmtime".to_string(),
+                "/usr/local/bin/wasmtime".to_string(),
+            ];
+
+            possible_paths
+                .into_iter()
+                .find(|p| Path::new(p).exists())
+                .unwrap_or_else(|| {
+                    warn!(
+                        "AVISO: wasmtime não encontrado nos caminhos padrões. Usando fallback cego."
+                    );
+                    "wasmtime".to_string()
+                })
+        });
+
+        cmd.args(["--ro-bind-try", &wasmtime_path, "/app/wasmtime"]);
+        cmd.args(["--ro-bind", caminho_binario, "/app/main.wasm"]);
+
+        cmd.arg("/app/wasmtime").arg("run").arg("/app/main.wasm");
     } else {
-        let mut c = Command::new("bwrap");
+        cmd.args(["--ro-bind", caminho_binario, "/app/main"]);
+        cmd.arg("/app/main");
 
-        c.args(["--ro-bind", "/usr", "/usr"]);
-        c.args(["--ro-bind-try", "/lib", "/lib"]);
-        c.args(["--ro-bind-try", "/lib64", "/lib64"]);
-        c.args(["--ro-bind-try", "/bin", "/bin"]);
+        cmd.env("GOMAXPROCS", "1");
+        cmd.env("CGO_ENABLED", "0");
+    }
 
-        c.args(["--dev", "/dev"]);
-        c.args(["--proc", "/proc"]);
+    unsafe {
+        cmd.pre_exec(|| {
+            libc::setpgid(0, 0);
+            Ok(())
+        });
+    }
 
-        c.args(["--unshare-all"]);
-
-        c.args(["--ro-bind", caminho_binario, caminho_binario]);
-
-        c.arg(caminho_binario);
-
-        c.env("GOMAXPROCS", "1");
-        c.env("CGO_ENABLED", "0");
-        c
-    };
+    info!("COMANDO: {:?}", cmd);
 
     let child = match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("ERRO ao spawnar processo: {}", e);
+            error!("ERRO FATAL ao spawnar sandbox: {}", e);
             return ("".into(), format!("Erro ao iniciar execução: {}", e));
         }
     };
 
     let pid = child.id().expect("Falha ao obter PID");
-    println!("LOG: Processo iniciado com PID: {}", pid);
+    info!("Sandbox iniciado no Grupo de Processos PGID: {}", pid);
 
     match timeout(Duration::from_secs(5), child.wait_with_output()).await {
         Ok(Ok(output)) => {
-            println!("LOG: Execução finalizada com sucesso.");
-            (
-                String::from_utf8_lossy(&output.stdout).to_string(),
-                String::from_utf8_lossy(&output.stderr).to_string(),
-            )
+            let _ = std::process::Command::new("kill")
+                .args(["-9", &format!("-{}", pid)])
+                .output();
+
+            let stdout_str = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr_str = String::from_utf8_lossy(&output.stderr).to_string();
+            let exit_status = output.status;
+
+            info!("EXIT STATUS: {}", exit_status);
+
+            if !stdout_str.is_empty() {
+                info!("STDOUT CAPTURADO:\n{}", stdout_str);
+            }
+            if !stderr_str.is_empty() {
+                error!("STDERR CAPTURADO:\n{}", stderr_str);
+            }
+
+            (stdout_str, stderr_str)
         }
         Ok(Err(e)) => {
-            eprintln!("ERRO de I/O durante execução: {}", e);
-            ("".into(), format!("Erro de I/O na execução: {}", e))
+            let _ = std::process::Command::new("kill")
+                .args(["-9", &format!("-{}", pid)])
+                .output();
+            error!("ERRO de I/O no container: {}", e);
+            ("".into(), format!("Erro interno de sandbox: {}", e))
         }
         Err(_) => {
-            eprintln!("TIMEOUT: Matando processo {}", pid);
+            error!(
+                "TIMEOUT DETECTADO! Encerrando Grupo de Processos (PGID) {}",
+                pid
+            );
 
-            #[cfg(windows)]
-            let _ = std::process::Command::new("taskkill")
-                .args(["/F", "/PID", &pid.to_string()])
+            let kill_cmd = std::process::Command::new("kill")
+                .args(["-9", &format!("-{}", pid)])
                 .output();
 
-            #[cfg(not(windows))]
-            let _ = std::process::Command::new("kill")
-                .args(["-9", &pid.to_string()])
-                .output();
+            if let Err(e) = kill_cmd {
+                error!("FALHA CRÍTICA AO MATAR PROCESSOS: {}", e);
+            }
 
-            (
-                "".into(),
-                "Erro: Tempo limite de execução (5s) excedido.".into(),
-            )
+            ("".into(), "Erro: Execução interrompida. O código demorou muito para responder (Loop Infinito ou Timeout).".into())
         }
     }
 }
@@ -99,11 +140,11 @@ pub async fn setup_user_env(ip_safe: &str) -> PathBuf {
     let src_dir = format!("{}/src", user_dir);
 
     if let Err(e) = tokio::fs::create_dir_all(&src_dir).await {
-        eprintln!("ERRO: Falha ao criar diretórios {}: {}", src_dir, e);
+        error!("ERRO: Falha ao criar diretórios {}: {}", src_dir, e);
     }
 
     if !Path::new(&format!("{}/Cargo.toml", user_dir)).exists() {
-        eprintln!("LOG: Iniciando novo projeto Cargo em {}", user_dir);
+        info!("LOG: Iniciando novo projeto Cargo em {}", user_dir);
 
         let package_name = format!("app_{}", ip_safe);
 
@@ -119,13 +160,13 @@ pub async fn setup_user_env(ip_safe: &str) -> PathBuf {
         match output {
             Ok(o) => {
                 if !o.status.success() {
-                    eprintln!(
+                    error!(
                         "ERRO: Cargo init falhou: {}",
                         String::from_utf8_lossy(&o.stderr)
                     );
                 }
             }
-            Err(e) => eprintln!("ERRO: Falha ao executar cargo init: {}", e),
+            Err(e) => error!("ERRO: Falha ao executar cargo init: {}", e),
         }
     }
 

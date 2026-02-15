@@ -22,6 +22,7 @@ interface ReorderItemProps {
   removeBlock: (id: string) => void;
   updateBlock: (id: string, newContent: string) => void;
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
+  sessionId: string;
 }
 
 export function ReorderItem({
@@ -34,6 +35,7 @@ export function ReorderItem({
   updateBlock,
   removeBlock,
   updateBlockMetadata,
+  sessionId,
 }: ReorderItemProps) {
   const dragControls = useDragControls();
 
@@ -105,12 +107,14 @@ export function ReorderItem({
             block={block}
             isDragging={isDragging}
             onCodeChange={handleUpdateContent}
+            sessionId={sessionId}
           />
         ) : (
           <RustEditor
             block={block}
             isDragging={isDragging}
             onCodeChange={handleUpdateContent}
+            sessionId={sessionId}
           />
         )}
       </div>

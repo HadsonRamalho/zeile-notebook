@@ -54,3 +54,4 @@ dashmap = "6.1.0"
 futures = "0.3.31"
 bytes = { version = "1.11.1", features = ["serde"] }
 automerge = "0.7.3"
+libc = "0.2.182"

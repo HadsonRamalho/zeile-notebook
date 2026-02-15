@@ -12,11 +12,13 @@ interface GoNotebookProps {
   block: Block;
   onCodeChange: (newCode: string) => void;
   isDragging?: boolean;
+  sessionId: string;
 }
 
 export function GoEditor({
   block,
   onCodeChange,
+  sessionId,
   isDragging = false,
 }: GoNotebookProps) {
   const [output, setOutput] = useState("");
@@ -29,6 +31,7 @@ export function GoEditor({
       setOutput,
       setStatus,
       code: block.content,
+      sessionId,
     });
   }
 

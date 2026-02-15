@@ -25,5 +25,12 @@ export function RustEditorMDX({
     language: "rust",
   };
 
-  return <RustEditor block={block} onCodeChange={setCode} isDragging={false} />;
+  return (
+    <RustEditor
+      block={block}
+      onCodeChange={setCode}
+      isDragging={false}
+      sessionId={"1234-1234-1234-1234"}
+    />
+  );
 }

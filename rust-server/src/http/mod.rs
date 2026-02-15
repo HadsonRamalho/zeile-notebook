@@ -3,7 +3,10 @@ use axum::extract::Json;
 use axum::http::HeaderMap;
 use std::net::SocketAddr;
 use std::path::Path;
+use std::path::PathBuf;
 use tokio::process::Command;
+use tracing::error;
+use tracing::info;
 
 use crate::CodeRequest;
 use crate::CodeResponse;
@@ -32,13 +35,14 @@ pub async fn verify_request(
         .unwrap_or("Unknown Agent")
         .to_string();
 
-    println!("--------------------------------------------------");
-    println!("LOG: Nova requisição de IP: {}", ip);
+    info!("Nova requisição de IP: {}", ip);
 
-    let safe_ip = ip.replace(|c: char| !c.is_alphanumeric(), "_");
+    let safe_session = payload
+        .session_id
+        .replace(|c: char| !c.is_alphanumeric(), "_");
 
-    if let Err(e) = register_log(&payload.code, &safe_ip, &ip, &user_agent).await {
-        eprintln!("ERRO: Falha no log de arquivo: {}", e);
+    if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
+        error!("Falha no log de arquivo: {}", e);
     }
 
     if let Err(msg) = verify_code(&payload.code) {
@@ -48,7 +52,7 @@ pub async fn verify_request(
         });
     }
 
-    let project_path = setup_user_env(&safe_ip).await;
+    let project_path = setup_user_env(&safe_session).await;
     let src_path = project_path.join("src");
 
     let module_name = extract_module_name(&payload.code);
@@ -82,12 +86,36 @@ pub async fn verify_request(
         });
     }
 
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let abs_project_path = std::fs::canonicalize(&project_path)
+        .unwrap_or_else(|_| current_dir.join(&project_path))
+        .to_string_lossy()
+        .to_string();
+
+    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+    let rustup_dir = format!("{}/.rustup", home_dir);
+    let cargo_dir = format!("{}/.cargo", home_dir);
+
     if !is_main {
-        let check_output = Command::new("cargo")
-            .current_dir(&project_path)
-            .arg("check")
-            .output()
-            .await;
+        let mut check_cmd = Command::new("bwrap");
+        check_cmd.args(["--unshare-all", "--die-with-parent", "--new-session"]);
+        check_cmd.args(["--ro-bind", "/usr", "/usr"]);
+        check_cmd.args(["--ro-bind-try", "/lib", "/lib"]);
+        check_cmd.args(["--ro-bind-try", "/lib64", "/lib64"]);
+        check_cmd.args(["--ro-bind-try", "/bin", "/bin"]);
+        check_cmd.args(["--dev", "/dev", "--proc", "/proc", "--dir", "/tmp"]);
+        check_cmd.args(["--ro-bind-try", &rustup_dir, &rustup_dir]);
+        check_cmd.args(["--ro-bind-try", &cargo_dir, &cargo_dir]);
+
+        check_cmd.args(["--bind", &abs_project_path, "/app"]);
+        check_cmd.args(["--chdir", "/app"]);
+
+        check_cmd.env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir));
+        check_cmd.env("HOME", &home_dir);
+
+        check_cmd.arg("cargo").arg("check");
+
+        let check_output = check_cmd.output().await;
 
         return match check_output {
             Ok(out) => Json(CodeResponse {
@@ -100,27 +128,44 @@ pub async fn verify_request(
             }),
             Err(e) => Json(CodeResponse {
                 stdout: "".into(),
-                stderr: format!("Erro ao verificar módulo: {}", e),
+                stderr: format!("Erro ao verificar módulo no sandbox: {}", e),
             }),
         };
     }
 
-    eprintln!("LOG: Executando cargo build com JSON output...");
+    info!("Executando cargo build com JSON output...");
 
-    let compile_output = Command::new("cargo")
-        .current_dir(&project_path)
+    info!("Iniciando build isolado em {}", abs_project_path);
+
+    let mut build_cmd = Command::new("bwrap");
+    build_cmd.args(["--unshare-all", "--die-with-parent", "--new-session"]);
+    build_cmd.args(["--ro-bind", "/usr", "/usr"]);
+    build_cmd.args(["--ro-bind-try", "/lib", "/lib"]);
+    build_cmd.args(["--ro-bind-try", "/lib64", "/lib64"]);
+    build_cmd.args(["--ro-bind-try", "/bin", "/bin"]);
+    build_cmd.args(["--dev", "/dev", "--proc", "/proc", "--dir", "/tmp"]);
+    build_cmd.args(["--ro-bind-try", &rustup_dir, &rustup_dir]);
+    build_cmd.args(["--ro-bind-try", &cargo_dir, &cargo_dir]);
+
+    build_cmd.args(["--bind", &abs_project_path, "/app"]);
+    build_cmd.args(["--chdir", "/app"]);
+
+    build_cmd.env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir));
+    build_cmd.env("HOME", &home_dir);
+
+    build_cmd
+        .arg("cargo")
         .arg("build")
         .arg("--message-format=json")
         .arg("--target=wasm32-wasip1")
         .arg("--offline")
-        .arg("-q")
-        .output()
-        .await;
+        .arg("-q");
+
+    let compile_output = build_cmd.output().await;
 
     match compile_output {
         Ok(out) => {
             let stdout_str = String::from_utf8_lossy(&out.stdout);
-
             let mut formatted_errors = String::new();
             let mut exe_path: Option<String> = None;
 
@@ -133,9 +178,14 @@ pub async fn verify_request(
                         }
                     }
 
-                    if line.contains(r#""executable""#) {
-                        if let Some(exec) = val.get("executable").and_then(|v| v.as_str()) {
-                            exe_path = Some(exec.to_string());
+                    if val.get("reason").and_then(|r| r.as_str()) == Some("compiler-artifact") {
+                        if let Some(executable) = val.get("executable").and_then(|v| v.as_str()) {
+                            if let Some(file_name) = Path::new(executable).file_name() {
+                                let real_path = project_path
+                                    .join("target/wasm32-wasip1/debug")
+                                    .join(file_name);
+                                exe_path = Some(real_path.to_string_lossy().to_string());
+                            }
                         }
                     }
                 }
@@ -143,28 +193,27 @@ pub async fn verify_request(
 
             if out.status.success() {
                 if let Some(path) = exe_path {
-                    eprintln!("LOG: Caminho do executável encontrado via JSON: {}", path);
-                    let (stdout, _) = run_safe_bin(&path).await;
-
+                    info!("Caminho do executável traduzido: {}", path);
+                    let (stdout, stderr) = run_safe_bin(&path).await;
                     return Json(CodeResponse {
                         stdout,
-                        stderr: formatted_errors,
+                        stderr: formatted_errors + &stderr,
                     });
                 } else {
-                    let fallback_name = if cfg!(windows) {
-                        format!("app_{}.exe", safe_ip)
-                    } else {
-                        format!("app_{}", safe_ip)
-                    };
-                    let fallback_path = project_path.join("target/debug").join(fallback_name);
+                    let fallback_name = format!("app_{}.wasm", safe_session);
+                    let fallback_path = project_path
+                        .join("target/wasm32-wasip1/debug")
+                        .join(fallback_name);
                     let path_str = fallback_path.to_string_lossy().to_string();
                     let (stdout, stderr) = run_safe_bin(&path_str).await;
-                    return Json(CodeResponse { stdout, stderr });
+                    return Json(CodeResponse {
+                        stdout,
+                        stderr: formatted_errors + &stderr,
+                    });
                 }
             }
 
-            eprintln!("LOG: Compilação FALHOU.");
-
+            error!("Compilação falhou.");
             let final_stderr = if !formatted_errors.is_empty() {
                 formatted_errors
             } else {
@@ -201,13 +250,14 @@ pub async fn verify_go_request(
         .unwrap_or("Unknown Agent")
         .to_string();
 
-    println!("--------------------------------------------------");
-    println!("LOG: Nova requisição de IP: {}", ip);
+    info!("Nova requisição de IP: {}", ip);
 
-    let safe_ip = ip.replace(|c: char| !c.is_alphanumeric(), "_");
+    let safe_session = payload
+        .session_id
+        .replace(|c: char| !c.is_alphanumeric(), "_");
 
-    if let Err(e) = register_log(&payload.code, &safe_ip, &ip, &user_agent).await {
-        eprintln!("ERRO: Falha no log de arquivo: {}", e);
+    if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
+        error!("Falha no log de arquivo: {}", e);
     }
 
     if let Err(msg) = verify_go_code(&payload.code) {
@@ -218,12 +268,12 @@ pub async fn verify_go_request(
     }
 
     let bin_name = if cfg!(windows) {
-        format!("app_{}.exe", safe_ip)
+        format!("app_{}.exe", safe_session)
     } else {
-        format!("app_{}", safe_ip)
+        format!("app_{}", safe_session)
     };
 
-    let user_dir = format!("files/go/{}", safe_ip);
+    let user_dir = format!("files/go/{}", safe_session);
     let _ = tokio::fs::create_dir_all(&user_dir).await;
 
     let file_path = Path::new(&user_dir).join("main.go");
@@ -236,7 +286,7 @@ pub async fn verify_go_request(
         });
     }
 
-    eprintln!("LOG: Compilando Go...");
+    info!("Compilando Go...");
 
     let compile_output = Command::new("go")
         .current_dir(&user_dir)

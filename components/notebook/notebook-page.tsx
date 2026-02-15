@@ -2,7 +2,7 @@
 
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
 import { usePresence } from "@/hooks/use-presence";
@@ -27,6 +27,7 @@ export default function RustInteractivePage({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const tokenX = getCookie("auth_token");
   const token = tokenX?.toString() || "";
+  const sessionId = useRef(crypto.randomUUID()).current;
 
   const {
     doc,
@@ -193,6 +194,7 @@ export default function RustInteractivePage({
                 removeBlock={deleteBlock}
                 updateBlock={updateBlockContent}
                 updateBlockMetadata={updateBlockMetadataSync}
+                sessionId={sessionId}
               />
             </div>
           );

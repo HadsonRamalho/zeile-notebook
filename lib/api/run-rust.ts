@@ -6,6 +6,7 @@ interface RunRustProps {
   setStatus: (s: RunStatus) => void;
   setIsRunning: (r: boolean) => void;
   code: string;
+  sessionId: string;
 }
 
 interface RustApiResponse {
@@ -18,6 +19,7 @@ export async function RunRust({
   setIsRunning,
   setStatus,
   code,
+  sessionId,
 }: RunRustProps) {
   setIsRunning(true);
   setStatus("idle");
@@ -25,6 +27,7 @@ export async function RunRust({
   try {
     const data: RustApiResponse = await api.post("/run", {
       code,
+      session_id: sessionId,
     });
     if (data.stderr) {
       setStatus("error");
@@ -67,6 +70,7 @@ export async function RunGo({
   setIsRunning,
   setStatus,
   code,
+  sessionId,
 }: RunRustProps) {
   setIsRunning(true);
   setStatus("idle");
@@ -75,6 +79,7 @@ export async function RunGo({
   try {
     const data: RustApiResponse = await api.post("/run/go", {
       code,
+      session_id: sessionId,
     });
 
     const stderr = data.stderr || "";
