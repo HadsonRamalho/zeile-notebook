@@ -127,8 +127,8 @@ export async function generateMetadata(props: {
 
   if (params.slug && params.slug.length === 1) {
     return {
-      title: "Meu Caderno",
-      description: "Caderno de anotações e código Rust interativo.",
+      title: "Zeile Notebook",
+      description: "Caderno de anotações e código interativo.",
     };
   }
 
