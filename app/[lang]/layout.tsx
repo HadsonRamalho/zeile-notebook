@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Rust Notebook",
+  title: "Zeile Notebook",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
