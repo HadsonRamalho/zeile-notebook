@@ -14,6 +14,7 @@ type AutomergeLib = typeof AutomergeType;
 
 export function useAutomergeSync(notebookId: string, token: string) {
   const [isConnected, setIsConnected] = useState(false);
+  const [hasSyncedOnce, setHasSyncedOnce] = useState(false);
 
   const [doc, setDoc] = useState<Notebook | null>(null);
 
@@ -47,75 +48,83 @@ export function useAutomergeSync(notebookId: string, token: string) {
   useEffect(() => {
     if (!notebookId || !automerge.current || !docRef.current) return;
 
-    if (socketRef.current) {
+    let reconnectTimer: NodeJS.Timeout;
+
+    const connect = () => {
       if (
-        socketRef.current.readyState === WebSocket.OPEN ||
-        socketRef.current.readyState === WebSocket.CONNECTING
+        socketRef.current?.readyState === WebSocket.OPEN ||
+        socketRef.current?.readyState === WebSocket.CONNECTING
       ) {
         return;
       }
-      socketRef.current.close();
-    }
 
-    if (socketRef.current?.readyState === WebSocket.OPEN) return;
+      const validToken = token.length > 0;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}${process.env.NEXT_PUBLIC_WS_URL}/notebook/ws/${notebookId}`;
 
-    const validToken = token.length > 0;
+      const protocols = validToken ? ["access_token", token] : undefined;
+      const socket = new WebSocket(wsUrl, protocols);
+      socket.binaryType = "arraybuffer";
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}${process.env.NEXT_PUBLIC_WS_URL}/notebook/ws/${notebookId}`;
+      socketRef.current = socket;
 
-    const protocols = validToken ? ["access_token", token] : undefined;
-    const socket = new WebSocket(wsUrl, protocols);
-    socket.binaryType = "arraybuffer";
-    socketRef.current = socket;
+      const handleOpen = () => {
+        setIsConnected(true);
+        setHasSyncedOnce(true);
+      };
 
-    const handleOpen = () => setIsConnected(true);
-    const handleClose = () => setIsConnected(false);
+      const handleClose = () => {
+        setIsConnected(false);
+        reconnectTimer = setTimeout(connect, 3000);
+      };
 
-    const handleMessage = (event: MessageEvent) => {
-      if (!automerge.current || !docRef.current) return;
+      const handleMessage = (event: MessageEvent) => {
+        if (!automerge.current || !docRef.current) return;
 
-      const binaryMessage = new Uint8Array(event.data);
-      const currentDoc = docRef.current;
+        const binaryMessage = new Uint8Array(event.data);
+        const currentDoc = docRef.current;
 
-      const [nextDoc, nextSyncState] = automerge.current.receiveSyncMessage(
-        currentDoc,
-        syncState.current,
-        binaryMessage,
-      );
+        const [nextDoc, nextSyncState] = automerge.current.receiveSyncMessage(
+          currentDoc,
+          syncState.current,
+          binaryMessage,
+        );
 
-      syncState.current = nextSyncState;
+        syncState.current = nextSyncState;
 
-      if (nextDoc !== currentDoc) {
-        docRef.current = nextDoc;
-        setDoc(nextDoc);
-      }
+        if (nextDoc !== currentDoc) {
+          docRef.current = nextDoc;
+          setDoc(nextDoc);
+        }
 
-      const [updatedSyncState, responseMessage] =
-        automerge.current.generateSyncMessage(nextDoc, syncState.current);
+        const [updatedSyncState, responseMessage] =
+          automerge.current.generateSyncMessage(nextDoc, syncState.current);
 
-      syncState.current = updatedSyncState;
+        syncState.current = updatedSyncState;
 
-      if (responseMessage && socket.readyState === WebSocket.OPEN) {
-        socket.send(responseMessage);
-      }
+        if (responseMessage && socket.readyState === WebSocket.OPEN) {
+          socket.send(responseMessage);
+        }
+      };
+
+      socket.addEventListener("open", handleOpen);
+      socket.addEventListener("close", handleClose);
+      socket.addEventListener("message", handleMessage);
     };
 
-    socket.addEventListener("open", handleOpen);
-    socket.addEventListener("close", handleClose);
-    socket.addEventListener("message", handleMessage);
+    connect();
 
     return () => {
-      socket.removeEventListener("open", handleOpen);
-      socket.removeEventListener("close", handleClose);
-      socket.removeEventListener("message", handleMessage);
+      clearTimeout(reconnectTimer);
 
-      socket.onopen = null;
-      socket.onclose = null;
-      socket.onmessage = null;
+      if (socketRef.current) {
+        socketRef.current.onopen = null;
+        socketRef.current.onclose = null;
+        socketRef.current.onmessage = null;
 
-      socket.close();
-      socketRef.current = null;
+        socketRef.current.close();
+        socketRef.current = null;
+      }
     };
   }, [notebookId, token, !!doc]);
 
@@ -222,6 +231,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
   return {
     doc,
     isConnected,
+    hasSyncedOnce,
     addBlockSync,
     updateBlockContent,
     updateBlockMetadataSync,

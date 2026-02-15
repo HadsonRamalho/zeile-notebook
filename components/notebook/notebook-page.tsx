@@ -2,6 +2,7 @@
 
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
+import { RotateCw } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
@@ -32,6 +33,7 @@ export default function RustInteractivePage({
   const {
     doc,
     isConnected,
+    hasSyncedOnce,
     addBlockSync,
     updateBlockContent,
     updateBlockMetadataSync,
@@ -91,7 +93,7 @@ export default function RustInteractivePage({
     setHoveredIndex(null);
   };
 
-  if (!doc || !isConnected) {
+  if (!doc || !hasSyncedOnce) {
     return (
       <div className="flex h-screen w-full items-center justify-center text-muted-foreground">
         <h2>Conectando ao servidor...</h2>
@@ -120,6 +122,7 @@ export default function RustInteractivePage({
     >
       <CollabChat messages={messages} sendChatMessage={sendChatMessage} />
       <LiveCursors collaborators={collaborators} />
+      <Refreshing isConnected={isConnected} hasSyncedOnce={hasSyncedOnce} />
       <Reorder.Group
         axis="y"
         values={blocks}
@@ -237,3 +240,22 @@ function getBlockTitle(
 
   return titles[language] ?? "Arquivo de Código";
 }
+
+const Refreshing = ({
+  isConnected,
+  hasSyncedOnce,
+}: {
+  isConnected: boolean;
+  hasSyncedOnce: boolean;
+}) => {
+  if (!isConnected && !hasSyncedOnce) {
+    return null;
+  }
+
+  return (
+    <div className="absolute md:fixed flex items-center gap-2 md:top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-md text-sm z-10 animate-pulse">
+      <RotateCw className="animate-spin size-4" />
+      Sincronizando...
+    </div>
+  );
+};
