@@ -23,6 +23,7 @@ interface ReorderItemProps {
   updateBlock: (id: string, newContent: string) => void;
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
   sessionId: string;
+  canWrite: boolean;
 }
 
 export function ReorderItem({
@@ -36,6 +37,7 @@ export function ReorderItem({
   removeBlock,
   updateBlockMetadata,
   sessionId,
+  canWrite,
 }: ReorderItemProps) {
   const dragControls = useDragControls();
 
@@ -56,65 +58,67 @@ export function ReorderItem({
       onDragEnd={() => setIsDragging(false)}
       dragListener={false}
     >
-      <div
-        className="absolute -left-6 top-2 flex flex-col gap-2 transition-opacity opacity-100 md:opacity-0 group-hover/item:opacity-100 hover:cursor-grab active:cursor-grabbing select-none touch-none"
-        onPointerDown={(e) => dragControls.start(e)}
-      >
-        <GripVertical
-          size={16}
-          className="text-gray-600 cursor-grab active:cursor-grabbing"
-        />
-        {pageBlocks.length > 1 && (
-          <button
-            type="button"
-            disabled={pageBlocks.length === 1}
-            onClick={() => removeBlock(block.id)}
-            className="text-gray-600 hover:text-red-500"
-          >
-            <Trash2 size={14} />
-          </button>
-        )}
-      </div>
+      {canWrite && (
+        <div
+          className="absolute -left-6 top-2 flex flex-col gap-2 transition-opacity opacity-100 md:opacity-0 group-hover/item:opacity-100 hover:cursor-grab active:cursor-grabbing select-none touch-none"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <GripVertical
+            size={16}
+            className="text-gray-600 cursor-grab active:cursor-grabbing"
+          />
+          {pageBlocks.length > 1 && (
+            <button
+              type="button"
+              disabled={pageBlocks.length === 1}
+              onClick={() => removeBlock(block.id)}
+              className="text-gray-600 hover:text-red-500"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         {block.type === "text" ? (
           <TextBlock
             content={block.content}
-            onChange={(val) => updateBlock(block.id, val)}
+            onChange={(val) => canWrite && updateBlock(block.id, val)}
           />
         ) : block.type === "component" ? (
           <ComponentRenderer
             block={block}
-            updateBlockAction={handleUpdateContent}
-            updateBlockMetadata={updateBlockMetadata}
+            updateBlockAction={canWrite ? handleUpdateContent : () => {}}
+            updateBlockMetadata={canWrite ? updateBlockMetadata : () => {}}
           />
         ) : block.language === "typescript" ? (
           <TsxEditor
             pageFiles={pageFiles}
             block={block}
             pageBlocks={pageBlocks}
-            setBlocksAction={setBlocks}
-            updateBlockAction={handleUpdateContent}
+            setBlocksAction={canWrite ? setBlocks : () => {}}
+            updateBlockAction={canWrite ? handleUpdateContent : () => {}}
           />
         ) : block.language === "python" ? (
           <PythonSandbox
-            onCodeChange={handleUpdateContent}
             block={block}
             isDragging={isDragging}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         ) : block.language === "go" ? (
           <GoEditor
             block={block}
             isDragging={isDragging}
-            onCodeChange={handleUpdateContent}
             sessionId={sessionId}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         ) : (
           <RustEditor
             block={block}
             isDragging={isDragging}
-            onCodeChange={handleUpdateContent}
             sessionId={sessionId}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         )}
       </div>

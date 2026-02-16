@@ -54,19 +54,29 @@ pub async fn websocket_handler(
 }
 
 async fn handle_socket(
-    socket: WebSocket,
+    mut socket: WebSocket,
     notebook_id: Uuid,
     original_user_id: Option<Uuid>,
     registry: SyncRegistry,
     pool: Pool<AsyncPgConnection>,
 ) {
     let user_id = original_user_id.unwrap_or(Uuid::new_v4());
-    let (mut sender, mut receiver) = socket.split();
 
     let permissions = get_user_notebook_permissions(&pool, &notebook_id, original_user_id)
         .await
         .unwrap()
         .0;
+
+    if !permissions.can_read {
+        tracing::warn!(
+            "Acesso negado: Tentativa de leitura em notebook privado {}",
+            notebook_id
+        );
+        let _ = socket.close().await;
+        return;
+    }
+
+    let (mut sender, mut receiver) = socket.split();
 
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
 
@@ -106,7 +116,11 @@ async fn handle_socket(
 
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Binary(data))) = receiver.next().await {
-            process_msg(user_id, data, &notebook_recv, permission_cloned.clone()).await;
+            let should_continue =
+                process_msg(user_id, data, &notebook_recv, permission_cloned.clone()).await;
+            if !should_continue {
+                break;
+            }
         }
     });
 
@@ -139,7 +153,7 @@ async fn process_msg(
     data: Bytes,
     notebook: &Arc<RwLock<ActiveNotebook>>,
     permission: TeamRole,
-) {
+) -> bool {
     let mut nb_guard = notebook.write().await;
 
     let ActiveNotebook {
@@ -152,8 +166,13 @@ async fn process_msg(
     if let Ok(msg) = SyncMessage::decode(&data) {
         if let Some(peer_state) = peer_states.get_mut(&sender_session_id) {
             if !permission.can_write {
-                let mut doc_clone = doc.fork();
-                if let Err(e) = doc_clone.sync().receive_sync_message(peer_state, msg) {
+                if !msg.changes.is_empty() {
+                    tracing::warn!(
+                        "Usuário sem permissão tentou enviar alterações. Desconectando."
+                    );
+                    return false;
+                }
+                if let Err(e) = doc.sync().receive_sync_message(peer_state, msg) {
                     tracing::error!("Erro sync viewer: {:?}", e);
                 }
             } else {
@@ -172,6 +191,8 @@ async fn process_msg(
             }
         }
     }
+
+    true
 }
 
 pub async fn websocket_presence_handler(
@@ -190,18 +211,31 @@ pub async fn websocket_presence_handler(
             socket,
             notebook_id,
             user_token,
-            state.presence_registry.clone(),
+            state.presence_registry.to_owned(),
+            state.pool.to_owned(),
         )
     })
 }
 
 async fn handle_presence_socket(
-    socket: WebSocket,
+    mut socket: WebSocket,
     notebook_id: Uuid,
     original_user_id: Option<Uuid>,
     registry: Arc<RwLock<HashMap<Uuid, Arc<RwLock<PresenceRoom>>>>>,
+    pool: Pool<AsyncPgConnection>,
 ) {
     let user_id = original_user_id.unwrap_or_else(Uuid::new_v4);
+
+    let permissions = get_user_notebook_permissions(&pool, &notebook_id, original_user_id)
+        .await
+        .unwrap()
+        .0;
+
+    if !permissions.can_read {
+        let _ = socket.close().await;
+        return;
+    }
+
     let (mut sender, mut receiver) = socket.split();
 
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();

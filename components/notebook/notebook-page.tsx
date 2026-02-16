@@ -3,11 +3,13 @@
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
 import { RotateCw } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
 import { usePresence } from "@/hooks/use-presence";
+import { getUserNotebookPermissions } from "@/lib/api/notebook-service";
 import type { Block, BlockMetadata, BlockType, Language } from "@/lib/types";
+import type { TeamRole } from "@/lib/types/team-types";
 import { InlineTOC } from "../inline-toc";
 import { Button } from "../ui/button";
 import { CollabChat } from "./collaboration/chat";
@@ -29,6 +31,7 @@ export default function RustInteractivePage({
   const tokenX = getCookie("auth_token");
   const token = tokenX?.toString() || "";
   const sessionId = useRef(crypto.randomUUID()).current;
+  const [userPermissions, setUserPermissions] = useState<TeamRole | null>(null);
 
   const {
     doc,
@@ -48,6 +51,16 @@ export default function RustInteractivePage({
     sendChatMessage,
     updateFocus,
   } = usePresence(pageId, user);
+
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      const tempPermissions = await getUserNotebookPermissions(pageId);
+      setUserPermissions(tempPermissions);
+    };
+    if (!userPermissions && (isConnected || hasSyncedOnce)) {
+      loadUserPermissions();
+    }
+  }, [userPermissions, hasSyncedOnce, pageId]);
 
   const handlePointerMove = (e: React.PointerEvent) => {
     updateCursor(e.clientX, e.clientY);
@@ -115,6 +128,14 @@ export default function RustInteractivePage({
     );
   }
 
+  if (userPermissions?.can_read) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center text-red-700/60">
+        <h2>Você não tem permissão para visualizar essa página.</h2>
+      </div>
+    );
+  }
+
   return (
     <div
       onPointerMove={handlePointerMove}
@@ -166,11 +187,13 @@ export default function RustInteractivePage({
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              <ReorderTools
-                hoveredIndex={hoveredIndex}
-                index={index}
-                addBlock={handleAddBlock}
-              />
+              {userPermissions?.can_write && (
+                <ReorderTools
+                  hoveredIndex={hoveredIndex}
+                  index={index}
+                  addBlock={handleAddBlock}
+                />
+              )}
 
               {focusedUsers.length > 0 && (
                 <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
@@ -198,6 +221,7 @@ export default function RustInteractivePage({
                 updateBlock={updateBlockContent}
                 updateBlockMetadata={updateBlockMetadataSync}
                 sessionId={sessionId}
+                canWrite={userPermissions?.can_write || false}
               />
             </div>
           );
