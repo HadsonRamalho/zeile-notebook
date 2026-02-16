@@ -60,7 +60,7 @@ export default function RustInteractivePage({
     if (!userPermissions && (isConnected || hasSyncedOnce)) {
       loadUserPermissions();
     }
-  }, [userPermissions, hasSyncedOnce, pageId]);
+  }, [userPermissions, hasSyncedOnce, pageId, isConnected]);
 
   const handlePointerMove = (e: React.PointerEvent) => {
     updateCursor(e.clientX, e.clientY);
@@ -128,7 +128,7 @@ export default function RustInteractivePage({
     );
   }
 
-  if (userPermissions?.can_read) {
+  if (!userPermissions?.can_read) {
     return (
       <div className="flex h-screen w-full items-center justify-center text-red-700/60">
         <h2>Você não tem permissão para visualizar essa página.</h2>
