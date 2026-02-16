@@ -183,7 +183,9 @@ export default function RustInteractivePage({
         />
       )}
 
-      <HistoryButton isOpen={isOpen} setIsOpen={setIsOpen} />
+      {userPermissions.can_write && (
+        <HistoryButton isOpen={isOpen} setIsOpen={setIsOpen} />
+      )}
 
       {isOpen && (
         <HistoryDialog
