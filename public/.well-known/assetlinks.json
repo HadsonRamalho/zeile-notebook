@@ -1,8 +1,12 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "app.zeile_notebook.twa",
-        "sha256_cert_fingerprints": ["F0:C2:D4:6A:1C:D6:25:3D:42:BB:39:81:6C:E6:C9:37:FD:AD:C9:63:8A:46:97:6A:76:0C:63:BF:E2:1D:B6:B2"]
-      }
-    }]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.zeile_notebook.twa",
+      "sha256_cert_fingerprints": [
+        "76:88:A8:E0:82:9A:8B:F9:80:85:21:F7:7E:A0:2A:0A:81:FF:99:6B:AF:4F:D5:93:3F:1C:2C:A4:3D:8C:54:51"
+      ]
+    }
+  }
+]
