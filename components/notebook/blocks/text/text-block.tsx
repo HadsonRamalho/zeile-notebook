@@ -33,8 +33,7 @@ export function TextBlock({ content, onChange }: TextBlockProps) {
     // biome-ignore lint/a11y/useKeyWithClickEvents: <.>
     <div
       onClick={() => setIsEditing(true)}
-      className="prose prose-invert max-w-none prose-headings:mt-2
-      prose-headings:mb-1 prose-p:my-1 cursor-text hover:bg-white/5 p-2 rounded-lg transition-colors whitespace-pre-wrap"
+      className="prose prose-invert max-w-none cursor-text hover:bg-white/5 p-2 rounded-lg transition-colors whitespace-pre-wrap leading-snug prose-p:my-0 prose-p:leading-normal prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0"
     >
       {content ? (
         <Markdown rehypePlugins={[rehypeSlug, remarkGfm]}>{content}</Markdown>
