@@ -19,7 +19,6 @@ export const metadata: Metadata = {
     shortcut: "/logo.png",
     apple: "/logo.png",
   },
-  manifest: "/site.webmanifest",
 };
 
 export default function Layout({ children }: LayoutProps<"/[lang]">) {
