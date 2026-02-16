@@ -207,7 +207,7 @@ export function ReorderTools({
           initial={{ y: 10, scale: 0.95, opacity: 0 }}
           animate={{ y: 0, scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-50 w-max max-w-[90vw] print:hidden"
+          className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-5 w-max max-w-[90vw] print:hidden"
         >
           <div className="flex bg-card items-center gap-1 border border-white/10 p-1.5 rounded-2xl shadow-2xl backdrop-blur-xl">
             <AnimatePresence mode="wait">

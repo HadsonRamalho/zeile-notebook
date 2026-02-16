@@ -199,6 +199,12 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
+  const restoreState = (oldBlocks: Block[]) => {
+    updateDoc((d) => {
+      d.blocks = JSON.parse(JSON.stringify(oldBlocks));
+    });
+  };
+
   const updateBlockMetadataSync = (blockId: string, meta: any) => {
     updateDoc((d) => {
       const block = d.blocks.find((b) => b.id === blockId);
@@ -233,6 +239,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
     isConnected,
     hasSyncedOnce,
     addBlockSync,
+    restoreState,
     updateBlockContent,
     updateBlockMetadataSync,
     deleteBlock,
