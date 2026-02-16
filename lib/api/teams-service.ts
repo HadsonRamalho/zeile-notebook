@@ -36,7 +36,7 @@ export async function removeMember(teamId: string, userId: string) {
 }
 
 export async function updateRole(teamId: string, role: UpdateTeamRole) {
-  return await api.patch(`/team/${teamId}/role`, role);
+  return await api.patch(`/team/${teamId}/roles`, role);
 }
 
 export async function createTeamRole(teamId: string, role: NewTeamRoleRequest) {
