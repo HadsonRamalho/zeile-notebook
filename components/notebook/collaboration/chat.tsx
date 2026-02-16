@@ -81,7 +81,7 @@ export function CollabChat({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder="Pressione / ou ; para conversar..."
-          className="h-10 w-64 rounded-full border border-border bg-card/80 backdrop-blur-md pl-10 pr-4 text-sm shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary focus:w-80"
+          className="h-10 w-64 rounded-full border border-border bg-card/80 backdrop-blur-md pl-4 pr-4 text-sm shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary focus:w-80"
         />
       </form>
     </div>
