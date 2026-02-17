@@ -3,6 +3,10 @@ import { BookSearch, Code, Info, Lock, Sparkles, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import {
+  HomeMarquee,
+  LanguageShowcaseGrid,
+} from "@/components/interface/home/languages";
 import { RetroGrid } from "@/components/ui/retro-grid";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { baseOptions } from "@/lib/layout.shared";
@@ -59,6 +63,15 @@ export default function HomePage() {
           <RetroGrid className="opacity-40" />
         </section>
 
+        <section className="hidden border-t bg-muted/20 py-24">
+          <div className="mx-auto max-w-7xl px-6">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-center">
+              {t("features.title")}
+            </h2>
+            <VideoShowcase />
+          </div>
+        </section>
+
         <section className="border-t bg-muted/20 py-24">
           <div className="mx-auto max-w-7xl px-6">
             <div className="mb-16 text-center">
@@ -93,6 +106,10 @@ export default function HomePage() {
               />
             </div>
           </div>
+          <LanguageShowcaseGrid />
+          <HomeMarquee reverse={false} />
+          <HomeMarquee reverse={true} />
+          <HomeMarquee reverse={false} />
         </section>
 
         <section className="border-y bg-background">
@@ -166,3 +183,34 @@ const shortcuts = [
   { prefix: "01", title: "items.home", href: "/docs" },
   { prefix: "02", title: "nav.explore", href: "/explore" },
 ];
+
+function VideoShowcase() {
+  return (
+    <section className="relative z-20 mx-auto mt-10 w-full max-w-6xl px-6">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
+          <div className="flex gap-1.5">
+            <div className="h-3 w-3 rounded-full bg-red-500/80" />
+            <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
+            <div className="h-3 w-3 rounded-full bg-green-500/80" />
+          </div>
+          <div className="mx-auto flex h-6 items-center rounded bg-background px-4 text-xs font-medium text-muted-foreground shadow-sm">
+            zeile.app/demo
+          </div>
+        </div>
+
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full object-cover"
+          poster="/showcase-poster.jpg"
+        >
+          <source src="/showcase.mp4" type="video/mp4" />
+          Seu navegador não suporta reprodução de vídeo.
+        </video>
+      </div>
+    </section>
+  );
+}

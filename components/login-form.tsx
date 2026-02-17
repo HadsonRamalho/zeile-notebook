@@ -31,7 +31,7 @@ import { handleApiError } from "@/lib/api/handle-api-error";
 import { loginSchema } from "@/lib/schemas/auth-schemas";
 import type { LoginFormValues } from "@/lib/types/auth-types";
 import { cn } from "@/lib/utils";
-import { GithubIcon } from "./github-info";
+import { GithubIcon } from "./icons/github-icon";
 import { GoogleIcon } from "./icons/google-icon";
 import { BackButton } from "./interface/back-button";
 

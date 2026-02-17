@@ -24,7 +24,7 @@ pub struct CodeResponse {
     stderr: String,
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::main]
 async fn main() {
     rustls::crypto::ring::default_provider()
         .install_default()

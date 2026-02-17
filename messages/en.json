@@ -64,7 +64,8 @@
     },
     "items": {
       "home": "My Notebooks"
-    }
+    },
+    "supported_languages": "Supported Languages"
   },
   "login": {
     "title": "Welcome",

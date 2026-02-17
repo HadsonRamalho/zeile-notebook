@@ -18,17 +18,7 @@ pub async fn send_email(transport: &SmtpTransport, email: &Message) -> Result<()
     }
 }
 
-pub async fn send_team_invitation_email(
-    user: &User,
-    magic_link: &str,
-    team_name: &str,
-    invited_by: &str,
-) -> Result<StatusCode, ApiError> {
-    let credentials = match get_email_credentials() {
-        Ok(credentials) => credentials,
-        Err(_) => return Err(ApiError::SendingEmail),
-    };
-
+pub fn get_smtp_data(credentials: (String, String)) -> SmtpTransport {
     let smtp_username = credentials.0;
     let smtp_password = credentials.1;
 
@@ -41,8 +31,26 @@ pub async fn send_team_invitation_email(
         .authentication(vec![Mechanism::Plain])
         .build();
 
+    smtp_transport
+}
+
+pub async fn send_team_invitation_email(
+    user: &User,
+    magic_link: &str,
+    team_name: &str,
+    invited_by: &str,
+) -> Result<StatusCode, ApiError> {
+    let credentials = match get_email_credentials() {
+        Ok(credentials) => credentials,
+        Err(_) => return Err(ApiError::SendingEmail),
+    };
+
+    let from_email = credentials.0.clone();
+
+    let smtp_transport = get_smtp_data(credentials);
+
     let email = Message::builder()
-        .from(Mailbox { name: Some("Zeile Notebook".to_string()), email: Address::from_str(&smtp_username).unwrap() })
+        .from(Mailbox { name: Some("Zeile Notebook".to_string()), email: Address::from_str(&from_email).unwrap() })
         .to(Mailbox::from_str(&user.email).unwrap())
         .subject(format!("Zeile Notebook | Convite para Equipe {}", team_name))
         .header(ContentType::parse("text/html").unwrap())

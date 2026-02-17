@@ -31,7 +31,7 @@ import { BASE_URL } from "@/lib/api/base";
 import { updateProfile } from "@/lib/api/user-service";
 import { profileSchema } from "@/lib/schemas/user-schemas";
 import type { ProfileFormValues } from "@/lib/types/user-types";
-import { GithubIcon } from "./github-info";
+import { GithubIcon } from "./icons/github-icon";
 import { GoogleIcon } from "./icons/google-icon";
 import { BackButton } from "./interface/back-button";
 import { DeleteAccountDialog } from "./interface/delete-account-dialog";

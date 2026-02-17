@@ -64,7 +64,8 @@
     },
     "items": {
       "home": "Meus Cadernos"
-    }
+    },
+    "supported_languages": "Linguagens Suportadas"
   },
   "login": {
     "title": "Bem-vindo",

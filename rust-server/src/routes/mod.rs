@@ -74,7 +74,7 @@ pub async fn init_routes() -> Router {
     if let Some(db_url) = db_url {
         let mgr =
             AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(db_url, config);
-        let pool = Pool::builder(mgr).max_size(10).build().unwrap();
+        let pool = Pool::builder(mgr).max_size(50).build().unwrap();
 
         let app_state = Arc::new(AppState {
             presence_registry,

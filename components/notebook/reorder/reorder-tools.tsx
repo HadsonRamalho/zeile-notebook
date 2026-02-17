@@ -4,20 +4,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
   Box,
-  Boxes,
   ChevronLeft,
-  Code2,
-  FastForward,
   IdCard,
   Info,
   Loader,
-  Pi,
   Plus,
   Terminal,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { GithubIcon } from "@/components/github-info";
+import { GithubIcon } from "@/components/icons/github-icon";
+import { GoIcon } from "@/components/icons/go-icon";
+import { PythonIcon } from "@/components/icons/python-icon";
+import { ReactIcon } from "@/components/icons/react-icon";
+import { RustIcon } from "@/components/icons/rust-icon";
 import type { BlockMetadata, BlockType, Language } from "@/lib/types";
 
 interface ReorderToolsProps {
@@ -79,25 +79,25 @@ export function ReorderTools({
       buttons: [
         {
           label: "Rust",
-          icon: <Code2 size={14} />,
+          icon: <RustIcon size={30} />,
           color: "hover:text-orange-500",
           onClick: () => addBlock(index, "code", "rust"),
         },
         {
           label: "React/TS",
-          icon: <Boxes size={14} />,
+          icon: <ReactIcon size={24} />,
           color: "hover:text-cyan-400",
           onClick: () => addBlock(index, "code", "typescript"),
         },
         {
           label: "Python",
-          icon: <Pi size={14} />,
-          color: "hover:text-indigo-500",
+          icon: <PythonIcon size={24} />,
+          color: "hover:text-indigo-400",
           onClick: () => addBlock(index, "code", "python"),
         },
         {
           label: "Go",
-          icon: <FastForward size={14} />,
+          icon: <GoIcon size={30} />,
           color: "hover:text-blue-300",
           onClick: () => addBlock(index, "code", "go"),
         },

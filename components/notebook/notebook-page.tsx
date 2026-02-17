@@ -23,6 +23,7 @@ import type { TeamRole } from "@/lib/types/team-types";
 import { InlineTOC } from "../inline-toc";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { ScrollProgress } from "../ui/scroll-progress";
 import { CollabChat } from "./collaboration/chat";
 import { LiveCursors } from "./collaboration/live-cursors";
 import { useNotebook } from "./notebook-context";
@@ -281,6 +282,7 @@ export default function RustInteractivePage({
       </Reorder.Group>
       <aside className="hidden xl:block w-70 print:hidden">
         <div className="sticky top-24">
+          <ScrollProgress className="top-0.5" />
           <InlineTOC blocks={blocks} />
         </div>
       </aside>
