@@ -3,7 +3,7 @@
 import { Check, FileText, Pencil, Plus, RotateCw } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import type { NotebookMeta } from "@/lib/types";
 import { DeletePageDialog } from "../delete-page-dialog";
@@ -33,6 +33,12 @@ export function UserSidebar() {
     }
     setEditingId(null);
   };
+
+  useEffect(() => {
+    if (user) {
+      refreshPages();
+    }
+  }, [user]);
 
   if (!user) {
     return null;
