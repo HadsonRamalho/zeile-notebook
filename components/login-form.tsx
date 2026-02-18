@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -170,12 +171,12 @@ export function LoginForm({
                     <FormItem>
                       <div className="flex items-center">
                         <FormLabel>{t("password_label")}</FormLabel>
-                        <a
-                          href="/"
+                        <Link
+                          href="/forgot-password"
                           className="ml-auto text-sm underline-offset-4 hover:underline"
                         >
                           {t("forgot_password")}
-                        </a>
+                        </Link>
                       </div>
                       <FormControl>
                         <Input

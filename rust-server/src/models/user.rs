@@ -137,6 +137,24 @@ impl Sanitize for UpdateUser {
     }
 }
 
+#[derive(Validate, Serialize, Deserialize)]
+pub struct UserEmail {
+    #[validate(email)]
+    pub email: String,
+}
+
+impl Sanitize for UserEmail {
+    fn sanitize(&mut self) {
+        self.email = self.email.trim().to_lowercase();
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ResetPasswordPayload {
+    pub token: String,
+    pub new_password: String,
+}
+
 pub async fn register_user(conn: &mut AsyncPgConnection, user: &NewUser) -> Result<User, String> {
     match diesel::insert_into(users)
         .values(user)

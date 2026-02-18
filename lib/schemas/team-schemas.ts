@@ -1,6 +1,5 @@
 import z from "zod";
-
-type Translator = (key: string) => string;
+import type { Translator } from "./translator";
 
 export const getTeamFormSchema = (t: Translator) =>
   z.object({

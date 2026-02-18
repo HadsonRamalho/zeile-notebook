@@ -288,6 +288,37 @@
     "empty_state_title": "Nenhum notebook encontrado",
     "empty_state_description": "Ainda não há notebooks públicos disponíveis na plataforma. Quando a comunidade compartilhar algo, aparecerá aqui."
   },
+  "forgot_password": {
+    "title": "Recuperar Conta",
+    "description": "Insira seu email para receber o link de redefinição.",
+    "email_label": "Email",
+    "email_placeholder": "Seu email",
+    "submit_button": "Enviar Instruções",
+    "success_toast": "Instruções enviadas para seu email.",
+    "success_message": "Verifique sua caixa de entrada. Enviamos um link seguro para a redefinição da sua senha.",
+    "back_to_login": "Voltar para o login",
+    "errors": {
+      "invalid_email": "Insira um email válido."
+    }
+  },
+  "reset_password": {
+    "title": "Nova Senha",
+    "description": "Crie uma nova credencial segura para sua conta.",
+    "new_password_label": "Nova senha",
+    "new_password_placeholder": "Nova senha",
+    "confirm_password_label": "Confirme a nova senha",
+    "confirm_password_placeholder": "Confirme a nova senha",
+    "submit_button": "Redefinir Senha",
+    "success_toast": "Senha atualizada com sucesso.",
+    "request_new_link": "Solicitar novo link",
+    "errors": {
+      "missing_token": "Identificador de redefinição ausente.",
+      "invalid_link_title": "Link Inválido ou Expirado",
+      "invalid_link_desc": "O link de redefinição de senha não é mais válido. Por favor, solicite um novo.",
+      "min_length": "A senha deve ter no mínimo 8 caracteres.",
+      "password_mismatch": "As senhas não coincidem."
+    }
+  },
   "toc": {
     "title": "Nesta página"
   }

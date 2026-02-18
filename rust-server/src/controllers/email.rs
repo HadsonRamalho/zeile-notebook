@@ -177,3 +177,70 @@ pub async fn send_team_invitation_email(
         Err(_) => Err(ApiError::SendingEmail),
     }
 }
+
+pub async fn send_password_reset_email(
+    user: &User,
+    reset_link: &str,
+) -> Result<StatusCode, ApiError> {
+    let credentials = match get_email_credentials() {
+        Ok(c) => c,
+        Err(_) => return Err(ApiError::SendingEmail),
+    };
+
+    let from_email = credentials.0.clone();
+    let smtp_transport = get_smtp_data(credentials);
+
+    let email = Message::builder()
+        .from(Mailbox { name: Some("Zeile Notebook".to_string()), email: Address::from_str(&from_email).unwrap() })
+        .to(Mailbox::from_str(&user.email).unwrap())
+        .subject("Zeile Notebook | Redefinição de Senha")
+        .header(ContentType::parse("text/html").unwrap())
+        .body(format!(
+            r#"
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f5; color: #27272a; }}
+                    .wrapper {{ max-width: 600px; margin: 0 auto; }}
+                    .container {{ padding: 32px; border: 1px solid #e4e4e7; border-radius: 8px; background-color: #ffffff; }}
+                    .logo {{ font-size: 20px; font-weight: 800; color: #10b981; margin-bottom: 24px; text-align: center; }}
+                    .header {{ font-size: 22px; font-weight: 600; color: #18181b; margin-bottom: 16px; text-align: center; }}
+                    .content {{ font-size: 15px; line-height: 1.6; color: #3f3f46; margin-bottom: 24px; }}
+                    .highlight {{ font-weight: 600; color: #18181b; }}
+                    .button-container {{ text-align: center; margin: 32px 0; }}
+                    .button {{ background-color: #10b981; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; }}
+                </style>
+            </head>
+            <body>
+                <div class="wrapper">
+                    <div class="container">
+                        <div class="logo">Zeile Notebook</div>
+                        <div class="header">Redefinição de Senha</div>
+                        <div class="content">
+                            Olá, <span class="highlight">{nome}</span>.
+                            <br><br>
+                            Recebemos uma solicitação para redefinir a senha da sua conta.
+                        </div>
+                        <div class="button-container">
+                            <a href="{link}" class="button">Redefinir Senha</a>
+                        </div>
+                        <div class="content" style="font-size: 14px;">
+                            Se você não solicitou esta alteração, ignore esta mensagem. O link expirará em breve.
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            "#,
+            nome = &user.name,
+            link = reset_link,
+        ))
+        .unwrap();
+
+    match smtp_transport.send(&email) {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(_) => Err(ApiError::SendingEmail),
+    }
+}

@@ -294,6 +294,37 @@
     "empty_state_title": "No notebooks found",
     "empty_state_description": "There are no public notebooks available on the platform yet. When the community shares something, it will appear here."
   },
+  "forgot_password": {
+    "title": "Recover Account",
+    "description": "Enter your email to receive the reset link.",
+    "email_label": "Email",
+    "email_placeholder": "Your email",
+    "submit_button": "Send Instructions",
+    "success_toast": "Instructions sent to your email.",
+    "success_message": "Check your inbox. We have sent a secure link to reset your password.",
+    "back_to_login": "Back to login",
+    "errors": {
+      "invalid_email": "Enter a valid email address."
+    }
+  },
+  "reset_password": {
+    "title": "New Password",
+    "description": "Create a new secure credential for your account.",
+    "new_password_label": "New password",
+    "new_password_placeholder": "New password",
+    "confirm_password_label": "Confirm new password",
+    "confirm_password_placeholder": "Confirm new password",
+    "submit_button": "Reset Password",
+    "success_toast": "Password updated successfully.",
+    "request_new_link": "Request new link",
+    "errors": {
+      "missing_token": "Missing reset identifier.",
+      "invalid_link_title": "Invalid or Expired Link",
+      "invalid_link_desc": "The password reset link is no longer valid. Please request a new one.",
+      "min_length": "Password must be at least 8 characters long.",
+      "password_mismatch": "Passwords do not match."
+    }
+  },
   "toc": {
     "title": "On this page"
   }

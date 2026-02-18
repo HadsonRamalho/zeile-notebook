@@ -1,4 +1,5 @@
 import z from "zod";
+import type { Translator } from "./translator";
 
 export const loginSchema = z.object({
   email: z.email("Digite um e-mail válido"),
@@ -16,3 +17,19 @@ export const signupSchema = z
     message: "As senhas não coincidem",
     path: ["confirmPassword"],
   });
+
+export const getRequestResetSchema = (t: Translator) =>
+  z.object({
+    email: z.email(t("errors.invalid_email")),
+  });
+
+export const getExecuteResetSchema = (t: Translator) =>
+  z
+    .object({
+      password: z.string().min(8, t("errors.min_length")),
+      confirmPassword: z.string().min(8, t("errors.min_length")),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("errors.password_mismatch"),
+      path: ["confirmPassword"],
+    });

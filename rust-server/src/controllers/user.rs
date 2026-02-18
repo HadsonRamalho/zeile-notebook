@@ -12,6 +12,7 @@ use validator::Validate;
 
 use crate::{
     controllers::{
+        email::send_password_reset_email,
         jwt::{extract_claims_from_header, generate_jwt},
         utils::{Sanitize, get_conn, password_hash},
     },
@@ -21,7 +22,8 @@ use crate::{
         state::AppState,
         team::TeamRole,
         user::{
-            AuthProvider, LoginUser, NewUser, UpdateUser, UpdateUserPassword, User, UserAuthInfo,
+            AuthProvider, LoginUser, NewUser, ResetPasswordPayload, UpdateUser, UpdateUserPassword,
+            User, UserAuthInfo, UserEmail,
         },
     },
 };
@@ -290,4 +292,56 @@ pub async fn api_get_user_notebook_permissions(
     let permissions = get_user_notebook_permissions(&state.pool, &notebook_id, id).await?;
 
     Ok(permissions)
+}
+
+pub async fn api_request_password_reset(
+    State(state): State<Arc<AppState>>,
+    Json(input): Json<UserEmail>,
+) -> Result<StatusCode, ApiError> {
+    let mut email = input;
+    email.sanitize();
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let user = match models::user::find_user_by_email(conn, &email.email).await {
+        Ok(u) => u,
+        Err(_) => return Ok(StatusCode::OK),
+    };
+
+    if user.primary_provider != AuthProvider::Email {
+        return Err(ApiError::WrongProvider(format!(
+            "{:?}",
+            user.primary_provider
+        )));
+    }
+
+    let reset_token = crate::controllers::jwt::generate_reset_token(user.id)?;
+    let frontend_url = crate::controllers::utils::get_frontend_url_from_env()
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+    let reset_link = format!("{}/reset-password?token={}", frontend_url, reset_token);
+
+    send_password_reset_email(&user, &reset_link).await?;
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn api_execute_password_reset(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<ResetPasswordPayload>,
+) -> Result<StatusCode, ApiError> {
+    let user_id = crate::controllers::jwt::verify_reset_token(&payload.token)?;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let hashed_password = crate::controllers::utils::password_hash(&payload.new_password);
+
+    match models::user::update_user_password(conn, &user_id, hashed_password).await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => Err(e),
+    }
 }

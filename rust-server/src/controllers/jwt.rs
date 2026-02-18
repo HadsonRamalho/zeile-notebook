@@ -5,8 +5,15 @@ use axum::{body::Body, extract::Request, middleware::Next, response::Response};
 use dotenvy::dotenv;
 use hyper::{HeaderMap, StatusCode};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode};
+use serde::{Deserialize, Serialize};
 
 const JWT_EXP_HOURS: i64 = 24 * 7;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResetClaims {
+    pub sub: uuid::Uuid,
+    pub exp: usize,
+}
 
 pub async fn jwt_auth(req: Request<Body>, next: Next) -> Result<Response, ApiError> {
     let _ = extract_claims_from_header(req.headers()).await?;
@@ -144,4 +151,45 @@ pub async fn extract_claims_from_ws_headers(
     validate_claims(&decoded.claims).await?;
 
     Ok((token, decoded.claims))
+}
+
+pub fn generate_reset_token(user_id: uuid::Uuid) -> Result<String, ApiError> {
+    let expiration = chrono::Utc::now()
+        .checked_add_signed(chrono::Duration::hours(1))
+        .expect("Invalid timestamp")
+        .timestamp() as usize;
+
+    let claims = ResetClaims {
+        sub: user_id,
+        exp: expiration,
+    };
+
+    let secret = get_jwt_secret_from_env()?;
+
+    match jsonwebtoken::encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    ) {
+        Ok(token) => Ok(token),
+        Err(e) => Err(ApiError::CreateToken(e.to_string())),
+    }
+}
+
+pub fn verify_reset_token(token: &str) -> Result<uuid::Uuid, ApiError> {
+    let secret = get_jwt_secret_from_env()?;
+
+    let decoded = decode::<ResetClaims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::new(Algorithm::HS256),
+    )
+    .map_err(|_| ApiError::InvalidAuthorizationToken)?;
+
+    let now = chrono::Utc::now().timestamp() as usize;
+    if decoded.claims.exp < now {
+        return Err(ApiError::InvalidAuthorizationToken);
+    }
+
+    Ok(decoded.claims.sub)
 }
