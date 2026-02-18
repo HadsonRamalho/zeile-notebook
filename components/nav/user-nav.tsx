@@ -1,6 +1,12 @@
 "use client";
 
-import { LogOut, Settings, User, User as UserIcon } from "lucide-react";
+import {
+  LogOut,
+  Settings,
+  TableColumnsSplit,
+  User,
+  User as UserIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -71,6 +77,14 @@ export function UserNav() {
               <span>{t("nav.profile")}</span>
             </Link>
           </DropdownMenuItem>
+          {user.role === "Admin" && (
+            <DropdownMenuItem asChild>
+              <Link href="/admin">
+                <TableColumnsSplit className="mr-2 h-4 w-4" />
+                <span>Admin</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem asChild>
             <Link href="/settings">
               <Settings className="mr-2 h-4 w-4" />

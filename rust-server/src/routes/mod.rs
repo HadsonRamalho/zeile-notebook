@@ -2,6 +2,7 @@ use crate::controllers::sync::{PresenceRegistry, SyncRegistry};
 use crate::controllers::utils::{get_database_url_from_env, get_frontend_url_from_env};
 use crate::models::error::ApiError;
 use crate::models::state::AppState;
+use crate::routes::admin::admin_routes;
 use crate::routes::notebook::notebook_routes;
 use crate::routes::run_rust::run_rust_routes;
 use crate::routes::team::team_routes;
@@ -30,6 +31,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use utoipa_axum::router::OpenApiRouter;
 
+pub mod admin;
 pub mod docs;
 pub mod notebook;
 pub mod run_rust;
@@ -92,6 +94,7 @@ pub async fn init_routes() -> Router {
             .nest("/api/user", user_routes().await.into())
             .nest("/api/notebook", notebook_routes().await.into())
             .nest("/api/team", team_routes().await.into())
+            .nest("/api/admin", admin_routes().await.into())
             //.merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", get_api_docs()))
             .with_state(app_state)
             .layer(DefaultBodyLimit::max(1024 * 1024 * 100))
