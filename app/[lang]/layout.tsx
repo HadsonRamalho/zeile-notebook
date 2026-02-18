@@ -5,6 +5,7 @@ import "../global.css";
 import Script from "next/script";
 import { NextIntlClientProvider, useMessages } from "next-intl";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
 import { Provider } from "../search-provider";
 
@@ -27,10 +28,12 @@ export default function Layout({ children }: LayoutProps<"/[lang]">) {
     <html lang="en" className={inter.className} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen">
         <NextIntlClientProvider messages={messages}>
-          <AuthProvider>
-            <Toaster richColors={true} />
-            <Provider>{children}</Provider>
-          </AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AuthProvider>
+              <Toaster richColors={true} />
+              <Provider>{children}</Provider>
+            </AuthProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
       <Script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js" />

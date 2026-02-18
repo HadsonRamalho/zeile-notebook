@@ -196,6 +196,7 @@ export function DocsLayout({
                   (themeSwitch.component ?? (
                     <ThemeToggle
                       className="ms-auto p-0"
+                      location="footer"
                       mode={themeSwitch.mode}
                     />
                   ))}

@@ -2,8 +2,9 @@
 import { cva } from "class-variance-authority";
 import { Airplay, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { ComponentProps, useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { cn } from "../../lib/cn";
+import { useThemeToggle } from "../ui/skiper-ui/skiper26";
 
 const itemVariants = cva(
   "size-6.5 rounded-full p-1.5 text-fd-muted-foreground",
@@ -26,11 +27,18 @@ const full = [
 export function ThemeToggle({
   className,
   mode = "light-dark",
+  location = "default",
   ...props
 }: ComponentProps<"div"> & {
   mode?: "light-dark" | "light-dark-system";
+  location?: "default" | "footer";
 }) {
-  const { setTheme, theme, resolvedTheme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
+  const themeStart = location === "default" ? "top-right" : "bottom-left";
+  const { toggleTheme } = useThemeToggle({
+    variant: "circle",
+    start: themeStart,
+  });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -49,7 +57,9 @@ export function ThemeToggle({
       <button
         className={container}
         aria-label={`Toggle Theme`}
-        onClick={() => setTheme(value === "light" ? "dark" : "light")}
+        onClick={() => {
+          toggleTheme();
+        }}
         data-theme-toggle=""
       >
         {full.map(([key, Icon]) => {
@@ -76,7 +86,7 @@ export function ThemeToggle({
           key={key}
           aria-label={key}
           className={cn(itemVariants({ active: value === key }))}
-          onClick={() => setTheme(key)}
+          onClick={() => toggleTheme()}
         >
           <Icon className="size-full" fill="currentColor" />
         </button>
