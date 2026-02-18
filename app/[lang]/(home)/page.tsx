@@ -63,15 +63,6 @@ export default function HomePage() {
           <RetroGrid className="opacity-40" />
         </section>
 
-        <section className="hidden border-t bg-muted/20 py-24">
-          <div className="mx-auto max-w-7xl px-6">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-center">
-              {t("features.title")}
-            </h2>
-            <VideoShowcase />
-          </div>
-        </section>
-
         <section className="border-t bg-muted/20 py-24">
           <div className="mx-auto max-w-7xl px-6">
             <div className="mb-16 text-center">
@@ -106,6 +97,16 @@ export default function HomePage() {
               />
             </div>
           </div>
+
+          <section className="py-10">
+            <div className="mx-auto">
+              <h2 className="hidden text-3xl font-bold tracking-tight sm:text-4xl text-center">
+                {t("features.title")}
+              </h2>
+              <VideoShowcase />
+            </div>
+          </section>
+
           <LanguageShowcaseGrid />
           <HomeMarquee reverse={false} />
           <HomeMarquee reverse={true} />
@@ -186,7 +187,7 @@ const shortcuts = [
 
 function VideoShowcase() {
   return (
-    <section className="relative z-20 mx-auto mt-10 w-full max-w-6xl px-6">
+    <section className="relative z-20 mt-10 w-full px-4 md:mx-auto md:max-w-7xl md:px-6">
       <div className="relative overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
         <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
           <div className="flex gap-1.5">
@@ -199,17 +200,43 @@ function VideoShowcase() {
           </div>
         </div>
 
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full object-cover"
-          poster="/showcase-poster.jpg"
-        >
-          <source src="/showcase.mp4" type="video/mp4" />
-          Seu navegador não suporta reprodução de vídeo.
-        </video>
+        <div className="flex w-full flex-col md:flex-row bg-black">
+          <div className="relative w-full md:w-1/2 border-b md:border-b-0 md:border-r border-white/10">
+            <div style={{ paddingBottom: "100%", position: "relative" }}>
+              <iframe
+                src="https://player.vimeo.com/video/1166077256?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1&background=1"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                }}
+                title="Zeile Demo Left"
+              />
+            </div>
+          </div>
+
+          <div className="relative w-full md:w-1/2">
+            <div style={{ paddingBottom: "100%", position: "relative" }}>
+              <iframe
+                src="https://player.vimeo.com/video/1166078982?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1&background=1"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                }}
+                title="Zeile Demo Right"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
