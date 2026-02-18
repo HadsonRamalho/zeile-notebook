@@ -36,15 +36,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/auth-context";
 import {
-  type AdminNotebookView,
-  type AdminSystemStats,
-  type AdminTeamView,
-  type AdminUserView,
   fetchAdminNotebooks,
   fetchAdminStats,
   fetchAdminTeams,
   fetchAdminUsers,
 } from "@/lib/api/admin-service";
+import type {
+  AdminNotebookView,
+  AdminSystemStats,
+  AdminTeamView,
+  AdminUserView,
+} from "@/lib/types/admin-types";
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
