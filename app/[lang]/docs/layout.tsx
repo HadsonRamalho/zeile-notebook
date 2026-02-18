@@ -35,7 +35,7 @@ export default function Layout({ children }: LayoutProps<"/[lang]/docs">) {
           <NotebookProvider pageId={null}>
             <DocsLayout
               tree={filteredTree}
-              {...baseOptions()}
+              {...baseOptions({ variant: "default" })}
               sidebar={{
                 defaultOpenLevel: 1,
                 banner: (

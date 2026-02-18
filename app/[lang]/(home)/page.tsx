@@ -15,7 +15,7 @@ export default function HomePage() {
   const t = useTranslations("homepage");
 
   return (
-    <HomeLayout {...baseOptions()}>
+    <HomeLayout {...baseOptions({ variant: "home" })}>
       <main className="relative overflow-hidden bg-background">
         <section className="relative flex min-h-[80vh] w-full flex-col items-center justify-center overflow-hidden px-6 py-24 text-center md:py-32">
           <div className="z-10 flex flex-col items-center justify-center gap-6 max-w-4xl">
