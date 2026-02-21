@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { CppIcon } from "@/components/icons/cpp-icon";
 import { GithubIcon } from "@/components/icons/github-icon";
 import { GoIcon } from "@/components/icons/go-icon";
 import { PythonIcon } from "@/components/icons/python-icon";
@@ -104,8 +105,8 @@ export function ReorderTools({
         },
         {
           label: "C++",
-          icon: <CpuIcon size={30} />,
-          color: "hover:text-blue-600",
+          icon: <CppIcon size={30} />,
+          color: "hover:text-blue-500",
           onClick: () => addBlock(index, "code", "cpp"),
         },
       ],
