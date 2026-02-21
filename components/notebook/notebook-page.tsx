@@ -297,6 +297,7 @@ function getInitialCode(language: Language): string {
       "export default function App() {\n  return <h1>Olá React!</h1>\n}",
     python: 'import math \nprint(f"O valor de PI é {math.pi}")',
     go: 'package main\nimport "fmt"\nfunc main() {\n\tfmt.Println("Hello, Go!")\n}',
+    cpp: '#include <iostream>\n\nusing namespace std;\n\nint main(){\n\tcout << "Olá!" << endl;\n\treturn 0;\n}',
   };
 
   return templates[language] ?? templates.python;
@@ -314,6 +315,7 @@ function getBlockTitle(
     rust: "file.rs",
     python: "script.py",
     go: "main.go",
+    cpp: "main.cpp",
   };
 
   return titles[language] ?? "Arquivo de Código";

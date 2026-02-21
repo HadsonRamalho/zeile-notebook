@@ -97,3 +97,42 @@ pub fn verify_go_code(code: &str) -> Result<(), String> {
 
     Ok(())
 }
+
+pub fn verify_cpp_code(codigo: &str) -> Result<(), String> {
+    let bad_includes = [
+        "<unistd.h>",
+        "<sys/socket.h>",
+        "<sys/types.h>",
+        "<arpa/inet.h>",
+        "<netinet/in.h>",
+        "<netdb.h>",
+        "<windows.h>",
+        "<winsock2.h>",
+        "<thread>",
+        "<mutex>",
+    ];
+
+    for bad in &bad_includes {
+        if codigo.contains(bad) {
+            return Err(format!(
+                "Segurança: O cabeçalho '{}' não é permitido neste ambiente.",
+                bad
+            ));
+        }
+    }
+
+    let bad_functions = [
+        "system(", "popen(", "fork(", "exec(", "kill(", "socket(", "connect(",
+    ];
+
+    for bad in &bad_functions {
+        if codigo.contains(bad) {
+            return Err(format!(
+                "Segurança: A função '{}' não é permitida neste ambiente.",
+                bad
+            ));
+        }
+    }
+
+    Ok(())
+}

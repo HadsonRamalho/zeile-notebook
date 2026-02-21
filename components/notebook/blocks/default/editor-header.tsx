@@ -27,6 +27,10 @@ const getTsxFileName = () => {
   return "App.tsx";
 };
 
+const getCppFileName = () => {
+  return "main.cpp";
+};
+
 interface RenderFileNameProps {
   name: string;
   pageBlocks: Block[];
@@ -80,14 +84,24 @@ export function EditorHeader({
   loadBabel,
   showPreview,
 }: EditorHeaderProps) {
-  const fileName =
-    block.language === "rust"
-      ? getRustFileName(block.content)
-      : block.language === "python"
-        ? getPythonFileName(block.content)
-        : block.language === "go"
-          ? getGoFileName()
-          : getTsxFileName();
+  let fileName = getTsxFileName();
+  switch (block.language) {
+    case "cpp":
+      fileName = getCppFileName();
+      break;
+    case "go":
+      fileName = getGoFileName();
+      break;
+    case "python":
+      fileName = getPythonFileName(block.content);
+      break;
+    case "rust":
+      fileName = getRustFileName(block.content);
+      break;
+    case "typescript":
+      fileName = getTsxFileName();
+      break;
+  }
 
   return (
     <div className="w-full grid p-2 grid-cols-1 md:flex">

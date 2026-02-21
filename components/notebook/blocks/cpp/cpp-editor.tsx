@@ -8,19 +8,19 @@ import { EditorConsole } from "../default/editor-console";
 import { EditorHeader } from "../default/editor-header";
 import { RunButton } from "../default/run-button";
 
-interface GoNotebookProps {
+interface CppNotebookProps {
   block: Block;
   onCodeChange: (newCode: string) => void;
   isDragging?: boolean;
   sessionId: string;
 }
 
-export function GoEditor({
+export function CppEditor({
   block,
   onCodeChange,
   sessionId,
   isDragging = false,
-}: GoNotebookProps) {
+}: CppNotebookProps) {
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState<RunStatus>("idle");
@@ -32,7 +32,7 @@ export function GoEditor({
       setStatus,
       code: block.content,
       sessionId,
-      language: "go",
+      language: "cpp",
     });
   }
 
@@ -72,7 +72,7 @@ export function GoEditor({
         <div className="relative group bg-card">
           <BlockEditor
             content={block.content}
-            language="go"
+            language="cpp"
             onChange={handleCodeChange}
             readOnly={isDragging}
             minHeight="280px"

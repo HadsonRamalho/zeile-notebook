@@ -5,6 +5,7 @@ import { GripVertical, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 import type { Block, BlockMetadata } from "@/lib/types";
 import { ComponentRenderer } from "../blocks/components/components";
+import { CppEditor } from "../blocks/cpp/cpp-editor";
 import { GoEditor } from "../blocks/go/go-editor";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
@@ -112,6 +113,12 @@ export function ReorderItem({
             isDragging={isDragging}
             sessionId={sessionId}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
+          />
+        ) : block.language === "cpp" ? (
+          <CppEditor
+            block={block}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            sessionId={sessionId}
           />
         ) : (
           <RustEditor

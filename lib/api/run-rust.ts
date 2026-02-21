@@ -1,83 +1,48 @@
-import type { RunStatus } from "../types";
+import type { Language, RunStatus } from "../types";
 import { api } from "./base";
 
-interface RunRustProps {
+interface RunCodeProps {
   setOutput: (o: string) => void;
   setStatus: (s: RunStatus) => void;
   setIsRunning: (r: boolean) => void;
   code: string;
   sessionId: string;
+  language: Language;
 }
 
-interface RustApiResponse {
+interface RunCodeApiResponse {
   stdout?: string;
   stderr?: string;
 }
 
-export async function RunRust({
-  setOutput,
-  setIsRunning,
-  setStatus,
-  code,
-  sessionId,
-}: RunRustProps) {
-  setIsRunning(true);
-  setStatus("idle");
-  setOutput("");
-  try {
-    const data: RustApiResponse = await api.post("/run", {
-      code,
-      session_id: sessionId,
-    });
-    if (data.stderr) {
-      setStatus("error");
-      setOutput(data.stderr);
-
-      if (data.stderr.includes("file not found for module")) {
-        setOutput(
-          "Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))\n\n" +
-            data.stderr,
-        );
-        return;
-      }
-
-      if (
-        data.stderr.includes(
-          "Finished `dev` profile [unoptimized + debuginfo]",
-        ) ||
-        data.stderr.includes("Finished dev [unoptimized + debuginfo]")
-      ) {
-        setOutput("Bloco compilado!");
-        setStatus("success");
-        return;
-      }
-      return;
-    }
-
-    setOutput(data.stdout || "Código executado com sucesso.");
-    setStatus("success");
-  } catch (err) {
-    console.error(err);
-    setOutput("Erro: Não foi possível conectar ao servidor Rust.");
-    setStatus("error");
-  } finally {
-    setIsRunning(false);
-  }
+interface FormatCombinedOutputType {
+  stdout?: string;
+  stderr?: string;
 }
 
-export async function RunGo({
+function formatCombinedOutput({ stdout, stderr }: FormatCombinedOutputType) {
+  if (stdout && stderr) {
+    return `${stdout}\n\n--- Erro de Execução ---\n${stderr}`;
+  }
+  return stdout || stderr || "Código executado com sucesso.";
+}
+
+export async function RunCode({
   setOutput,
   setIsRunning,
   setStatus,
   code,
   sessionId,
-}: RunRustProps) {
+  language,
+}: RunCodeProps) {
   setIsRunning(true);
   setStatus("idle");
   setOutput("");
 
   try {
-    const data: RustApiResponse = await api.post("/run/go", {
+    const endpoint = language === "rust" ? "/run" : `/run/${language}`;
+
+    const data: RunCodeApiResponse = await api.post(endpoint, {
       code,
       session_id: sessionId,
     });
@@ -85,32 +50,59 @@ export async function RunGo({
     const stderr = data.stderr || "";
     const stdout = data.stdout || "";
 
-    const isCompileOrSecError =
-      stderr.includes("Erro de Compilação Go:") ||
-      stderr.includes("Falha ao invocar") ||
-      stderr.includes("Segurança:");
+    if (language === "rust") {
+      if (stderr) {
+        if (stderr.includes("file not found for module")) {
+          setStatus("error");
+          setOutput(
+            `Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))\n\n${stderr}`,
+          );
+          return;
+        }
 
-    if (isCompileOrSecError) {
-      setStatus("error");
-      setOutput(stderr);
+        if (
+          stderr.includes("Finished `dev` profile [unoptimized + debuginfo]") ||
+          stderr.includes("Finished dev [unoptimized + debuginfo]")
+        ) {
+          setStatus("success");
+          setOutput("Bloco compilado!");
+          return;
+        }
+
+        setStatus("error");
+        setOutput(stderr);
+        return;
+      }
+
+      setStatus("success");
+      setOutput(stdout || "Código executado com sucesso.");
       return;
     }
 
-    let finalOutput = stdout;
+    if (language === "go" || language === "cpp") {
+      const langName = language === "go" ? "Go" : "C++";
+      const isCompileOrSecError =
+        stderr.includes(`Erro de Compilação ${langName}:`) ||
+        stderr.includes("Falha ao invocar") ||
+        stderr.includes("Segurança:");
 
-    if (stderr) {
-      finalOutput += finalOutput
-        ? `\n\n--- Erro de Execução ---\n${stderr}`
-        : stderr;
+      if (isCompileOrSecError) {
+        setStatus("error");
+        setOutput(stderr);
+        return;
+      }
+
+      setStatus(stderr ? "error" : "success");
+      setOutput(formatCombinedOutput({ stderr, stdout }));
+      return;
     }
 
-    setOutput(finalOutput || "Código executado com sucesso.");
-
     setStatus(stderr ? "error" : "success");
+    setOutput(formatCombinedOutput({ stderr, stdout }));
   } catch (err) {
     console.error(err);
-    setOutput("Erro: Não foi possível se comunicar com o servidor.");
     setStatus("error");
+    setOutput("Erro: Não foi possível se comunicar com o servidor.");
   } finally {
     setIsRunning(false);
   }

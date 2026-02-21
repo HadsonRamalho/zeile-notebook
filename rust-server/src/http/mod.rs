@@ -4,7 +4,9 @@ use axum::http::HeaderMap;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::Duration;
 use tokio::process::Command;
+use tokio::time::timeout;
 use tracing::error;
 use tracing::info;
 
@@ -15,6 +17,7 @@ use crate::file::register_log;
 use crate::file::run_safe_bin;
 use crate::file::setup_user_env;
 use crate::sec::verify_code;
+use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
 
 pub async fn verify_request(
@@ -315,5 +318,101 @@ pub async fn verify_go_request(
             stdout: "".into(),
             stderr: format!("Falha ao invocar compilador Go: {}", e),
         }),
+    }
+}
+
+pub async fn verify_cpp_request(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(payload): Json<CodeRequest>,
+) -> Json<CodeResponse> {
+    let addr = addr.ip();
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or(&addr.to_string())
+        .to_string();
+
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("Unknown Agent")
+        .to_string();
+
+    info!("Nova requisição C++ de IP: {}", ip);
+
+    let safe_session = payload
+        .session_id
+        .replace(|c: char| !c.is_alphanumeric(), "_");
+
+    if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
+        error!("Falha no log de arquivo: {}", e);
+    }
+
+    if let Err(msg) = verify_cpp_code(&payload.code) {
+        return Json(CodeResponse {
+            stdout: "".into(),
+            stderr: format!("Erro ao salvar arquivo C++: {}", msg),
+        });
+    }
+
+    let bin_name = if cfg!(windows) {
+        format!("app_{}.exe", safe_session)
+    } else {
+        format!("app_{}", safe_session)
+    };
+
+    let user_dir = format!("files/cpp/{}", safe_session);
+    let _ = tokio::fs::create_dir_all(&user_dir).await;
+
+    let file_path = Path::new(&user_dir).join("main.cpp");
+    let bin_path = Path::new(&user_dir).join(&bin_name);
+
+    if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
+        return Json(CodeResponse {
+            stdout: "".into(),
+            stderr: format!("Erro ao salvar arquivo C++: {}", e),
+        });
+    }
+
+    info!("Compilando C++...");
+
+    let compile_future = Command::new("clang++")
+        .current_dir(&user_dir)
+        .arg("-O2")
+        .arg("-Wall")
+        .arg("-std=c++20")
+        .arg("-o")
+        .arg(&bin_name)
+        .arg("main.cpp")
+        .output();
+
+    match timeout(Duration::from_secs(10), compile_future).await {
+        Ok(Ok(out)) => {
+            if out.status.success() {
+                let bin_path_str = bin_path.to_string_lossy().to_string();
+                let (stdout, stderr) = run_safe_bin(&bin_path_str).await;
+                Json(CodeResponse { stdout, stderr })
+            } else {
+                Json(CodeResponse {
+                    stdout: "".into(),
+                    stderr: format!(
+                        "Erro de Compilação C++:\n{}",
+                        String::from_utf8_lossy(&out.stderr)
+                    ),
+                })
+            }
+        }
+        Ok(Err(e)) => Json(CodeResponse {
+            stdout: "".into(),
+            stderr: format!("Falha ao invocar compilador C++: {}", e),
+        }),
+        Err(_) => {
+            let _ = tokio::fs::remove_file(&file_path).await;
+            Json(CodeResponse {
+                stdout: "".into(),
+                stderr: "Erro: Tempo limite de compilação excedido. O código causou um travamento no compilador.".into(),
+            })
+        }
     }
 }

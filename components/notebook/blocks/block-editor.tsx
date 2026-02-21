@@ -1,5 +1,6 @@
 "use client";
 
+import { cpp } from "@codemirror/lang-cpp";
 import { go } from "@codemirror/lang-go";
 import { javascript } from "@codemirror/lang-javascript";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -38,7 +39,7 @@ export const BlockEditor = React.memo(
     className,
     minHeight = "40px",
   }: BlockEditorProps) => {
-    const { theme } = useTheme();
+    const { resolvedTheme } = useTheme();
     const editorRef = useRef<ReactCodeMirrorRef>(null);
 
     const localContentRef = useRef(content);
@@ -61,6 +62,8 @@ export const BlockEditor = React.memo(
           return python();
         case "go":
           return go();
+        case "cpp":
+          return cpp();
         default:
           return [];
       }
@@ -76,7 +79,8 @@ export const BlockEditor = React.memo(
         foldGutter: false,
         highlightActiveLine: false,
         indentOnInput: true,
-        autocompletion: false,
+        autocompletion: true,
+        tabSize: 4,
       }),
       [type],
     );
@@ -133,9 +137,10 @@ export const BlockEditor = React.memo(
         value={localContentRef.current}
         height="auto"
         minHeight={minHeight}
-        theme={theme === "dark" ? vscodeDark : vscodeLight}
+        theme={resolvedTheme === "dark" ? vscodeDark : vscodeLight}
         extensions={extensions}
         onBlur={onBlur}
+        autoFocus={true}
         onChange={handleChange}
         editable={!readOnly}
         basicSetup={basicSetup}
