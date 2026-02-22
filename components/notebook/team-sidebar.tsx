@@ -3,17 +3,17 @@
 import {
   ChevronDown,
   ChevronRight,
-  FileText,
   Plus,
   RotateCw,
   Settings,
   Users,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "../ui/button";
+import { PageSidebar } from "./page/page-sidebar";
 import { useTeamNotebookManager } from "./team/team-notebook-manager";
 
 interface TeamSidebarProps {
@@ -26,10 +26,11 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
 
-  const { teamPages, createTeamPage, refreshTeamPages } =
+  const { teamPages, createTeamPage, renameTeamPage, refreshTeamPages } =
     useTeamNotebookManager();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   if (!user) {
     return null;
@@ -89,34 +90,23 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
       </div>
 
       {isOpen && (
-        <div className="flex flex-col gap-1 pl-6 pr-1 mt-1">
+        <div className="flex flex-col gap-1 pl-2 mt-1">
           {pages.length === 0 ? (
             <span className="p-2 text-xs text-muted-foreground italic">
               {a("empty_notebooks")}
             </span>
           ) : (
-            pages.map((page) => {
-              const pageRoute = `/docs/${page.id}`;
-              const isActive = pathname === pageRoute;
-
-              return (
-                <Button
-                  key={page.id}
-                  onClick={() => router.push(pageRoute)}
-                  variant="ghost"
-                  className={`flex items-center justify-start gap-2 p-2 h-8 w-full ${
-                    isActive
-                      ? "bg-muted text-sidebar-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  <FileText className="shrink-0 size-4" />
-                  <span className="truncate max-w-35 text-xs">
-                    {page.title}
-                  </span>
-                </Button>
-              );
-            })
+            pages.map((page) => (
+              <div key={page.id}>
+                <PageSidebar
+                  editingId={editingId}
+                  setEditingId={setEditingId}
+                  page={page}
+                  renameTeamPage={renameTeamPage}
+                  teamId={team.id}
+                />
+              </div>
+            ))
           )}
         </div>
       )}

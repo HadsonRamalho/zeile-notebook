@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Box,
   ChevronLeft,
-  CpuIcon,
   IdCard,
   Info,
   Loader,
