@@ -27,8 +27,13 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
-  const { teamPages, createTeamPage, renameTeamPage, refreshTeamPages } =
-    useTeamNotebookManager();
+  const {
+    teamPages,
+    createTeamPage,
+    deleteTeamPage,
+    renameTeamPage,
+    refreshTeamPages,
+  } = useTeamNotebookManager();
 
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -104,6 +109,8 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
                   page={page}
                   renameTeamPage={renameTeamPage}
                   teamId={team.id}
+                  deleteTeamPage={deleteTeamPage}
+                  onDeleteTeamPage={refreshTeamPages}
                 />
               </div>
             ))

@@ -16,6 +16,8 @@ interface PageSidebarProps {
     newTitle: string,
   ) => Promise<void>;
   teamId?: string;
+  deleteTeamPage?: (teamId: string, pageId: string) => Promise<void>;
+  onDeleteTeamPage?: (teamId: string) => void;
 }
 
 export function PageSidebar({
@@ -25,6 +27,8 @@ export function PageSidebar({
   renamePage,
   renameTeamPage,
   teamId,
+  deleteTeamPage,
+  onDeleteTeamPage,
 }: PageSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -95,7 +99,13 @@ export function PageSidebar({
             >
               <Pencil size={12} />
             </button>
-            <DeletePageDialog pageId={page.id} pageTitle={page.title} />
+            <DeletePageDialog
+              pageId={page.id}
+              pageTitle={page.title}
+              teamId={teamId}
+              deleteTeamPage={deleteTeamPage}
+              onDeleteTeamPage={onDeleteTeamPage}
+            />
           </div>
         </div>
       )}
