@@ -2,7 +2,13 @@ import type { CalloutContainerProps } from "fumadocs-ui/components/callout";
 import type { BannerVariant } from "@/components/banner";
 
 export type BlockType = "text" | "code" | "component";
-export type Language = "rust" | "typescript" | "python" | "go" | "cpp";
+export type Language =
+  | "rust"
+  | "typescript"
+  | "python"
+  | "go"
+  | "cpp"
+  | "generic";
 export type RunStatus = "idle" | "success" | "error";
 export type TsMode = "simple" | "advanced";
 

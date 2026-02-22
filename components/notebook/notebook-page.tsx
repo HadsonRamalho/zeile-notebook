@@ -298,6 +298,7 @@ function getInitialCode(language: Language): string {
     python: 'import math \nprint(f"O valor de PI é {math.pi}")',
     go: 'package main\nimport "fmt"\nfunc main() {\n\tfmt.Println("Hello, Go!")\n}',
     cpp: '#include <iostream>\n\nusing namespace std;\n\nint main(){\n\tcout << "Olá!" << endl;\n\treturn 0;\n}',
+    generic: "",
   };
 
   return templates[language] ?? templates.python;
@@ -316,6 +317,7 @@ function getBlockTitle(
     python: "script.py",
     go: "main.go",
     cpp: "main.cpp",
+    generic: "Code",
   };
 
   return titles[language] ?? "Arquivo de Código";

@@ -3,9 +3,10 @@
 import { Reorder, useDragControls } from "framer-motion";
 import { GripVertical, Trash2 } from "lucide-react";
 import { useCallback } from "react";
-import type { Block, BlockMetadata } from "@/lib/types";
+import type { Block, BlockMetadata, Language } from "@/lib/types";
 import { ComponentRenderer } from "../blocks/components/components";
 import { CppEditor } from "../blocks/cpp/cpp-editor";
+import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
@@ -120,6 +121,40 @@ export function ReorderItem({
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
             sessionId={sessionId}
           />
+        ) : block.language === "generic" ? (
+          (() => {
+            let currentProps: Record<string, any> = {};
+            if (block.metadata?.type === "generic" && block.metadata.props) {
+              currentProps = block.metadata.props;
+            }
+
+            const selectedLanguage =
+              (currentProps.language as Language) || "typescript";
+
+            return (
+              <GenericBlockEditor
+                content={block.content}
+                type="code"
+                language={selectedLanguage}
+                onBlur={(): void => {}}
+                onChange={canWrite ? handleUpdateContent : () => {}}
+                onLanguageChange={
+                  canWrite
+                    ? (newLang) => {
+                        updateBlockMetadata(block.id, {
+                          type: "generic",
+                          props: {
+                            ...currentProps,
+                            language: newLang,
+                          },
+                        });
+                      }
+                    : undefined
+                }
+                readOnly={!canWrite}
+              />
+            );
+          })()
         ) : (
           <RustEditor
             block={block}
