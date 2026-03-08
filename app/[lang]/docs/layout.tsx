@@ -39,7 +39,7 @@ export default function Layout({ children }: LayoutProps<"/[lang]/docs">) {
               sidebar={{
                 defaultOpenLevel: 1,
                 banner: (
-                  <div>
+                  <div className="flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-10rem)] pb-4 pr-2">
                     <UserSidebar />
                     <TeamsSidebar />
                   </div>
