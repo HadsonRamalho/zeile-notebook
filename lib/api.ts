@@ -1,7 +1,6 @@
 import { getSharedPyodide } from "./pyodideStore";
 import type { Block } from "./types";
 
-
 export async function RunTsxInSandbox(block: Block, pageBlocks: Block[]) {
   if (typeof window === "undefined") {
     console.error("Window não foi definida");

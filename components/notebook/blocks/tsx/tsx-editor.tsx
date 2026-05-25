@@ -32,36 +32,22 @@ interface RenderPreviewProps {
 }
 
 function RenderPreview({ id, mode, sandboxUrl }: RenderPreviewProps) {
-  if (mode === "simple") {
-    return (
-      <div id={`preview-${id}`} className="bg-white overflow-hidden relative">
-        {sandboxUrl ? (
-          <iframe
-            title="TsxPreview"
-            src={sandboxUrl}
-            sandbox="allow-scripts"
-            className="w-full h-full border-none"
-          />
-        ) : (
-          <div className="p-4 text-gray-400 italic">
-            Clique em "Executar" para renderizar...
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (mode === "advanced") {
-    return (
-      <SandpackPreview
-        showNavigator={false}
-        showRestartButton={true}
-        showOpenNewtab={false}
-        showOpenInCodeSandbox={false}
-        className="h-100"
-      />
-    );
-  }
+  return (
+    <div id={`preview-${id}`} className="bg-white overflow-hidden relative">
+      {sandboxUrl ? (
+        <iframe
+          title="TsxPreview"
+          src={sandboxUrl}
+          sandbox="allow-scripts"
+          className="w-full h-full border-none"
+        />
+      ) : (
+        <div className="p-4 text-gray-400 italic">
+          Clique em "Executar" para renderizar...
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function TsxEditor({
@@ -72,7 +58,7 @@ export function TsxEditor({
   updateBlockAction,
 }: TsxEditorProps) {
   const [showPreview, setShowPreview] = useState(true);
-  const [mode, setMode] = useState<TsMode>("advanced");
+  const [mode, setMode] = useState<TsMode>("simple");
   const [sandboxUrl, setSandboxUrl] = useState<string | null>(null);
   const [babelReady, setBabelReady] = useState(false);
   const { theme } = useTheme();
@@ -163,7 +149,7 @@ export function TsxEditor({
               showTabs
               showLineNumbers
               showInlineErrors
-              showRunButton={mode === "advanced"}
+              showRunButton={false}
               className="h-100 text-[0.9rem]"
             />
             {showPreview && (
