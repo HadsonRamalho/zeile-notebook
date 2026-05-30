@@ -55,10 +55,8 @@ export function GoEditor({
             block={block}
             pageBlocks={[]}
             setBlocksAction={() => {}}
-            mode={"simple"}
             babelReady={false}
             handleRunSimple={() => {}}
-            setMode={() => {}}
             setShowPreview={() => {}}
             showPreview={false}
           />

@@ -55,10 +55,8 @@ export function RustEditor({
             block={block}
             pageBlocks={[]}
             setBlocksAction={() => {}}
-            mode={"simple"}
             babelReady={false}
             handleRunSimple={() => {}}
-            setMode={() => {}}
             setShowPreview={() => {}}
             showPreview={false}
           />
