@@ -21,7 +21,7 @@ export type ChatMessage = {
 
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
-    return "hsl(157, 76%, 35%)"
+    return "hsl(157, 76%, 35%)";
   }
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -31,7 +31,9 @@ const stringToColor = (str: string) => {
 };
 
 export function usePresence(pageId: string, currentUser: User | null) {
-  const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(new Map());
+  const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
+    new Map(),
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -43,7 +45,11 @@ export function usePresence(pageId: string, currentUser: User | null) {
 
   useEffect(() => {
     if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) return;
+      if (
+        wsRef.current.readyState === WebSocket.OPEN ||
+        wsRef.current.readyState === WebSocket.CONNECTING
+      )
+        return;
       wsRef.current.close();
     }
 
@@ -122,49 +128,58 @@ export function usePresence(pageId: string, currentUser: User | null) {
     }
   }, [currentUser]);
 
-  const sendChatMessage = useCallback((text: string) => {
-    if (!text.trim() || !currentUser?.id) return;
+  const sendChatMessage = useCallback(
+    (text: string) => {
+      if (!text.trim() || !currentUser?.id) return;
 
-    const msgId = crypto.randomUUID();
-    const newMsg: ChatMessage = {
-      id: msgId,
-      userId: currentUser.id,
-      name: currentUser.name || "Visitante",
-      text,
-      color: stringToColor(currentUser.name || currentUser.id),
-    };
+      const msgId = crypto.randomUUID();
+      const newMsg: ChatMessage = {
+        id: msgId,
+        userId: currentUser.id,
+        name: currentUser.name || "Visitante",
+        text,
+        color: stringToColor(currentUser.name || currentUser.id),
+      };
 
-    setMessages((prev) => [...prev, newMsg]);
-    setTimeout(() => {
-      setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
-    }, 6000);
+      setMessages((prev) => [...prev, newMsg]);
+      setTimeout(() => {
+        setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
+      }, 6000);
 
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "chat",
-          msgId,
-          userId: currentUser.id,
-          name: currentUser.name,
-          text,
-        })
-      );
-    }
-  }, [currentUser]);
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "chat",
+            msgId,
+            userId: currentUser.id,
+            name: currentUser.name,
+            text,
+          }),
+        );
+      }
+    },
+    [currentUser],
+  );
 
-  const updateCursor = useCallback((x: number, y: number) => {
-    myState.current.cursor = { x, y };
-    const now = Date.now();
-    if (now - lastSendTime.current > 50) {
+  const updateCursor = useCallback(
+    (x: number, y: number) => {
+      myState.current.cursor = { x, y };
+      const now = Date.now();
+      if (now - lastSendTime.current > 50) {
+        broadcastPresence();
+        lastSendTime.current = now;
+      }
+    },
+    [broadcastPresence],
+  );
+
+  const updateFocus = useCallback(
+    (blockId: string | null) => {
+      myState.current.focusedBlockId = blockId;
       broadcastPresence();
-      lastSendTime.current = now;
-    }
-  }, [broadcastPresence]);
-
-  const updateFocus = useCallback((blockId: string | null) => {
-    myState.current.focusedBlockId = blockId;
-    broadcastPresence();
-  }, [broadcastPresence]);
+    },
+    [broadcastPresence],
+  );
 
   return {
     collaborators: Array.from(collaborators.values()),

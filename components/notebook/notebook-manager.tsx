@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { useAuth } from "@/context/auth-context";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
@@ -43,41 +49,47 @@ export function NotebookManagerProvider({
   const { user } = useAuth();
   const router = useRouter();
 
-  const refreshPages = async () => {
+  const refreshPages = useCallback(async () => {
     if (!user) {
       return;
     }
-    const data = await getMyNotebooks();
-    setPages(data);
-  };
+    try {
+      const data = await getMyNotebooks();
+      setPages(data);
+    } catch (err) {
+      console.error("Failed to refresh pages:", err);
+    }
+  }, [user]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <Desnecessário no array de dependências>
   useEffect(() => {
     refreshPages();
-  }, []);
+  }, [refreshPages]);
 
-  const renamePage = async (id: string, newTitle: string) => {
-    if (!user) {
-      return;
-    }
-    if (!newTitle.trim()) return;
+  const renamePage = useCallback(
+    async (id: string, newTitle: string) => {
+      if (!user) {
+        return;
+      }
+      if (!newTitle.trim()) return;
 
-    try {
-      await updateNotebookTitle(id, newTitle);
+      try {
+        await updateNotebookTitle(id, newTitle);
 
-      window.dispatchEvent(
-        new CustomEvent("notebook-title-updated", {
-          detail: { id, title: newTitle },
-        }),
-      );
+        window.dispatchEvent(
+          new CustomEvent("notebook-title-updated", {
+            detail: { id, title: newTitle },
+          }),
+        );
 
-      await refreshPages();
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
+        await refreshPages();
+      } catch (err) {
+        handleApiError({ err, t });
+      }
+    },
+    [user, refreshPages, t],
+  );
 
-  const createPage = async () => {
+  const createPage = useCallback(async () => {
     if (!user) {
       return;
     }
@@ -90,52 +102,61 @@ export function NotebookManagerProvider({
     } catch (err) {
       handleApiError({ err, t });
     }
-  };
+  }, [user, refreshPages, router, t]);
 
-  const clone = async (id: string) => {
-    try {
-      if (!user) {
-        return;
+  const clone = useCallback(
+    async (id: string) => {
+      try {
+        if (!user) {
+          return;
+        }
+        const newId = await cloneNotebook(id);
+
+        await refreshPages();
+
+        router.push(`/docs/${newId}`);
+      } catch (err) {
+        handleApiError({ err, t });
       }
-      const newId = await cloneNotebook(id);
+    },
+    [user, refreshPages, router, t],
+  );
 
-      await refreshPages();
+  const updateVisibility = useCallback(
+    async (id: string, isVisible: boolean) => {
+      try {
+        if (!user) {
+          return;
+        }
+        await updateNotebookVisibility(id, isVisible);
 
-      router.push(`/docs/${newId}`);
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
-
-  const updateVisibility = async (id: string, isVisible: boolean) => {
-    try {
-      if (!user) {
-        return;
+        await refreshPages();
+      } catch (err) {
+        handleApiError({ err, t });
       }
-      await updateNotebookVisibility(id, isVisible);
+    },
+    [user, refreshPages, t],
+  );
 
-      await refreshPages();
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
+  const deletePage = useCallback(
+    async (id: string) => {
+      try {
+        if (!user) {
+          return;
+        }
+        await deleteNotebook(id);
 
-  const deletePage = async (id: string) => {
-    try {
-      if (!user) {
-        return;
+        await refreshPages();
+
+        router.push("/docs");
+      } catch (err) {
+        handleApiError({ err, t });
       }
-      await deleteNotebook(id);
+    },
+    [user, refreshPages, router, t],
+  );
 
-      await refreshPages();
-
-      router.push("/docs");
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
-
-  const downloadBackup = async () => {
+  const downloadBackup = useCallback(async () => {
     if (!user) {
       return;
     }
@@ -146,39 +167,44 @@ export function NotebookManagerProvider({
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `rust-notebook-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `rust-notebook-backup-${new Date()
+      .toISOString()
+      .slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
+  }, [user]);
 
-  const uploadBackup = async (file: File) => {
-    if (!user) {
-      return;
-    }
-    return new Promise<void>((resolve, reject) => {
-      const reader = new FileReader();
+  const uploadBackup = useCallback(
+    async (file: File) => {
+      if (!user) {
+        return;
+      }
+      return new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
 
-      reader.onload = async (e) => {
-        const content = e.target?.result as string;
-        if (!content) return;
+        reader.onload = async (e) => {
+          const content = e.target?.result as string;
+          if (!content) return;
 
-        const success = await restoreFullBackup(content);
-        if (success) {
-          await refreshPages();
-          alert("Backup restaurado com sucesso!");
-          router.push("/docs");
-          resolve();
-        } else {
-          alert("Erro ao ler o arquivo de backup.");
-          reject();
-        }
-      };
+          const success = await restoreFullBackup(content);
+          if (success) {
+            await refreshPages();
+            alert("Backup restaurado com sucesso!");
+            router.push("/docs");
+            resolve();
+          } else {
+            alert("Erro ao ler o arquivo de backup.");
+            reject();
+          }
+        };
 
-      reader.readAsText(file);
-    });
-  };
+        reader.readAsText(file);
+      });
+    },
+    [user, refreshPages, router],
+  );
 
   return (
     <NotebookManagerContext.Provider

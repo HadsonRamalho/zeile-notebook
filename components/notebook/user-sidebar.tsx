@@ -18,12 +18,6 @@ export function UserSidebar() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    if (user) {
-      refreshPages();
-    }
-  }, [user, refreshPages]);
-
-  useEffect(() => {
     const maxPage = Math.ceil(pages.length / ITEMS_PER_PAGE);
     if (currentPage > maxPage && maxPage > 0) {
       setCurrentPage(maxPage);
