@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
@@ -49,82 +49,89 @@ export function TeamNotebookManagerProvider({
     {},
   );
 
-  const refreshTeamPages = async (teamId: string) => {
-    if (!user) return;
-    try {
-      const data = await fetchTeamPages(teamId);
+  const refreshTeamPages = useCallback(
+    async (teamId: string) => {
+      if (!user) return;
+      try {
+        const data = await fetchTeamPages(teamId);
 
-      setTeamPages((prev) => ({
-        ...prev,
-        [teamId]: data,
-      }));
-    } catch (err) {
-      console.error(`Erro ao buscar páginas do time ${teamId}:`, err);
-    }
-  };
+        setTeamPages((prev) => ({
+          ...prev,
+          [teamId]: data,
+        }));
+      } catch (err) {
+        console.error(`Erro ao buscar páginas do time ${teamId}:`, err);
+      }
+    },
+    [user],
+  );
 
-  const createPageForTeam = async (teamId: string) => {
-    if (!user) return;
+  const createPageForTeam = useCallback(
+    async (teamId: string) => {
+      if (!user) return;
 
-    try {
-      const newId = await createTeamPage(teamId);
+      try {
+        const newId = await createTeamPage(teamId);
 
-      await refreshTeamPages(teamId);
+        await refreshTeamPages(teamId);
 
-      router.push(`/docs/${newId}`);
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
+        router.push(`/docs/${newId}`);
+      } catch (err) {
+        handleApiError({ err, t });
+      }
+    },
+    [user, refreshTeamPages, router, t],
+  );
 
-  const renameTeamPage = async (
-    teamId: string,
-    pageId: string,
-    newTitle: string,
-  ) => {
-    if (!user || !newTitle.trim()) return;
+  const renameTeamPage = useCallback(
+    async (teamId: string, pageId: string, newTitle: string) => {
+      if (!user || !newTitle.trim()) return;
 
-    try {
-      await updateNotebookTitle(pageId, newTitle);
+      try {
+        await updateNotebookTitle(pageId, newTitle);
 
-      window.dispatchEvent(
-        new CustomEvent("notebook-title-updated", {
-          detail: { id: pageId, title: newTitle },
-        }),
-      );
+        window.dispatchEvent(
+          new CustomEvent("notebook-title-updated", {
+            detail: { id: pageId, title: newTitle },
+          }),
+        );
 
-      await refreshTeamPages(teamId);
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
+        await refreshTeamPages(teamId);
+      } catch (err) {
+        handleApiError({ err, t });
+      }
+    },
+    [user, refreshTeamPages, t],
+  );
 
-  const updateTeamPageVisibility = async (
-    teamId: string,
-    pageId: string,
-    isVisible: boolean,
-  ) => {
-    if (!user) return;
+  const updateTeamPageVisibility = useCallback(
+    async (teamId: string, pageId: string, isVisible: boolean) => {
+      if (!user) return;
 
-    try {
-      await updateNotebookVisibility(pageId, isVisible);
-      await refreshTeamPages(teamId);
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
+      try {
+        await updateNotebookVisibility(pageId, isVisible);
+        await refreshTeamPages(teamId);
+      } catch (err) {
+        handleApiError({ err, t });
+      }
+    },
+    [user, refreshTeamPages, t],
+  );
 
-  const deletePageForTeam = async (teamId: string, pageId: string) => {
-    if (!user) return;
+  const deletePageForTeam = useCallback(
+    async (teamId: string, pageId: string) => {
+      if (!user) return;
 
-    try {
-      await deleteNotebook(pageId);
-      await refreshTeamPages(teamId);
-      router.push("/docs");
-    } catch (err) {
-      handleApiError({ err, t });
-    }
-  };
+      try {
+        await deleteNotebook(pageId);
+        await refreshTeamPages(teamId);
+        router.push("/docs");
+      } catch (err) {
+        handleApiError({ err, t });
+      }
+    },
+    [user, refreshTeamPages, router, t],
+  );
 
   return (
     <TeamNotebookManagerContext.Provider
