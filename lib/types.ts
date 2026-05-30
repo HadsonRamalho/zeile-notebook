@@ -10,7 +10,7 @@ export type Language =
   | "cpp"
   | "generic";
 export type RunStatus = "idle" | "success" | "error";
-export type TsMode = "simple" | "advanced";
+export type TsMode = "simple";
 
 export type BlockComponentType =
   | "callout"

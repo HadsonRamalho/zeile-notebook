@@ -1,5 +1,4 @@
 "use client";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { Block, RunStatus } from "@/lib/types";
 import { BlockEditor } from "../block-editor";
@@ -57,10 +56,8 @@ export default function PythonSandbox({
               block={block}
               pageBlocks={[]}
               setBlocksAction={() => {}}
-              mode={"simple"}
               babelReady={false}
               handleRunSimple={() => {}}
-              setMode={() => {}}
               setShowPreview={() => {}}
               showPreview={false}
             />

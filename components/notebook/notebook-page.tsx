@@ -103,26 +103,6 @@ export default function RustInteractivePage({
     return data as Block[];
   }, [displayDoc]);
 
-  const getFileName = (title: string) => {
-    return title.replace(/[^a-zA-Z0-9]/g, "_");
-  };
-
-  const pageFiles = blocks.reduce(
-    (acc, b) => {
-      if (b.type === "code" && b.language === "typescript" && b.title) {
-        let name = b.title.replace(/[^a-zA-Z0-9]/g, "_");
-        if (/^\d/.test(name)) name = `_${name}`;
-
-        acc[`/${name}.tsx`] = {
-          code: b.content,
-          hidden: true,
-        };
-      }
-      return acc;
-    },
-    {} as Record<string, any>,
-  );
-
   const handleAddBlock = (
     index: number,
     type: BlockType,
@@ -210,22 +190,6 @@ export default function RustInteractivePage({
           const borderColor =
             focusedUsers.length > 0 ? focusedUsers[0].color : "transparent";
 
-          const blockName = getFileName(block.title);
-          const currentBlockFileName = `/${blockName}.tsx`;
-          const isTS = block.language === "typescript";
-          const filesForThisBlock = {
-            ...pageFiles,
-            [currentBlockFileName]: block.content,
-          };
-
-          if (isTS) {
-            filesForThisBlock["/App.tsx"] = {
-              code: `import { App as Component } from "./${blockName}"; export default function Main() { return <Component />; }`,
-              hidden: true,
-            };
-          }
-          delete filesForThisBlock[currentBlockFileName];
-
           return (
             // biome-ignore lint/a11y/noStaticElementInteractions: <Necessário pra controlar o render>
             <div
@@ -266,7 +230,6 @@ export default function RustInteractivePage({
               <ReorderItem
                 block={block}
                 isDragging={isDragging}
-                pageFiles={pageFiles}
                 pageBlocks={blocks}
                 setBlocks={() => {}}
                 setIsDragging={setIsDragging}

@@ -33,16 +33,11 @@ export function TsxEditorMDX({
     console.log("Blocks atualizados (dummy):", blocks);
   };
 
-  const defaultPageFiles = {
-    "/styles.css": "body { font-family: sans-serif; }",
-  };
-
   return (
     <div className="my-6 w-full">
       <TsxEditor
         block={block}
         pageBlocks={[block]}
-        pageFiles={defaultPageFiles}
         setBlocksAction={setBlocksAction}
         updateBlockAction={updateBlockAction}
       />
