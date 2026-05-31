@@ -36,6 +36,7 @@ export function TsxEditorMDX({
   return (
     <div className="my-6 w-full">
       <TsxEditor
+        pageFiles={{}}
         block={block}
         pageBlocks={[block]}
         setBlocksAction={setBlocksAction}

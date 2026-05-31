@@ -1,13 +1,24 @@
 "use client";
 
+import {
+  SandpackCodeEditor,
+  SandpackConsole,
+  type SandpackInternalOptions,
+  SandpackLayout,
+  SandpackPreview,
+  SandpackProvider,
+} from "@codesandbox/sandpack-react";
 import Script from "next/script";
-import { useCallback, useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { RunTsxInSandbox } from "@/lib/api";
-import type { Block } from "@/lib/types";
-import { BlockEditor } from "../block-editor";
+import type { Block, TsMode } from "@/lib/types";
 import { EditorHeader } from "../default/editor-header";
+import { SandpackManager } from "./sandpack-manager";
 
 interface TsxEditorProps {
+  // biome-ignore lint/suspicious/noExplicitAny: <necessário para armazenar os arquivos>
+  pageFiles: Record<string, any>;
   block: Block;
   pageBlocks: Block[];
   setBlocksAction: (blocks: Block[]) => void;
@@ -16,14 +27,15 @@ interface TsxEditorProps {
 
 interface RenderPreviewProps {
   id: string;
+  mode: TsMode;
   sandboxUrl: string | null;
 }
 
-function RenderPreview({ id, sandboxUrl }: RenderPreviewProps) {
+function RenderPreview({ id, mode, sandboxUrl }: RenderPreviewProps) {
   return (
     <div
       id={`preview-${id}`}
-      className="bg-white overflow-hidden relative border-t min-h-[300px]"
+      className="bg-white overflow-hidden relative min-h-[300px]"
     >
       {sandboxUrl ? (
         <iframe
@@ -42,16 +54,20 @@ function RenderPreview({ id, sandboxUrl }: RenderPreviewProps) {
 }
 
 export function TsxEditor({
+  pageFiles,
   block,
   pageBlocks,
   setBlocksAction,
   onCodeChange,
 }: TsxEditorProps) {
   const [showPreview, setShowPreview] = useState(true);
+  const [showConsole, setShowConsole] = useState(false);
+  const [mode, setMode] = useState<TsMode>("simple");
   const [sandboxUrl, setSandboxUrl] = useState<string | null>(null);
   const [babelReady, setBabelReady] = useState(false);
+  const { theme } = useTheme();
 
-  const loadBabel = useCallback(() => {
+  const loadBabel = () => {
     if ((window as any).Babel) {
       setBabelReady(true);
       return;
@@ -83,65 +99,103 @@ export function TsxEditor({
     };
 
     document.body.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    if (!babelReady) {
-      loadBabel();
-    }
-  }, [babelReady, loadBabel]);
-
-  const handleRunSimple = async () => {
-    try {
-      const url = await RunTsxInSandbox(block, pageBlocks);
-      setSandboxUrl(url);
-    } catch (error: any) {
-      console.error("Erro ao executar TSX:", error);
-      alert(error.message || "Erro ao executar o código.");
-    }
   };
 
-  const handleCodeChange = useCallback(
-    (val: string) => {
-      onCodeChange(val);
-    },
-    [onCodeChange],
-  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <loadBabel não precisa estar no array de dependências>
+  useEffect(() => {
+    if (!babelReady && mode === "simple") {
+      loadBabel();
+    }
+  }, [babelReady, mode]);
+
+  const editorOptions: SandpackInternalOptions = {
+    initMode: "lazy",
+    recompileMode: "delayed",
+    recompileDelay: 1000,
+    showOpenInCodeSandbox: false,
+  };
+  const editorFiles = { ...pageFiles, "/App.tsx": block.content };
+
+  const handleRunSimple = async () => {
+    const url = await RunTsxInSandbox(block, pageBlocks);
+    setSandboxUrl(url);
+  };
 
   return (
-    <div className="rounded-lg overflow-hidden border bg-card border-border shadow-sm">
+    <div className="rounded-lg overflow-hidden border bg-card border-border">
       <Script
         src="https://unpkg.com/@babel/standalone/babel.min.js"
         strategy="lazyOnload"
         onLoad={() => setBabelReady(true)}
       />
+      <SandpackProvider
+        key={mode}
+        theme={theme === "dark" ? "dark" : undefined}
+        template="react-ts"
+        files={editorFiles}
+        options={editorOptions}
+      >
+        <div className="flex bg-card">
+          <EditorHeader
+            block={block}
+            pageBlocks={pageBlocks}
+            setBlocksAction={setBlocksAction}
+            mode={mode}
+            babelReady={babelReady}
+            handleRunSimple={handleRunSimple}
+            setMode={setMode}
+            setShowPreview={setShowPreview}
+            showPreview={showPreview}
+            showConsole={showConsole}
+            setShowConsole={setShowConsole}
+          />
+        </div>
 
-      <div className="flex bg-card">
-        <EditorHeader
-          block={block}
-          pageBlocks={pageBlocks}
-          setBlocksAction={setBlocksAction}
-          babelReady={babelReady}
-          handleRunSimple={handleRunSimple}
-          setShowPreview={setShowPreview}
-          showPreview={showPreview}
-          loadBabel={loadBabel}
-        />
-      </div>
+        <div className="flex flex-col overflow-hidden bg-card">
+          <SandpackLayout>
+            <SandpackCodeEditor
+              showTabs
+              showLineNumbers
+              showInlineErrors
+              showRunButton={false}
+              className="h-100 text-[0.9rem]"
+            />
+            <div
+              className={`flex-1 border-l ${
+                showPreview && mode === "advanced" ? "block" : "hidden"
+              }`}
+            >
+              <SandpackPreview
+                className="h-full"
+                showOpenInCodeSandbox={false}
+              />
+            </div>
 
-      <div className="flex flex-col overflow-hidden bg-card">
-        <BlockEditor
-          content={block.content}
-          language="typescript"
-          type="code"
-          onChange={handleCodeChange}
-          onBlur={() => {}}
-          minHeight="300px"
-          className="border-none rounded-none"
-        />
+            <div
+              className={`flex-1 border-l ${
+                showPreview && mode === "simple" ? "block" : "hidden"
+              }`}
+            >
+              <RenderPreview
+                sandboxUrl={sandboxUrl}
+                id={block.id}
+                mode={mode}
+              />
+            </div>
+          </SandpackLayout>
 
-        {showPreview && <RenderPreview sandboxUrl={sandboxUrl} id={block.id} />}
-      </div>
+          {mode === "advanced" && showConsole && (
+            <div className="border-t bg-card h-36 print:hidden overflow-auto">
+              <SandpackConsole
+                resetOnPreviewRestart={true}
+                showResetConsoleButton={true}
+              />
+            </div>
+          )}
+
+          <SandpackManager code={block.content} onChange={onCodeChange} />
+        </div>
+      </SandpackProvider>
     </div>
   );
 }

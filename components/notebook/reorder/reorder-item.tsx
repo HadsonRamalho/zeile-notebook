@@ -16,6 +16,8 @@ import { TsxEditor } from "../blocks/tsx/tsx-editor";
 interface ReorderItemProps {
   block: Block;
   isDragging: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: <Necessário pra gerenciar os arquivos>
+  pageFiles: Record<string, any>;
   pageBlocks: Block[];
   setBlocks: (b: Block[]) => void;
   setIsDragging: (d: boolean) => void;
@@ -31,6 +33,7 @@ export function ReorderItem({
   setIsDragging,
   isDragging,
   pageBlocks,
+  pageFiles,
   setBlocks,
   updateBlock,
   removeBlock,
@@ -88,11 +91,12 @@ export function ReorderItem({
         ) : block.type === "component" ? (
           <ComponentRenderer
             block={block}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            updateBlockAction={canWrite ? handleUpdateContent : () => {}}
             updateBlockMetadata={canWrite ? updateBlockMetadata : () => {}}
           />
         ) : block.language === "typescript" ? (
           <TsxEditor
+            pageFiles={{}}
             block={block}
             pageBlocks={pageBlocks}
             setBlocksAction={canWrite ? setBlocks : () => {}}

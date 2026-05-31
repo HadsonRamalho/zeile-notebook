@@ -1,5 +1,13 @@
-import { Clock, Eye, EyeClosed, Play, Terminal } from "lucide-react";
-import type { Block } from "@/lib/types";
+import { Clock, Cpu, Eye, EyeClosed, Play, Terminal, Wifi } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Block, TsMode } from "@/lib/types";
 
 const getRustFileName = (codeVal: string): string => {
   const match = codeVal.match(/^\/\/ *#\[mod=([a-zA-Z0-9_]+)\]/m);
@@ -55,10 +63,14 @@ interface EditorHeaderProps {
   block: Block;
   pageBlocks: Block[];
   setBlocksAction: (b: Block[]) => void;
+  mode: TsMode;
   babelReady: boolean;
   handleRunSimple: () => void;
+  setMode: (m: TsMode) => void;
   setShowPreview: (s: boolean) => void;
   showPreview: boolean;
+  showConsole?: boolean;
+  setShowConsole?: (s: boolean) => void;
   loadBabel?: () => void;
 }
 
@@ -66,11 +78,15 @@ export function EditorHeader({
   block,
   pageBlocks,
   setBlocksAction,
+  mode,
   babelReady,
+  setMode,
   handleRunSimple,
   setShowPreview,
   loadBabel,
   showPreview,
+  showConsole,
+  setShowConsole,
 }: EditorHeaderProps) {
   let fileName = getTsxFileName();
   switch (block.language) {
@@ -117,23 +133,61 @@ export function EditorHeader({
       </div>
       {block.language === "typescript" && (
         <div className="grid grid-cols-1 md:flex flex-cols gap-2 w-full justify-end print:hidden">
-          <button
-            type="button"
-            onClick={babelReady ? handleRunSimple : loadBabel}
-            className="px-3 py-1 text-xs bg-card text-foreground rounded transition-colors"
+          {mode === "simple" && (
+            <button
+              type="button"
+              onClick={babelReady ? handleRunSimple : loadBabel}
+              className="px-3 py-1 text-xs bg-card text-foreground rounded transition-colors"
+            >
+              <div className="flex items-center justify-center gap-2">
+                {babelReady ? (
+                  <>
+                    <Play className="size-4" /> Executar
+                  </>
+                ) : (
+                  <>
+                    <Clock /> Carregar o Compilador...
+                  </>
+                )}
+              </div>
+            </button>
+          )}
+          <Select
+            onValueChange={(e) => {
+              setMode(e as TsMode);
+            }}
           >
-            <div className="flex items-center justify-center gap-2">
-              {babelReady ? (
-                <>
-                  <Play className="size-4" /> Executar
-                </>
-              ) : (
-                <>
-                  <Clock /> Carregar o Compilador...
-                </>
-              )}
-            </div>
-          </button>
+            <SelectTrigger className="bg-transparent py-6 w-full justify-center md:w-44 border-none h-full rounded text-foreground">
+              <SelectValue
+                className="bg-transparent"
+                placeholder={
+                  mode === "advanced" ? (
+                    <div className="flex justify-center">
+                      <Wifi />
+                      Modo Sandpack
+                    </div>
+                  ) : (
+                    <div className="flex justify-center">
+                      <Cpu />
+                      Modo Nativo
+                    </div>
+                  )
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="advanced">
+                  <Wifi />
+                  Modo Sandpack
+                </SelectItem>
+                <SelectItem value="simple">
+                  <Cpu />
+                  Modo Nativo
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <button
             type="button"
             onClick={() => setShowPreview(!showPreview)}
@@ -150,6 +204,18 @@ export function EditorHeader({
               </div>
             )}
           </button>
+          {mode === "advanced" && setShowConsole && (
+            <button
+              type="button"
+              onClick={() => setShowConsole(!showConsole)}
+              className="px-3 py-1 text-xs bg-transparent text-foreground rounded transition-colors"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Terminal className="size-4" />
+                {showConsole ? "Ocultar Console" : "Exibir Console"}
+              </div>
+            </button>
+          )}
         </div>
       )}
     </div>
