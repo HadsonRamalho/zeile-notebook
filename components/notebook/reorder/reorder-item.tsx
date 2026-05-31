@@ -88,7 +88,7 @@ export function ReorderItem({
         ) : block.type === "component" ? (
           <ComponentRenderer
             block={block}
-            updateBlockAction={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
             updateBlockMetadata={canWrite ? updateBlockMetadata : () => {}}
           />
         ) : block.language === "typescript" ? (
@@ -96,7 +96,7 @@ export function ReorderItem({
             block={block}
             pageBlocks={pageBlocks}
             setBlocksAction={canWrite ? setBlocks : () => {}}
-            updateBlockAction={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         ) : block.language === "python" ? (
           <PythonSandbox

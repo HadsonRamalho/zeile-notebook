@@ -59,8 +59,11 @@ export function useAutomergeSync(notebookId: string, token: string) {
       }
 
       const validToken = token.length > 0;
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}${process.env.NEXT_PUBLIC_WS_URL}/notebook/ws/${notebookId}`;
+      const protocol =
+        window.location.protocol === "https:" ? "wss://" : "ws://";
+      const host =
+        process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
+      const wsUrl = `${protocol}${host}/notebook/ws/${notebookId}`;
 
       const protocols = validToken ? ["access_token", token] : undefined;
       const socket = new WebSocket(wsUrl, protocols);

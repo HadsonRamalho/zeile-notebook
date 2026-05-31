@@ -9,13 +9,13 @@ import { TextBlock } from "../text/text-block";
 
 interface ComponentRendererProps {
   block: Block;
-  updateBlockAction: (id: string, content: string) => void;
+  onCodeChange: (newContent: string) => void;
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
 }
 
 export function ComponentRenderer({
   block,
-  updateBlockAction,
+  onCodeChange,
   updateBlockMetadata,
 }: ComponentRendererProps) {
   if (block.type !== "component" || !block.metadata) return null;
@@ -25,10 +25,7 @@ export function ComponentRenderer({
       return (
         <div className="group relative my-4">
           <Callout type={block.metadata.props?.type || "info"}>
-            <TextBlock
-              content={block.content}
-              onChange={(newVal) => updateBlockAction(newVal, newVal)}
-            />
+            <TextBlock content={block.content} onChange={onCodeChange} />
           </Callout>
         </div>
       );
@@ -38,10 +35,7 @@ export function ComponentRenderer({
       return (
         <div className="group relative my-4">
           <Card title={block.metadata.props.title}>
-            <TextBlock
-              content={block.content}
-              onChange={(newVal) => updateBlockAction(newVal, newVal)}
-            />
+            <TextBlock content={block.content} onChange={onCodeChange} />
           </Card>
         </div>
       );
@@ -66,10 +60,7 @@ export function ComponentRenderer({
             variant={block.metadata.variant}
             className="rounded-md"
           >
-            <TextBlock
-              content={block.content}
-              onChange={(newVal) => updateBlockAction(newVal, newVal)}
-            />
+            <TextBlock content={block.content} onChange={onCodeChange} />
           </Banner>
         </div>
       );

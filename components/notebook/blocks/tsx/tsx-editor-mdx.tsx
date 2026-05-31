@@ -39,7 +39,7 @@ export function TsxEditorMDX({
         block={block}
         pageBlocks={[block]}
         setBlocksAction={setBlocksAction}
-        updateBlockAction={updateBlockAction}
+        onCodeChange={(newContent) => updateBlockAction(block.id, newContent)}
       />
     </div>
   );

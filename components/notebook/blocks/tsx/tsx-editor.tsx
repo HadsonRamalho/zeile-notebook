@@ -11,7 +11,7 @@ interface TsxEditorProps {
   block: Block;
   pageBlocks: Block[];
   setBlocksAction: (blocks: Block[]) => void;
-  updateBlockAction: (id: string, newContent: string) => void;
+  onCodeChange: (newContent: string) => void;
 }
 
 interface RenderPreviewProps {
@@ -45,7 +45,7 @@ export function TsxEditor({
   block,
   pageBlocks,
   setBlocksAction,
-  updateBlockAction,
+  onCodeChange,
 }: TsxEditorProps) {
   const [showPreview, setShowPreview] = useState(true);
   const [sandboxUrl, setSandboxUrl] = useState<string | null>(null);
@@ -103,9 +103,9 @@ export function TsxEditor({
 
   const handleCodeChange = useCallback(
     (val: string) => {
-      updateBlockAction(block.id, val);
+      onCodeChange(val);
     },
-    [block.id, updateBlockAction],
+    [onCodeChange],
   );
 
   return (

@@ -53,8 +53,10 @@ export function usePresence(pageId: string, currentUser: User | null) {
       wsRef.current.close();
     }
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}${process.env.NEXT_PUBLIC_WS_URL}/notebook/ws/presence/${pageId}`;
+    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const host =
+      process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
+    const wsUrl = `${protocol}${host}/notebook/ws/presence/${pageId}`;
     const token = getCookie("auth_token")?.toString() || "";
     const protocols = token.length > 0 ? ["access_token", token] : undefined;
 
