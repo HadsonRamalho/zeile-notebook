@@ -4,6 +4,10 @@
 @import "fumadocs-openapi/css/preset.css";
 @import "tw-animate-css";
 
+@utility -inset-s-4 {
+    inset-inline-start: -1rem;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

@@ -1,4 +1,4 @@
-import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
+import type { BaseLayoutProps } from "../components/layout/shared";
 import Image from "next/image";
 import Link from "next/link";
 import { NextIntlClientProvider, useLocale, useMessages } from "next-intl";

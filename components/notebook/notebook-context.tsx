@@ -9,7 +9,10 @@ import {
   useState,
 } from "react";
 import { handleApiError } from "@/lib/api/handle-api-error";
-import { getCurrentNotebook } from "@/lib/api/notebook-service";
+import {
+  getCurrentNotebook,
+  getCurrentNotebookWithBlocks,
+} from "@/lib/api/notebook-service";
 import type { Notebook } from "@/lib/types";
 import { useNotebookManager } from "./notebook-manager";
 
@@ -85,9 +88,10 @@ export function NotebookProvider({
 
   useEffect(() => {
     if (pageId) {
-      getCurrentNotebook(pageId).then((data) => {
+      getCurrentNotebookWithBlocks(pageId).then((data) => {
         if (data) {
-          setVisibility(data.isPublic);
+          // biome-ignore lint/suspicious/noExplicitAny: <necessário para compatibilidade de tipos legados>
+          setVisibility((data as any).isPublic ?? (data as any).is_public);
           setNotebook(data);
         }
       });

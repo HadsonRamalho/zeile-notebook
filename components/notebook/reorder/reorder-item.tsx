@@ -91,7 +91,7 @@ export function ReorderItem({
         ) : block.type === "component" ? (
           <ComponentRenderer
             block={block}
-            updateBlockAction={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
             updateBlockMetadata={canWrite ? updateBlockMetadata : () => {}}
           />
         ) : block.language === "typescript" ? (

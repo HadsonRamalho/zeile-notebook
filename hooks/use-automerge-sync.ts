@@ -58,6 +58,9 @@ export function useAutomergeSync(notebookId: string, token: string) {
         return;
       }
 
+      // Inicializa um novo estado de sincronização para cada nova conexão
+      syncState.current = automerge.current!.initSyncState();
+
       const validToken = token.length > 0;
       const protocol =
         window.location.protocol === "https:" ? "wss://" : "ws://";
@@ -73,11 +76,12 @@ export function useAutomergeSync(notebookId: string, token: string) {
 
       const handleOpen = () => {
         setIsConnected(true);
-        setHasSyncedOnce(true);
+        console.log("WebSocket connected to notebook:", notebookId);
       };
 
       const handleClose = () => {
         setIsConnected(false);
+        console.log("WebSocket disconnected from notebook:", notebookId);
         reconnectTimer = setTimeout(connect, 3000);
       };
 
@@ -98,6 +102,11 @@ export function useAutomergeSync(notebookId: string, token: string) {
         if (nextDoc !== currentDoc) {
           docRef.current = nextDoc;
           setDoc(nextDoc);
+        }
+
+        if (!hasSyncedOnce) {
+          console.log("Initial sync completed for notebook:", notebookId);
+          setHasSyncedOnce(true);
         }
 
         const [updatedSyncState, responseMessage] =

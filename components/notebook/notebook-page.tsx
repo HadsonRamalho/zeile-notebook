@@ -38,7 +38,7 @@ export default function RustInteractivePage({
   pageId = "default",
 }: RustInteractivePageProps) {
   const { user } = useAuth();
-  const { isDragging, setIsDragging } = useNotebook();
+  const { isDragging, setIsDragging, notebook } = useNotebook();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const tokenX = getCookie("auth_token");
   const token = tokenX?.toString() || "";
@@ -93,15 +93,15 @@ export default function RustInteractivePage({
     }
   }, [userPermissions, hasSyncedOnce, pageId, isConnected]);
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    updateCursor(e.clientX, e.clientY);
-  };
-
   const blocks = useMemo(() => {
     if (!displayDoc || !displayDoc.blocks) return [];
     const data = JSON.parse(JSON.stringify(displayDoc.blocks));
     return data as Block[];
   }, [displayDoc]);
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    updateCursor(e.clientX, e.clientY);
+  };
 
   const handleAddBlock = (
     index: number,
@@ -231,6 +231,7 @@ export default function RustInteractivePage({
                 block={block}
                 isDragging={isDragging}
                 pageBlocks={blocks}
+                pageFiles={{}}
                 setBlocks={() => {}}
                 setIsDragging={setIsDragging}
                 removeBlock={deleteBlock}

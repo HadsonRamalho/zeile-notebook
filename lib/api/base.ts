@@ -1,7 +1,7 @@
 import { getCookie } from "cookies-next";
 
 export const BASE_URL =
-  process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
+  process.env.NEXT_PUBLIC_API || "https://4n4vf0vd-3099.brs.devtunnels.ms/api";
 
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -31,6 +31,7 @@ async function http<T>(path: string, config?: FetchOptions): Promise<T> {
     ...config,
     headers: {
       "Content-Type": "application/json",
+      "X-Tunnel-Skip-AntiPhish": "true",
       ...(token && { Authorization: `Bearer ${token}` }),
       ...config?.headers,
     },

@@ -112,7 +112,6 @@ export function TsxEditor({
     initMode: "lazy",
     recompileMode: "delayed",
     recompileDelay: 1000,
-    showOpenInCodeSandbox: false,
   };
   const editorFiles = { ...pageFiles, "/App.tsx": block.content };
 

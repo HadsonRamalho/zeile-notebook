@@ -63,10 +63,10 @@ interface EditorHeaderProps {
   block: Block;
   pageBlocks: Block[];
   setBlocksAction: (b: Block[]) => void;
-  mode: TsMode;
+  mode?: TsMode;
   babelReady: boolean;
   handleRunSimple: () => void;
-  setMode: (m: TsMode) => void;
+  setMode?: (m: TsMode) => void;
   setShowPreview: (s: boolean) => void;
   showPreview: boolean;
   showConsole?: boolean;
@@ -154,7 +154,7 @@ export function EditorHeader({
           )}
           <Select
             onValueChange={(e) => {
-              setMode(e as TsMode);
+              setMode?.(e as TsMode);
             }}
           >
             <SelectTrigger className="bg-transparent py-6 w-full justify-center md:w-44 border-none h-full rounded text-foreground">

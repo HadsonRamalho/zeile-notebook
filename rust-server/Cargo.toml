@@ -53,5 +53,9 @@ oauth2 = "5.0.0"
 dashmap = "6.1.0"
 futures = "0.3.31"
 bytes = { version = "1.11.1", features = ["serde"] }
-automerge = "0.7.3"
+automerge = { version = "0.9.0", features = ["wasm"] }
 libc = "0.2.182"
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
+
+[features]
+serde-wasm-bindgen = ["dep:serde-wasm-bindgen"]

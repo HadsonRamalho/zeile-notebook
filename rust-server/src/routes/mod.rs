@@ -1,5 +1,5 @@
 use crate::controllers::sync::{PresenceRegistry, SyncRegistry};
-use crate::controllers::utils::{get_database_url_from_env, get_frontend_url_from_env};
+use crate::controllers::utils::get_database_url_from_env;
 use crate::models::error::ApiError;
 use crate::models::state::AppState;
 use crate::routes::admin::admin_routes;
@@ -10,7 +10,6 @@ use crate::routes::user::user_routes;
 use axum::{Json, Router};
 use axum::{
     extract::DefaultBodyLimit,
-    http::HeaderValue,
     routing::{get, get_service},
 };
 use dashmap::DashMap;
@@ -21,7 +20,6 @@ use diesel_async::{AsyncPgConnection, pooled_connection::deadpool::Pool};
 use futures_util::FutureExt;
 use futures_util::future::BoxFuture;
 use hyper::StatusCode;
-use hyper::header::{AUTHORIZATION, CONTENT_TYPE};
 use rustls::ClientConfig;
 use rustls_platform_verifier::ConfigVerifierExt;
 use std::collections::HashMap;
@@ -65,8 +63,6 @@ pub fn establish_connection(config: &str) -> BoxFuture<'_, ConnectionResult<Asyn
 pub async fn init_routes() -> Router {
     let db_url = get_database_url_from_env().ok();
 
-    let frontend_url = get_frontend_url_from_env().unwrap();
-
     let mut config = ManagerConfig::default();
     config.custom_setup = Box::new(establish_connection);
 
@@ -95,14 +91,17 @@ pub async fn init_routes() -> Router {
             .nest("/api/notebook", notebook_routes().await.into())
             .nest("/api/team", team_routes().await.into())
             .nest("/api/admin", admin_routes().await.into())
-            //.merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", get_api_docs()))
+            .merge(utoipa_swagger_ui::SwaggerUi::new("/docs").url(
+                "/api-docs/openapi.json",
+                crate::routes::docs::get_api_docs(),
+            ))
             .with_state(app_state)
             .layer(DefaultBodyLimit::max(1024 * 1024 * 100))
             .layer(
                 CorsLayer::new()
-                    .allow_origin(vec![frontend_url.parse::<HeaderValue>().unwrap()])
+                    .allow_origin(Any)
                     .allow_methods(Any)
-                    .allow_headers(vec![AUTHORIZATION, CONTENT_TYPE]),
+                    .allow_headers(Any),
             );
     }
     Router::new()
