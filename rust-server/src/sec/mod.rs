@@ -136,3 +136,23 @@ pub fn verify_cpp_code(codigo: &str) -> Result<(), String> {
 
     Ok(())
 }
+
+pub fn verify_zig_code(code: &str) -> Result<(), String> {
+    let forbidden_patterns = [
+        "std.os",
+        "std.fs",
+        "std.net",
+        "std.process",
+        "std.Thread",
+        "extern",
+        "asm",
+    ];
+
+    for pattern in forbidden_patterns {
+        if code.contains(pattern) {
+            return Err(format!("Segurança: O uso de '{}' não é permitido.", pattern));
+        }
+    }
+
+    Ok(())
+}

@@ -79,8 +79,9 @@ export async function RunCode({
       return;
     }
 
-    if (language === "go" || language === "cpp") {
-      const langName = language === "go" ? "Go" : "C++";
+    if (language === "go" || language === "cpp" || language === "zig") {
+      const langName =
+        language === "go" ? "Go" : language === "cpp" ? "C++" : "Zig";
       const isCompileOrSecError =
         stderr.includes(`Erro de Compilação ${langName}:`) ||
         stderr.includes("Falha ao invocar") ||

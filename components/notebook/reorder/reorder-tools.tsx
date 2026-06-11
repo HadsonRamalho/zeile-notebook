@@ -20,6 +20,7 @@ import { GoIcon } from "@/components/icons/go-icon";
 import { PythonIcon } from "@/components/icons/python-icon";
 import { ReactIcon } from "@/components/icons/react-icon";
 import { RustIcon } from "@/components/icons/rust-icon";
+import { ZigIcon } from "@/components/icons/zig-icon";
 import type { BlockMetadata, BlockType, Language } from "@/lib/types";
 
 interface ReorderToolsProps {
@@ -108,6 +109,12 @@ export function ReorderTools({
           icon: <CppIcon size={30} />,
           color: "hover:text-blue-500",
           onClick: () => addBlock(index, "code", "cpp"),
+        },
+        {
+          label: "Zig",
+          icon: <ZigIcon size={24} />,
+          color: "hover:text-orange-600",
+          onClick: () => addBlock(index, "code", "zig"),
         },
         {
           label: "Genérico",

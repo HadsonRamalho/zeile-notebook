@@ -31,3 +31,4 @@ rust-server/target
 rust-server/logs
 rust-server/files
 rust-server/Cargo.lock
+rust-server/.compilers

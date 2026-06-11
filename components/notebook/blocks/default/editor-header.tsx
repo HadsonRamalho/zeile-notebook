@@ -31,6 +31,10 @@ const getCppFileName = () => {
   return "main.cpp";
 };
 
+const getZigFileName = () => {
+  return "main.zig";
+};
+
 interface RenderFileNameProps {
   name: string;
   pageBlocks: Block[];
@@ -92,6 +96,9 @@ export function EditorHeader({
   switch (block.language) {
     case "cpp":
       fileName = getCppFileName();
+      break;
+    case "zig":
+      fileName = getZigFileName();
       break;
     case "go":
       fileName = getGoFileName();

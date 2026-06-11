@@ -10,6 +10,7 @@ import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
+import { ZigEditor } from "../blocks/zig/zig-editor";
 import { TextBlock } from "../blocks/text/text-block";
 import { TsxEditor } from "../blocks/tsx/tsx-editor";
 
@@ -117,6 +118,12 @@ export function ReorderItem({
           />
         ) : block.language === "cpp" ? (
           <CppEditor
+            block={block}
+            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            sessionId={sessionId}
+          />
+        ) : block.language === "zig" ? (
+          <ZigEditor
             block={block}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
             sessionId={sessionId}

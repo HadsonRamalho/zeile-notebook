@@ -31,6 +31,9 @@ pub enum Language {
     Rust,
     Typescript,
     Python,
+    Zig,
+    Go,
+    Cpp,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

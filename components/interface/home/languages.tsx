@@ -1,7 +1,9 @@
+import { CppIcon } from "@/components/icons/cpp-icon";
 import { GoIcon } from "@/components/icons/go-icon";
 import { PythonIcon } from "@/components/icons/python-icon";
 import { ReactIcon } from "@/components/icons/react-icon";
 import { RustIcon } from "@/components/icons/rust-icon";
+import { ZigIcon } from "@/components/icons/zig-icon";
 
 const languages = [
   {
@@ -27,6 +29,18 @@ const languages = [
     icon: <GoIcon />,
     color:
       "hover:border-blue-300/50 hover:bg-blue-300/10 hover:shadow-blue-300/20",
+  },
+  {
+    name: "C++",
+    icon: <CppIcon />,
+    color:
+      "hover:border-blue-500/50 hover:bg-blue-500/10 hover:shadow-blue-500/20",
+  },
+  {
+    name: "Zig",
+    icon: <ZigIcon />,
+    color:
+      "hover:border-orange-600/50 hover:bg-orange-600/10 hover:shadow-orange-600/20",
   },
 ];
 

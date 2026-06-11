@@ -19,6 +19,7 @@ use crate::file::setup_user_env;
 use crate::sec::verify_code;
 use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
+use crate::sec::verify_zig_code;
 
 pub async fn verify_request(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -292,7 +293,9 @@ pub async fn verify_go_request(
 
     info!("Compilando Go...");
 
-    let compile_output = Command::new("go")
+    let go_path = std::env::var("GO_PATH").unwrap_or_else(|_| "go".to_string());
+
+    let compile_output = Command::new(go_path)
         .current_dir(&user_dir)
         .arg("build")
         .arg("-o")
@@ -377,7 +380,9 @@ pub async fn verify_cpp_request(
 
     info!("Compilando C++...");
 
-    let compile_future = Command::new("clang++")
+    let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
+
+    let compile_future = Command::new(cpp_path)
         .current_dir(&user_dir)
         .arg("-O2")
         .arg("-Wall")
@@ -414,5 +419,94 @@ pub async fn verify_cpp_request(
                 stderr: "Erro: Tempo limite de compilação excedido. O código causou um travamento no compilador.".into(),
             })
         }
+    }
+}
+
+pub async fn verify_zig_request(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(payload): Json<CodeRequest>,
+) -> Json<CodeResponse> {
+    let addr = addr.ip();
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or(&addr.to_string())
+        .to_string();
+
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("Unknown Agent")
+        .to_string();
+
+    info!("Nova requisição Zig de IP: {}", ip);
+
+    let safe_session = payload
+        .session_id
+        .replace(|c: char| !c.is_alphanumeric(), "_");
+
+    if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
+        error!("Falha no log de arquivo: {}", e);
+    }
+
+    if let Err(msg) = verify_zig_code(&payload.code) {
+        return Json(CodeResponse {
+            stdout: "".into(),
+            stderr: msg,
+        });
+    }
+
+    let bin_name = if cfg!(windows) {
+        format!("app_{}.exe", safe_session)
+    } else {
+        format!("app_{}", safe_session)
+    };
+
+    let user_dir = format!("files/zig/{}", safe_session);
+    let _ = tokio::fs::create_dir_all(&user_dir).await;
+
+    let file_path = Path::new(&user_dir).join("main.zig");
+    let bin_path = Path::new(&user_dir).join(&bin_name);
+
+    if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
+        return Json(CodeResponse {
+            stdout: "".into(),
+            stderr: format!("Erro ao salvar arquivo Zig: {}", e),
+        });
+    }
+
+    info!("Compilando Zig...");
+
+    let zig_path = std::env::var("ZIG_PATH").unwrap_or_else(|_| "zig".to_string());
+
+    let compile_output = Command::new(zig_path)
+        .current_dir(&user_dir)
+        .arg("build-exe")
+        .arg("-O")
+        .arg("ReleaseSmall")
+        .arg("--name")
+        .arg(&bin_name)
+        .arg("main.zig")
+        .output()
+        .await;
+
+    match compile_output {
+        Ok(out) if out.status.success() => {
+            let bin_path_str = bin_path.to_string_lossy().to_string();
+            let (stdout, stderr) = run_safe_bin(&bin_path_str).await;
+            Json(CodeResponse { stdout, stderr })
+        }
+        Ok(out) => Json(CodeResponse {
+            stdout: "".into(),
+            stderr: format!(
+                "Erro de Compilação Zig:\n{}",
+                String::from_utf8_lossy(&out.stderr)
+            ),
+        }),
+        Err(e) => Json(CodeResponse {
+            stdout: "".into(),
+            stderr: format!("Falha ao invocar compilador Zig: {}", e),
+        }),
     }
 }

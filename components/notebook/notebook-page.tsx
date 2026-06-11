@@ -282,6 +282,7 @@ function getBlockTitle(
     python: "script.py",
     go: "main.go",
     cpp: "main.cpp",
+    zig: "main.zig",
     generic: "Code",
   };
 
