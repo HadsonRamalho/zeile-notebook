@@ -140,7 +140,6 @@ pub fn verify_cpp_code(codigo: &str) -> Result<(), String> {
 pub fn verify_zig_code(code: &str) -> Result<(), String> {
     let forbidden_patterns = [
         "std.os",
-        "std.fs",
         "std.net",
         "std.process",
         "std.Thread",
@@ -150,8 +149,19 @@ pub fn verify_zig_code(code: &str) -> Result<(), String> {
 
     for pattern in forbidden_patterns {
         if code.contains(pattern) {
-            return Err(format!("Segurança: O uso de '{}' não é permitido.", pattern));
+            return Err(format!(
+                "Segurança: O uso de '{}' não é permitido.",
+                pattern
+            ));
         }
+    }
+
+    // Permitir apenas o uso específico de stdout/stderr de std.fs para Zig 0.15.2
+    if code.contains("std.fs")
+        && !code.contains("std.fs.File.stdout")
+        && !code.contains("std.fs.File.stderr")
+    {
+        return Err("Segurança: O uso geral de 'std.fs' não é permitido. Use apenas 'std.fs.File.stdout()' ou 'std.fs.File.stderr()'.".into());
     }
 
     Ok(())
