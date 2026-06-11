@@ -6,6 +6,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
+import { zig } from "codemirror-lang-zig";
 import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
@@ -64,6 +65,8 @@ export const BlockEditor = React.memo(
           return go();
         case "cpp":
           return cpp();
+        case "zig":
+          return zig();
         default:
           return [];
       }

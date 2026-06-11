@@ -8,6 +8,7 @@ export type Language =
   | "python"
   | "go"
   | "cpp"
+  | "zig"
   | "generic";
 export type RunStatus = "idle" | "success" | "error";
 export type TsMode = "simple" | "advanced";

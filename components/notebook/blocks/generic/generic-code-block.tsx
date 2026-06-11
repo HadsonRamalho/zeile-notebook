@@ -5,6 +5,7 @@ import { go } from "@codemirror/lang-go";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
+import { zig } from "codemirror-lang-zig";
 import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
@@ -14,6 +15,13 @@ import CodeMirror, {
 import diff from "fast-diff";
 import { useTheme } from "next-themes";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { BlockType, Language } from "@/lib/types";
 
 interface BlockEditorProps {
@@ -58,6 +66,8 @@ export const GenericBlockEditor = React.memo(
           return go();
         case "cpp":
           return cpp();
+        case "zig":
+          return zig();
         default:
           return javascript({ typescript: true, jsx: true });
       }
@@ -88,10 +98,9 @@ export const GenericBlockEditor = React.memo(
     );
 
     const handleLanguageChange = useCallback(
-      (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newLang = e.target.value as Language;
+      (newLang: string) => {
         if (onLanguageChange) {
-          onLanguageChange(newLang);
+          onLanguageChange(newLang as Language);
         }
       },
       [onLanguageChange],
@@ -143,19 +152,27 @@ export const GenericBlockEditor = React.memo(
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {language}
           </span>
-          <select
+          <Select
             value={language}
-            onChange={handleLanguageChange}
+            onValueChange={handleLanguageChange}
             disabled={readOnly}
-            className="bg-transparent text-xs text-muted-foreground outline-none cursor-pointer hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="typescript">TypeScript</option>
-            <option value="javascript">JavaScript</option>
-            <option value="python">Python</option>
-            <option value="rust">Rust</option>
-            <option value="go">Go</option>
-            <option value="cpp">C++</option>
-          </select>
+            <SelectTrigger
+              size="sm"
+              className="h-6 text-[10px] uppercase font-bold tracking-tight border-none shadow-none bg-transparent hover:bg-muted/50 p-1"
+            >
+              <SelectValue placeholder="Language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="typescript">TypeScript</SelectItem>
+              <SelectItem value="javascript">JavaScript</SelectItem>
+              <SelectItem value="python">Python</SelectItem>
+              <SelectItem value="rust">Rust</SelectItem>
+              <SelectItem value="go">Go</SelectItem>
+              <SelectItem value="cpp">C++</SelectItem>
+              <SelectItem value="zig">Zig</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <CodeMirror
           ref={editorRef}

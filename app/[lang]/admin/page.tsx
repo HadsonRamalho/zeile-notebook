@@ -5,16 +5,6 @@ import { ptBR } from "date-fns/locale";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { Book, Shield, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { BackButton } from "@/components/interface/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,37 +196,6 @@ export default function AdminDashboardPage() {
                   </CardContent>
                 </Card>
               </div>
-
-              <Card className="col-span-4 mt-4">
-                <CardHeader>
-                  <CardTitle>Evolução de Uso</CardTitle>
-                </CardHeader>
-                <CardContent className="pl-2">
-                  <div className="h-75 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats?.chart_data || []}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip cursor={{ fill: "transparent" }} />
-                        <Legend />
-                        <Bar
-                          dataKey="users"
-                          name="Usuários"
-                          fill="#10b981"
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="notebooks"
-                          name="Cadernos"
-                          fill="#3b82f6"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="users" className="pt-4">
