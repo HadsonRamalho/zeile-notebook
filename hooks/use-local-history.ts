@@ -8,18 +8,36 @@ export interface HistorySnapshot {
 
 export function useLocalHistory(currentDoc: Notebook | null) {
   const [history, setHistory] = useState<HistorySnapshot[]>([]);
-  const lastSavedDoc = useRef<Notebook | null>(null);
+  const lastSavedContent = useRef<string | null>(null);
 
   useEffect(() => {
     if (!currentDoc) return;
 
+    const currentBlocksAndTitle = JSON.stringify({
+      blocks: currentDoc.blocks,
+      title: currentDoc.title,
+    });
+
+    if (lastSavedContent.current === null) {
+      lastSavedContent.current = currentBlocksAndTitle;
+      return;
+    }
+
     const interval = setInterval(() => {
-      if (currentDoc !== lastSavedDoc.current) {
+      const currentContent = JSON.stringify({
+        blocks: currentDoc.blocks,
+        title: currentDoc.title,
+      });
+
+      if (currentContent !== lastSavedContent.current) {
         setHistory((prev) => [
-          { timestamp: new Date(), doc: currentDoc },
+          {
+            timestamp: new Date(),
+            doc: JSON.parse(JSON.stringify(currentDoc)),
+          },
           ...prev,
         ]);
-        lastSavedDoc.current = currentDoc;
+        lastSavedContent.current = currentContent;
       }
     }, 5000);
 
