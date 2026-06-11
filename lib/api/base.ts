@@ -31,7 +31,6 @@ async function http<T>(path: string, config?: FetchOptions): Promise<T> {
     ...config,
     headers: {
       "Content-Type": "application/json",
-      "X-Tunnel-Skip-AntiPhish": "true",
       ...(token && { Authorization: `Bearer ${token}` }),
       ...config?.headers,
     },
