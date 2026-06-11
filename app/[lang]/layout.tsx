@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
 import { Provider } from "../search-provider";
+import { PWARegistration } from "@/components/pwa-registration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Layout({ children }: LayoutProps<"/[lang]">) {
+export default function Layout({ children }: any) {
   const messages = useMessages();
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
@@ -29,6 +30,7 @@ export default function Layout({ children }: LayoutProps<"/[lang]">) {
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AuthProvider>
+              <PWARegistration />
               <Toaster richColors={true} />
               <Provider>{children}</Provider>
             </AuthProvider>

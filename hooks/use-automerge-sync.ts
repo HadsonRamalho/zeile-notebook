@@ -1,5 +1,6 @@
 import type * as AutomergeType from "@automerge/automerge";
 import diff from "fast-diff";
+import { get, set } from "idb-keyval";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type {
@@ -25,25 +26,48 @@ export function useAutomergeSync(notebookId: string, token: string) {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadLibrary() {
+    async function init() {
       const automergex = await import("@automerge/automerge");
       if (!isMounted) return;
 
       automerge.current = automergex;
       syncState.current = automergex.initSyncState();
 
-      const initialDoc = automergex.init<Notebook>();
+      // Tenta carregar do IndexedDB
+      const cachedBinary = await get(`notebook_${notebookId}`);
+      let initialDoc: Notebook;
+
+      if (cachedBinary && cachedBinary instanceof Uint8Array) {
+        try {
+          initialDoc = automergex.load<Notebook>(cachedBinary);
+          setHasSyncedOnce(true);
+        } catch (e) {
+          console.error("Erro ao carregar notebook do cache:", e);
+          initialDoc = automergex.init<Notebook>();
+        }
+      } else {
+        initialDoc = automergex.init<Notebook>();
+      }
 
       docRef.current = initialDoc;
       setDoc(initialDoc);
     }
 
-    loadLibrary();
+    init();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [notebookId]);
+
+  const persistLocally = useCallback(
+    async (currentDoc: Notebook) => {
+      if (!automerge.current) return;
+      const binary = automerge.current.save(currentDoc);
+      await set(`notebook_${notebookId}`, binary);
+    },
+    [notebookId],
+  );
 
   useEffect(() => {
     if (!notebookId || !automerge.current || !docRef.current) return;
@@ -77,6 +101,18 @@ export function useAutomergeSync(notebookId: string, token: string) {
       const handleOpen = () => {
         setIsConnected(true);
         console.log("WebSocket connected to notebook:", notebookId);
+
+        if (automerge.current && docRef.current) {
+          const [nextSyncState, message] =
+            automerge.current.generateSyncMessage(
+              docRef.current,
+              syncState.current,
+            );
+          syncState.current = nextSyncState;
+          if (message && socket.readyState === WebSocket.OPEN) {
+            socket.send(message);
+          }
+        }
       };
 
       const handleClose = () => {
@@ -102,6 +138,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
         if (nextDoc !== currentDoc) {
           docRef.current = nextDoc;
           setDoc(nextDoc);
+          persistLocally(nextDoc);
         }
 
         if (!hasSyncedOnce) {
@@ -138,26 +175,30 @@ export function useAutomergeSync(notebookId: string, token: string) {
         socketRef.current = null;
       }
     };
-  }, [notebookId, token, !!doc]);
+  }, [notebookId, token, !!doc, persistLocally]);
 
-  const updateDoc = useCallback((callback: (d: Notebook) => void) => {
-    if (!automerge.current || !docRef.current) return;
+  const updateDoc = useCallback(
+    (callback: (d: Notebook) => void) => {
+      if (!automerge.current || !docRef.current) return;
 
-    const newDoc = automerge.current.change(docRef.current, callback);
+      const newDoc = automerge.current.change(docRef.current, callback);
 
-    docRef.current = newDoc;
-    setDoc(newDoc);
+      docRef.current = newDoc;
+      setDoc(newDoc);
+      persistLocally(newDoc);
 
-    const [nextSyncState, message] = automerge.current.generateSyncMessage(
-      newDoc,
-      syncState.current,
-    );
-    syncState.current = nextSyncState;
+      const [nextSyncState, message] = automerge.current.generateSyncMessage(
+        newDoc,
+        syncState.current,
+      );
+      syncState.current = nextSyncState;
 
-    if (message && socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(message);
-    }
-  }, []);
+      if (message && socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(message);
+      }
+    },
+    [persistLocally],
+  );
 
   const addBlockSync = (
     index: number,
