@@ -239,7 +239,7 @@ export function SidebarViewport(props: ScrollAreaProps) {
           {
             maskImage:
               "linear-gradient(to bottom, transparent, white 12px, white calc(100% - 12px), transparent)",
-          } as object
+          } as React.CSSProperties
         }
       >
         {props.children}

@@ -118,7 +118,7 @@ export function LayoutBody({
             "calc(var(--fd-docs-row-2) + var(--fd-toc-popover-height))",
           "--fd-sidebar-col": collapsed ? "0px" : "var(--fd-sidebar-width)",
           ...style,
-        } as object
+        } as React.CSSProperties
       }
       {...props}
     >
