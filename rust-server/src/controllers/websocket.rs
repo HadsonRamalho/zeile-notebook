@@ -240,6 +240,8 @@ async fn handle_presence_socket(
 
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
 
+    let _ = tx.send(format!(r#"{{"type":"init","userId":"{}"}}"#, user_id));
+
     let room = {
         let mut reg = registry.write().await;
         let room_arc = reg

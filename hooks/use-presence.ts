@@ -6,9 +6,10 @@ export type Collaborator = {
   id: string;
   name: string;
   color: string;
-  avatar?: string;
+  avatar?: string | null;
   cursor: { x: number; y: number } | null;
   focusedBlockId: string | null;
+  isGuest: boolean;
 };
 
 export type ChatMessage = {
@@ -36,12 +37,50 @@ export function usePresence(pageId: string, currentUser: User | null) {
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const socketUserIdRef = useRef<string | null>(null);
+  const [socketUserId, setSocketUserId] = useState<string | null>(null);
 
   const lastSendTime = useRef(0);
   const myState = useRef({
     cursor: null as { x: number; y: number } | null,
     focusedBlockId: null as string | null,
   });
+
+  const broadcastPresence = useCallback(() => {
+    const myId = socketUserIdRef.current;
+    if (wsRef.current?.readyState === WebSocket.OPEN && myId) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "presence",
+          userId: myId,
+          name: currentUser?.name || "Visitante",
+          avatar: currentUser?.avatar_url || null,
+          isGuest: !currentUser,
+          cursor: myState.current.cursor,
+          focusedBlockId: myState.current.focusedBlockId,
+        }),
+      );
+    }
+  }, [currentUser]);
+
+  const broadcastPresenceWithId = useCallback(
+    (myId: string) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "presence",
+            userId: myId,
+            name: currentUser?.name || "Visitante",
+            avatar: currentUser?.avatar_url || null,
+            isGuest: !currentUser,
+            cursor: myState.current.cursor,
+            focusedBlockId: myState.current.focusedBlockId,
+          }),
+        );
+      }
+    },
+    [currentUser],
+  );
 
   useEffect(() => {
     if (wsRef.current) {
@@ -66,7 +105,14 @@ export function usePresence(pageId: string, currentUser: User | null) {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.userId === currentUser?.id) return;
+        if (data.userId === socketUserIdRef.current) return;
+
+        if (data.type === "init") {
+          socketUserIdRef.current = data.userId;
+          setSocketUserId(data.userId);
+          broadcastPresenceWithId(data.userId);
+          return;
+        }
 
         if (data.type === "chat") {
           const newMsg: ChatMessage = {
@@ -85,6 +131,15 @@ export function usePresence(pageId: string, currentUser: User | null) {
           return;
         }
 
+        if (data.type === "disconnect") {
+          setCollaborators((prev) => {
+            const next = new Map(prev);
+            next.delete(data.userId);
+            return next;
+          });
+          return;
+        }
+
         if (data.type === "presence") {
           setCollaborators((prev) => {
             const next = new Map(prev);
@@ -94,6 +149,8 @@ export function usePresence(pageId: string, currentUser: User | null) {
               color: stringToColor(data.name || data.userId),
               cursor: data.cursor,
               focusedBlockId: data.focusedBlockId,
+              avatar: data.avatar,
+              isGuest: data.isGuest ?? true,
             });
             return next;
           });
@@ -103,7 +160,9 @@ export function usePresence(pageId: string, currentUser: User | null) {
       }
     };
 
-    ws.onopen = () => broadcastPresence();
+    ws.onopen = () => {
+      // Wait for init message to broadcast
+    };
 
     return () => {
       if (ws) {
@@ -113,34 +172,23 @@ export function usePresence(pageId: string, currentUser: User | null) {
         ws.close();
       }
       wsRef.current = null;
+      socketUserIdRef.current = null;
+      setSocketUserId(null);
     };
-  }, [pageId, currentUser?.id]);
-
-  const broadcastPresence = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && currentUser?.id) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "presence",
-          userId: currentUser.id,
-          name: currentUser.name || "Visitante",
-          cursor: myState.current.cursor,
-          focusedBlockId: myState.current.focusedBlockId,
-        }),
-      );
-    }
-  }, [currentUser]);
+  }, [pageId, broadcastPresenceWithId]);
 
   const sendChatMessage = useCallback(
     (text: string) => {
-      if (!text.trim() || !currentUser?.id) return;
+      const myId = socketUserIdRef.current;
+      if (!text.trim() || !myId) return;
 
       const msgId = crypto.randomUUID();
       const newMsg: ChatMessage = {
         id: msgId,
-        userId: currentUser.id,
-        name: currentUser.name || "Visitante",
+        userId: myId,
+        name: currentUser?.name || "Visitante",
         text,
-        color: stringToColor(currentUser.name || currentUser.id),
+        color: stringToColor(currentUser?.name || myId),
       };
 
       setMessages((prev) => [...prev, newMsg]);
@@ -153,8 +201,8 @@ export function usePresence(pageId: string, currentUser: User | null) {
           JSON.stringify({
             type: "chat",
             msgId,
-            userId: currentUser.id,
-            name: currentUser.name,
+            userId: myId,
+            name: currentUser?.name || "Visitante",
             text,
           }),
         );
@@ -184,6 +232,7 @@ export function usePresence(pageId: string, currentUser: User | null) {
   );
 
   return {
+    socketUserId,
     collaborators: Array.from(collaborators.values()),
     messages,
     sendChatMessage,

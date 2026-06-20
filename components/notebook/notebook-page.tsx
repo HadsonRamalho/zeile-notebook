@@ -26,6 +26,7 @@ import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
 import { CollabChat } from "./collaboration/chat";
 import { LiveCursors } from "./collaboration/live-cursors";
+import { PresenceBubble } from "./collaboration/presence-bubble";
 import { useNotebook } from "./notebook-context";
 import { ReorderItem } from "./reorder/reorder-item";
 import { ReorderTools } from "./reorder/reorder-tools";
@@ -58,6 +59,7 @@ export default function RustInteractivePage({
   } = useAutomergeSync(pageId, token);
 
   const {
+    socketUserId,
     collaborators,
     updateCursor,
     messages,
@@ -153,6 +155,11 @@ export default function RustInteractivePage({
       className="min-h-screen flex flex-row w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
     >
       <CollabChat messages={messages} sendChatMessage={sendChatMessage} />
+      <PresenceBubble
+        socketUserId={socketUserId}
+        collaborators={collaborators}
+        currentUser={user}
+      />
       <LiveCursors collaborators={collaborators} />
 
       {!isConnected && <Refreshing />}
