@@ -147,7 +147,7 @@ export function PresenceBubble({
                       )}
                     </span>
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      {user.isGuest ? "Visitante" : "Membro da conta"}
+                      {user.isGuest ? "Visitante" : "Membro"}
                     </span>
                   </div>
                 </div>
