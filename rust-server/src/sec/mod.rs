@@ -110,6 +110,11 @@ pub fn verify_cpp_code(codigo: &str) -> Result<(), String> {
         "<winsock2.h>",
         "<thread>",
         "<mutex>",
+        "<fstream>",
+        "<filesystem>",
+        "<experimental/filesystem>",
+        "<cstdio>",
+        "<stdio.h>",
     ];
 
     for bad in &bad_includes {
@@ -123,6 +128,7 @@ pub fn verify_cpp_code(codigo: &str) -> Result<(), String> {
 
     let bad_functions = [
         "system(", "popen(", "fork(", "exec(", "kill(", "socket(", "connect(",
+        "fopen(", "freopen(", "ofstream", "ifstream", "fstream",
     ];
 
     for bad in &bad_functions {

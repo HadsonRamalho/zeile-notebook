@@ -382,30 +382,53 @@ pub async fn verify_cpp_request(
 
     let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
 
-    let compile_future = Command::new(cpp_path)
+    let compile_future = Command::new("prlimit")
         .current_dir(&user_dir)
+        .arg("--cpu=10")
+        .arg("--as=2147483648")
+        .arg("--")
+        .arg(&cpp_path)
         .arg("-O2")
         .arg("-Wall")
         .arg("-std=c++20")
+        .arg("-ftemplate-depth=256")
+        .arg("-fconstexpr-steps=1000000")
         .arg("-o")
         .arg(&bin_name)
         .arg("main.cpp")
         .output();
 
-    match timeout(Duration::from_secs(10), compile_future).await {
+    match timeout(Duration::from_secs(12), compile_future).await {
         Ok(Ok(out)) => {
             if out.status.success() {
                 let bin_path_str = bin_path.to_string_lossy().to_string();
                 let (stdout, stderr) = run_safe_bin(&bin_path_str).await;
                 Json(CodeResponse { stdout, stderr })
             } else {
-                Json(CodeResponse {
-                    stdout: "".into(),
-                    stderr: format!(
-                        "Erro de Compilação C++:\n{}",
-                        String::from_utf8_lossy(&out.stderr)
-                    ),
-                })
+                let stderr_txt = String::from_utf8_lossy(&out.stderr).to_string();
+                let killed_by_signal = out.status.code().is_none();
+                let low = stderr_txt.to_lowercase();
+                let dos_markers = [
+                    "exceeded maximum depth",
+                    "recursive template instantiation",
+                    "template instantiation depth",
+                    "nested too deeply",
+                    "memory exhausted",
+                    "out of memory",
+                ];
+                let is_dos =
+                    killed_by_signal || dos_markers.iter().any(|m| low.contains(m));
+                if is_dos {
+                    Json(CodeResponse {
+                        stdout: "".into(),
+                        stderr: "Segurança: compilação bloqueada por exceder os limites de recurso (possível bomba de compilação — template/include/macro).".into(),
+                    })
+                } else {
+                    Json(CodeResponse {
+                        stdout: "".into(),
+                        stderr: format!("Erro de Compilação C++:\n{}", stderr_txt),
+                    })
+                }
             }
         }
         Ok(Err(e)) => Json(CodeResponse {
@@ -416,7 +439,7 @@ pub async fn verify_cpp_request(
             let _ = tokio::fs::remove_file(&file_path).await;
             Json(CodeResponse {
                 stdout: "".into(),
-                stderr: "Erro: Tempo limite de compilação excedido. O código causou um travamento no compilador.".into(),
+                stderr: "Segurança: compilação bloqueada por exceder o tempo limite (possível bomba de compilação / negação de serviço).".into(),
             })
         }
     }
