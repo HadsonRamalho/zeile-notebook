@@ -11,7 +11,7 @@ use diesel_async::{AsyncPgConnection, pooled_connection::deadpool::Pool};
 use futures::{SinkExt, stream::StreamExt};
 use hyper::HeaderMap;
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{Notify, RwLock, mpsc};
 use uuid::Uuid;
 
 use automerge::sync::{Message as SyncMessage, State as SyncState, SyncDoc};
@@ -19,7 +19,7 @@ use automerge::sync::{Message as SyncMessage, State as SyncState, SyncDoc};
 use crate::{
     controllers::{
         jwt::extract_claims_from_ws_headers,
-        sync::{ActiveNotebook, PresenceRoom, SyncRegistry},
+        sync::{ActiveNotebook, NotebookInner, PeerHandle, PresenceRoom, SyncRegistry, PEER_CHANNEL_CAP},
         user::get_user_notebook_permissions,
     },
     models::{
@@ -78,30 +78,28 @@ async fn handle_socket(
 
     let (mut sender, mut receiver) = socket.split();
 
-    let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
+    let (tx, mut rx) = mpsc::channel::<Vec<u8>>(PEER_CHANNEL_CAP);
 
-    let notebook = {
-        if let Some(nb) = registry.get(&notebook_id) {
-            nb.clone()
-        } else {
-            let mut conn = pool.get().await.unwrap();
-            let saved_data = load_notebook_data(&mut conn, notebook_id).await;
-            let new_notebook = Arc::new(RwLock::new(ActiveNotebook::new(saved_data)));
-            registry.insert(notebook_id, new_notebook.clone());
-            new_notebook
-        }
+    let notebook: Arc<ActiveNotebook> = if let Some(nb) = registry.get(&notebook_id) {
+        nb.clone()
+    } else {
+        let mut conn = pool.get().await.unwrap();
+        let saved_data = load_notebook_data(&mut conn, notebook_id).await;
+        registry
+            .entry(notebook_id)
+            .or_insert_with(|| Arc::new(ActiveNotebook::new(saved_data)))
+            .clone()
     };
 
+    let peer = Arc::new(PeerHandle {
+        notify: Notify::new(),
+        tx,
+    });
     {
-        let mut nb = notebook.write().await;
-        nb.subscribers.insert(user_id, tx.clone());
-        let mut peer_state = SyncState::new();
-
-        if let Some(msg) = nb.doc.sync().generate_sync_message(&mut peer_state) {
-            let _ = tx.send(msg.encode());
-        }
-        nb.peer_states.insert(user_id, peer_state);
+        let mut inner = notebook.inner.lock().await;
+        inner.peer_states.entry(user_id).or_insert_with(SyncState::new);
     }
+    notebook.peers.insert(user_id, peer.clone());
 
     let mut send_task = tokio::spawn(async move {
         while let Some(packet) = rx.recv().await {
@@ -111,83 +109,112 @@ async fn handle_socket(
         }
     });
 
+    let sync_nb = notebook.clone();
+    let sync_peer = peer.clone();
+    let mut sync_task = tokio::spawn(async move {
+        loop {
+            sync_peer.notify.notified().await;
+            loop {
+                let bytes = {
+                    let mut inner = sync_nb.inner.lock().await;
+                    let NotebookInner { doc, peer_states } = &mut *inner;
+                    match peer_states.get_mut(&user_id) {
+                        Some(state) => doc.sync().generate_sync_message(state).map(|m| m.encode()),
+                        None => None,
+                    }
+                };
+                match bytes {
+                    Some(b) => {
+                        if sync_peer.tx.send(b).await.is_err() {
+                            return;
+                        }
+                    }
+                    None => break,
+                }
+            }
+        }
+    });
+
+    peer.notify.notify_one();
+
     let notebook_recv = notebook.clone();
     let permission_cloned = permissions.clone();
 
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Binary(data))) = receiver.next().await {
-            let should_continue =
-                process_msg(user_id, data, &notebook_recv, permission_cloned.clone()).await;
-            if !should_continue {
+            if !process_msg(user_id, data, &notebook_recv, &permission_cloned).await {
                 break;
             }
         }
     });
 
     tokio::select! {
-        _ = (&mut send_task) => recv_task.abort(),
-        _ = (&mut recv_task) => send_task.abort(),
+        _ = (&mut send_task) => { recv_task.abort(); sync_task.abort(); }
+        _ = (&mut recv_task) => { send_task.abort(); sync_task.abort(); }
     };
 
-    let (should_remove, data_to_save) = {
-        let mut nb = notebook.write().await;
-        nb.subscribers.remove(&user_id);
-        nb.peer_states.remove(&user_id);
-
-        let empty = nb.subscribers.is_empty();
-        (empty, nb.doc.save())
+    notebook.peers.remove(&user_id);
+    let data_to_save = {
+        let mut inner = notebook.inner.lock().await;
+        inner.peer_states.remove(&user_id);
+        if notebook.peers.is_empty() {
+            Some(inner.doc.save())
+        } else {
+            None
+        }
     };
 
-    if should_remove {
+    if let Some(data) = data_to_save {
+        registry.remove_if(&notebook_id, |_, nb| nb.peers.is_empty());
         let pool_clone = pool.clone();
         tokio::spawn(async move {
             if let Ok(mut conn) = pool_clone.get().await {
-                save_notebook_data(&mut conn, user_id, notebook_id, data_to_save).await;
+                save_notebook_data(&mut conn, user_id, notebook_id, data).await;
             }
         });
-        registry.remove(&notebook_id);
     }
 }
+
 async fn process_msg(
-    sender_session_id: Uuid,
+    sender_id: Uuid,
     data: Bytes,
-    notebook: &Arc<RwLock<ActiveNotebook>>,
-    permission: TeamRole,
+    notebook: &Arc<ActiveNotebook>,
+    permission: &TeamRole,
 ) -> bool {
-    let mut nb_guard = notebook.write().await;
+    let msg = match SyncMessage::decode(&data) {
+        Ok(m) => m,
+        Err(_) => return true,
+    };
 
-    let ActiveNotebook {
-        doc,
-        peer_states,
-        subscribers,
-        ..
-    } = &mut *nb_guard;
-
-    if let Ok(msg) = SyncMessage::decode(&data) {
-        if let Some(peer_state) = peer_states.get_mut(&sender_session_id) {
-            if !permission.can_write {
-                if !msg.changes.is_empty() {
-                    tracing::warn!(
-                        "Usuário sem permissão tentou enviar alterações. Desconectando."
-                    );
-                    return false;
-                }
-                if let Err(e) = doc.sync().receive_sync_message(peer_state, msg) {
-                    tracing::error!("Erro sync viewer: {:?}", e);
-                }
-            } else {
-                if let Err(e) = doc.sync().receive_sync_message(peer_state, msg) {
-                    tracing::error!("Erro sync owner: {:?}", e);
-                }
-            }
-        }
+    if !permission.can_write && !msg.changes.is_empty() {
+        tracing::warn!("Usuário sem permissão tentou enviar alterações. Desconectando.");
+        return false;
     }
 
-    for (peer_id, peer_state) in peer_states.iter_mut() {
-        if let Some(msg) = doc.sync().generate_sync_message(peer_state) {
-            let bytes = msg.encode();
-            if let Some(tx) = subscribers.get(peer_id) {
-                let _ = tx.send(bytes);
+    let advanced = {
+        let mut inner = notebook.inner.lock().await;
+        let NotebookInner { doc, peer_states } = &mut *inner;
+        let before = doc.get_heads();
+        match peer_states.get_mut(&sender_id) {
+            Some(state) => {
+                if let Err(e) = doc.sync().receive_sync_message(state, msg) {
+                    tracing::error!("Erro ao aplicar sync message: {:?}", e);
+                    return true;
+                }
+            }
+            None => return true,
+        }
+        before != doc.get_heads()
+    };
+
+    if let Some(p) = notebook.peers.get(&sender_id) {
+        p.notify.notify_one();
+    }
+
+    if advanced {
+        for entry in notebook.peers.iter() {
+            if *entry.key() != sender_id {
+                entry.value().notify.notify_one();
             }
         }
     }

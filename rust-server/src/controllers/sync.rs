@@ -1,13 +1,24 @@
 use automerge::{AutoCommit, sync::State as SyncState};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{Notify, RwLock, mpsc};
 use uuid::Uuid;
 
-pub struct ActiveNotebook {
+pub const PEER_CHANNEL_CAP: usize = 256;
+
+pub struct NotebookInner {
     pub doc: AutoCommit,
-    pub subscribers: HashMap<Uuid, mpsc::UnboundedSender<Vec<u8>>>,
     pub peer_states: HashMap<Uuid, SyncState>,
+}
+
+pub struct PeerHandle {
+    pub notify: Notify,
+    pub tx: mpsc::Sender<Vec<u8>>,
+}
+
+pub struct ActiveNotebook {
+    pub inner: tokio::sync::Mutex<NotebookInner>,
+    pub peers: dashmap::DashMap<Uuid, Arc<PeerHandle>>,
 }
 
 impl ActiveNotebook {
@@ -19,9 +30,11 @@ impl ActiveNotebook {
         };
 
         Self {
-            doc,
-            subscribers: HashMap::new(),
-            peer_states: HashMap::new(),
+            inner: tokio::sync::Mutex::new(NotebookInner {
+                doc,
+                peer_states: HashMap::new(),
+            }),
+            peers: dashmap::DashMap::new(),
         }
     }
 }
@@ -38,5 +51,5 @@ impl PresenceRoom {
     }
 }
 
-pub type SyncRegistry = Arc<dashmap::DashMap<Uuid, Arc<RwLock<ActiveNotebook>>>>;
+pub type SyncRegistry = Arc<dashmap::DashMap<Uuid, Arc<ActiveNotebook>>>;
 pub type PresenceRegistry = Arc<RwLock<HashMap<Uuid, Arc<RwLock<PresenceRoom>>>>>;
