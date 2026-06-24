@@ -1,0 +1,3 @@
+-- O PostgreSQL não permite remover um valor de ENUM diretamente.
+-- Reverter exigiria recriar o tipo block_type_enum sem 'drawing' e migrar a coluna.
+-- Mantido como no-op intencional.

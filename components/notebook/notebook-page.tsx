@@ -53,6 +53,7 @@ export default function RustInteractivePage({
     addBlockSync,
     updateBlockContent,
     updateBlockMetadataSync,
+    updateDrawingScene,
     restoreState,
     deleteBlock,
     reorderBlocks,
@@ -112,7 +113,11 @@ export default function RustInteractivePage({
     metadata?: BlockMetadata,
   ) => {
     const content =
-      type === "code" ? getInitialCode(language ?? "rust") : "Escreva aqui";
+      type === "code"
+        ? getInitialCode(language ?? "rust")
+        : type === "drawing"
+          ? ""
+          : "Escreva aqui";
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
@@ -244,6 +249,8 @@ export default function RustInteractivePage({
                 removeBlock={deleteBlock}
                 updateBlock={updateBlockContent}
                 updateBlockMetadata={updateBlockMetadataSync}
+                updateDrawingScene={updateDrawingScene}
+                doc={doc}
                 sessionId={sessionId}
                 canWrite={!previewDoc && !!userPermissions?.can_write}
               />
@@ -281,6 +288,7 @@ function getBlockTitle(
   language: Language,
   blockCount: number,
 ): string {
+  if (type === "drawing") return "Desenho";
   if (type !== "code") return "Bloco de Texto";
 
   const titles: Record<string, string> = {

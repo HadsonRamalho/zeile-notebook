@@ -22,6 +22,7 @@ pub enum BlockType {
     Text,
     Code,
     Component,
+    Drawing,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]

@@ -7,9 +7,11 @@ import type {
   Block,
   BlockMetadata,
   BlockType,
+  DrawingElement,
   Language,
   Notebook,
 } from "@/lib/types";
+import { writeSceneElements } from "@/lib/drawing-scene";
 
 type AutomergeLib = typeof AutomergeType;
 
@@ -216,6 +218,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
         content,
         ...(language !== undefined ? { language: language as any } : {}),
         ...(metadata !== undefined ? { metadata } : {}),
+        ...(type === "drawing" ? { scene: { elements: {} } } : {}),
       };
       if (!d.blocks) d.blocks = [];
       d.blocks.splice(index + 1, 0, newBlock);
@@ -271,6 +274,15 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
+  const updateDrawingScene = (
+    blockId: string,
+    elements: readonly DrawingElement[],
+  ) => {
+    updateDoc((d) => {
+      writeSceneElements(d, blockId, elements);
+    });
+  };
+
   const deleteBlock = (blockId: string) => {
     updateDoc((d) => {
       const index = d.blocks.findIndex((b) => b.id === blockId);
@@ -295,6 +307,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
     restoreState,
     updateBlockContent,
     updateBlockMetadataSync,
+    updateDrawingScene,
     deleteBlock,
     reorderBlocks,
   };

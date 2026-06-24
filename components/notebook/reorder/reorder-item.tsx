@@ -3,8 +3,15 @@
 import { Reorder, useDragControls } from "framer-motion";
 import { GripVertical, Trash2 } from "lucide-react";
 import { useCallback } from "react";
-import type { Block, BlockMetadata, Language } from "@/lib/types";
+import type {
+  Block,
+  BlockMetadata,
+  DrawingElement,
+  Language,
+  Notebook,
+} from "@/lib/types";
 import { ComponentRenderer } from "../blocks/components/components";
+import { DrawingCell } from "../blocks/drawing/drawing-cell";
 import { CppEditor } from "../blocks/cpp/cpp-editor";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
@@ -25,6 +32,8 @@ interface ReorderItemProps {
   removeBlock: (id: string) => void;
   updateBlock: (id: string, newContent: string) => void;
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
+  updateDrawingScene: (id: string, elements: readonly DrawingElement[]) => void;
+  doc: Notebook | null;
   sessionId: string;
   canWrite: boolean;
 }
@@ -39,6 +48,8 @@ export function ReorderItem({
   updateBlock,
   removeBlock,
   updateBlockMetadata,
+  updateDrawingScene,
+  doc,
   sessionId,
   canWrite,
 }: ReorderItemProps) {
@@ -84,7 +95,14 @@ export function ReorderItem({
       )}
 
       <div className="flex-1 min-w-0">
-        {block.type === "text" ? (
+        {block.type === "drawing" ? (
+          <DrawingCell
+            doc={doc}
+            blockId={block.id}
+            updateDrawingScene={updateDrawingScene}
+            canWrite={canWrite}
+          />
+        ) : block.type === "text" ? (
           <TextBlock
             content={block.content}
             onChange={(val) => canWrite && updateBlock(block.id, val)}

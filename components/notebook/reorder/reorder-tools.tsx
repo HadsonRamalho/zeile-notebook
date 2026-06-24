@@ -9,6 +9,7 @@ import {
   IdCard,
   Info,
   Loader,
+  Pencil,
   Plus,
   Terminal,
   Zap,
@@ -62,6 +63,12 @@ export function ReorderTools({
           icon: <Plus size={14} />,
           color: "hover:text-blue-400",
           onClick: () => addBlock(index, "text"),
+        },
+        {
+          label: "Desenho",
+          icon: <Pencil size={14} />,
+          color: "hover:text-purple-400",
+          onClick: () => addBlock(index, "drawing"),
         },
         {
           label: "Código",

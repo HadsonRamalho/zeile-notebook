@@ -1,0 +1,108 @@
+"use client";
+
+import "@excalidraw/excalidraw/index.css";
+import dynamic from "next/dynamic";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  readSceneElements,
+  sceneSignature,
+  writeSceneElements,
+} from "@/lib/drawing-scene";
+import type { DrawingElement, Notebook } from "@/lib/types";
+
+const Excalidraw = dynamic(
+  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
+  { ssr: false },
+);
+
+type ExcalidrawApi = {
+  getSceneElements: () => readonly DrawingElement[];
+  updateScene: (scene: { elements: readonly DrawingElement[] }) => void;
+};
+
+interface DrawingCellProps {
+  doc: Notebook | null;
+  blockId: string;
+  updateDrawingScene: (
+    blockId: string,
+    elements: readonly DrawingElement[],
+  ) => void;
+  canWrite: boolean;
+}
+
+export function DrawingCell({
+  doc,
+  blockId,
+  updateDrawingScene,
+  canWrite,
+}: DrawingCellProps) {
+  const { resolvedTheme } = useTheme();
+  const [fullscreen, setFullscreen] = useState(false);
+  const apiRef = useRef<ExcalidrawApi | null>(null);
+  const applyingRemote = useRef(false);
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const remote = readSceneElements(doc, blockId);
+    if (sceneSignature(remote) === sceneSignature(api.getSceneElements()))
+      return;
+    applyingRemote.current = true;
+    api.updateScene({ elements: remote });
+    setTimeout(() => {
+      applyingRemote.current = false;
+    }, 0);
+  }, [doc, blockId]);
+
+  useEffect(() => {
+    return () => {
+      if (commitTimer.current) clearTimeout(commitTimer.current);
+    };
+  }, []);
+
+  const onChange = useCallback(
+    (elements: readonly DrawingElement[]) => {
+      if (applyingRemote.current || !canWrite) return;
+      if (commitTimer.current) clearTimeout(commitTimer.current);
+      commitTimer.current = setTimeout(() => {
+        updateDrawingScene(blockId, elements);
+      }, 250);
+    },
+    [blockId, updateDrawingScene, canWrite],
+  );
+
+  const initial = readSceneElements(doc, blockId);
+
+  return (
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-[100] bg-white dark:bg-zinc-900"
+          : "relative h-[480px] w-full overflow-hidden rounded-lg border"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => setFullscreen((v) => !v)}
+        className="absolute right-2 top-2 z-[101] rounded bg-zinc-800 p-1.5 text-white hover:bg-zinc-700"
+        title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+      >
+        {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+      </button>
+      <Excalidraw
+        // biome-ignore lint/suspicious/noExplicitAny: API do Excalidraw
+        excalidrawAPI={(api: any) => {
+          apiRef.current = api;
+        }}
+        initialData={{ elements: initial as never }}
+        theme={resolvedTheme === "dark" ? "dark" : "light"}
+        viewModeEnabled={!canWrite}
+        // biome-ignore lint/suspicious/noExplicitAny: elementos do Excalidraw
+        onChange={(els: any) => onChange(els as DrawingElement[])}
+      />
+    </div>
+  );
+}

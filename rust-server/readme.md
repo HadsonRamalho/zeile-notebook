@@ -63,7 +63,7 @@ cargo run
 
 After running the server, access the interactive documentation at:
 ```
-http://localhost:3099/docs
+https://4n4vf0vd-3099.brs.devtunnels.ms/docs
 ```
 
 ## Contributing

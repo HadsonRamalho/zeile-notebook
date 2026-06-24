@@ -104,7 +104,10 @@ impl IntoResponse for ApiError {
         let error_code = self.error_code();
 
         let (status, message) = match self {
-            ApiError::Database(_) | ApiError::DatabaseConnection(_) | ApiError::CreateToken(_) => {
+            ApiError::Database(_)
+            | ApiError::DatabaseConnection(_)
+            | ApiError::CreateToken(_)
+            | ApiError::SendingEmail => {
                 (StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
             }
 

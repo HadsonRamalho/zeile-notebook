@@ -1,7 +1,17 @@
 import type { CalloutContainerProps } from "fumadocs-ui/components/callout";
 import type { BannerVariant } from "@/components/banner";
 
-export type BlockType = "text" | "code" | "component";
+export type BlockType = "text" | "code" | "component" | "drawing";
+
+export type DrawingElement = {
+  id: string;
+  version: number;
+  [key: string]: unknown;
+};
+
+export interface DrawingScene {
+  elements: Record<string, DrawingElement>;
+}
 export type Language =
   | "rust"
   | "typescript"
@@ -61,6 +71,7 @@ export interface Block {
   content: string;
   language?: Language;
   metadata?: BlockMetadata;
+  scene?: DrawingScene;
 }
 
 export interface NotebookMeta {

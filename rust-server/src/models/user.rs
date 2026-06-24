@@ -172,6 +172,7 @@ pub async fn find_user_by_email(
 ) -> Result<User, ApiError> {
     match users.filter(email.eq(param)).get_result(conn).await {
         Ok(user) => Ok(user),
+        Err(diesel::result::Error::NotFound) => Err(ApiError::UserNotFound),
         Err(e) => Err(ApiError::Database(e.to_string())),
     }
 }
@@ -179,6 +180,7 @@ pub async fn find_user_by_email(
 pub async fn find_user_by_id(conn: &mut AsyncPgConnection, param: &Uuid) -> Result<User, ApiError> {
     match users.filter(id.eq(param)).get_result(conn).await {
         Ok(user) => Ok(user),
+        Err(diesel::result::Error::NotFound) => Err(ApiError::UserNotFound),
         Err(e) => Err(ApiError::Database(e.to_string())),
     }
 }
