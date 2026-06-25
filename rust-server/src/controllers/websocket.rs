@@ -251,8 +251,6 @@ async fn handle_presence_socket(
     registry: Arc<RwLock<HashMap<Uuid, Arc<RwLock<PresenceRoom>>>>>,
     pool: Pool<AsyncPgConnection>,
 ) {
-    let user_id = original_user_id.unwrap_or_else(Uuid::new_v4);
-
     let permissions = get_user_notebook_permissions(&pool, &notebook_id, original_user_id)
         .await
         .unwrap()
@@ -265,9 +263,11 @@ async fn handle_presence_socket(
 
     let (mut sender, mut receiver) = socket.split();
 
+    let session_id = Uuid::new_v4();
+
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
 
-    let _ = tx.send(format!(r#"{{"type":"init","userId":"{}"}}"#, user_id));
+    let _ = tx.send(format!(r#"{{"type":"init","userId":"{}"}}"#, session_id));
 
     let room = {
         let mut reg = registry.write().await;
@@ -280,7 +280,7 @@ async fn handle_presence_socket(
 
     {
         let mut r = room.write().await;
-        r.subscribers.insert(user_id, tx);
+        r.subscribers.insert(session_id, tx);
     }
 
     let mut send_task = tokio::spawn(async move {
@@ -295,8 +295,8 @@ async fn handle_presence_socket(
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
             let r = room_for_recv.read().await;
-            for (peer_id, peer_tx) in r.subscribers.iter() {
-                if *peer_id != user_id {
+            for (peer_session_id, peer_tx) in r.subscribers.iter() {
+                if *peer_session_id != session_id {
                     let _ = peer_tx.send(text.to_string());
                 }
             }
@@ -310,9 +310,9 @@ async fn handle_presence_socket(
 
     let should_remove_room = {
         let mut r = room.write().await;
-        r.subscribers.remove(&user_id);
+        r.subscribers.remove(&session_id);
 
-        let disconnect_msg = format!(r#"{{"type":"disconnect","userId":"{}"}}"#, user_id);
+        let disconnect_msg = format!(r#"{{"type":"disconnect","userId":"{}"}}"#, session_id);
         for peer_tx in r.subscribers.values() {
             let _ = peer_tx.send(disconnect_msg.clone());
         }
