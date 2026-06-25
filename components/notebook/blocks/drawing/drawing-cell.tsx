@@ -5,11 +5,7 @@ import dynamic from "next/dynamic";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  readSceneElements,
-  sceneSignature,
-  writeSceneElements,
-} from "@/lib/drawing-scene";
+import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
 import type { DrawingElement, Notebook } from "@/lib/types";
 
 const Excalidraw = dynamic(
@@ -41,20 +37,20 @@ export function DrawingCell({
   const { resolvedTheme } = useTheme();
   const [fullscreen, setFullscreen] = useState(false);
   const apiRef = useRef<ExcalidrawApi | null>(null);
-  const applyingRemote = useRef(false);
+  // Assinatura de conteúdo do último estado sincronizado (aplicado ou enviado).
+  // É a única fonte de verdade para detectar eco e quebrar o loop, sem depender
+  // de timing entre updateScene e onChange.
+  const lastSyncedSig = useRef<string>("");
   const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const remote = readSceneElements(doc, blockId);
-    if (sceneSignature(remote) === sceneSignature(api.getSceneElements()))
-      return;
-    applyingRemote.current = true;
+    const sig = sceneSignature(remote);
+    if (sig === lastSyncedSig.current) return;
+    lastSyncedSig.current = sig;
     api.updateScene({ elements: remote });
-    setTimeout(() => {
-      applyingRemote.current = false;
-    }, 0);
   }, [doc, blockId]);
 
   useEffect(() => {
@@ -65,7 +61,11 @@ export function DrawingCell({
 
   const onChange = useCallback(
     (elements: readonly DrawingElement[]) => {
-      if (applyingRemote.current || !canWrite) return;
+      if (!canWrite) return;
+      const sig = sceneSignature(elements);
+      // Sem mudança real de conteúdo (ou eco do que acabamos de aplicar).
+      if (sig === lastSyncedSig.current) return;
+      lastSyncedSig.current = sig;
       if (commitTimer.current) clearTimeout(commitTimer.current);
       commitTimer.current = setTimeout(() => {
         updateDrawingScene(blockId, elements);
@@ -96,6 +96,8 @@ export function DrawingCell({
         // biome-ignore lint/suspicious/noExplicitAny: API do Excalidraw
         excalidrawAPI={(api: any) => {
           apiRef.current = api;
+          // Estado inicial já reflete o doc: não deve gerar commit de eco.
+          lastSyncedSig.current = sceneSignature(initial);
         }}
         initialData={{ elements: initial as never }}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
