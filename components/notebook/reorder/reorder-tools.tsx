@@ -6,12 +6,14 @@ import {
   Box,
   ChevronLeft,
   Cpu,
+  Database,
   IdCard,
   Info,
   Loader,
   Pencil,
   Plus,
   Terminal,
+  Waypoints,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
@@ -65,12 +67,6 @@ export function ReorderTools({
           onClick: () => addBlock(index, "text"),
         },
         {
-          label: "Desenho",
-          icon: <Pencil size={14} />,
-          color: "hover:text-purple-400",
-          onClick: () => addBlock(index, "drawing"),
-        },
-        {
           label: "Código",
           icon: <Terminal size={14} />,
           color: "hover:text-orange-400",
@@ -81,6 +77,29 @@ export function ReorderTools({
           icon: <Loader size={14} />,
           color: "hover:text-emerald-400",
           targetView: "ui",
+        },
+        {
+          label: "Diagramas",
+          icon: <Waypoints size={14} />,
+          color: "hover:text-purple-400",
+          targetView: "diagrams",
+        },
+      ],
+    },
+    diagrams: {
+      parent: "main",
+      buttons: [
+        {
+          label: "Desenho",
+          icon: <Pencil size={14} />,
+          color: "hover:text-purple-400",
+          onClick: () => addBlock(index, "drawing"),
+        },
+        {
+          label: "Database Schema",
+          icon: <Database size={14} />,
+          color: "hover:text-sky-400",
+          onClick: () => addBlock(index, "database_schema"),
         },
       ],
     },

@@ -80,9 +80,9 @@ export function PageSidebar({
       ) : (
         <div className="flex items-center justify-between w-full group">
           <Button
-            onClick={() => router.push(`/docs/${page.id}`)}
+            onClick={() => router.push(`/notebook/${page.id}`)}
             className={`flex-1 justify-start gap-2 p-2 w-full bg-card hover:bg-muted group-hover:bg-muted hover:cursor-pointer ${
-              pathname === `/docs/${page.id}`
+              pathname === `/notebook/${page.id}`
                 ? "text-sidebar-primary font-medium"
                 : "text-muted-foreground"
             }`}

@@ -49,7 +49,7 @@ export default function PublicNotebooksPage() {
               const formattedDate = new Date(notebook.updated_at);
 
               return (
-                <Link key={notebook.id} href={`/docs/${notebook.id}`}>
+                <Link key={notebook.id} href={`/notebook/${notebook.id}`}>
                   <Card className="h-full flex flex-col hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group">
                     <CardHeader className="pb-3">
                       <div className="grid grid-cols-1 justify-between items-start gap-4">

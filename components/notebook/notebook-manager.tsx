@@ -98,7 +98,7 @@ export function NotebookManagerProvider({
 
       await refreshPages();
 
-      router.push(`/docs/${newId}`);
+      router.push(`/notebook/${newId}`);
     } catch (err) {
       handleApiError({ err, t });
     }
@@ -114,7 +114,7 @@ export function NotebookManagerProvider({
 
         await refreshPages();
 
-        router.push(`/docs/${newId}`);
+        router.push(`/notebook/${newId}`);
       } catch (err) {
         handleApiError({ err, t });
       }

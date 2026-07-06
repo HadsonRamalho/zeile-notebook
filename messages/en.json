@@ -34,7 +34,8 @@
       "profile": "Profile",
       "settings": "Settings",
       "logout": "Logout",
-      "explore": "Explore Public Feed"
+      "explore": "Explore Public Feed",
+      "my_notebooks": "My Notebooks"
     },
     "hero": {
       "title": "Zeile Notebook",
@@ -203,6 +204,8 @@
     "my_notebook": "My Notebook",
     "no_pages": "No pages created",
     "new_page": "New page",
+    "go_to_notebooks": "Go to my notebooks",
+    "empty_notebook_desc": "Create a new notebook or select one from the sidebar to get started.",
     "backup_title": "Settings and backup",
     "manage_data": "Manage data",
     "download_all": "Export All (.json)",

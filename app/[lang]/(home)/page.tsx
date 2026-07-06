@@ -1,5 +1,13 @@
 import { HomeLayout } from "fumadocs-ui/layouts/home";
-import { BookSearch, Code, Info, Lock, Sparkles, Users } from "lucide-react";
+import {
+  BookSearch,
+  Code,
+  Info,
+  Lock,
+  NotebookPen,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -38,16 +46,24 @@ export default function HomePage() {
             </p>
 
             <div className="mt-8 grid grid-cols-1 md:flex flex-row justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
-              <Link href="/explore">
+              <Link href="/notebook">
                 <ShimmerButton
                   background="#169e69"
                   className="shadow-2xl h-14 px-8 text-sm font-bold w-full"
                 >
                   <span className="flex items-center gap-2 text-white">
-                    <BookSearch className="h-4 w-4" />
-                    {t("nav.explore")}
+                    <NotebookPen className="h-4 w-4" />
+                    {t("nav.my_notebooks")}
                   </span>
                 </ShimmerButton>
+              </Link>
+
+              <Link
+                href="/explore"
+                className="flex h-14 items-center justify-center rounded-full border bg-background px-8 text-sm font-bold shadow-sm transition-all hover:bg-muted w-full"
+              >
+                <BookSearch className="mr-2 h-4 w-4" />
+                {t("nav.explore")}
               </Link>
 
               <Link

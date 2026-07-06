@@ -53,16 +53,16 @@ export function CollabChat({
   };
 
   return (
-    <div className="fixed bottom-20 left-6 z-200 flex flex-col items-start gap-3 pointer-events-none print:hidden">
-      <div className="flex flex-col items-start gap-2 max-w-75">
+    <div className="fixed bottom-36 right-6 z-200 flex flex-col items-end gap-3 pointer-events-none print:hidden">
+      <div className="flex flex-col items-end gap-2 max-w-75">
         <AnimatePresence>
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, x: -50, scale: 0.9 }}
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-              className="px-4 py-2 rounded-2xl rounded-tl-none shadow-lg text-sm text-white pointer-events-auto backdrop-blur-md bg-opacity-90"
+              className="px-4 py-2 rounded-2xl rounded-tr-none shadow-lg text-sm text-white pointer-events-auto backdrop-blur-md bg-opacity-90"
               style={{ backgroundColor: msg.color }}
             >
               <span className="font-bold opacity-80 text-xs block mb-0.5">
@@ -74,18 +74,7 @@ export function CollabChat({
         </AnimatePresence>
       </div>
 
-      <div className="flex items-center gap-2 pointer-events-auto">
-        <button
-          type="button"
-          onClick={() => setIsOpen((v) => !v)}
-          title={isOpen ? "Fechar chat" : "Abrir chat"}
-          className="relative flex items-center justify-center p-0.5 rounded-full border border-border bg-card/80 backdrop-blur-md shadow-md transition-all hover:scale-105 hover:bg-card/90 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-        >
-          <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            {isOpen ? <X size={16} /> : <MessageSquare size={16} />}
-          </span>
-        </button>
-
+      <div className="flex items-center justify-end gap-2 pointer-events-auto">
         <AnimatePresence>
           {isOpen && (
             <motion.form
@@ -108,6 +97,17 @@ export function CollabChat({
             </motion.form>
           )}
         </AnimatePresence>
+
+        <button
+          type="button"
+          onClick={() => setIsOpen((v) => !v)}
+          title={isOpen ? "Fechar chat" : "Abrir chat"}
+          className="relative flex items-center justify-center p-0.5 rounded-full border border-border bg-card/80 backdrop-blur-md shadow-md transition-all hover:scale-105 hover:bg-card/90 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+        >
+          <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            {isOpen ? <X size={16} /> : <MessageSquare size={16} />}
+          </span>
+        </button>
       </div>
     </div>
   );

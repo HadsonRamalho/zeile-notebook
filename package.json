@@ -15,7 +15,6 @@
   "dependencies": {
     "@automerge/automerge": "^3.2.3",
     "@codemirror/lang-cpp": "^6.0.3",
-    "@excalidraw/excalidraw": "^0.18.0",
     "@codemirror/lang-go": "^6.0.1",
     "@codemirror/lang-javascript": "^6.2.4",
     "@codemirror/lang-markdown": "^6.5.0",
@@ -23,6 +22,7 @@
     "@codemirror/lang-rust": "^6.0.2",
     "@codemirror/view": "^6.43.0",
     "@codesandbox/sandpack-react": "^2.20.0",
+    "@excalidraw/excalidraw": "^0.18.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -36,6 +36,7 @@
     "@uiw/codemirror-theme-github": "^4.25.4",
     "@uiw/codemirror-theme-vscode": "^4.25.4",
     "@uiw/react-codemirror": "^4.25.4",
+    "@xyflow/react": "^12.11.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "codemirror-lang-zig": "^0.1.0",

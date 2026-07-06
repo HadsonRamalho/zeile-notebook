@@ -24,6 +24,7 @@ import { InlineTOC } from "../inline-toc";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
+import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
 import { CollabChat } from "./collaboration/chat";
 import { LiveCursors } from "./collaboration/live-cursors";
 import { PresenceBubble } from "./collaboration/presence-bubble";
@@ -117,7 +118,9 @@ export default function RustInteractivePage({
         ? getInitialCode(language ?? "rust")
         : type === "drawing"
           ? ""
-          : "Escreva aqui";
+          : type === "database_schema"
+            ? defaultDatabaseSchemaContent
+            : "Escreva aqui";
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
@@ -289,6 +292,7 @@ function getBlockTitle(
   blockCount: number,
 ): string {
   if (type === "drawing") return "Desenho";
+  if (type === "database_schema") return "Database Schema";
   if (type !== "code") return "Bloco de Texto";
 
   const titles: Record<string, string> = {

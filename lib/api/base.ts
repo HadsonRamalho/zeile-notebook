@@ -1,7 +1,7 @@
 import { getCookie } from "cookies-next";
 
 export const BASE_URL =
-  process.env.NEXT_PUBLIC_API || "https://4n4vf0vd-3099.brs.devtunnels.ms/api";
+  process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
 
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;

@@ -1,7 +1,12 @@
 import type { CalloutContainerProps } from "fumadocs-ui/components/callout";
 import type { BannerVariant } from "@/components/banner";
 
-export type BlockType = "text" | "code" | "component" | "drawing";
+export type BlockType =
+  | "text"
+  | "code"
+  | "component"
+  | "drawing"
+  | "database_schema";
 
 export type DrawingElement = {
   id: string;

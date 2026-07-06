@@ -6,6 +6,7 @@ use chrono::{Duration, Utc};
 use hyper::{HeaderMap, StatusCode};
 use rand::{Rng, distributions::Alphanumeric};
 use std::sync::Arc;
+use tracing::error;
 use uuid::Uuid;
 
 use crate::{
@@ -87,7 +88,7 @@ pub async fn api_accept_invite(
 
     let invitation = match crate::models::team_invitation::consume_invitation_by_token(
         &mut conn,
-        &payload.token,
+        &payload.token.trim(),
     )
     .await
     {

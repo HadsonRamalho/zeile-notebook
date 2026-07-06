@@ -34,7 +34,8 @@
       "profile": "Perfil",
       "settings": "Configurações",
       "logout": "Sair",
-      "explore": "Ver Feed Público"
+      "explore": "Ver Feed Público",
+      "my_notebooks": "Meus Cadernos"
     },
     "hero": {
       "title": "Zeile Notebook",
@@ -197,6 +198,8 @@
     "my_notebook": "Meu Caderno",
     "no_pages": "Nenhuma página criada",
     "new_page": "Nova página",
+    "go_to_notebooks": "Ir para meus cadernos",
+    "empty_notebook_desc": "Crie um novo caderno ou selecione um na barra lateral para começar.",
     "backup_title": "Configurações e backup",
     "manage_data": "Gerenciar dados",
     "download_all": "Exportar Tudo (.json)",

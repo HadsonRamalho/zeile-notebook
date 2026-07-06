@@ -70,7 +70,7 @@ export async function GET(request: Request) {
       );
 
       const dynamicResults = rustResponse.flatMap((page: any) => {
-        const url = `/docs/${page.id}`;
+        const url = `/notebook/${page.id}`;
         const nodes = [];
 
         nodes.push({

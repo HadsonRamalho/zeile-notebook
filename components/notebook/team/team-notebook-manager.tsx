@@ -75,7 +75,7 @@ export function TeamNotebookManagerProvider({
 
         await refreshTeamPages(teamId);
 
-        router.push(`/docs/${newId}`);
+        router.push(`/notebook/${newId}`);
       } catch (err) {
         handleApiError({ err, t });
       }

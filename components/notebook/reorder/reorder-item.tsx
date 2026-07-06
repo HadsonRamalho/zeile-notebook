@@ -11,15 +11,16 @@ import type {
   Notebook,
 } from "@/lib/types";
 import { ComponentRenderer } from "../blocks/components/components";
-import { DrawingCell } from "../blocks/drawing/drawing-cell";
 import { CppEditor } from "../blocks/cpp/cpp-editor";
+import { DatabaseSchemaCell } from "../blocks/database-schema/database-schema-cell";
+import { DrawingCell } from "../blocks/drawing/drawing-cell";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
-import { ZigEditor } from "../blocks/zig/zig-editor";
 import { TextBlock } from "../blocks/text/text-block";
 import { TsxEditor } from "../blocks/tsx/tsx-editor";
+import { ZigEditor } from "../blocks/zig/zig-editor";
 
 interface ReorderItemProps {
   block: Block;
@@ -100,6 +101,12 @@ export function ReorderItem({
             doc={doc}
             blockId={block.id}
             updateDrawingScene={updateDrawingScene}
+            canWrite={canWrite}
+          />
+        ) : block.type === "database_schema" ? (
+          <DatabaseSchemaCell
+            content={block.content}
+            onChange={(val) => updateBlock(block.id, val)}
             canWrite={canWrite}
           />
         ) : block.type === "text" ? (

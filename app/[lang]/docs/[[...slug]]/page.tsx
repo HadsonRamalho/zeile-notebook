@@ -7,11 +7,7 @@ import {
   DocsDescription,
   DocsPage,
   DocsTitle,
-} from "@/components/layout/notebook/page";
-import { NotebookProvider } from "@/components/notebook/notebook-context";
-import { NotebookControls } from "@/components/notebook/notebook-controls";
-import RustInteractivePage from "@/components/notebook/notebook-page";
-import { NotebookTitle } from "@/components/notebook/notebook-title";
+} from "@/components/layout/docs/page";
 import { env } from "@/lib/env";
 import { formatFullDate } from "@/lib/formatFullDate";
 import { getPageImage, source } from "@/lib/source";
@@ -79,30 +75,7 @@ export default async function Page(
     );
   }
 
-  if (params.slug && params.slug.length === 1) {
-    const pageId = params.slug[0];
-    return (
-      <NotebookProvider pageId={pageId}>
-        <DocsPage className="flex flex-col max-w-none!">
-          <div className="flex flex-col mb-8 max-w-none!">
-            <NotebookTitle pageId={pageId} />
-            <p className="text-muted-foreground text-xs mt-1 font-mono">
-              ID: {pageId}
-            </p>
-            <div className="mt-2 md:w-330">
-              <NotebookControls />
-            </div>
-          </div>
-
-          <DocsBody>
-            <RustInteractivePage pageId={pageId} />
-          </DocsBody>
-        </DocsPage>
-      </NotebookProvider>
-    );
-  }
-
-  if (!page) notFound();
+  notFound();
 }
 
 export async function generateStaticParams() {
@@ -122,13 +95,6 @@ export async function generateMetadata(props: {
       openGraph: {
         images: getPageImage(page).url,
       },
-    };
-  }
-
-  if (params.slug && params.slug.length === 1) {
-    return {
-      title: "Zeile Notebook",
-      description: "Caderno de anotações e código interativo.",
     };
   }
 
