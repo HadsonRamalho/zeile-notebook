@@ -35,7 +35,7 @@ function RenderPreview({ id, mode, sandboxUrl }: RenderPreviewProps) {
   return (
     <div
       id={`preview-${id}`}
-      className="bg-white overflow-hidden relative min-h-[300px]"
+      className="bg-background overflow-hidden relative min-h-[300px]"
     >
       {sandboxUrl ? (
         <iframe
@@ -45,7 +45,7 @@ function RenderPreview({ id, mode, sandboxUrl }: RenderPreviewProps) {
           className="w-full h-[500px] border-none"
         />
       ) : (
-        <div className="p-4 text-gray-400 italic flex items-center justify-center h-[300px]">
+        <div className="p-4 text-muted-foreground italic flex items-center justify-center h-[300px]">
           Clique em "Executar" para renderizar...
         </div>
       )}
@@ -121,7 +121,7 @@ export function TsxEditor({
   };
 
   return (
-    <div className="rounded-lg overflow-hidden border bg-card border-border">
+    <div className="rounded-xl overflow-hidden border border-border bg-card shadow-2xl transition-all duration-300 mb-6 mt-2">
       <Script
         src="https://unpkg.com/@babel/standalone/babel.min.js"
         strategy="lazyOnload"
@@ -134,7 +134,7 @@ export function TsxEditor({
         files={editorFiles}
         options={editorOptions}
       >
-        <div className="flex bg-card">
+        <div className="flex items-center justify-between bg-card px-4 py-2 border-b border-border">
           <EditorHeader
             block={block}
             pageBlocks={pageBlocks}
@@ -184,7 +184,7 @@ export function TsxEditor({
           </SandpackLayout>
 
           {mode === "advanced" && showConsole && (
-            <div className="border-t bg-card h-36 print:hidden overflow-auto">
+            <div className="border-t border-border bg-muted/30 h-36 print:hidden overflow-auto">
               <SandpackConsole
                 resetOnPreviewRestart={true}
                 showResetConsoleButton={true}

@@ -1,20 +1,20 @@
 "use client";
 
-import * as Base from "fumadocs-core/toc";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import type { Block } from "@/lib/types";
-import { cn, extractTOCFromBlocks } from "@/lib/utils";
+import { AnchorProvider, TOCItem } from "@/lib/toc";
+import { cn, extractTOCFromBlocks, type TOCItemType } from "@/lib/utils";
 
 interface InlineTOCProps {
   blocks?: Block[];
-  tocItems?: Base.TOCItemType[];
+  tocItems?: TOCItemType[];
 }
 
 export function InlineTOC({ tocItems, blocks }: InlineTOCProps) {
   const t = useTranslations("toc");
 
-  const [items, setItems] = useState<Base.TOCItemType[]>([]);
+  const [items, setItems] = useState<TOCItemType[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
@@ -77,7 +77,7 @@ export function InlineTOC({ tocItems, blocks }: InlineTOCProps) {
   if (items.length === 0) return null;
 
   return (
-    <Base.AnchorProvider toc={items}>
+    <AnchorProvider toc={items}>
       <div
         ref={containerRef}
         className="flex flex-col max-h-[80vh] overflow-y-auto pr-2 top-24 relative"
@@ -86,38 +86,36 @@ export function InlineTOC({ tocItems, blocks }: InlineTOCProps) {
           {t("title")}
         </p>
 
-        <Base.ScrollProvider containerRef={containerRef}>
-          <div className="flex flex-col relative ml-4">
-            <div className="absolute left-0 top-0 bottom-0 w-px bg-border/40" />
-            <div
-              className="absolute left-0 w-0.5 bg-fd-primary rounded-sm transition-all duration-300 ease-out"
-              style={{
-                top: markerStyle.top,
-                height: markerStyle.height,
-                opacity: markerStyle.opacity,
-              }}
-            />
+        <div className="flex flex-col relative ml-4">
+          <div className="absolute left-0 top-0 bottom-0 w-px bg-border/40" />
+          <div
+            className="absolute left-0 w-0.5 bg-fd-primary rounded-sm transition-all duration-300 ease-out"
+            style={{
+              top: markerStyle.top,
+              height: markerStyle.height,
+              opacity: markerStyle.opacity,
+            }}
+          />
 
-            {items.map((item) => (
-              <Base.TOCItem
-                key={item.url}
-                href={item.url}
-                ref={(el) => {
-                  if (el) itemRefs.current.set(item.url, el);
-                }}
-                className={cn(
-                  "py-2 text-sm transition-colors duration-300 block no-underline",
-                  item.depth <= 2 ? "pl-4" : "pl-8",
-                  "text-muted-foreground hover:text-foreground",
-                  "data-[active=true]:text-fd-primary data-[active=true]:font-medium",
-                )}
-              >
-                {item.title}
-              </Base.TOCItem>
-            ))}
-          </div>
-        </Base.ScrollProvider>
+          {items.map((item) => (
+            <TOCItem
+              key={item.url}
+              href={item.url}
+              ref={(el) => {
+                if (el) itemRefs.current.set(item.url, el);
+              }}
+              className={cn(
+                "py-2 text-sm transition-colors duration-300 block no-underline",
+                item.depth <= 2 ? "pl-4" : "pl-8",
+                "text-muted-foreground hover:text-foreground",
+                "data-[active=true]:text-fd-primary data-[active=true]:font-medium",
+              )}
+            >
+              {item.title}
+            </TOCItem>
+          ))}
+        </div>
       </div>
-    </Base.AnchorProvider>
+    </AnchorProvider>
   );
 }

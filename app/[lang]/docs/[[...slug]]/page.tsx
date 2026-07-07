@@ -1,6 +1,8 @@
-import { createRelativeLink } from "fumadocs-ui/mdx";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import rehypeSlug from "rehype-slug";
+import remarkGfm from "remark-gfm";
 import { InlineTOC } from "@/components/inline-toc";
 import {
   DocsBody,
@@ -9,94 +11,87 @@ import {
   DocsTitle,
 } from "@/components/layout/docs/page";
 import { env } from "@/lib/env";
-import { formatFullDate } from "@/lib/formatFullDate";
-import { getPageImage, source } from "@/lib/source";
+import { getDocPage, getDocPages, getDocSource, getHeadings } from "@/lib/docs";
 import { getMDXComponents } from "@/mdx-components";
 
 export const dynamicParams = true;
-
-type UpdatedAtProps = {
-  date: Date;
-};
-
-function UpdatedAt({ date }: UpdatedAtProps) {
-  return (
-    <span className="text-sm text-fd-muted-foreground">
-      Última atualização em: {formatFullDate(date)}
-    </span>
-  );
-}
 
 export default async function Page(
   props: PageProps<"/[lang]/docs/[[...slug]]">,
 ) {
   const params = await props.params;
-  const page = source.getPage(params.slug);
+  const slug = params.slug ?? [];
+  const page = getDocPage(slug);
 
-  if (page) {
-    const lastModifiedTime = page.data.lastModified;
-    if (page.data.title === "API Reference") {
-      const mode = env.get("NEXT_PUBLIC_MODE");
-      if (mode === "NO_ENDPOINTS") {
-        return (
-          <DocsPage toc={page.data.toc}>
-            <DocsTitle>Conteúdo indisponível</DocsTitle>
-            <DocsDescription className="mb-0">
-              Os endpoints não estão disponíveis no momento, pois o MODE da API
-              está configurado como {mode}.
-            </DocsDescription>
-            <DocsBody />
-          </DocsPage>
-        );
-      }
+  if (!page) notFound();
+
+  if (page.frontmatter.title === "API Reference") {
+    env.loadEnv();
+    const mode = env.get("NEXT_PUBLIC_MODE");
+    if (mode === "NO_ENDPOINTS") {
+      return (
+        <DocsPage>
+          <DocsTitle>Conteúdo indisponível</DocsTitle>
+          <DocsDescription className="mb-0">
+            Os endpoints não estão disponíveis no momento, pois o MODE da API
+            está configurado como {mode}.
+          </DocsDescription>
+        </DocsPage>
+      );
     }
-    const MDX = page.data.body;
-
-    return (
-      <DocsPage toc={undefined}>
-        <DocsTitle>{page.data.title}</DocsTitle>
-        <DocsDescription>{page.data.description}</DocsDescription>
-        {lastModifiedTime && <UpdatedAt date={lastModifiedTime} />}
-        <DocsBody className="grid xl:grid-cols-[1fr_250px] gap-8 max-w-none! w-full">
-          <div className="min-w-0">
-            <MDX
-              components={getMDXComponents({
-                a: createRelativeLink(source, page),
-              })}
-            />
-          </div>
-          <aside className="hidden xl:block">
-            <div className="sticky top-24">
-              <InlineTOC tocItems={page.data.toc} />
-            </div>
-          </aside>
-        </DocsBody>
-      </DocsPage>
-    );
   }
 
-  notFound();
+  const source = getDocSource(page);
+  const toc = getHeadings(source);
+
+  return (
+    <DocsPage toc={toc}>
+      <div className="max-w-[850px]">
+        <DocsTitle>{page.frontmatter.title}</DocsTitle>
+        <DocsDescription>{page.frontmatter.description}</DocsDescription>
+      </div>
+      <DocsBody className="grid xl:grid-cols-[1fr_250px] gap-8 max-w-none! w-full">
+        <div className="min-w-0">
+          <MDXRemote
+            source={source}
+            components={getMDXComponents()}
+            options={{
+              mdxOptions: {
+                remarkPlugins: [remarkGfm],
+                rehypePlugins: [rehypeSlug],
+              },
+            }}
+          />
+        </div>
+        <aside className="hidden xl:block">
+          <div className="sticky top-24">
+            <InlineTOC tocItems={toc} />
+          </div>
+        </aside>
+      </DocsBody>
+    </DocsPage>
+  );
 }
 
 export async function generateStaticParams() {
-  return source.generateParams();
+  return ["pt-br", "en"].flatMap((lang) =>
+    getDocPages().map((page) => ({ lang, slug: page.slugs })),
+  );
 }
 
 export async function generateMetadata(props: {
   params: Promise<{ slug?: string[] }>;
 }): Promise<Metadata> {
   const params = await props.params;
-  const page = source.getPage(params.slug);
+  const page = getDocPage(params.slug ?? []);
 
-  if (page) {
-    return {
-      title: page.data.title,
-      description: page.data.description,
-      openGraph: {
-        images: getPageImage(page).url,
-      },
-    };
-  }
+  if (!page) return notFound();
 
-  return notFound();
+  return {
+    title: page.frontmatter.title,
+    description: page.frontmatter.description,
+    openGraph: {
+      images: `/og/docs/${[...page.slugs, "image.png"].join("/")}`,
+    },
+  };
 }

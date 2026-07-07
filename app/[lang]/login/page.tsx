@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import {
   NextIntlClientProvider,
@@ -7,6 +6,7 @@ import {
 } from "next-intl";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/login-form";
+import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
 
 function LoginContent() {
   const t = useTranslations("docs");
@@ -35,7 +35,7 @@ export default function Page() {
     <Suspense
       fallback={
         <div className="flex h-screen w-full items-center justify-center flex-col gap-4">
-          <Loader2 className="size-10 animate-spin text-primary" />
+          <HelixPercentLoader label={t("loading")} />
           <p className="text-muted-foreground animate-pulse">{t("loading")}</p>
         </div>
       }

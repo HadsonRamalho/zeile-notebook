@@ -1,14 +1,12 @@
-import { Copy, Loader2, Lock, Printer, Share2, Users } from "lucide-react";
+import { Copy, Lock, Printer, Share2, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { Dock, DockIcon } from "@/components/ui/dock";
+import { Loader } from "@/components/motion/loader";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export type ControlRules = {
   showPrivacySelector: boolean;
@@ -27,6 +25,42 @@ interface ControlActionsProps {
   onExport: () => void;
 }
 
+function DockAction({
+  icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <DockIcon
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          aria-disabled={disabled}
+          onClick={disabled ? undefined : onClick}
+          onKeyDown={(e) => {
+            if (!disabled && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              onClick();
+            }
+          }}
+          aria-label={label}
+          className="text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground aria-disabled:pointer-events-none aria-disabled:opacity-50"
+        >
+          {icon}
+        </DockIcon>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function ControlActions({
   rules,
   isPublic,
@@ -38,66 +72,64 @@ export function ControlActions({
 }: ControlActionsProps) {
   const t = useTranslations("notebook_controls");
 
+  const hasAny =
+    rules.showPrivacySelector ||
+    rules.showClone ||
+    rules.showShare ||
+    rules.showExport;
+
+  if (!hasAny) return null;
+
   return (
-    <div className="grid grid-cols-1 w-full md:w-auto md:flex gap-2 items-center justify-center md:justify-start print:hidden">
+    <Dock
+      iconSize={40}
+      iconMagnification={52}
+      className="mt-0 border-border bg-card supports-backdrop-blur:bg-card/80"
+    >
       {rules.showPrivacySelector && (
-        <Select
-          value={isPublic ? "true" : "false"}
-          onValueChange={(val) => onToggleVisibility(val === "true")}
-        >
-          <SelectTrigger className="w-full md:w-45">
-            <SelectValue placeholder={t("visibility")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="false">
-                <Lock className="size-4 mr-2 inline-block" />
-                {t("private")}
-              </SelectItem>
-              <SelectItem value="true">
-                <Users className="size-4 mr-2 inline-block" />
-                {t("public")}
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <DockAction
+          icon={
+            isPublic ? (
+              <Users className="size-4" />
+            ) : (
+              <Lock className="size-4" />
+            )
+          }
+          label={isPublic ? t("public") : t("private")}
+          onClick={() => onToggleVisibility(!isPublic)}
+        />
       )}
 
       {rules.showClone && (
-        <Button
+        <DockAction
+          icon={
+            isCloning ? (
+              <Loader variant="spinner" size={16} />
+            ) : (
+              <Copy className="size-4" />
+            )
+          }
+          label={t("clone")}
           onClick={onClone}
           disabled={isCloning}
-          className="w-full md:w-auto"
-        >
-          {isCloning ? (
-            <Loader2 className="size-4 mr-2 animate-spin" />
-          ) : (
-            <Copy className="size-4 mr-2" />
-          )}
-          {t("clone")}
-        </Button>
+        />
       )}
 
       {rules.showShare && (
-        <Button
+        <DockAction
+          icon={<Share2 className="size-4" />}
+          label={t("share")}
           onClick={onShare}
-          variant="secondary"
-          className="gap-2 shadow-sm w-full md:w-auto"
-        >
-          <Share2 size={16} />
-          {t("share")}
-        </Button>
+        />
       )}
 
       {rules.showExport && (
-        <Button
+        <DockAction
+          icon={<Printer className="size-4" />}
+          label={t("pdf")}
           onClick={onExport}
-          className="gap-2 backdrop-blur-sm w-full md:w-auto"
-        >
-          <Printer className="size-4" />
-          {t("pdf")}
-        </Button>
+        />
       )}
-    </div>
+    </Dock>
   );
 }

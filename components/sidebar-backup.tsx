@@ -46,31 +46,25 @@ export function SidebarBackup() {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+            className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             title={t("backup_title")}
           >
             <Settings size={14} />
           </button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent
-          align="start"
-          className="w-56 bg-[#1e1e1e] border-[#333] text-gray-200"
-        >
+        <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuLabel>{t("manage_data")}</DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-[#333]" />
+          <DropdownMenuSeparator />
 
-          <DropdownMenuItem
-            onClick={() => downloadBackup()}
-            className="cursor-pointer hover:bg-[#333] focus:bg-[#333]"
-          >
+          <DropdownMenuItem onClick={() => downloadBackup()} className="cursor-pointer">
             <Download className="mr-2 h-4 w-4" />
             <span>{t("download_all")}</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
             onClick={() => fileInputRef.current?.click()}
-            className="cursor-pointer hover:bg-[#333] focus:bg-[#333] text-emerald-400 focus:text-emerald-400"
+            className="cursor-pointer"
           >
             <Upload className="mr-2 h-4 w-4" />
             <span>{t("import")}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Plus, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
@@ -24,6 +24,11 @@ export function UserSidebar() {
     }
   }, [pages.length, currentPage]);
 
+  useEffect(() => {
+    const id = setInterval(refreshPages, 6000);
+    return () => clearInterval(id);
+  }, [refreshPages]);
+
   if (!user) {
     return null;
   }
@@ -40,28 +45,19 @@ export function UserSidebar() {
   };
 
   return (
-    <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-white/10">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between px-2">
         <span className="text-xs font-bold uppercase">{t("my_notebook")}</span>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
-            onClick={refreshPages}
-          >
-            <RotateCw size={14} />
-          </button>
-
-          <div className="w-px h-3 bg-white/10 mx-1" />
 
           <SidebarBackup />
 
-          <div className="w-px h-3 bg-white/10 mx-1" />
+          <div className="w-px h-3 bg-border mx-1" />
 
           <button
             type="button"
             onClick={handleCreatePage}
-            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+            className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             title={t("new_page")}
           >
             <Plus size={14} />
@@ -94,12 +90,12 @@ export function UserSidebar() {
             type="button"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+            className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
           >
             <ChevronLeft size={16} />
           </button>
 
-          <span className="text-xs text-gray-500 font-medium">
+          <span className="text-xs text-muted-foreground font-medium">
             {currentPage} / {totalPages}
           </span>
 
@@ -107,7 +103,7 @@ export function UserSidebar() {
             type="button"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+            className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
           >
             <ChevronRight size={16} />
           </button>

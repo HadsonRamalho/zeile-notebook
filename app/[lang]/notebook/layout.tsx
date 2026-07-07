@@ -1,5 +1,5 @@
-import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { NextIntlClientProvider, useMessages } from "next-intl";
+import { AppShell } from "@/components/layout/app-shell";
 import { NotebookManagerProvider } from "@/components/notebook/notebook-manager";
 import { NotebookSidebar } from "@/components/notebook/sidebar/notebook-sidebar";
 import { TeamNotebookManagerProvider } from "@/components/notebook/team/team-notebook-manager";
@@ -12,12 +12,12 @@ export default function Layout({ children }: LayoutProps<"/[lang]/notebook">) {
     <NextIntlClientProvider messages={messages}>
       <TeamNotebookManagerProvider>
         <NotebookManagerProvider>
-          <HomeLayout {...baseOptions({ variant: "notebook" })}>
+          <AppShell nav={baseOptions({ variant: "notebook" }).nav?.component}>
             <div className="flex flex-1 pt-14">
               <NotebookSidebar />
-              <div className="flex-1 min-w-0 px-4 py-6 md:px-8">{children}</div>
+              <div className="flex-1 min-w-0 py-6 pl-8 pr-4 md:pl-12 md:pr-8">{children}</div>
             </div>
-          </HomeLayout>
+          </AppShell>
         </NotebookManagerProvider>
       </TeamNotebookManagerProvider>
     </NextIntlClientProvider>

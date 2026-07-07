@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  RotateCw,
-  Settings,
-  Users,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Settings, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "../ui/button";
 import { PageSidebar } from "./page/page-sidebar";
@@ -37,6 +30,11 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const id = setInterval(() => refreshTeamPages(team.id), 6000);
+    return () => clearInterval(id);
+  }, [team.id, refreshTeamPages]);
+
   if (!user) {
     return null;
   }
@@ -51,9 +49,10 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
 
   return (
     <div className="flex flex-col w-full">
-      <div className="flex bg-card  items-center justify-between p-2 w-full hover:bg-muted rounded-md group text-sm text-muted-foreground hover:text-foreground transition-colors">
-        <div
-          className="flex items-center gap-2 overflow-hidden hover:cursor-pointer"
+      <div className="group flex w-full items-center justify-between rounded-md p-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? (
@@ -62,12 +61,15 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
             <ChevronRight size={14} className="shrink-0" />
           )}
           <Users size={14} className="shrink-0" />
-          <span className="font-medium truncate">{team.name}</span>
-        </div>
+          <span className="truncate font-medium">{team.name}</span>
+        </button>
 
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
-            className="rounded hover:bg-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity size-5"
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:text-accent-foreground"
             onClick={(e) => {
               e.stopPropagation();
               router.push(`/teams/${team.id}/settings`);
@@ -77,17 +79,11 @@ export function TeamSidebar({ team }: TeamSidebarProps) {
           </Button>
 
           <Button
-            onClick={() => {
-              refreshTeamPages(team.id);
-            }}
-            className="rounded hover:bg-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity size-5"
-          >
-            <RotateCw className="size-4" />
-          </Button>
-
-          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:text-accent-foreground"
             onClick={handleCreatePage}
-            className="rounded hover:bg-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity size-5"
           >
             <Plus className="size-4" />
           </Button>

@@ -1,8 +1,7 @@
-import { createSearchAPI } from "fumadocs-core/search/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { api } from "@/lib/api/base";
-import { source } from "@/lib/source";
+import { getDocPages } from "@/lib/docs";
 
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -34,23 +33,32 @@ function generateHighlights(text: string, query: string) {
   return result;
 }
 
-const fumadocsSearch = createSearchAPI("advanced", {
-  language: "portuguese",
-  indexes: source.getPages().map((page) => ({
-    title: page.data.title,
-    description: page.data.description,
-    url: page.url,
-    id: page.url,
-    structuredData: page.data.structuredData,
-  })),
-});
+function searchDocs(query: string) {
+  const lowerQuery = query.toLowerCase();
+
+  return getDocPages()
+    .filter(
+      (page) =>
+        page.frontmatter.title.toLowerCase().includes(lowerQuery) ||
+        page.frontmatter.description?.toLowerCase().includes(lowerQuery),
+    )
+    .map((page) => ({
+      id: page.url,
+      type: "page" as const,
+      url: page.url,
+      content: page.frontmatter.title,
+      contentWithHighlights: generateHighlights(
+        page.frontmatter.title,
+        query,
+      ),
+    }));
+}
 
 export async function GET(request: Request) {
-  const staticResponse = await fumadocsSearch.GET(request);
-  let results = await staticResponse.json();
-
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query");
+
+  let results: unknown[] = query ? searchDocs(query) : [];
 
   if (!query) {
     return NextResponse.json(results);

@@ -44,45 +44,43 @@ export default function PythonSandbox({
   );
 
   return (
-    <div className="rounded-lg p-2">
-      <div
-        className={`flex flex-col gap-6 w-full mb-6 mt-2 ${
-          isDragging ? "pointer-events-none opacity-50" : ""
-        }`}
-      >
-        <div className="flex flex-col rounded-xl border dark:border-[#333] bg-card dark:bg-[#1e1e1e] shadow-2xl overflow-hidden transition-all duration-300 dark:hover:border-[#444]">
-          <div className="flex items-center justify-between bg-card dark:bg-[#252525] px-4 py-2 border-b dark:border-[#333]">
-            <EditorHeader
-              block={block}
-              pageBlocks={[]}
-              setBlocksAction={() => {}}
-              babelReady={false}
-              handleRunSimple={() => {}}
-              setShowPreview={() => {}}
-              showPreview={false}
-            />
-            <RunButton
-              isRunning={isRunning}
-              handleRun={handleRun}
-              isLoading={false}
-            />
-          </div>
-
-          <div className="relative group">
-            <BlockEditor
-              content={block.content}
-              language={"python"}
-              onChange={handleCodeChange}
-              readOnly={isDragging}
-              minHeight="280px"
-              className="border-none rounded-none"
-              onBlur={() => {}}
-              type="code"
-            />
-          </div>
-
-          {!isDragging && <EditorConsole status={status} output={output} />}
+    <div
+      className={`flex flex-col gap-6 w-full mb-6 mt-2 ${
+        isDragging ? "pointer-events-none opacity-50" : ""
+      }`}
+    >
+      <div className="flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden transition-all duration-300">
+        <div className="flex items-center justify-between bg-card px-4 py-2 border-b border-border">
+          <EditorHeader
+            block={block}
+            pageBlocks={[]}
+            setBlocksAction={() => {}}
+            babelReady={false}
+            handleRunSimple={() => {}}
+            setShowPreview={() => {}}
+            showPreview={false}
+          />
+          <RunButton
+            isRunning={isRunning}
+            handleRun={handleRun}
+            isLoading={false}
+          />
         </div>
+
+        <div className="relative group bg-card">
+          <BlockEditor
+            content={block.content}
+            language="python"
+            onChange={handleCodeChange}
+            readOnly={isDragging}
+            minHeight="280px"
+            className="border-none rounded-none"
+            onBlur={() => {}}
+            type="code"
+          />
+        </div>
+
+        {!isDragging && <EditorConsole status={status} output={output} />}
       </div>
     </div>
   );

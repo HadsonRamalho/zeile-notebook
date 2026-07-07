@@ -83,7 +83,7 @@ export function NotebookControls() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:flex w-full justify-between gap-2 print:hidden">
+    <div className="flex w-full justify-start gap-2 print:hidden">
       <ControlActions
         rules={rules}
         isPublic={isPublic}

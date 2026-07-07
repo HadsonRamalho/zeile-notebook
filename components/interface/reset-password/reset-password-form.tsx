@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, KeyRound, Send } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -89,6 +90,7 @@ export function ResetPasswordForm({
             variant="outline"
             onClick={() => router.push("/forgot-password")}
           >
+            <Send className="mr-2 h-4 w-4" />
             {t("request_new_link")}
           </Button>
         </CardContent>
@@ -161,8 +163,10 @@ export function ResetPasswordForm({
                   className="w-full bg-secondary text-foreground"
                   disabled={isLoading}
                 >
-                  {isLoading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isLoading ? (
+                    <Loader variant="spinner" size={16} className="mr-2" />
+                  ) : (
+                    <KeyRound className="mr-2 h-4 w-4" />
                   )}
                   {t("submit_button")}
                 </Button>

@@ -134,6 +134,36 @@ export const BlockEditor = React.memo(
       localContentRef.current = content;
     }, [content]);
 
+    if (type === "code" || type === "component") {
+      const defaultHeight = 240;
+      return (
+        <div
+          style={{
+            height: defaultHeight,
+            minHeight: defaultHeight,
+            maxHeight: defaultHeight * 2,
+            resize: "vertical",
+            overflow: "auto",
+          }}
+          className={`rounded-md border border-border ${className}`}
+        >
+          <CodeMirror
+            ref={editorRef}
+            value={localContentRef.current}
+            height="100%"
+            theme={resolvedTheme === "dark" ? vscodeDark : vscodeLight}
+            extensions={extensions}
+            onBlur={onBlur}
+            autoFocus={true}
+            onChange={handleChange}
+            editable={!readOnly}
+            basicSetup={basicSetup}
+            className="text-sm w-full h-full overflow-auto"
+          />
+        </div>
+      );
+    }
+
     return (
       <CodeMirror
         ref={editorRef}

@@ -21,6 +21,10 @@
   },
   "registries": {
     "@magicui": "https://magicui.design/r/{name}",
-    "@skiper-ui": "https://skiper-ui.com/registry/{name}.json"
+    "@skiper-ui": "https://skiper-ui.com/registry/{name}.json",
+    "@beui": "https://beui.dev/r/{name}.json",
+    "@animate-ui": "https://animate-ui.com/r/{name}.json",
+    "@remocn": "https://www.remocn.dev/r/{name}.json",
+    "@coss": "https://coss.com/ui/r/{name}.json"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, Plus, Trash2, Users } from "lucide-react";
+import { Plus, Send, Trash2, Users } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -31,7 +32,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/motion/select";
 import { useAuth } from "@/context/auth-context";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { inviteTeamMember, removeMember } from "@/lib/api/teams-service";
@@ -158,11 +159,7 @@ export function TeamMembers({
                   </div>
                   <div className="space-y-2">
                     <Label>{a("user_role")}</Label>
-                    <Select
-                      required
-                      value={inviteRoleId}
-                      onValueChange={setInviteRoleId}
-                    >
+                    <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={a("select_role")} />
                       </SelectTrigger>
@@ -191,8 +188,10 @@ export function TeamMembers({
                     type="submit"
                     disabled={isInviting || !inviteEmail || !inviteRoleId}
                   >
-                    {isInviting && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isInviting ? (
+                      <Loader variant="spinner" size={16} className="mr-2" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
                     )}
                     {a("send_invite")}
                   </Button>
@@ -282,7 +281,7 @@ export function TeamMembers({
               disabled={isRemoving}
             >
               {isRemoving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader variant="spinner" size={16} className="mr-2" />
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}

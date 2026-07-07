@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Send } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -120,8 +121,10 @@ export function ForgotPasswordForm({
                     className="w-full bg-secondary text-foreground"
                     disabled={isLoading}
                   >
-                    {isLoading && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isLoading ? (
+                      <Loader variant="spinner" size={16} className="mr-2" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
                     )}
                     {t("submit_button")}
                   </Button>

@@ -3,11 +3,11 @@
 import {
   AlertCircle,
   Check,
-  Loader2,
   SettingsIcon,
   Star,
   X,
 } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { type AnchorHTMLAttributes, useEffect, useState } from "react";
 import type { BlockMetadata } from "@/lib/types";
 import { cn } from "../lib/cn";
@@ -127,7 +127,7 @@ export function GithubInfo({
 
       <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-black/5 px-2 py-0.5 rounded-full">
         {loading ? (
-          <Loader2 className="size-3 animate-spin" />
+          <Loader variant="spinner" size={12} />
         ) : (
           <>
             <Star className="size-3 text-yellow-500 fill-yellow-500" />

@@ -1,5 +1,5 @@
-import { HomeLayout } from "fumadocs-ui/layouts/home";
 import type { Metadata } from "next";
+import { AppShell } from "@/components/layout/app-shell";
 import { NextIntlClientProvider, useMessages } from "next-intl";
 import { ProfileForm } from "@/components/profile-form";
 import { baseOptions } from "@/lib/layout.shared";
@@ -13,7 +13,7 @@ export default function ProfilePage() {
   const messages = useMessages();
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <HomeLayout {...baseOptions({ variant: "global" })}>
+      <AppShell nav={baseOptions({ variant: "global" }).nav?.component}>
         <main className="flex flex-1 flex-col items-center mt-10 p-4">
           <div className="w-full max-w-6xl space-y-6">
             <NextIntlClientProvider messages={messages}>
@@ -21,7 +21,7 @@ export default function ProfilePage() {
             </NextIntlClientProvider>
           </div>
         </main>
-      </HomeLayout>
+      </AppShell>
     </div>
   );
 }

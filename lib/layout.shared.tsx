@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { NextIntlClientProvider, useLocale, useMessages } from "next-intl";
 import { LanguageSelect } from "@/components/interface/locale-switcher";
+import { PrimaryNav } from "@/components/layout/primary-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserNav } from "@/components/nav/user-nav";
-import { cn } from "@/lib/cn";
 import type { BaseLayoutProps } from "../components/layout/shared";
 
 function IconWithTitle() {
@@ -20,7 +20,7 @@ function IconWithTitle() {
 }
 
 interface BaseOptionsProps {
-  variant: "default" | "home" | "global" | "notebook";
+  variant: "default" | "home" | "global" | "notebook" | "docs";
 }
 
 export function baseOptions({
@@ -33,11 +33,15 @@ export function baseOptions({
     nav: {
       children:
         variant === "default" ? (
-          <NextIntlClientProvider messages={messages}>
+          <NextIntlClientProvider locale={locale} messages={messages}>
             <div className="flex w-full items-center justify-between gap-2 print:hidden">
               <IconWithTitle />
 
-              <UserNav />
+              <div className="flex items-center gap-1.5">
+                <LanguageSelect />
+                <ThemeToggle />
+                <UserNav />
+              </div>
             </div>
           </NextIntlClientProvider>
         ) : null,
@@ -45,25 +49,17 @@ export function baseOptions({
       component:
         variant !== "default" ? (
           <NextIntlClientProvider locale={locale} messages={messages}>
-            <header
-              className={cn(
-                "fixed top-0 z-50 w-full border-b border-border/40 backdrop-blur print:hidden",
-                variant === "notebook"
-                  ? "bg-fd-card supports-backdrop-filter:bg-fd-card/95"
-                  : "bg-fd-background/95 supports-backdrop-filter:bg-fd-background/60",
-              )}
-            >
-              <div className="container mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-6">
-                <div className="flex gap-4">
+            <header className="fixed top-0 z-50 w-full border-b bg-sidebar/95 backdrop-blur supports-backdrop-filter:bg-sidebar/80 print:hidden">
+              <div className="flex h-14 items-center justify-between gap-4 px-4 md:px-6">
+                <div className="flex items-center gap-6">
                   <IconWithTitle />
+                  <PrimaryNav />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex justify-end items-end">
-                    <LanguageSelect />
-                  </div>
-                  <UserNav />
+                <div className="flex items-center gap-1.5">
+                  <LanguageSelect />
                   <ThemeToggle />
+                  <UserNav />
                 </div>
               </div>
             </header>

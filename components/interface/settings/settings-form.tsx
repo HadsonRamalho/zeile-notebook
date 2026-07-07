@@ -23,7 +23,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/motion/select";
 import { Separator } from "@/components/ui/separator";
 import { useLocalStorage } from "@/hooks/use-local-storate";
 import { BackButton } from "../back-button";

@@ -1,8 +1,7 @@
-import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { AppShell } from "@/components/layout/app-shell";
 import {
   BookSearch,
   Code,
-  Info,
   Lock,
   NotebookPen,
   Sparkles,
@@ -23,7 +22,7 @@ export default function HomePage() {
   const t = useTranslations("homepage");
 
   return (
-    <HomeLayout {...baseOptions({ variant: "home" })}>
+    <AppShell nav={baseOptions({ variant: "home" }).nav?.component}>
       <main className="relative overflow-hidden bg-background">
         <section className="relative flex min-h-[80vh] w-full flex-col items-center justify-center overflow-hidden px-6 py-24 text-center md:py-32">
           <div className="z-10 flex flex-col items-center justify-center gap-6 max-w-4xl">
@@ -37,7 +36,7 @@ export default function HomePage() {
               />
             </div>
 
-            <h1 className="pointer-events-none z-10 whitespace-pre-wrap bg-linear-to-b from-[#169e69] via-[#5eeb95] to-[#1ca381] bg-clip-text text-center text-5xl font-extrabold leading-none tracking-tighter text-transparent sm:text-7xl lg:text-8xl">
+            <h1 className="pointer-events-none z-10 whitespace-pre-wrap bg-linear-to-b from-primary via-primary/70 to-primary bg-clip-text text-center text-5xl font-extrabold leading-none tracking-tighter text-transparent sm:text-7xl lg:text-8xl">
               {t("hero.title")}
             </h1>
 
@@ -48,10 +47,10 @@ export default function HomePage() {
             <div className="mt-8 grid grid-cols-1 md:flex flex-row justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
               <Link href="/notebook">
                 <ShimmerButton
-                  background="#169e69"
+                  background="var(--primary)"
                   className="shadow-2xl h-14 px-8 text-sm font-bold w-full"
                 >
-                  <span className="flex items-center gap-2 text-white">
+                  <span className="flex items-center gap-2 text-primary-foreground">
                     <NotebookPen className="h-4 w-4" />
                     {t("nav.my_notebooks")}
                   </span>
@@ -60,18 +59,10 @@ export default function HomePage() {
 
               <Link
                 href="/explore"
-                className="flex h-14 items-center justify-center rounded-full border bg-background px-8 text-sm font-bold shadow-sm transition-all hover:bg-muted w-full"
+                className="flex h-14 items-center justify-center rounded-full border bg-background px-8 text-sm font-bold shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground w-full"
               >
                 <BookSearch className="mr-2 h-4 w-4" />
                 {t("nav.explore")}
-              </Link>
-
-              <Link
-                href="/docs"
-                className="flex h-14 items-center justify-center rounded-full border bg-background px-8 text-sm font-bold shadow-sm transition-all hover:bg-muted w-full"
-              >
-                <Info className="mr-2 h-4 w-4" />
-                {t("about.title")}
               </Link>
             </div>
           </div>
@@ -116,9 +107,6 @@ export default function HomePage() {
 
           <section className="py-10">
             <div className="mx-auto">
-              <h2 className="hidden text-3xl font-bold tracking-tight sm:text-4xl text-center">
-                {t("features.title")}
-              </h2>
               <VideoShowcase />
             </div>
           </section>
@@ -168,13 +156,13 @@ export default function HomePage() {
           </p>
           <Link
             href="https://github.com/HadsonRamalho/docs"
-            className="inline-flex h-12 items-center justify-center rounded-md bg-fd-primary px-8 text-sm font-medium text-white shadow transition-colors hover:bg-primary/90"
+            className="inline-flex h-12 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
           >
             {t("contribute.button")}
           </Link>
         </section>
       </main>
-    </HomeLayout>
+    </AppShell>
   );
 }
 

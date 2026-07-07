@@ -52,7 +52,7 @@ export function DeletePageDialog({
             e.stopPropagation();
             setIsOpen(true);
           }}
-          className="md:opacity-0 group-hover:opacity-100 hover:cursor-pointer p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+          className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           title="Excluir página"
         >
           <Trash2 size={14} />
@@ -80,11 +80,11 @@ export function DeletePageDialog({
             Cancelar
           </AlertDialogCancel>
           <AlertDialogAction
+            variant="destructive"
             onClick={async (e) => {
               await handleDelete(e);
               setIsOpen(false);
             }}
-            className="bg-red-600 hover:bg-red-700 text-white border-none hover:cursor-pointer"
           >
             Sim, excluir página
           </AlertDialogAction>

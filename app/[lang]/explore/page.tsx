@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { AppShell } from "@/components/layout/app-shell";
 import { BookSearch, Calendar, Search, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -26,7 +26,7 @@ export default function PublicNotebooksPage() {
   }, []);
 
   return (
-    <HomeLayout {...baseOptions({ variant: "global" })}>
+    <AppShell nav={baseOptions({ variant: "global" }).nav?.component}>
       <div className="max-w-300 w-full mx-auto mt-10 p-4 md:p-8 space-y-8">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between border-b pb-6">
           <div className="space-y-2">
@@ -97,6 +97,6 @@ export default function PublicNotebooksPage() {
           </div>
         )}
       </div>
-    </HomeLayout>
+    </AppShell>
   );
 }

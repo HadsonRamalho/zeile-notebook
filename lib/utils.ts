@@ -1,8 +1,13 @@
 import { type ClassValue, clsx } from "clsx";
-import type { TOCItemType } from "fumadocs-core/toc";
 import Slugger from "github-slugger";
 import { twMerge } from "tailwind-merge";
 import type { Block } from "./types";
+
+export interface TOCItemType {
+  title: string;
+  url: string;
+  depth: number;
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

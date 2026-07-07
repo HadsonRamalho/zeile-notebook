@@ -1,7 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
-import type { I18nConfig } from "fumadocs-core/i18n";
+import Link from "next/link";
 import type { LinkItemType } from "./link-item";
-import Link from "fumadocs-core/link";
 
 export interface NavOptions {
   enabled: boolean;
@@ -39,13 +38,6 @@ export interface BaseLayoutProps {
       lg: ReactNode;
     }>;
   }>;
-
-  /**
-   * I18n options
-   *
-   * @defaultValue false
-   */
-  i18n?: boolean | I18nConfig;
 
   /**
    * GitHub url

@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, Plus, Shield } from "lucide-react";
+import { Pencil, Plus, Save, Shield, X } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -100,16 +101,17 @@ export function TeamRoles({ teamId, roles, onUpdate }: TeamRolesProps) {
             {roles.map((role) => (
               <div
                 key={role.id}
-                className="border rounded-lg p-5 bg-card space-y-4 shadow-sm"
+                className="border rounded-lg p-5 bg-muted/40 space-y-4 shadow-sm"
               >
                 <div className="flex items-center justify-between border-b pb-3">
                   <h4 className="font-semibold">{role.name}</h4>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
-                    className="h-8 text-primary"
+                    className="h-8"
                     onClick={() => handleEditClick(role)}
                   >
+                    <Pencil className="mr-2 h-4 w-4" />
                     {a("edit_role_button")}
                   </Button>
                 </div>
@@ -239,13 +241,18 @@ export function TeamRoles({ teamId, roles, onUpdate }: TeamRolesProps) {
               onClick={() => setEditingRole(null)}
               disabled={isSaving}
             >
+              <X className="mr-2 h-4 w-4" />
               Cancelar
             </Button>
             <Button
               onClick={handleSaveChanges}
               disabled={isSaving || !editingRole?.name.trim()}
             >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSaving ? (
+                <Loader variant="spinner" size={16} className="mr-2" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
               Salvar Alterações
             </Button>
           </DialogFooter>

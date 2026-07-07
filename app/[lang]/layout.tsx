@@ -1,44 +1,18 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../global.css";
-import Script from "next/script";
 import { NextIntlClientProvider, useMessages } from "next-intl";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
-import { Provider } from "../search-provider";
 import { PWARegistration } from "@/components/pwa-registration";
-
-const inter = Inter({
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Zeile Notebook",
-  icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
-  },
-};
+import { Provider } from "../search-provider";
 
 export default function Layout({ children }: any) {
   const messages = useMessages();
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen">
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <AuthProvider>
-              <PWARegistration />
-              <Toaster richColors={true} />
-              <Provider>{children}</Provider>
-            </AuthProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
-      </body>
-      <Script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js" />
-      <Script src="https://unpkg.com/@babel/standalone/babel.min.js" />
-    </html>
+    <NextIntlClientProvider messages={messages}>
+      <AuthProvider>
+        <PWARegistration />
+        <Toaster richColors={true} />
+        <Provider>{children}</Provider>
+      </AuthProvider>
+    </NextIntlClientProvider>
   );
 }

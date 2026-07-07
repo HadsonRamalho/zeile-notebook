@@ -1,8 +1,9 @@
 "use client";
 
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Home, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { acceptTeamInvite } from "@/lib/api/teams-service";
@@ -55,7 +56,7 @@ function InviteProcessor() {
   if (status === "loading" || isAuthLoading) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <HelixPercentLoader label="Processando convite" />
         <p className="text-muted-foreground animate-pulse">
           Processando seu convite...
         </p>
@@ -80,7 +81,10 @@ function InviteProcessor() {
       <XCircle className="h-16 w-16 text-destructive" />
       <h2 className="text-2xl font-bold">Convite Inválido</h2>
       <p className="text-muted-foreground">{errorMessage}</p>
-      <Button onClick={() => router.push("/docs")}>Ir para o Início</Button>
+      <Button onClick={() => router.push("/docs")}>
+        <Home className="mr-2 h-4 w-4" />
+        Ir para o Início
+      </Button>
     </div>
   );
 }
@@ -91,7 +95,7 @@ export default function InvitePage() {
       <Suspense
         fallback={
           <div className="flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <HelixPercentLoader label="Carregando" />
             <p className="text-muted-foreground">Carregando...</p>
           </div>
         }

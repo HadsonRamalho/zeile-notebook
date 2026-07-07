@@ -14,6 +14,7 @@ import { ComponentRenderer } from "../blocks/components/components";
 import { CppEditor } from "../blocks/cpp/cpp-editor";
 import { DatabaseSchemaCell } from "../blocks/database-schema/database-schema-cell";
 import { DrawingCell } from "../blocks/drawing/drawing-cell";
+import { FreeDrawingCell } from "../blocks/free-drawing/free-drawing-cell";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import PythonSandbox from "../blocks/python/python-editor";
@@ -98,6 +99,13 @@ export function ReorderItem({
       <div className="flex-1 min-w-0">
         {block.type === "drawing" ? (
           <DrawingCell
+            doc={doc}
+            blockId={block.id}
+            updateDrawingScene={updateDrawingScene}
+            canWrite={canWrite}
+          />
+        ) : block.type === "free_drawing" ? (
+          <FreeDrawingCell
             doc={doc}
             blockId={block.id}
             updateDrawingScene={updateDrawingScene}

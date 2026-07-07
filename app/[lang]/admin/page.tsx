@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { AppShell } from "@/components/layout/app-shell";
 import { Book, Shield, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BackButton } from "@/components/interface/back-button";
@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { useAuth } from "@/context/auth-context";
 import {
   fetchAdminNotebooks,
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <HomeLayout {...baseOptions({ variant: "global" })}>
+    <AppShell nav={baseOptions({ variant: "global" }).nav?.component}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-8 mt-10">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -469,6 +469,6 @@ export default function AdminDashboardPage() {
           </div>
         </Tabs>
       </div>
-    </HomeLayout>
+    </AppShell>
   );
 }

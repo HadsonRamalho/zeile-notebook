@@ -1,4 +1,5 @@
-import { Loader2, Play } from "lucide-react";
+import { Play } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 
 interface RunButtonProps {
   isRunning: boolean;
@@ -16,12 +17,12 @@ export function RunButton({ isRunning, handleRun, isLoading }: RunButtonProps) {
       flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all print:hidden
       ${
         isRunning || isLoading
-          ? "bg-[#444] text-[#888] cursor-not-allowed"
-          : "bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95 shadow-lg shadow-emerald-900/20"
+          ? "bg-muted text-muted-foreground cursor-not-allowed"
+          : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/20"
       }`}
     >
       {isRunning ? (
-        <Loader2 className="size-3.5 animate-spin" />
+        <Loader variant="spinner" size={14} />
       ) : (
         <Play className="size-3.5 fill-current" />
       )}

@@ -25,7 +25,7 @@ export function LiveCursors({
           >
             <CursorIcon color={collab.color} />
             <div
-              className="px-2 py-1 ml-4 mt-1 rounded-full text-xs text-white font-medium whitespace-nowrap shadow-md"
+              className="ml-4 mt-1 rounded-md px-2 py-1 text-xs font-medium text-white whitespace-nowrap shadow-md"
               style={{ backgroundColor: collab.color }}
             >
               {collab.name}
@@ -40,17 +40,13 @@ export function LiveCursors({
 function CursorIcon({ color }: { color: string }) {
   return (
     <svg
-      width="24"
-      height="36"
-      viewBox="0 0 24 36"
-      fill="none"
-      stroke="white"
-      strokeWidth="2"
-      className="drop-shadow-md"
+      className="size-6 drop-shadow-md"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 40 40"
     >
       <path
-        d="M5.65376 21.0069L2.34861 3.23554C1.96781 1.18731 4.15549 -0.347576 5.89201 0.751688L21.7515 10.7937C23.5593 11.9383 23.3614 14.6648 21.4111 15.4851L14.7358 18.293C14.2818 18.484 13.916 18.8413 13.7126 19.2921L10.8242 25.6961C9.97159 27.587 7.15555 27.2435 6.77977 25.2227L5.65376 21.0069Z"
         fill={color}
+        d="M1.8 4.4 7 36.2c.3 1.8 2.6 2.3 3.6.8l3.9-5.7c1.7-2.5 4.5-4.1 7.5-4.3l6.9-.5c1.8-.1 2.5-2.4 1.1-3.5L5 2.5c-1.4-1.1-3.5 0-3.3 1.9Z"
       />
     </svg>
   );

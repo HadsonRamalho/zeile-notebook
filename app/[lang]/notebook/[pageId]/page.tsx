@@ -11,19 +11,18 @@ export default async function Page(
 
   return (
     <NotebookProvider pageId={pageId}>
-      <div className="flex flex-col mb-8 max-w-none!">
-        <NotebookTitle pageId={pageId} />
-        <p className="text-muted-foreground text-xs mt-1 font-mono">
-          ID: {pageId}
-        </p>
-        <div className="mt-2 md:w-330">
-          <NotebookControls />
-        </div>
-      </div>
-
-      <div className="prose flex-1">
-        <RustInteractivePage pageId={pageId} />
-      </div>
+      <RustInteractivePage
+        pageId={pageId}
+        header={
+          <div className="flex flex-col gap-3 mb-8 rounded-xl border bg-card p-4 md:p-6 shadow-sm">
+            <NotebookTitle pageId={pageId} />
+            <p className="text-muted-foreground text-xs font-mono">ID: {pageId}</p>
+            <div>
+              <NotebookControls />
+            </div>
+          </div>
+        }
+      />
     </NotebookProvider>
   );
 }

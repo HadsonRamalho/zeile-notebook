@@ -21,7 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/motion/select";
 import type { BlockType, Language } from "@/lib/types";
 
 interface BlockEditorProps {
@@ -157,10 +157,8 @@ export const GenericBlockEditor = React.memo(
             onValueChange={handleLanguageChange}
             disabled={readOnly}
           >
-            <SelectTrigger
-              size="sm"
-              className="h-6 text-[10px] uppercase font-bold tracking-tight border-none shadow-none bg-transparent hover:bg-muted/50 p-1"
-            >
+            <SelectTrigger className="h-6 text-[10px] uppercase font-bold tracking-tight border-none shadow-none bg-transparent hover:bg-muted/50 p-1">
+
               <SelectValue placeholder="Language" />
             </SelectTrigger>
             <SelectContent>

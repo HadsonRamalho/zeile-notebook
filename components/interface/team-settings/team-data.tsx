@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Loader2, Save, Settings, Trash2 } from "lucide-react";
+import { AlertTriangle, Save, Settings, Trash2 } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -173,7 +174,7 @@ export function TeamData({
                   }
                 >
                   {isSaving && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader variant="spinner" size={16} className="mr-2" />
                   )}
                   {!isSaving && <Save className="mr-2 h-4 w-4" />}
                   {a("save_button")}
@@ -233,7 +234,7 @@ export function TeamData({
                       disabled={isDeleting}
                     >
                       {isDeleting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader variant="spinner" size={16} className="mr-2" />
                       ) : (
                         <Trash2 className="mr-2 h-4 w-4" />
                       )}

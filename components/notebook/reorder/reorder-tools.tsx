@@ -93,6 +93,12 @@ export function ReorderTools({
           label: "Desenho",
           icon: <Pencil size={14} />,
           color: "hover:text-purple-400",
+          onClick: () => addBlock(index, "free_drawing"),
+        },
+        {
+          label: "Excalidraw",
+          icon: <Waypoints size={14} />,
+          color: "hover:text-purple-400",
           onClick: () => addBlock(index, "drawing"),
         },
         {
@@ -256,7 +262,7 @@ export function ReorderTools({
           exit={{ scale: 0.95, opacity: 0 }}
           className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-5 w-max max-w-[90vw] print:hidden"
         >
-          <div className="flex bg-card items-center gap-1 border border-white/10 p-1.5 rounded-2xl shadow-2xl backdrop-blur-xl">
+          <div className="flex bg-card items-center gap-1 border border-border p-1.5 rounded-2xl shadow-2xl backdrop-blur-xl">
             <AnimatePresence mode="wait">
               <motion.div
                 key={view}
@@ -302,7 +308,7 @@ const ToolButton = ({ onClick, icon, label, color }: any) => (
   <button
     type="button"
     onClick={onClick}
-    className={`flex items-center gap-1.5 px-3 py-2 sm:py-1.5 hover:bg-white/5 text-gray-400 ${color} rounded-xl transition-all text-[10px] font-bold uppercase tracking-tight`}
+    className={`flex items-center gap-1.5 px-3 py-2 sm:py-1.5 hover:bg-accent text-muted-foreground ${color} rounded-xl transition-all text-[10px] font-bold uppercase tracking-tight`}
   >
     {icon} <span>{label}</span>
   </button>
@@ -312,7 +318,7 @@ const BackButton = ({ onClick }: { onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className="p-2 mr-1 hover:bg-white/10 rounded-xl text-gray-500 transition-colors"
+    className="p-2 mr-1 hover:bg-accent rounded-xl text-muted-foreground transition-colors"
   >
     <ChevronLeft size={14} />
   </button>

@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, LogIn } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -196,8 +197,10 @@ export function LoginForm({
                   className="w-full bg-secondary text-foreground"
                   disabled={isLoading}
                 >
-                  {isLoading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isLoading ? (
+                    <Loader variant="spinner" size={16} className="mr-2" />
+                  ) : (
+                    <LogIn className="mr-2 h-4 w-4" />
                   )}
                   {t("submit_button")}
                 </Button>

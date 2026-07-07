@@ -33,12 +33,14 @@ export function TextBlock({ content, onChange }: TextBlockProps) {
     // biome-ignore lint/a11y/useKeyWithClickEvents: <.>
     <div
       onClick={() => setIsEditing(true)}
-      className="prose prose-invert max-w-none cursor-text hover:bg-white/5 p-2 rounded-lg transition-colors whitespace-pre-wrap leading-snug prose-p:my-0 prose-p:leading-normal prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0"
+      className="prose dark:prose-invert max-w-none cursor-text hover:bg-accent/50 p-2 rounded-lg transition-colors whitespace-pre-wrap leading-snug prose-p:my-0 prose-p:leading-normal prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:before:content-none prose-code:after:content-none prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-sm prose-code:font-normal prose-code:text-foreground"
     >
       {content ? (
-        <Markdown rehypePlugins={[rehypeSlug, remarkGfm]}>{content}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
+          {content}
+        </Markdown>
       ) : (
-        <span className="text-gray-600 italic">Clique para escrever...</span>
+        <span className="text-muted-foreground italic">Clique para escrever...</span>
       )}
     </div>
   );

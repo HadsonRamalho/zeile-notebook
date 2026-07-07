@@ -1,11 +1,13 @@
 "use client";
 
-import { Home, Loader2, Settings, Shield, Users } from "lucide-react";
+import { Home, Settings, Shield, Users } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/interface/back-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { handleApiError } from "@/lib/api/handle-api-error";
@@ -98,7 +100,7 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="animate-spin text-muted-foreground h-8 w-8" />
+        <Loader variant="spinner" size={32} className="text-muted-foreground" />
       </div>
     );
   }
@@ -118,7 +120,7 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   }
 
   return (
-    <div className="max-w-5xl md:min-w-3xl mx-auto p-2 md:p-6 space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex flex-col space-y-2 text-center sm:text-left">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">{team.name}</h2>
@@ -131,31 +133,30 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
 
       <Separator />
 
-      <div className="grid grid-cols-1 md:flex border-b border-border overflow-x-auto">
-        <TabButton
-          active={activeTab === "general"}
-          onClick={() => setActiveTab("general")}
-          icon={<Settings size={16} />}
-          label={t("general_tab")}
-        />
-        <TabButton
-          active={activeTab === "members"}
-          onClick={() => setActiveTab("members")}
-          icon={<Users size={16} />}
-          label={t("member_tab")}
-        />
-        {roles.length > 0 && (
-          <TabButton
-            active={activeTab === "roles"}
-            onClick={() => setActiveTab("roles")}
-            icon={<Shield size={16} />}
-            label={t("role_tab")}
-          />
-        )}
-      </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+        variant="pill"
+        className="w-full"
+      >
+        <TabsList className="w-fit">
+          <TabsTrigger value="general" className="gap-2" indicatorClassName="bg-primary">
+            <Settings size={16} />
+            {t("general_tab")}
+          </TabsTrigger>
+          <TabsTrigger value="members" className="gap-2" indicatorClassName="bg-primary">
+            <Users size={16} />
+            {t("member_tab")}
+          </TabsTrigger>
+          {roles.length > 0 && (
+            <TabsTrigger value="roles" className="gap-2" indicatorClassName="bg-primary">
+              <Shield size={16} />
+              {t("role_tab")}
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-      <div className="pt-4">
-        {activeTab === "general" && (
+        <TabsContent value="general" className="w-full">
           <TeamData
             isSaving={isSaving}
             setIsSaving={setIsSaving}
@@ -164,9 +165,9 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
             team={team}
             userPermissions={userPermissions}
           />
-        )}
+        </TabsContent>
 
-        {activeTab === "members" && (
+        <TabsContent value="members" className="w-full">
           <TeamMembers
             teamId={teamId}
             userPermissions={userPermissions}
@@ -174,38 +175,14 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
             members={members}
             onUpdate={reloadTeamMembers}
           />
-        )}
+        </TabsContent>
 
-        {activeTab === "roles" && roles.length > 0 && (
-          <TeamRoles roles={roles} teamId={teamId} onUpdate={reloadTeamRoles} />
+        {roles.length > 0 && (
+          <TabsContent value="roles" className="w-full">
+            <TeamRoles roles={roles} teamId={teamId} onUpdate={reloadTeamRoles} />
+          </TabsContent>
         )}
-      </div>
+      </Tabs>
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-        active
-          ? "border-primary text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-      }`}
-    >
-      {icon} {label}
-    </button>
   );
 }

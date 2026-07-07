@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 import { Maximize2, Minimize2, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { schemaEdgeTypes } from "./deletable-edge";
 import { type SchemaTableNode, schemaNodeTypes } from "./schema-table-node";
 
@@ -181,13 +182,18 @@ export function DatabaseSchemaCell({
 
   return (
     <div
+      style={
+        fullscreen
+          ? undefined
+          : { height: 480, minHeight: 480, maxHeight: 960, resize: "vertical", overflow: "auto" }
+      }
       className={
         fullscreen
           ? "fixed inset-0 z-100 bg-background"
-          : "relative h-120 w-full overflow-hidden rounded-lg border"
+          : "relative w-full rounded-lg border"
       }
     >
-      <div className="absolute right-2 top-2 z-101 flex gap-2">
+      <div className={cn("absolute right-2 top-2 flex gap-2", fullscreen ? "z-101" : "z-10")}>
         {canWrite && (
           <button
             type="button"
@@ -209,6 +215,21 @@ export function DatabaseSchemaCell({
         </button>
       </div>
       <ReactFlow
+        style={
+          {
+            "--xy-background-color": "var(--card)",
+            "--xy-background-pattern-dots-color": "var(--border)",
+            "--xy-edge-stroke": "var(--muted-foreground)",
+            "--xy-edge-stroke-selected": "var(--primary)",
+            "--xy-node-border": "var(--border)",
+            "--xy-node-background-color": "var(--card)",
+            "--xy-node-color": "var(--foreground)",
+            "--xy-selection-background-color": "color-mix(in oklab, var(--primary) 10%, transparent)",
+            "--xy-selection-border": "1px solid var(--primary)",
+            "--xy-handle-background-color": "var(--primary)",
+            "--xy-handle-border-color": "var(--background)",
+          } as React.CSSProperties
+        }
         nodes={nodes}
         edges={edges}
         nodeTypes={schemaNodeTypes}

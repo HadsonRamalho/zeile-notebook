@@ -1,8 +1,8 @@
 "use client";
 import type { ComponentProps, ReactNode } from "react";
-import { usePathname } from "fumadocs-core/framework";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { isActive } from "../../lib/urls";
-import Link from "fumadocs-core/link";
 
 interface Filterable {
   /**
@@ -109,7 +109,8 @@ export function LinkItem({
     <Link
       ref={ref}
       href={item.url}
-      external={item.external}
+      target={item.external ? "_blank" : undefined}
+      rel={item.external ? "noreferrer" : undefined}
       {...props}
       data-active={active}
     >

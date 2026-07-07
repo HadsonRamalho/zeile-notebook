@@ -4,7 +4,7 @@ import {
   Position,
   useReactFlow,
 } from "@xyflow/react";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2, X } from "lucide-react";
 import { BaseHandle } from "@/components/ui/base-handle";
 import { BaseNodeContent, BaseNodeHeader } from "@/components/ui/base-node";
 import { DatabaseSchemaNode } from "@/components/ui/database-schema-node";
@@ -24,9 +24,13 @@ export interface SchemaTableData {
 export type SchemaTableNode = Node<SchemaTableData, "schemaTable">;
 
 export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
-  const { updateNodeData, setEdges } = useReactFlow();
+  const { updateNodeData, setEdges, deleteElements } = useReactFlow();
 
   const setLabel = (label: string) => updateNodeData(id, { label });
+
+  const removeTable = () => {
+    deleteElements({ nodes: [{ id }] });
+  };
 
   const setField = (index: number, patch: Partial<SchemaField>) => {
     const schema = data.schema.map((field, i) =>
@@ -69,13 +73,21 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
 
   return (
     <DatabaseSchemaNode className="w-72">
-      <BaseNodeHeader className="bg-secondary text-muted-foreground my-0 rounded-t-md px-2 py-1">
+      <BaseNodeHeader className="bg-secondary text-muted-foreground my-0 flex items-center gap-1 rounded-t-md px-2 py-1">
         <input
           value={data.label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="nome_da_tabela"
-          className="nodrag w-full bg-transparent text-center text-sm font-semibold outline-none"
+          className="nodrag w-full min-w-0 flex-1 bg-transparent text-center text-sm font-semibold outline-none"
         />
+        <button
+          type="button"
+          onClick={removeTable}
+          className="nodrag shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          title="Remover tabela"
+        >
+          <Trash2 size={12} />
+        </button>
       </BaseNodeHeader>
       <BaseNodeContent className="gap-1 p-2">
         {data.schema.map((field, index) => (

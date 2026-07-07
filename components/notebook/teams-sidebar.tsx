@@ -1,8 +1,9 @@
 "use client";
 
-import { Plus, RotateCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { Loader } from "@/components/motion/loader";
 import { useAuth } from "@/context/auth-context";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
@@ -50,6 +51,12 @@ export function TeamsSidebar() {
       loadTeams();
     }
   }, [teams, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(loadTeams, 6000);
+    return () => clearInterval(id);
+  }, [user]);
 
   if (!user) {
     return null;
@@ -102,22 +109,12 @@ export function TeamsSidebar() {
         </span>
 
         <div className="flex justify-end">
-          <Button
-            onClick={() => {
-              loadTeams();
-            }}
-            size="xs"
-            className=" bg-transparent hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white"
-          >
-            <RotateCw className="size-4" />
-          </Button>
-
           <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button
                 type="button"
-                className=" bg-transparent hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white"
-                size="xs"
+                className="text-muted-foreground hover:text-accent-foreground"
+                size="icon-xs"
                 variant="ghost"
                 title={a("new_team")}
               >
@@ -146,7 +143,7 @@ export function TeamsSidebar() {
                       value={newTeamName}
                       onChange={(e) => setNewTeamName(e.target.value)}
                       placeholder="Ex: Class 12"
-                      className="w-full bg-background border border-white/10 rounded-md px-3 py-2 text-sm outline-none focus:border-primary transition-colors"
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary transition-colors"
                     />
                   </div>
 
@@ -159,7 +156,7 @@ export function TeamsSidebar() {
                       value={newTeamDesc}
                       onChange={(e) => setNewTeamDesc(e.target.value)}
                       placeholder={a("team_description")}
-                      className="w-full bg-background border border-white/10 rounded-md px-3 py-2 text-sm outline-none focus:border-primary transition-colors min-h-20 resize-none"
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary transition-colors min-h-20 resize-none"
                     />
                   </div>
                 </div>
@@ -178,6 +175,11 @@ export function TeamsSidebar() {
                     type="submit"
                     disabled={isCreating || !newTeamName.trim()}
                   >
+                    {isCreating ? (
+                      <Loader variant="spinner" size={16} className="mr-2" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
                     {isCreating ? a("creating_button") : a("create_button")}
                   </Button>
                 </AlertDialogFooter>

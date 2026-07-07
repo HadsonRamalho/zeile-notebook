@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
 import type { DrawingElement, Notebook } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const Excalidraw = dynamic(
   async () => (await import("@excalidraw/excalidraw")).Excalidraw,
@@ -78,16 +79,24 @@ export function DrawingCell({
 
   return (
     <div
+      style={
+        fullscreen
+          ? undefined
+          : { height: 480, minHeight: 480, maxHeight: 960, resize: "vertical", overflow: "auto" }
+      }
       className={
         fullscreen
-          ? "fixed inset-0 z-[100] bg-white dark:bg-zinc-900"
-          : "relative h-[480px] w-full overflow-hidden rounded-lg border"
+          ? "fixed inset-0 z-[100] bg-background"
+          : "relative w-full rounded-lg border"
       }
     >
       <button
         type="button"
         onClick={() => setFullscreen((v) => !v)}
-        className="absolute right-2 top-2 z-[101] rounded bg-zinc-800 p-1.5 text-white hover:bg-zinc-700"
+        className={cn(
+          "absolute right-2 top-2 rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground",
+          fullscreen ? "z-[101]" : "z-10",
+        )}
         title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
       >
         {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}

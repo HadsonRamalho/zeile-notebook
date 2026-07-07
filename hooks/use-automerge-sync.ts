@@ -299,6 +299,72 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
+  // Experimental: histórico real derivado do log de changes do Automerge, em
+  // vez do polling in-memory de `useLocalHistory`.
+  //
+  // O `automerge.getHistory()` nativo é O(n²): cada entrada tem um getter
+  // preguiçoso que reconstrói o snapshot do ZERO (`applyChanges(init(),
+  // history.slice(0, index+1))`), então pedir o snapshot de todas as n
+  // entradas custa 1+2+...+n aplicações — era isso que travava a aba em
+  // documentos com muitas alterações. Aqui reconstruímos incrementalmente
+  // (aplica 1 change de cada vez sobre o acumulador, O(n) no total) e
+  // cedemos a thread principal a cada fatia via `setTimeout`, então mesmo um
+  // histórico grande não bloqueia a UI de uma vez só. O resultado fica em
+  // cache (por referência do doc) pra não recalcular à toa.
+  type AutomergeHistoryEntry = {
+    timestamp: Date;
+    message: string | null;
+    doc: Notebook;
+  };
+  const automergeHistoryCache = useRef<{
+    forDoc: Notebook;
+    entries: AutomergeHistoryEntry[];
+  } | null>(null);
+  const HISTORY_CHUNK_SIZE = 200;
+
+  const buildAutomergeHistory = useCallback(
+    async (
+      onProgress?: (done: number, total: number) => void,
+    ): Promise<AutomergeHistoryEntry[]> => {
+      const lib = automerge.current;
+      const currentDoc = docRef.current;
+      if (!lib || !currentDoc) return [];
+
+      if (automergeHistoryCache.current?.forDoc === currentDoc) {
+        return automergeHistoryCache.current.entries;
+      }
+
+      const changes = lib.getAllChanges(currentDoc);
+      const total = changes.length;
+      const entries: AutomergeHistoryEntry[] = [];
+
+      let acc = lib.init<Notebook>();
+      for (let i = 0; i < total; i++) {
+        const change = changes[i];
+        if (!change) continue;
+        const [next] = lib.applyChanges<Notebook>(acc, [change]);
+        acc = next;
+        const decoded = lib.decodeChange(change);
+        entries.push({
+          timestamp: new Date(decoded.time * 1000),
+          message: decoded.message,
+          doc: acc,
+        });
+        if (i % HISTORY_CHUNK_SIZE === HISTORY_CHUNK_SIZE - 1) {
+          onProgress?.(i + 1, total);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+      onProgress?.(total, total);
+
+      // Mais recente primeiro, igual ao useLocalHistory.
+      entries.reverse();
+      automergeHistoryCache.current = { forDoc: currentDoc, entries };
+      return entries;
+    },
+    [],
+  );
+
   return {
     doc,
     isConnected,
@@ -310,5 +376,6 @@ export function useAutomergeSync(notebookId: string, token: string) {
     updateDrawingScene,
     deleteBlock,
     reorderBlocks,
+    buildAutomergeHistory,
   };
 }

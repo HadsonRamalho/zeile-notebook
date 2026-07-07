@@ -2,14 +2,12 @@
 
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
-import { Check, Eye, History, RotateCw, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Eye, Plus, RotateCw, X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { AppNotFound } from "@/components/motion/not-found";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
-import {
-  type HistorySnapshot,
-  useLocalHistory,
-} from "@/hooks/use-local-history";
+import { useLocalHistory } from "@/hooks/use-local-history";
 import { usePresence } from "@/hooks/use-presence";
 import { getUserNotebookPermissions } from "@/lib/api/notebook-service";
 import type {
@@ -25,19 +23,20 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
 import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
-import { CollabChat } from "./collaboration/chat";
+import { CollabBar } from "./collaboration/collab-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
-import { PresenceBubble } from "./collaboration/presence-bubble";
 import { useNotebook } from "./notebook-context";
 import { ReorderItem } from "./reorder/reorder-item";
 import { ReorderTools } from "./reorder/reorder-tools";
 
 interface RustInteractivePageProps {
   pageId: string;
+  header?: ReactNode;
 }
 
 export default function RustInteractivePage({
   pageId = "default",
+  header,
 }: RustInteractivePageProps) {
   const { user } = useAuth();
   const { isDragging, setIsDragging, notebook } = useNotebook();
@@ -58,6 +57,7 @@ export default function RustInteractivePage({
     restoreState,
     deleteBlock,
     reorderBlocks,
+    buildAutomergeHistory,
   } = useAutomergeSync(pageId, token);
 
   const {
@@ -70,8 +70,36 @@ export default function RustInteractivePage({
   } = usePresence(pageId, user);
 
   const { history } = useLocalHistory(doc);
+  const AUTOMERGE_HISTORY_PAGE_SIZE = 50;
+  const [automergeHistory, setAutomergeHistory] = useState<
+    Awaited<ReturnType<typeof buildAutomergeHistory>>
+  >([]);
+  const [automergeHistoryVisibleCount, setAutomergeHistoryVisibleCount] =
+    useState(AUTOMERGE_HISTORY_PAGE_SIZE);
+  const [isLoadingAutomergeHistory, setIsLoadingAutomergeHistory] =
+    useState(false);
+  const [automergeHistoryProgress, setAutomergeHistoryProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
+  const handleLoadAutomergeHistory = async () => {
+    setIsLoadingAutomergeHistory(true);
+    setAutomergeHistoryProgress(null);
+    const result = await buildAutomergeHistory((done, total) =>
+      setAutomergeHistoryProgress({ done, total }),
+    );
+    setAutomergeHistory(result);
+    setAutomergeHistoryVisibleCount(AUTOMERGE_HISTORY_PAGE_SIZE);
+    setIsLoadingAutomergeHistory(false);
+    setAutomergeHistoryProgress(null);
+  };
+
+  const handleLoadMoreAutomergeHistory = () => {
+    setAutomergeHistoryVisibleCount((n) => n + AUTOMERGE_HISTORY_PAGE_SIZE);
+  };
+
+  const [activeCollabTab, setActiveCollabTab] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc] = useState<Notebook | null>(null);
   const displayDoc = previewDoc || doc;
 
@@ -83,7 +111,7 @@ export default function RustInteractivePage({
     if (previewDoc?.blocks) {
       restoreState(previewDoc.blocks);
       setPreviewDoc(null);
-      setIsOpen(false);
+      setActiveCollabTab(null);
     }
   };
 
@@ -116,7 +144,7 @@ export default function RustInteractivePage({
     const content =
       type === "code"
         ? getInitialCode(language ?? "rust")
-        : type === "drawing"
+        : type === "drawing" || type === "free_drawing"
           ? ""
           : type === "database_schema"
             ? defaultDatabaseSchemaContent
@@ -143,6 +171,7 @@ export default function RustInteractivePage({
           onClick={() => handleAddBlock(-1, "text")}
           className="px-4 py-2 bg-fd-primary text-foreground rounded-md hover:bg-primary/90 transition-colors"
         >
+          <Plus className="mr-2 h-4 w-4" />
           Adicionar Primeiro Bloco
         </Button>
       </div>
@@ -151,8 +180,8 @@ export default function RustInteractivePage({
 
   if (!userPermissions?.can_read) {
     return (
-      <div className="flex h-screen w-full items-center justify-center text-red-700/60">
-        <h2>Você não tem permissão para visualizar essa página.</h2>
+      <div className="flex h-screen w-full items-center justify-center">
+        <AppNotFound variant="forbidden" />
       </div>
     );
   }
@@ -162,11 +191,24 @@ export default function RustInteractivePage({
       onPointerMove={handlePointerMove}
       className="min-h-screen flex flex-row w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
     >
-      <CollabChat messages={messages} sendChatMessage={sendChatMessage} />
-      <PresenceBubble
+      <CollabBar
+        canWriteHistory={userPermissions.can_write}
+        history={history}
+        automergeHistory={automergeHistory}
+        automergeHistoryVisibleCount={automergeHistoryVisibleCount}
+        isLoadingAutomergeHistory={isLoadingAutomergeHistory}
+        automergeHistoryProgress={automergeHistoryProgress}
+        onLoadAutomergeHistory={handleLoadAutomergeHistory}
+        onLoadMoreAutomergeHistory={handleLoadMoreAutomergeHistory}
+        previewDoc={previewDoc}
+        setPreviewDoc={setPreviewDoc}
+        messages={messages}
+        sendChatMessage={sendChatMessage}
         socketUserId={socketUserId}
         collaborators={collaborators}
         currentUser={user}
+        activeTab={activeCollabTab}
+        onActiveTabChange={setActiveCollabTab}
       />
       <LiveCursors collaborators={collaborators} />
 
@@ -179,19 +221,8 @@ export default function RustInteractivePage({
         />
       )}
 
-      {userPermissions.can_write && (
-        <HistoryButton isOpen={isOpen} setIsOpen={setIsOpen} />
-      )}
-
-      {isOpen && (
-        <HistoryDialog
-          setIsOpen={setIsOpen}
-          history={history}
-          previewDoc={previewDoc}
-          setPreviewDoc={setPreviewDoc}
-        />
-      )}
-
+      <div className="flex flex-1 min-w-0 flex-col">
+      {header}
       <Reorder.Group
         axis="y"
         values={blocks}
@@ -261,6 +292,7 @@ export default function RustInteractivePage({
           );
         })}
       </Reorder.Group>
+      </div>
       <aside className="hidden xl:block w-70 print:hidden">
         <div className="sticky top-24">
           <ScrollProgress className="top-0.5" />
@@ -291,7 +323,8 @@ function getBlockTitle(
   language: Language,
   blockCount: number,
 ): string {
-  if (type === "drawing") return "Desenho";
+  if (type === "drawing") return "Excalidraw";
+  if (type === "free_drawing") return "Desenho";
   if (type === "database_schema") return "Database Schema";
   if (type !== "code") return "Bloco de Texto";
 
@@ -358,86 +391,3 @@ function PreviewDialog({
   );
 }
 
-interface HistoryButtonProps {
-  setIsOpen: (o: boolean) => void;
-  isOpen: boolean;
-}
-
-function HistoryButton({ setIsOpen, isOpen }: HistoryButtonProps) {
-  return (
-    <Button
-      onClick={() => setIsOpen(!isOpen)}
-      className="fixed top-20 right-4 md:right-8 h-12 w-12 rounded-full bg-fd-secondary text-fd-primary shadow-2xl z-2 hover:scale-105 transition-all flex items-center justify-center"
-      title="Histórico de Edições"
-    >
-      <History className="size-6" />
-    </Button>
-  );
-}
-
-interface HistoryDialogProps {
-  setIsOpen: (o: boolean) => void;
-  history: HistorySnapshot[];
-  previewDoc: Notebook | null;
-  setPreviewDoc: (d: Notebook | null) => void;
-}
-
-function HistoryDialog({
-  setIsOpen,
-  history,
-  previewDoc,
-  setPreviewDoc,
-}: HistoryDialogProps) {
-  return (
-    <div className="fixed bottom-24 right-6 z-10 w-80 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-5 max-h-100 flex flex-col animate-in slide-in-from-bottom-8 fade-in duration-300">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
-        <div className="flex items-center justify-center gap-3">
-          <span className="font-semibold text-sm flex items-center gap-2">
-            <History className="size-4 text-muted-foreground" />
-            Histórico
-          </span>
-          <Badge className="flex items-center justify-center">
-            {history.length} {history.length === 1 ? "versão" : "versões"}
-          </Badge>
-        </div>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full hover:bg-destructive/10 group transition-colors"
-          onClick={() => setIsOpen(false)}
-        >
-          <X className="size-4 text-muted-foreground group-hover:text-destructive transition-colors" />
-        </Button>
-      </div>
-
-      <div className="flex-1 max-h-[20vh] md:max-h-100 overflow-y-scroll pr-2 -mr-2 space-y-2">
-        {history.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Nenhuma alteração detectada.
-          </p>
-        ) : (
-          history.map((snap, index) => {
-            const isSelected = previewDoc === snap.doc;
-            return (
-              <Button
-                key={index}
-                onClick={() => setPreviewDoc(snap.doc)}
-                className={`w-full text-left p-3 text-sm rounded-xl border transition-all ${
-                  isSelected
-                    ? "bg-primary/10 border-primary text-primary shadow-sm"
-                    : "bg-muted/30 border-transparent hover:border-border hover:bg-muted/60"
-                }`}
-              >
-                <div className="text-xs flex items-center gap-1">
-                  <RotateCw className="size-3" />
-                  {snap.timestamp.toLocaleTimeString()}
-                </div>
-              </Button>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}

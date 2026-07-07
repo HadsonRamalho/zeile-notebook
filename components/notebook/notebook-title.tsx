@@ -74,7 +74,7 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
 
   return (
     <h1
-      className="text-3xl font-bold cursor-text hover:bg-white/5 rounded px-1 transition-colors"
+      className="text-3xl font-bold cursor-text hover:bg-accent rounded px-1 transition-colors"
       onClick={() => {
         setIsEditing(true);
       }}

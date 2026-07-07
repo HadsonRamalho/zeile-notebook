@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Camera, Loader2, Lock, Save, User } from "lucide-react";
+import { AlertTriangle, Camera, Lock, Save, Upload, User } from "lucide-react";
+import { Loader } from "@/components/motion/loader";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -83,7 +84,7 @@ export function ProfileForm() {
   if (isAuthLoading) {
     return (
       <div className="flex h-40 items-center justify-center">
-        <Loader2 className="animate-spin" />
+        <Loader variant="spinner" size={16} />
       </div>
     );
   }
@@ -141,6 +142,7 @@ export function ProfileForm() {
                     className="mt-2"
                     type="button"
                   >
+                    <Upload className="mr-2 h-4 w-4" />
                     {t("profile_card.update_image")}
                   </Button>
                 </div>
@@ -222,7 +224,7 @@ export function ProfileForm() {
                 type="submit"
                 disabled={isSaving || !form.formState.isDirty}
               >
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving && <Loader variant="spinner" size={16} className="mr-2" />}
                 {!isSaving && <Save className="mr-2 h-4 w-4" />}
                 {t("profile_card.save")}
               </Button>

@@ -1,12 +1,11 @@
-import { Clock, Cpu, Eye, EyeClosed, Play, Terminal, Wifi } from "lucide-react";
+import { Clock, Eye, EyeClosed, Play, Terminal } from "lucide-react";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/motion/select";
 import type { Block, TsMode } from "@/lib/types";
 
 const getRustFileName = (codeVal: string): string => {
@@ -57,7 +56,7 @@ function RenderFileName({
         );
         setBlocksAction(newBlocks);
       }}
-      className="bg-transparent text-muted-foreground text-sm font-mono focus:outline-none focus:text-emerald-400 h-full"
+      className="bg-transparent text-muted-foreground text-sm font-mono focus:outline-none focus:text-primary h-full"
       placeholder="Nome do componente..."
     />
   );
@@ -119,7 +118,7 @@ export function EditorHeader({
       <div className="flex items-center gap-4">
         <div>
           {block.language === "typescript" ? (
-            <div className="flex items-center justify-center gap-2 px-6 py-4 text-muted-foreground">
+            <div className="flex items-center gap-2 p-2 text-muted-foreground">
               <Terminal size={16} />
               <RenderFileName
                 name={block.title}
@@ -144,83 +143,58 @@ export function EditorHeader({
             <button
               type="button"
               onClick={babelReady ? handleRunSimple : loadBabel}
-              className="px-3 py-1 text-xs bg-card text-foreground rounded transition-colors"
+              disabled={!babelReady}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all print:hidden bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/20 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:cursor-not-allowed"
             >
-              <div className="flex items-center justify-center gap-2">
-                {babelReady ? (
-                  <>
-                    <Play className="size-4" /> Executar
-                  </>
-                ) : (
-                  <>
-                    <Clock /> Carregar o Compilador...
-                  </>
-                )}
-              </div>
+              {babelReady ? (
+                <>
+                  <Play className="size-3.5 fill-current" /> Executar
+                </>
+              ) : (
+                <>
+                  <Clock className="size-3.5" /> Carregar o Compilador...
+                </>
+              )}
             </button>
           )}
           <Select
+            value={mode}
             onValueChange={(e) => {
               setMode?.(e as TsMode);
             }}
           >
-            <SelectTrigger className="bg-transparent py-6 w-full justify-center md:w-44 border-none h-full rounded text-foreground">
-              <SelectValue
-                className="bg-transparent"
-                placeholder={
-                  mode === "advanced" ? (
-                    <div className="flex justify-center">
-                      <Wifi />
-                      Modo Sandpack
-                    </div>
-                  ) : (
-                    <div className="flex justify-center">
-                      <Cpu />
-                      Modo Nativo
-                    </div>
-                  )
-                }
-              />
+            <SelectTrigger className="bg-transparent py-1.5 w-full justify-center md:w-44 border-none rounded text-foreground">
+              <SelectValue placeholder="Selecione o modo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
-                <SelectItem value="advanced">
-                  <Wifi />
-                  Modo Sandpack
-                </SelectItem>
-                <SelectItem value="simple">
-                  <Cpu />
-                  Modo Nativo
-                </SelectItem>
-              </SelectGroup>
+              <SelectItem value="advanced">Modo Sandpack</SelectItem>
+              <SelectItem value="simple">Modo Nativo</SelectItem>
             </SelectContent>
           </Select>
           <button
             type="button"
             onClick={() => setShowPreview(!showPreview)}
-            className="px-3 py-1 text-xs bg-transparent text-foreground rounded transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             {showPreview ? (
-              <div className="flex items-center justify-center gap-2">
+              <>
                 <Eye className="size-4" /> Ocultar Renderização
-              </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center gap-2">
+              <>
                 <EyeClosed className="size-4" />
                 Exibir Renderização
-              </div>
+              </>
             )}
           </button>
           {mode === "advanced" && setShowConsole && (
             <button
               type="button"
               onClick={() => setShowConsole(!showConsole)}
-              className="px-3 py-1 text-xs bg-transparent text-foreground rounded transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              <div className="flex items-center justify-center gap-2">
-                <Terminal className="size-4" />
-                {showConsole ? "Ocultar Console" : "Exibir Console"}
-              </div>
+              <Terminal className="size-4" />
+              {showConsole ? "Ocultar Console" : "Exibir Console"}
             </button>
           )}
         </div>

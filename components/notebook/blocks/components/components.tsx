@@ -1,7 +1,7 @@
 "use client";
 
-import { Callout } from "fumadocs-ui/components/callout";
-import { Card } from "fumadocs-ui/components/card";
+import { Callout } from "@/components/mdx/callout";
+import { Card } from "@/components/mdx/card";
 import { Banner } from "@/components/banner";
 import { GithubInfo } from "@/components/github-info";
 import type { Block, BlockMetadata } from "@/lib/types";
