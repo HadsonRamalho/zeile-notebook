@@ -6,7 +6,7 @@ import { ExpandableTabs, type ExpandableTabsItem } from "@/components/motion/exp
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { HistorySnapshot } from "@/hooks/use-local-history";
+import type { AutomergeHistoryEntry } from "@/hooks/use-automerge-sync";
 import type { ChatMessage, Collaborator } from "@/hooks/use-presence";
 import type { Notebook } from "@/lib/types";
 import type { User } from "@/lib/types/user-types";
@@ -35,9 +35,8 @@ function getInitials(name: string) {
 
 interface CollabBarProps {
   canWriteHistory: boolean;
-  history: HistorySnapshot[];
   /** Histórico Automerge completo já reconstruído (não paginado) — a exibição é fatiada por `automergeHistoryVisibleCount`. */
-  automergeHistory: HistorySnapshot[];
+  automergeHistory: AutomergeHistoryEntry[];
   automergeHistoryVisibleCount: number;
   isLoadingAutomergeHistory: boolean;
   automergeHistoryProgress: { done: number; total: number } | null;
@@ -56,7 +55,9 @@ function HistoryPanel({
   history,
   previewDoc,
   setPreviewDoc,
-}: Pick<CollabBarProps, "history" | "previewDoc" | "setPreviewDoc">) {
+}: {
+  history: AutomergeHistoryEntry[];
+} & Pick<CollabBarProps, "previewDoc" | "setPreviewDoc">) {
   return (
     <div
       className={cn(
@@ -95,24 +96,11 @@ function HistoryPanel({
   );
 }
 
-// Experimental: alterna entre o histórico de sessão (useLocalHistory, amostra
-// a cada 5s, só nesta aba) e o histórico real do Automerge (um snapshot por
-// change já aplicado ao documento). A reconstrução do lado do Automerge é
-// feita em fatias (ver `buildAutomergeHistory`) e paginada aqui de 50 em 50
-// pra não travar a aba nem renderizar milhares de linhas de uma vez.
-//
-// `source`/`onSourceChange` vêm de fora (de `CollabBar`) em vez de um
-// `useState` local: o `ExpandableTabs` renderiza este componente em DOIS
-// lugares ao mesmo tempo — uma cópia visível e uma invisível só pra medir a
-// altura do painel. Com estado local, cada cópia teria seu próprio `source`
-// independente, e a cópia de medição nunca saía de "session" (nunca clicada),
-// subestimando a altura real da aba Automerge e cortando o fim da lista/o
-// botão "carregar mais". Com o estado vindo de fora, as duas cópias ficam
-// sincronizadas e a medição bate com o que é exibido de verdade.
+// Histórico real do Automerge (um snapshot por change já aplicado ao
+// documento) — reconstruído em fatias (ver `buildAutomergeHistory`) e
+// paginado aqui de 50 em 50 pra não travar a aba nem renderizar milhares de
+// linhas de uma vez.
 function HistoryTabContent({
-  source,
-  onSourceChange,
-  history,
   automergeHistory,
   automergeHistoryVisibleCount,
   isLoadingAutomergeHistory,
@@ -121,12 +109,8 @@ function HistoryTabContent({
   onLoadMoreAutomergeHistory,
   previewDoc,
   setPreviewDoc,
-}: {
-  source: "session" | "automerge";
-  onSourceChange: (s: "session" | "automerge") => void;
-} & Pick<
+}: Pick<
   CollabBarProps,
-  | "history"
   | "automergeHistory"
   | "automergeHistoryVisibleCount"
   | "isLoadingAutomergeHistory"
@@ -145,56 +129,29 @@ function HistoryTabContent({
 
   return (
     <div className="w-[min(36rem,90vw)] space-y-2 p-1">
-      <div className="flex items-center gap-1 rounded-full bg-muted/50 p-0.5 text-xs">
-        <button
-          type="button"
-          onClick={() => onSourceChange("session")}
-          className={cn(
-            "flex-1 rounded-full px-2 py-1 transition-colors",
-            source === "session"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Sessão atual
-        </button>
-        <button
-          type="button"
-          onClick={() => onSourceChange("automerge")}
-          className={cn(
-            "flex-1 rounded-full px-2 py-1 transition-colors",
-            source === "automerge"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Automerge
-        </button>
-      </div>
-
-      {source === "automerge" && (
-        <button
-          type="button"
-          onClick={onLoadAutomergeHistory}
-          disabled={isLoadingAutomergeHistory}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-2 py-1.5 text-xs text-muted-foreground hover:border-foreground/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Database className="size-3" />
-          {isLoadingAutomergeHistory
-            ? automergeHistoryProgress
-              ? `Reconstruindo... ${automergeHistoryProgress.done}/${automergeHistoryProgress.total}`
-              : "Reconstruindo..."
-            : `Carregar histórico real (${automergeHistory.length} no total)`}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onLoadAutomergeHistory}
+        disabled={isLoadingAutomergeHistory}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-2 py-1.5 text-xs text-muted-foreground hover:border-foreground/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <Database className="size-3" />
+        {isLoadingAutomergeHistory
+          ? automergeHistoryProgress
+            ? `Reconstruindo... ${automergeHistoryProgress.done}/${automergeHistoryProgress.total}`
+            : "Reconstruindo..."
+          : automergeHistory.length > 0
+            ? `Atualizar histórico (${automergeHistory.length} no total)`
+            : "Carregar histórico"}
+      </button>
 
       <HistoryPanel
-        history={source === "session" ? history : visibleAutomergeHistory}
+        history={visibleAutomergeHistory}
         previewDoc={previewDoc}
         setPreviewDoc={setPreviewDoc}
       />
 
-      {source === "automerge" && hasMoreAutomergeHistory && (
+      {hasMoreAutomergeHistory && (
         <button
           type="button"
           onClick={onLoadMoreAutomergeHistory}
@@ -353,7 +310,6 @@ function PresencePanel({
 
 export function CollabBar({
   canWriteHistory,
-  history,
   automergeHistory,
   automergeHistoryVisibleCount,
   isLoadingAutomergeHistory,
@@ -374,25 +330,16 @@ export function CollabBar({
   onActiveTabChange?: (id: string | null) => void;
 }) {
   const presenceCount = collaborators.length + 1;
-  // Vive aqui (não dentro de HistoryTabContent) porque o ExpandableTabs
-  // renderiza o conteúdo da aba duas vezes (visível + cópia invisível de
-  // medição) — estado local duplicaria e dessincronizaria entre as cópias.
-  const [historySource, setHistorySource] = useState<"session" | "automerge">(
-    "session",
-  );
 
   const items: ExpandableTabsItem[] = [
     ...(canWriteHistory
       ? [
           {
             id: "history",
-            label: `Histórico (${history.length})`,
+            label: `Histórico (${automergeHistory.length})`,
             icon: <History className="size-4" />,
             content: (
               <HistoryTabContent
-                source={historySource}
-                onSourceChange={setHistorySource}
-                history={history}
                 automergeHistory={automergeHistory}
                 automergeHistoryVisibleCount={automergeHistoryVisibleCount}
                 isLoadingAutomergeHistory={isLoadingAutomergeHistory}

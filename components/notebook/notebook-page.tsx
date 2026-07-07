@@ -7,7 +7,6 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AppNotFound } from "@/components/motion/not-found";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
-import { useLocalHistory } from "@/hooks/use-local-history";
 import { usePresence } from "@/hooks/use-presence";
 import { getUserNotebookPermissions } from "@/lib/api/notebook-service";
 import type {
@@ -69,7 +68,6 @@ export default function RustInteractivePage({
     updateFocus,
   } = usePresence(pageId, user);
 
-  const { history } = useLocalHistory(doc);
   const AUTOMERGE_HISTORY_PAGE_SIZE = 50;
   const [automergeHistory, setAutomergeHistory] = useState<
     Awaited<ReturnType<typeof buildAutomergeHistory>>
@@ -193,7 +191,6 @@ export default function RustInteractivePage({
     >
       <CollabBar
         canWriteHistory={userPermissions.can_write}
-        history={history}
         automergeHistory={automergeHistory}
         automergeHistoryVisibleCount={automergeHistoryVisibleCount}
         isLoadingAutomergeHistory={isLoadingAutomergeHistory}

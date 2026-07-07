@@ -15,6 +15,12 @@ import { writeSceneElements } from "@/lib/drawing-scene";
 
 type AutomergeLib = typeof AutomergeType;
 
+export interface AutomergeHistoryEntry {
+  timestamp: Date;
+  message: string | null;
+  doc: Notebook;
+}
+
 export function useAutomergeSync(notebookId: string, token: string) {
   const [isConnected, setIsConnected] = useState(false);
   const [hasSyncedOnce, setHasSyncedOnce] = useState(false);
@@ -299,8 +305,11 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
-  // Experimental: histórico real derivado do log de changes do Automerge, em
-  // vez do polling in-memory de `useLocalHistory`.
+  // Histórico real derivado do log de changes do Automerge — fonte única de
+  // versionamento (o polling in-memory por intervalo, `useLocalHistory`, foi
+  // removido: ele reiniciava o próprio timer a cada mudança de `doc`, então
+  // edições contínuas e rápidas — como desenhar — nunca deixavam o intervalo
+  // de 5s completar, e o histórico de sessão ficava cego a esses blocos).
   //
   // O `automerge.getHistory()` nativo é O(n²): cada entrada tem um getter
   // preguiçoso que reconstrói o snapshot do ZERO (`applyChanges(init(),
@@ -311,11 +320,6 @@ export function useAutomergeSync(notebookId: string, token: string) {
   // cedemos a thread principal a cada fatia via `setTimeout`, então mesmo um
   // histórico grande não bloqueia a UI de uma vez só. O resultado fica em
   // cache (por referência do doc) pra não recalcular à toa.
-  type AutomergeHistoryEntry = {
-    timestamp: Date;
-    message: string | null;
-    doc: Notebook;
-  };
   const automergeHistoryCache = useRef<{
     forDoc: Notebook;
     entries: AutomergeHistoryEntry[];
@@ -357,7 +361,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
       }
       onProgress?.(total, total);
 
-      // Mais recente primeiro, igual ao useLocalHistory.
+      // Mais recente primeiro.
       entries.reverse();
       automergeHistoryCache.current = { forDoc: currentDoc, entries };
       return entries;
