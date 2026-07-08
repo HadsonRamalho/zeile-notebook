@@ -292,8 +292,12 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         aria-label="Adicionar bloco"
         aria-expanded={open}
         className={cn(
-          "z-1 grid size-6 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-all hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100",
-          open && "opacity-100",
+          // Em mobile não há hover, então o gatilho fica sempre visível
+          // (opacity-100); só a partir de md ele se esconde por padrão e
+          // aparece no hover/foco — senão o botão fica invisível e
+          // inacessível em touch, sem nenhuma forma de abri-lo.
+          "z-1 grid size-6 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground opacity-100 shadow-sm transition-all hover:text-foreground md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
+          open && "md:opacity-100",
         )}
       >
         <Plus
