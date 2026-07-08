@@ -2,6 +2,7 @@
 
 import { Reorder, useDragControls } from "framer-motion";
 import {
+  ChevronDown,
   Download,
   Eraser,
   EyeIcon,
@@ -10,6 +11,7 @@ import {
   Focus,
   GripVertical,
   Hand,
+  Layers,
   LockIcon,
   Maximize2,
   Minimize2,
@@ -133,7 +135,19 @@ export function FreeDrawingCell({
   );
   const [tool, setTool] = useState<ToolKind>("pen");
   const [color, setColor] = useState("#0f172a");
-  const [size, setSize] = useState(8);
+  const [sizeByBrush, setSizeByBrush] = useState<Record<BrushKind, number>>({
+    pen: 8,
+    marker: 8,
+    calligraphy: 8,
+    eraser: 8,
+  });
+  const [expandedSizeTool, setExpandedSizeTool] = useState<BrushKind | null>(
+    null,
+  );
+  // Vive aqui (não dentro de LayersPanel) porque o painel desmonta ao entrar
+  // em modo foco (só é renderizado quando `!focusMode`) — um `useState`
+  // local perderia o estado de minimizado a cada entrada/saída do foco.
+  const [layersMinimized, setLayersMinimized] = useState(false);
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
   const panState = useRef<{
     startScreen: { x: number; y: number };
@@ -440,6 +454,25 @@ export function FreeDrawingCell({
     commit(upsertCanvasSettings(elements, next), elements);
   };
 
+  const isBrushKind = (t: ToolKind): t is BrushKind =>
+    t === "pen" || t === "marker" || t === "calligraphy" || t === "eraser";
+
+  // Clicar de novo na ferramenta já ativa expande o slider de tamanho
+  // específico daquele pincel; clicar numa ferramenta diferente só troca a
+  // ferramenta e fecha qualquer slider aberto.
+  const handleToolClick = (t: ToolKind) => {
+    if (t === tool && isBrushKind(t)) {
+      setExpandedSizeTool((cur) => (cur === t ? null : t));
+      return;
+    }
+    setTool(t);
+    setExpandedSizeTool(null);
+  };
+
+  const setSizeForBrush = (brush: BrushKind, value: number) => {
+    setSizeByBrush((prev) => ({ ...prev, [brush]: value }));
+  };
+
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!canWrite) return;
     if (e.button !== 0) return;
@@ -468,7 +501,7 @@ export function FreeDrawingCell({
       order: orderCounter.current,
       brush: tool,
       color,
-      size,
+      size: sizeByBrush[tool],
       opacity: 100,
       pressureSensitive: e.pointerType === "pen",
       points: [getPoint(e)],
@@ -672,6 +705,10 @@ export function FreeDrawingCell({
             focusMode
               ? "bg-foreground/[0.1] text-foreground"
               : "bg-card/85 text-foreground/70",
+            // Em tela cheia no mobile, o botão de foco sai daqui e aparece
+            // centralizado embaixo (ver bloco fixed abaixo) — mais alcançável
+            // com o polegar do que o canto superior.
+            fullscreen && "max-md:hidden",
           )}
           title={focusMode ? "Sair do modo foco" : "Modo foco"}
         >
@@ -696,6 +733,23 @@ export function FreeDrawingCell({
           </button>
         )}
       </div>
+
+      {fullscreen && (
+        <button
+          type="button"
+          onClick={() => setFocusMode((v) => !v)}
+          aria-pressed={focusMode}
+          className={cn(
+            "-translate-x-1/2 fixed bottom-4 left-1/2 z-[101] rounded-md border border-border p-2 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground md:hidden",
+            focusMode
+              ? "bg-foreground/[0.1] text-foreground"
+              : "bg-card/85 text-foreground/70",
+          )}
+          title={focusMode ? "Sair do modo foco" : "Modo foco"}
+        >
+          <Focus size={16} />
+        </button>
+      )}
 
       <div
         ref={containerRef}
@@ -734,16 +788,18 @@ export function FreeDrawingCell({
           <>
             <BrushPalette
               tool={tool}
-              onChangeTool={setTool}
+              onChangeTool={handleToolClick}
               onUndo={undo}
               onRedo={redo}
             />
-            <ColorAndSize
-              color={color}
-              onColor={setColor}
-              size={size}
-              onSize={setSize}
-            />
+            {expandedSizeTool && (
+              <BrushSizePopover
+                brush={expandedSizeTool}
+                size={sizeByBrush[expandedSizeTool]}
+                onSize={(v) => setSizeForBrush(expandedSizeTool, v)}
+              />
+            )}
+            <ColorPicker color={color} onColor={setColor} />
             <BackgroundControl
               settings={canvasSettings}
               onCustom={setBackgroundCustom}
@@ -770,6 +826,8 @@ export function FreeDrawingCell({
               onReorderCommit={onReorderLayersCommit}
               onRename={renameLayer}
               onDelete={deleteLayer}
+              minimized={layersMinimized}
+              onMinimizedChange={setLayersMinimized}
             />
           </>
         )}
@@ -883,20 +941,16 @@ function BrushPalette({
   );
 }
 
-function ColorAndSize({
+function ColorPicker({
   color,
   onColor,
-  size,
-  onSize,
 }: {
   color: string;
   onColor: (c: string) => void;
-  size: number;
-  onSize: (s: number) => void;
 }) {
   return (
-    <div className="-translate-x-1/2 absolute top-3 left-1/2 z-10 flex items-center gap-3 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur">
-      <div className="flex items-center gap-1.5">
+    <div className="-translate-x-1/2 absolute top-3 left-1/2 z-10 flex items-center gap-1.5 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur">
+      <div className="hidden items-center gap-1.5 md:flex">
         {SWATCHES.map((c) => (
           <button
             key={c}
@@ -912,16 +966,37 @@ function ColorAndSize({
             style={{ backgroundColor: c }}
           />
         ))}
-        <label className="relative size-5 cursor-pointer overflow-hidden rounded-full border border-border">
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => onColor(e.target.value)}
-            className="absolute -inset-1 cursor-pointer"
-            aria-label="Cor customizada"
-          />
-        </label>
       </div>
+      <label className="relative size-5 cursor-pointer overflow-hidden rounded-full border border-border">
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => onColor(e.target.value)}
+          className="absolute -inset-1 cursor-pointer"
+          aria-label="Cor customizada"
+        />
+      </label>
+    </div>
+  );
+}
+
+// Aparece só quando se clica de novo na ferramenta já ativa (ver
+// `handleToolClick`) — o slider de tamanho é próprio de cada pincel, não
+// compartilhado, então cada abertura mostra/edita o valor daquele pincel.
+function BrushSizePopover({
+  brush,
+  size,
+  onSize,
+}: {
+  brush: BrushKind;
+  size: number;
+  onSize: (s: number) => void;
+}) {
+  return (
+    <div className="absolute top-3 left-16 z-10 flex items-center gap-2 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur">
+      <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+        {BRUSH_LABELS[brush]}
+      </span>
       <div className="h-5 w-px bg-border" />
       <div className="flex w-32 items-center gap-2">
         <span className="w-6 font-mono text-[10px] text-muted-foreground tabular-nums">
@@ -953,7 +1028,7 @@ function ZoomControls({
   onFit: () => void;
 }) {
   return (
-    <div className="-translate-x-1/2 absolute bottom-3 left-1/2 z-10 flex items-center gap-0.5 rounded-full border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
+    <div className="-translate-x-1/2 absolute bottom-3 left-1/2 z-10 hidden items-center gap-0.5 rounded-full border border-border bg-card/85 p-1 shadow-lg backdrop-blur md:flex">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -1012,7 +1087,7 @@ function BackgroundControl({
 }) {
   const isTheme = settings.backgroundMode === "theme";
   return (
-    <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 rounded-full border border-border bg-card/85 px-2 py-1.5 shadow-lg backdrop-blur">
+    <div className="absolute bottom-3 left-3 z-10 hidden items-center gap-1.5 rounded-full border border-border bg-card/85 px-2 py-1.5 shadow-lg backdrop-blur md:flex">
       <label
         className={cn(
           "relative size-6 cursor-pointer overflow-hidden rounded-full border",
@@ -1074,6 +1149,8 @@ function LayersPanel({
   onReorderCommit,
   onRename,
   onDelete,
+  minimized,
+  onMinimizedChange,
 }: {
   layers: LayerElement[];
   activeLayerId: string | null;
@@ -1087,27 +1164,67 @@ function LayersPanel({
   onReorderCommit: () => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  minimized: boolean;
+  onMinimizedChange: (minimized: boolean) => void;
 }) {
   const visualTopToBottom = [...layers].reverse();
+
+  if (minimized) {
+    return (
+      <div className="absolute right-3 bottom-3 z-10">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Expandir camadas"
+              aria-pressed={false}
+              onClick={() => onMinimizedChange(false)}
+              className="grid size-9 place-items-center rounded-xl border border-border bg-card/85 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
+            >
+              <Layers className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left">Expandir camadas</TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute right-3 bottom-3 z-10 w-64 overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur">
       <div className="flex items-center justify-between border-border border-b px-3 py-1.5">
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
           Camadas
         </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Nova camada"
-              onClick={onAdd}
-              className="grid size-6 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
-            >
-              <PlusIcon className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Nova camada</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Nova camada"
+                onClick={onAdd}
+                className="grid size-6 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
+              >
+                <PlusIcon className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Nova camada</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Minimizar camadas"
+                aria-pressed={false}
+                onClick={() => onMinimizedChange(true)}
+                className="grid size-6 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
+              >
+                <ChevronDown className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Minimizar camadas</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
       <Reorder.Group
         axis="y"
@@ -1196,7 +1313,7 @@ function LayerRow({
           type="button"
           onPointerDown={(e) => dragControls.start(e)}
           aria-label="Arrastar para reordenar"
-          className="grid size-4 shrink-0 cursor-grab place-items-center text-foreground/40 hover:text-foreground active:cursor-grabbing"
+          className="grid size-4 shrink-0 touch-none select-none place-items-center text-foreground/40 hover:cursor-grab hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="size-3" />
         </button>
