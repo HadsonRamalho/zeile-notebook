@@ -222,7 +222,6 @@ export function LayoutsCanvasToolsShowcasePage() {
     setSelectedId(null);
   };
 
-  // Window-level mousemove + mouseup for active drag.
   useEffect(() => {
     if (!drag) return;
     const onMove = (e: MouseEvent) => {
@@ -294,7 +293,6 @@ export function LayoutsCanvasToolsShowcasePage() {
     };
   }, [drag, pan.x, pan.y, zoom, creationCount]);
 
-  // Keyboard shortcuts: tools, delete, escape, space-to-pan.
   useEffect(() => {
     const isTypingTarget = (el: EventTarget | null) => {
       if (!(el instanceof HTMLElement)) return false;
@@ -343,7 +341,6 @@ export function LayoutsCanvasToolsShowcasePage() {
     };
   }, [selectedId]);
 
-  // Wheel: cmd/ctrl-wheel zooms (centered on cursor); plain wheel pans.
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;

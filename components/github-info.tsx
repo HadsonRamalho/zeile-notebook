@@ -159,19 +159,15 @@ function humanizeNumber(num: number): string {
   }
 
   if (num < 100000) {
-    // For numbers between 1,000 and 99,999, show with one decimal (e.g., 1.5K)
     const value = (num / 1000).toFixed(1);
-    // Remove trailing .0 if present
     const formattedValue = value.endsWith(".0") ? value.slice(0, -2) : value;
 
     return `${formattedValue}K`;
   }
 
   if (num < 1000000) {
-    // For numbers between 10,000 and 999,999, show as whole K (e.g., 10K, 999K)
     return `${Math.floor(num / 1000)}K`;
   }
 
-  // For 1,000,000 and above, just return the number
   return num.toString();
 }

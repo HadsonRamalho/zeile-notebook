@@ -41,7 +41,6 @@ export function useAutomergeSync(notebookId: string, token: string) {
       automerge.current = automergex;
       syncState.current = automergex.initSyncState();
 
-      // Tenta carregar do IndexedDB
       const cachedBinary = await get(`notebook_${notebookId}`);
       let initialDoc: Notebook;
 

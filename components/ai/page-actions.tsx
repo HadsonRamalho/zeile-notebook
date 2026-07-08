@@ -19,9 +19,6 @@ import {
 const cache = new Map<string, string>();
 
 export function LLMCopyButton({
-  /**
-   * A URL to fetch the raw Markdown/MDX content of page
-   */
   markdownUrl,
 }: {
   markdownUrl: string;
@@ -71,14 +68,7 @@ export function ViewOptions({
   markdownUrl,
   githubUrl,
 }: {
-  /**
-   * A URL to the raw Markdown/MDX content of page
-   */
   markdownUrl: string;
-
-  /**
-   * Source file URL on GitHub
-   */
   githubUrl: string;
 }) {
   const items = useMemo(() => {
