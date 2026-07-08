@@ -67,7 +67,7 @@ export function ComponentRenderer({
 
     default:
       return (
-        <div className="p-4 border border-dashed border-white/10 rounded-lg italic text-gray-500">
+        <div className="p-4 border border-dashed border-border rounded-lg italic text-muted-foreground">
           Componente {block.metadata.type} em desenvolvimento...
         </div>
       );

@@ -59,6 +59,7 @@ export function UserSidebar() {
             onClick={handleCreatePage}
             className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             title={t("new_page")}
+            aria-label={t("new_page")}
           >
             <Plus size={14} />
           </button>

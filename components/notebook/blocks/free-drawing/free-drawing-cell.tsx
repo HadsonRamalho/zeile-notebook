@@ -36,6 +36,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
 import type { DrawingElement, Notebook } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -620,6 +621,7 @@ export function FreeDrawingCell({
     if (activeLayerId === id) {
       setActiveLayerId(cleaned.find(isLayer)?.id ?? null);
     }
+    toast("Camada excluída — Ctrl+Z para desfazer");
   };
 
   const undo = () => {
@@ -685,7 +687,7 @@ export function FreeDrawingCell({
       }
       className={cn(
         "relative w-full rounded-lg border bg-background",
-        fullscreen && "fixed inset-0 z-[100]",
+        fullscreen && "fixed inset-0 z-overlay",
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -693,7 +695,7 @@ export function FreeDrawingCell({
       <div
         className={cn(
           "absolute right-2 top-2 flex items-center gap-1.5",
-          fullscreen ? "z-[101]" : "z-10",
+          fullscreen ? "z-overlay-controls" : "z-10",
         )}
       >
         <button
@@ -711,6 +713,7 @@ export function FreeDrawingCell({
             fullscreen && "max-md:hidden",
           )}
           title={focusMode ? "Sair do modo foco" : "Modo foco"}
+          aria-label={focusMode ? "Sair do modo foco" : "Modo foco"}
         >
           <Focus size={16} />
         </button>
@@ -719,6 +722,7 @@ export function FreeDrawingCell({
           onClick={() => setFullscreen((v) => !v)}
           className="rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
           title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+          aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
         >
           {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
@@ -728,6 +732,7 @@ export function FreeDrawingCell({
             onClick={exportPng}
             className="rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
             title="Exportar como PNG"
+            aria-label="Exportar como PNG"
           >
             <Download size={16} />
           </button>
@@ -740,12 +745,13 @@ export function FreeDrawingCell({
           onClick={() => setFocusMode((v) => !v)}
           aria-pressed={focusMode}
           className={cn(
-            "-translate-x-1/2 fixed bottom-4 left-1/2 z-[101] rounded-md border border-border p-2 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground md:hidden",
+            "-translate-x-1/2 fixed bottom-4 left-1/2 z-overlay-controls rounded-md border border-border p-2 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground md:hidden",
             focusMode
               ? "bg-foreground/[0.1] text-foreground"
               : "bg-card/85 text-foreground/70",
           )}
           title={focusMode ? "Sair do modo foco" : "Modo foco"}
+          aria-label={focusMode ? "Sair do modo foco" : "Modo foco"}
         >
           <Focus size={16} />
         </button>
@@ -1304,7 +1310,7 @@ function LayerRow({
       className={cn(
         "flex w-full cursor-pointer flex-col gap-1 rounded-md bg-card px-2 py-1.5 text-left text-[11px] transition-colors",
         isActive
-          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+          ? "bg-primary/10 text-primary"
           : "hover:bg-foreground/5",
       )}
     >

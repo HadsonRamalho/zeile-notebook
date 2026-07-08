@@ -68,6 +68,7 @@ export function PageSidebar({
         <button
           type="button"
           onClick={() => handleSaveRename(page.id)}
+          aria-label="Salvar nome"
           className="flex size-6 items-center justify-center rounded-md text-primary transition-colors hover:bg-accent"
         >
           <Check size={14} />
@@ -96,6 +97,7 @@ export function PageSidebar({
         <button
           type="button"
           onClick={() => handleStartEditing(page)}
+          aria-label="Renomear página"
           className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-accent-foreground"
         >
           <Pencil size={12} />

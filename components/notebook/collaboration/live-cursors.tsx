@@ -7,7 +7,7 @@ export function LiveCursors({
   collaborators: Collaborator[];
 }) {
   return (
-    <div className="pointer-events-none fixed inset-0 z-100 overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-overlay overflow-hidden">
       {collaborators.map((collab) => {
         if (!collab.cursor) return null;
 

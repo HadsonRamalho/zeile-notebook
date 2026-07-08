@@ -64,7 +64,7 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
   if (isEditing) {
     return (
       <input
-        className="text-3xl font-bold bg-transparent border-b-2 border-emerald-500 outline-none w-full"
+        className="text-3xl font-bold bg-transparent border-b-2 border-primary outline-none w-full"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onBlur={handleBlur}
@@ -74,9 +74,17 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
 
   return (
     <h1
+      role="button"
+      tabIndex={0}
       className="text-3xl font-bold cursor-text hover:bg-accent rounded px-1 transition-colors"
       onClick={() => {
         setIsEditing(true);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setIsEditing(true);
+        }
       }}
     >
       {title || "..."}

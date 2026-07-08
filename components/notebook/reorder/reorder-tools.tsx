@@ -10,6 +10,7 @@ import {
   IdCard,
   Info,
   Loader,
+  MoreHorizontal,
   Pencil,
   Plus,
   Terminal,
@@ -40,7 +41,6 @@ interface ReorderToolsProps {
 type ToolButtonConfig = {
   label: string;
   icon: React.ReactNode;
-  color: string;
   onClick?: () => void;
   targetView?: string;
 };
@@ -90,25 +90,21 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Texto",
           icon: <Plus size={14} />,
-          color: "hover:text-blue-400",
           onClick: () => addBlock(index, "text"),
         },
         {
           label: "Código",
           icon: <Terminal size={14} />,
-          color: "hover:text-orange-400",
           targetView: "languages",
         },
         {
           label: "UI",
           icon: <Loader size={14} />,
-          color: "hover:text-emerald-400",
           targetView: "ui",
         },
         {
           label: "Diagramas",
           icon: <Waypoints size={14} />,
-          color: "hover:text-purple-400",
           targetView: "diagrams",
         },
       ],
@@ -119,19 +115,16 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Desenho",
           icon: <Pencil size={14} />,
-          color: "hover:text-purple-400",
           onClick: () => addBlock(index, "free_drawing"),
         },
         {
           label: "Excalidraw",
           icon: <Waypoints size={14} />,
-          color: "hover:text-purple-400",
           onClick: () => addBlock(index, "drawing"),
         },
         {
           label: "Database Schema",
           icon: <Database size={14} />,
-          color: "hover:text-sky-400",
           onClick: () => addBlock(index, "database_schema"),
         },
       ],
@@ -142,43 +135,46 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Rust",
           icon: <RustIcon size={30} />,
-          color: "hover:text-orange-500",
           onClick: () => addBlock(index, "code", "rust"),
         },
         {
           label: "React/TS",
           icon: <ReactIcon size={24} />,
-          color: "hover:text-cyan-400",
           onClick: () => addBlock(index, "code", "typescript"),
         },
         {
           label: "Python",
           icon: <PythonIcon size={24} />,
-          color: "hover:text-indigo-400",
           onClick: () => addBlock(index, "code", "python"),
         },
         {
+          label: "Mais",
+          icon: <MoreHorizontal size={24} />,
+          targetView: "languages_more",
+        },
+      ],
+    },
+    languages_more: {
+      parent: "languages",
+      buttons: [
+        {
           label: "Go",
           icon: <GoIcon size={30} />,
-          color: "hover:text-blue-300",
           onClick: () => addBlock(index, "code", "go"),
         },
         {
           label: "C++",
           icon: <CppIcon size={30} />,
-          color: "hover:text-blue-500",
           onClick: () => addBlock(index, "code", "cpp"),
         },
         {
           label: "Zig",
           icon: <ZigIcon size={24} />,
-          color: "hover:text-orange-600",
           onClick: () => addBlock(index, "code", "zig"),
         },
         {
           label: "Genérico",
-          icon: <Cpu />,
-          color: "hover:text-yellow-600",
+          icon: <Cpu size={24} />,
           onClick: () => addBlock(index, "code", "generic"),
         },
       ],
@@ -189,13 +185,11 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Callout",
           icon: <Info size={14} />,
-          color: "hover:text-blue-400",
           targetView: "ui_callout",
         },
         {
           label: "Card",
           icon: <Box size={14} />,
-          color: "hover:text-purple-400",
           onClick: () =>
             addBlock(index, "component", undefined, {
               type: "card",
@@ -205,13 +199,11 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Banner",
           icon: <IdCard size={14} />,
-          color: "hover:text-red-500",
           targetView: "ui_banner",
         },
         {
           label: "Github Repo",
           icon: <GithubIcon />,
-          color: "hover:text-indigo-400",
           onClick: () =>
             addBlock(index, "component", undefined, {
               type: "github_repo",
@@ -226,7 +218,6 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Banner Normal",
           icon: <IdCard size={14} />,
-          color: "hover:text-red-600",
           onClick: () =>
             addBlock(index, "component", undefined, {
               type: "banner",
@@ -236,7 +227,6 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Banner Arco-íris",
           icon: <IdCard size={14} />,
-          color: "hover:text-pink-600",
           onClick: () =>
             addBlock(index, "component", undefined, {
               type: "banner",
@@ -251,19 +241,16 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         {
           label: "Info",
           icon: <Info size={14} />,
-          color: "hover:text-blue-400",
           onClick: () => addCallout("info"),
         },
         {
           label: "Aviso",
           icon: <Zap size={14} />,
-          color: "hover:text-yellow-500",
           onClick: () => addCallout("warn"),
         },
         {
           label: "Erro",
           icon: <AlertCircle size={14} />,
-          color: "hover:text-red-500",
           onClick: () => addCallout("error"),
         },
       ],
@@ -296,7 +283,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           // (opacity-100); só a partir de md ele se esconde por padrão e
           // aparece no hover/foco — senão o botão fica invisível e
           // inacessível em touch, sem nenhuma forma de abri-lo.
-          "z-1 grid size-6 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground opacity-100 shadow-sm transition-all hover:text-foreground md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
+          "z-floating grid size-6 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground opacity-100 shadow-sm transition-all hover:text-foreground md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
           open && "md:opacity-100",
         )}
       >
@@ -340,7 +327,6 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
                         key={btn.label}
                         icon={btn.icon}
                         label={btn.label}
-                        color={btn.color}
                         onClick={() => {
                           if (btn.targetView) setView(btn.targetView);
                           if (btn.onClick) {
@@ -361,11 +347,11 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
   );
 }
 
-const ToolButton = ({ onClick, icon, label, color }: any) => (
+const ToolButton = ({ onClick, icon, label }: any) => (
   <button
     type="button"
     onClick={onClick}
-    className={`flex items-center gap-1.5 px-3 py-2 sm:py-1.5 hover:bg-accent text-muted-foreground ${color} rounded-xl transition-all text-[10px] font-bold uppercase tracking-tight`}
+    className="flex items-center gap-1.5 px-3 py-2 sm:py-1.5 hover:bg-accent hover:text-primary text-muted-foreground rounded-xl transition-all text-[10px] font-bold uppercase tracking-tight"
   >
     {icon} <span>{label}</span>
   </button>
@@ -375,6 +361,7 @@ const BackButton = ({ onClick }: { onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
+    aria-label="Voltar"
     className="p-2 mr-1 hover:bg-accent rounded-xl text-muted-foreground transition-colors"
   >
     <ChevronLeft size={14} />

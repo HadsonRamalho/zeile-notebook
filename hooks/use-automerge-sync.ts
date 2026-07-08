@@ -297,6 +297,17 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
+  // Reinsere um bloco removido na mesma posição, preservando id/conteúdo —
+  // usado pelo toast de "Desfazer" após deletar, para não gerar um bloco
+  // novo (id trocado) no lugar do original.
+  const restoreBlock = (index: number, block: Block) => {
+    updateDoc((d) => {
+      if (!d.blocks) d.blocks = [];
+      const clean: Block = JSON.parse(JSON.stringify(block));
+      d.blocks.splice(index, 0, clean);
+    });
+  };
+
   const reorderBlocks = (newOrder: Block[]) => {
     updateDoc((d) => {
       const cleanOrder = JSON.parse(JSON.stringify(newOrder));
@@ -378,6 +389,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
     updateBlockMetadataSync,
     updateDrawingScene,
     deleteBlock,
+    restoreBlock,
     reorderBlocks,
     buildAutomergeHistory,
   };

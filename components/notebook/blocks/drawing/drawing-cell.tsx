@@ -86,7 +86,7 @@ export function DrawingCell({
       }
       className={
         fullscreen
-          ? "fixed inset-0 z-[100] bg-background"
+          ? "fixed inset-0 z-overlay bg-background"
           : "relative w-full rounded-lg border"
       }
     >
@@ -95,9 +95,10 @@ export function DrawingCell({
         onClick={() => setFullscreen((v) => !v)}
         className={cn(
           "absolute right-2 top-2 rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground",
-          fullscreen ? "z-[101]" : "z-10",
+          fullscreen ? "z-overlay-controls" : "z-10",
         )}
         title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+        aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
       >
         {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>

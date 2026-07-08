@@ -189,11 +189,11 @@ export function DatabaseSchemaCell({
       }
       className={
         fullscreen
-          ? "fixed inset-0 z-100 bg-background"
+          ? "fixed inset-0 z-overlay bg-background"
           : "relative w-full rounded-lg border"
       }
     >
-      <div className={cn("absolute right-2 top-2 flex gap-2", fullscreen ? "z-101" : "z-10")}>
+      <div className={cn("absolute right-2 top-2 flex gap-2", fullscreen ? "z-overlay-controls" : "z-10")}>
         {canWrite && (
           <button
             type="button"
@@ -210,6 +210,7 @@ export function DatabaseSchemaCell({
           onClick={() => setFullscreen((v) => !v)}
           className="bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md border p-1.5 shadow-md transition-colors"
           title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+          aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
         >
           {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>

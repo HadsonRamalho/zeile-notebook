@@ -18,7 +18,7 @@ export function RunButton({ isRunning, handleRun, isLoading }: RunButtonProps) {
       ${
         isRunning || isLoading
           ? "bg-muted text-muted-foreground cursor-not-allowed"
-          : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/20"
+          : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
       }`}
     >
       {isRunning ? (

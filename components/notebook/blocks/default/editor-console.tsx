@@ -16,7 +16,7 @@ export function EditorConsole({ status, output }: EditorConsoleProps) {
         {status !== "idle" && (
           <div
             className={`flex items-center gap-1.5 text-[12px] font-bold uppercase ${
-              status === "success" ? "text-emerald-500" : "text-destructive"
+              status === "success" ? "text-primary" : "text-destructive"
             }`}
           >
             {status === "success" ? (

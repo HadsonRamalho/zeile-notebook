@@ -45,6 +45,7 @@ export function DeletableEdge({
             setEdges((edges) => edges.filter((edge) => edge.id !== id));
           }}
           title="Remover relacionamento"
+          aria-label="Remover relacionamento"
         >
           <X size={10} />
         </button>

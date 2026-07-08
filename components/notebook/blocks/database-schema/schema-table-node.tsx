@@ -85,6 +85,7 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
           onClick={removeTable}
           className="nodrag shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           title="Remover tabela"
+          aria-label="Remover tabela"
         >
           <Trash2 size={12} />
         </button>
@@ -115,6 +116,7 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
                 disabled={index === 0}
                 className="nodrag text-muted-foreground rounded p-0.5 hover:bg-muted disabled:opacity-30"
                 title="Mover para cima"
+                aria-label="Mover para cima"
               >
                 <ArrowUp size={10} />
               </button>
@@ -124,6 +126,7 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
                 disabled={index === data.schema.length - 1}
                 className="nodrag text-muted-foreground rounded p-0.5 hover:bg-muted disabled:opacity-30"
                 title="Mover para baixo"
+                aria-label="Mover para baixo"
               >
                 <ArrowDown size={10} />
               </button>
@@ -132,6 +135,7 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
                 onClick={() => removeField(index)}
                 className="nodrag text-muted-foreground rounded p-0.5 hover:bg-destructive/10 hover:text-destructive"
                 title="Remover campo"
+                aria-label="Remover campo"
               >
                 <X size={10} />
               </button>

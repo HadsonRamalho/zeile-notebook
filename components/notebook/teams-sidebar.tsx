@@ -135,7 +135,7 @@ export function TeamsSidebar() {
                 <div className="flex flex-col gap-4 py-4">
                   <div className="space-y-2">
                     <label htmlFor="teamName" className="text-sm font-medium">
-                      {a("team_name")} <span className="text-red-500">*</span>
+                      {a("team_name")} <span className="text-destructive">*</span>
                     </label>
                     <input
                       id="teamName"

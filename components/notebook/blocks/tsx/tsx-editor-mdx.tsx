@@ -29,9 +29,7 @@ export function TsxEditorMDX({
     }
   };
 
-  const setBlocksAction = (blocks: Block[]) => {
-    console.log("Blocks atualizados (dummy):", blocks);
-  };
+  const setBlocksAction = (_blocks: Block[]) => {};
 
   return (
     <div className="my-6 w-full">

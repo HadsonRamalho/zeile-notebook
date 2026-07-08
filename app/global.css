@@ -97,6 +97,9 @@
 }
 
 @theme inline {
+    --z-index-floating: 1;
+    --z-index-overlay: 100;
+    --z-index-overlay-controls: 101;
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);

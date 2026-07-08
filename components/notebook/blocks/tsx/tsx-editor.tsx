@@ -89,7 +89,6 @@ export function TsxEditor({
       global.require = amdRequire;
 
       setBabelReady(true);
-      console.log("Babel carregado com sucesso (AMD restaurado).");
     };
 
     script.onerror = (e) => {

@@ -81,14 +81,16 @@ export function ReorderItem({
         >
           <GripVertical
             size={16}
-            className="text-gray-600 cursor-grab active:cursor-grabbing"
+            className="text-muted-foreground cursor-grab active:cursor-grabbing"
           />
           {pageBlocks.length > 1 && (
             <button
               type="button"
               disabled={pageBlocks.length === 1}
               onClick={() => removeBlock(block.id)}
-              className="text-gray-600 hover:text-red-500"
+              aria-label="Excluir bloco"
+              title="Excluir bloco"
+              className="text-muted-foreground hover:text-destructive"
             >
               <Trash2 size={14} />
             </button>

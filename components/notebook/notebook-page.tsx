@@ -3,6 +3,7 @@
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
 import { Check, Eye, Plus, RotateCw, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   Fragment,
   type ReactNode,
@@ -61,6 +62,7 @@ export default function RustInteractivePage({
     updateDrawingScene,
     restoreState,
     deleteBlock,
+    restoreBlock,
     reorderBlocks,
     buildAutomergeHistory,
   } = useAutomergeSync(pageId, token);
@@ -156,6 +158,22 @@ export default function RustInteractivePage({
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
+  };
+
+  // Deletar um bloco não pede confirmação (fricção alta demais para uma ação
+  // do dia a dia), mas também não é definitivo: um toast com "Desfazer"
+  // reinsere o bloco exato (mesmo id/conteúdo) na mesma posição.
+  const handleDeleteBlock = (id: string) => {
+    const index = blocks.findIndex((b) => b.id === id);
+    const removed = blocks[index];
+    if (!removed) return;
+    deleteBlock(id);
+    toast(`Bloco "${removed.title || "sem título"}" excluído.`, {
+      action: {
+        label: "Desfazer",
+        onClick: () => restoreBlock(index, removed),
+      },
+    });
   };
 
   if (!doc || !hasSyncedOnce) {
@@ -277,7 +295,7 @@ export default function RustInteractivePage({
                   pageFiles={{}}
                   setBlocks={() => {}}
                   setIsDragging={setIsDragging}
-                  removeBlock={deleteBlock}
+                  removeBlock={handleDeleteBlock}
                   updateBlock={updateBlockContent}
                   updateBlockMetadata={updateBlockMetadataSync}
                   updateDrawingScene={updateDrawingScene}
@@ -345,7 +363,7 @@ function getBlockTitle(
 
 function Refreshing() {
   return (
-    <div className="absolute md:fixed flex items-center gap-2 md:top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-md text-sm z-10 animate-pulse">
+    <div className="absolute md:fixed flex items-center gap-2 md:top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm z-10 animate-pulse">
       <RotateCw className="animate-spin size-4" />
       Sincronizando...
     </div>
@@ -362,7 +380,7 @@ function PreviewDialog({
   handleConfirmRestore,
 }: PreviewDialogProps) {
   return (
-    <div className="fixed top-12 mt-4 md:top-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto bg-amber-500/95 backdrop-blur-md border border-amber-400 text-white px-4 py-3 md:px-5 rounded-2xl md:rounded-full shadow-2xl z-100 flex flex-col md:flex-row items-center gap-3 md:gap-4 animate-in slide-in-from-top-4 fade-in duration-300">
+    <div className="fixed top-12 mt-4 md:top-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto bg-primary/95 backdrop-blur-md border border-primary text-primary-foreground px-4 py-3 md:px-5 rounded-2xl md:rounded-full shadow-2xl z-overlay flex flex-col md:flex-row items-center gap-3 md:gap-4 animate-in slide-in-from-top-4 fade-in duration-300">
       <div className="flex items-center gap-2">
         <Eye className="size-4 md:size-5" />
         <span className="font-semibold text-sm md:text-base tracking-tight whitespace-nowrap">
@@ -370,20 +388,20 @@ function PreviewDialog({
         </span>
       </div>
 
-      <div className="w-full h-px md:w-px md:h-6 bg-white/20 md:bg-amber-400/50" />
+      <div className="w-full h-px md:w-px md:h-6 bg-primary-foreground/20" />
 
       <div className="flex items-center justify-center gap-2 w-full md:w-auto">
         <Button
           onClick={handleCancelPreview}
           variant="ghost"
-          className="flex-1 md:flex-none h-9 px-4 text-white hover:bg-amber-600 rounded-xl md:rounded-full transition-colors text-xs md:text-sm"
+          className="flex-1 md:flex-none h-9 px-4 text-primary-foreground hover:bg-primary-foreground/10 rounded-xl md:rounded-full transition-colors text-xs md:text-sm"
         >
           <X className="size-4 mr-1" />
           Cancelar
         </Button>
         <Button
           onClick={handleConfirmRestore}
-          className="flex-1 md:flex-none h-9 px-4 bg-white text-amber-600 hover:bg-amber-50 rounded-xl md:rounded-full font-bold shadow-sm transition-colors text-xs md:text-sm"
+          className="flex-1 md:flex-none h-9 px-4 bg-primary-foreground text-primary hover:bg-primary-foreground/90 rounded-xl md:rounded-full font-bold shadow-sm transition-colors text-xs md:text-sm"
         >
           <Check className="size-4 mr-1" />
           Restaurar

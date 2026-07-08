@@ -16,7 +16,7 @@ export function TextBlock({ content, onChange }: TextBlockProps) {
   if (isEditing) {
     return (
       <BlockEditor
-        className="w-full bg-muted text-foreground text-lg outline-none resize-none border-l-2 border-emerald-500  py-2"
+        className="w-full bg-muted text-foreground text-lg outline-none resize-none py-2"
         content={content}
         onBlur={() => {
           setIsEditing(false);

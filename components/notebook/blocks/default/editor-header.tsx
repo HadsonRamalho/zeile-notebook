@@ -144,7 +144,7 @@ export function EditorHeader({
               type="button"
               onClick={babelReady ? handleRunSimple : loadBabel}
               disabled={!babelReady}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all print:hidden bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/20 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all print:hidden bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
             >
               {babelReady ? (
                 <>
