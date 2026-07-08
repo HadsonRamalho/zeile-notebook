@@ -1,5 +1,6 @@
 import { NextIntlClientProvider, useMessages } from "next-intl";
 import { Toaster } from "sonner";
+import { AppRailShell } from "@/components/layout/app-rail-shell";
 import { AuthProvider } from "@/context/auth-context";
 import { PWARegistration } from "@/components/pwa-registration";
 import { Provider } from "../search-provider";
@@ -11,7 +12,9 @@ export default function Layout({ children }: any) {
       <AuthProvider>
         <PWARegistration />
         <Toaster richColors={true} />
-        <Provider>{children}</Provider>
+        <Provider>
+          <AppRailShell>{children}</AppRailShell>
+        </Provider>
       </AuthProvider>
     </NextIntlClientProvider>
   );

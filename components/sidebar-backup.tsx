@@ -46,10 +46,11 @@ export function SidebarBackup() {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-accent-foreground"
             title={t("backup_title")}
+            aria-label={t("backup_title")}
           >
-            <Settings size={14} />
+            <Settings size={17} />
           </button>
         </DropdownMenuTrigger>
 

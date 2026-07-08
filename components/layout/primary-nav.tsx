@@ -27,8 +27,10 @@ export function PrimaryNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              active ? "text-primary" : "text-muted-foreground",
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
             <Icon className="size-4" />

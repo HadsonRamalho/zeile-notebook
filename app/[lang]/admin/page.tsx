@@ -2,7 +2,6 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AppShell } from "@/components/layout/app-shell";
 import { Book, Shield, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BackButton } from "@/components/interface/back-button";
@@ -32,7 +31,6 @@ import {
   fetchAdminTeams,
   fetchAdminUsers,
 } from "@/lib/api/admin-service";
-import { baseOptions } from "@/lib/layout.shared";
 import type {
   AdminNotebookView,
   AdminSystemStats,
@@ -121,8 +119,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <AppShell nav={baseOptions({ variant: "global" }).nav?.component}>
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-8 mt-10">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-8 pt-10">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Painel Administrativo
@@ -469,6 +466,5 @@ export default function AdminDashboardPage() {
           </div>
         </Tabs>
       </div>
-    </AppShell>
   );
 }

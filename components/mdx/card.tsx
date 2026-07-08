@@ -32,7 +32,7 @@ export function Card({
   const content = (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-lg border bg-card p-4 text-sm shadow-sm transition-colors",
+        "flex flex-col gap-2 rounded-xl border bg-card p-4 text-sm transition-colors",
         href && "hover:border-primary",
         className,
       )}

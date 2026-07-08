@@ -686,8 +686,8 @@ export function FreeDrawingCell({
             }
       }
       className={cn(
-        "relative w-full rounded-lg border bg-background",
-        fullscreen && "fixed inset-0 z-overlay",
+        "relative w-full rounded-lg border bg-card",
+        fullscreen && "fixed inset-0 z-overlay bg-background",
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

@@ -54,6 +54,7 @@ export function DeletePageDialog({
           }}
           className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           title="Excluir página"
+          aria-label="Excluir página"
         >
           <Trash2 size={14} />
         </button>

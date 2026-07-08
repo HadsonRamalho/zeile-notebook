@@ -198,7 +198,7 @@ export function DatabaseSchemaCell({
           <button
             type="button"
             onClick={addTable}
-            className="bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs shadow-md transition-colors"
+            className="bg-card/85 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-colors"
             title="Adicionar tabela"
           >
             <Plus size={14} />
@@ -208,7 +208,7 @@ export function DatabaseSchemaCell({
         <button
           type="button"
           onClick={() => setFullscreen((v) => !v)}
-          className="bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md border p-1.5 shadow-md transition-colors"
+          className="bg-card/85 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md border border-border p-1.5 shadow-lg backdrop-blur transition-colors"
           title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
           aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
         >
@@ -264,10 +264,10 @@ export function DatabaseSchemaCell({
         <Background />
         <Controls
           showInteractive={canWrite}
-          className="overflow-hidden rounded-md border shadow-md"
+          className="overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur"
           style={
             {
-              "--xy-controls-button-background-color": "var(--card)",
+              "--xy-controls-button-background-color": "transparent",
               "--xy-controls-button-background-color-hover": "var(--accent)",
               "--xy-controls-button-color": "var(--muted-foreground)",
               "--xy-controls-button-color-hover": "var(--accent-foreground)",

@@ -10,6 +10,18 @@ import { Button } from "@/components/ui/button";
 import { fetchUserTeams } from "@/lib/api/teams-service";
 import type { Team, TeamRole } from "@/lib/types/team-types";
 
+function AmbientGlow() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+      <div className="animate-ambient-drift absolute top-8 left-[10%] size-72 rounded-full bg-accent-violet/15 blur-3xl" />
+      <div
+        className="animate-ambient-drift absolute top-0 right-[10%] size-64 rounded-full bg-primary/10 blur-3xl"
+        style={{ animationDelay: "2s" }}
+      />
+    </div>
+  );
+}
+
 function EmptyState() {
   const t = useTranslations("sidebar");
   const { createPage } = useNotebookManager();
@@ -56,12 +68,18 @@ export default function NotebookHomePage() {
   }, [refreshTeamPages]);
 
   if (pages.length === 0 && teams.length === 0) {
-    return <EmptyState />;
+    return (
+      <div className="relative flex flex-1 overflow-hidden">
+        <AmbientGlow />
+        <EmptyState />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-10 py-4">
-      <section className="flex flex-col gap-4 rounded-xl border bg-card p-5">
+    <div className="relative flex flex-1 flex-col gap-12 overflow-hidden py-4">
+      <AmbientGlow />
+      <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <NotebookPen className="size-5 text-primary" />
@@ -84,23 +102,23 @@ export default function NotebookHomePage() {
       </section>
 
       {teams.length > 0 && (
-        <section className="flex flex-col gap-4 rounded-xl border bg-card p-5">
+        <section className="flex flex-col gap-6">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <Users className="size-5 text-primary" />
             Times
           </h2>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-8">
             {teams.map(([team]) => {
               const pagesOfTeam = teamPages[team.id] ?? [];
               return (
-                <div
-                  key={team.id}
-                  className="flex flex-col gap-4 rounded-xl border border-dashed bg-muted/20 p-5"
-                >
-                  <h3 className="text-sm font-semibold text-muted-foreground">
-                    {team.name}
-                  </h3>
+                <div key={team.id} className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-mono text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+                      {team.name}
+                    </h3>
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
                   {pagesOfTeam.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Este time ainda não tem cadernos.

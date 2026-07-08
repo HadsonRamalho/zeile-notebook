@@ -14,6 +14,21 @@ const Excalidraw = dynamic(
   { ssr: false },
 );
 
+const ExcalidrawMainMenu = dynamic(
+  async () => {
+    const { MainMenu } = await import("@excalidraw/excalidraw");
+    return function ZeileExcalidrawMainMenu() {
+      return (
+        <MainMenu>
+          <MainMenu.DefaultItems.SaveAsImage />
+          <MainMenu.DefaultItems.ClearCanvas />
+        </MainMenu>
+      );
+    };
+  },
+  { ssr: false },
+);
+
 type ExcalidrawApi = {
   getSceneElements: () => readonly DrawingElement[];
   updateScene: (scene: { elements: readonly DrawingElement[] }) => void;
@@ -87,7 +102,7 @@ export function DrawingCell({
       className={
         fullscreen
           ? "fixed inset-0 z-overlay bg-background"
-          : "relative w-full rounded-lg border"
+          : "relative w-full rounded-lg border bg-card"
       }
     >
       <button
@@ -114,7 +129,21 @@ export function DrawingCell({
         viewModeEnabled={!canWrite}
         // biome-ignore lint/suspicious/noExplicitAny: elementos do Excalidraw
         onChange={(els: any) => onChange(els as DrawingElement[])}
-      />
+        UIOptions={{
+          canvasActions: {
+            changeViewBackgroundColor: false,
+            export: false,
+            loadScene: false,
+            saveToActiveFile: false,
+            toggleTheme: false,
+            saveAsImage: true,
+            clearCanvas: true,
+          },
+          tools: { image: false },
+        }}
+      >
+        <ExcalidrawMainMenu />
+      </Excalidraw>
     </div>
   );
 }

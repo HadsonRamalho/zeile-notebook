@@ -55,11 +55,7 @@ export function ComponentRenderer({
     case "banner":
       return (
         <div className="group relative my-4">
-          <Banner
-            changeLayout={false}
-            variant={block.metadata.variant}
-            className="rounded-md"
-          >
+          <Banner changeLayout={false} variant={block.metadata.variant}>
             <TextBlock content={block.content} onChange={onCodeChange} />
           </Banner>
         </div>

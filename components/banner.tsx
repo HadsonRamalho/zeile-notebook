@@ -56,9 +56,7 @@ export function Banner({
       id={id}
       {...props}
       className={cn(
-        "sticky top-0 z-10 flex rounded-md flex-row items-center justify-center px-4 py-2 text-center text-sm font-medium",
-        variant === "normal" && "bg-fd-secondary",
-        variant === "rainbow" && "bg-fd-background",
+        "sticky top-0 z-10 flex flex-row items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-center text-sm font-medium",
         !open && "hidden",
         props.className,
       )}

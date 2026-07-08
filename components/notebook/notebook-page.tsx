@@ -363,7 +363,7 @@ function getBlockTitle(
 
 function Refreshing() {
   return (
-    <div className="absolute md:fixed flex items-center gap-2 md:top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm z-10 animate-pulse">
+    <div className="absolute md:fixed flex items-center gap-2 md:top-4 right-4 bg-accent-violet text-accent-violet-foreground px-3 py-1 rounded-md text-sm z-10 animate-pulse">
       <RotateCw className="animate-spin size-4" />
       Sincronizando...
     </div>

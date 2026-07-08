@@ -1,15 +1,22 @@
 import { motion } from "framer-motion";
+import { useRef } from "react";
 import type { Collaborator } from "@/hooks/use-presence";
+import { cn } from "@/lib/utils";
 
 export function LiveCursors({
   collaborators,
 }: {
   collaborators: Collaborator[];
 }) {
+  const seenIds = useRef<Set<string>>(new Set());
+
   return (
     <div className="pointer-events-none fixed inset-0 z-overlay overflow-hidden">
       {collaborators.map((collab) => {
         if (!collab.cursor) return null;
+
+        const isNew = !seenIds.current.has(collab.id);
+        if (isNew) seenIds.current.add(collab.id);
 
         return (
           <motion.div
@@ -23,6 +30,12 @@ export function LiveCursors({
               stiffness: 250,
             }}
           >
+            <span
+              className={cn(
+                "absolute left-0 top-0 size-2 rounded-full",
+                isNew && "animate-presence-pulse",
+              )}
+            />
             <CursorIcon color={collab.color} />
             <div
               className="ml-4 mt-1 rounded-md px-2 py-1 text-xs font-medium text-white whitespace-nowrap shadow-md"

@@ -14,12 +14,9 @@ export default async function Page(
       <RustInteractivePage
         pageId={pageId}
         header={
-          <div className="flex flex-col gap-3 mb-8 rounded-xl border bg-card p-4 md:p-6 shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-border pb-6 mb-8">
             <NotebookTitle pageId={pageId} />
-            <p className="text-muted-foreground text-xs font-mono">ID: {pageId}</p>
-            <div>
-              <NotebookControls />
-            </div>
+            <NotebookControls />
           </div>
         }
       />

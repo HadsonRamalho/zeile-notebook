@@ -1,6 +1,5 @@
 "use client";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { BookSearch, Calendar, Search, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -9,7 +8,6 @@ import { BackButton } from "@/components/interface/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchPublicNotebooks } from "@/lib/api/notebook-service";
-import { baseOptions } from "@/lib/layout.shared";
 import type { PublicNotebookResponse } from "@/lib/types/notebook-types";
 
 export default function PublicNotebooksPage() {
@@ -26,8 +24,7 @@ export default function PublicNotebooksPage() {
   }, []);
 
   return (
-    <AppShell nav={baseOptions({ variant: "global" }).nav?.component}>
-      <div className="max-w-300 w-full mx-auto mt-10 p-4 md:p-8 space-y-8">
+    <div className="max-w-300 w-full mx-auto pt-10 p-4 md:p-8 space-y-8">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between border-b pb-6">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
@@ -50,7 +47,7 @@ export default function PublicNotebooksPage() {
 
               return (
                 <Link key={notebook.id} href={`/notebook/${notebook.id}`}>
-                  <Card className="h-full flex flex-col hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group">
+                  <Card className="h-full flex flex-col hover:border-primary/50 transition-all cursor-pointer group">
                     <CardHeader className="pb-3">
                       <div className="grid grid-cols-1 justify-between items-start gap-4">
                         <CardTitle className="line-clamp-1 text-lg group-hover:text-primary transition-colors">
@@ -96,7 +93,6 @@ export default function PublicNotebooksPage() {
             </p>
           </div>
         )}
-      </div>
-    </AppShell>
+    </div>
   );
 }
