@@ -3,7 +3,14 @@
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
 import { Check, Eye, Plus, RotateCw, X } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AppNotFound } from "@/components/motion/not-found";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
@@ -39,7 +46,6 @@ export default function RustInteractivePage({
 }: RustInteractivePageProps) {
   const { user } = useAuth();
   const { isDragging, setIsDragging, notebook } = useNotebook();
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const tokenX = getCookie("auth_token");
   const token = tokenX?.toString() || "";
   const sessionId = useRef(crypto.randomUUID()).current;
@@ -150,7 +156,6 @@ export default function RustInteractivePage({
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
-    setHoveredIndex(null);
   };
 
   if (!doc || !hasSyncedOnce) {
@@ -224,7 +229,7 @@ export default function RustInteractivePage({
         axis="y"
         values={blocks}
         onReorder={reorderBlocks}
-        className="space-y-4 w-full"
+        className="w-full"
       >
         {blocks.map((block, index) => {
           const focusedUsers = collaborators.filter(
@@ -234,58 +239,58 @@ export default function RustInteractivePage({
             focusedUsers.length > 0 ? focusedUsers[0].color : "transparent";
 
           return (
-            // biome-ignore lint/a11y/noStaticElementInteractions: <Necessário pra controlar o render>
-            <div
-              key={block.id}
-              onFocus={() => updateFocus(block.id)}
-              onBlur={() => updateFocus(null)}
-              className="relative group overflow-visible"
-              style={{
-                boxShadow:
-                  focusedUsers.length > 0 ? `0 0 0 2px ${borderColor}` : "none",
-              }}
-              onMouseEnter={() => setHoveredIndex(index)}
-              onMouseLeave={() => setHoveredIndex(null)}
-            >
+            <Fragment key={block.id}>
               {userPermissions?.can_write && (
-                <ReorderTools
-                  hoveredIndex={hoveredIndex}
-                  index={index}
-                  addBlock={handleAddBlock}
+                <ReorderTools index={index - 1} addBlock={handleAddBlock} />
+              )}
+
+              <div
+                onFocus={() => updateFocus(block.id)}
+                onBlur={() => updateFocus(null)}
+                className="relative overflow-visible"
+                style={{
+                  boxShadow:
+                    focusedUsers.length > 0
+                      ? `0 0 0 2px ${borderColor}`
+                      : "none",
+                }}
+              >
+                {focusedUsers.length > 0 && (
+                  <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
+                    {focusedUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className="size-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold"
+                        style={{ backgroundColor: user.color }}
+                        title={`${user.name} está editando`}
+                      >
+                        {user.name.charAt(0)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <ReorderItem
+                  block={block}
+                  isDragging={isDragging}
+                  pageBlocks={blocks}
+                  pageFiles={{}}
+                  setBlocks={() => {}}
+                  setIsDragging={setIsDragging}
+                  removeBlock={deleteBlock}
+                  updateBlock={updateBlockContent}
+                  updateBlockMetadata={updateBlockMetadataSync}
+                  updateDrawingScene={updateDrawingScene}
+                  doc={doc}
+                  sessionId={sessionId}
+                  canWrite={!previewDoc && !!userPermissions?.can_write}
                 />
-              )}
+              </div>
 
-              {focusedUsers.length > 0 && (
-                <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
-                  {focusedUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="size-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold"
-                      style={{ backgroundColor: user.color }}
-                      title={`${user.name} está editando`}
-                    >
-                      {user.name.charAt(0)}
-                    </div>
-                  ))}
-                </div>
+              {userPermissions?.can_write && index === blocks.length - 1 && (
+                <ReorderTools index={index} addBlock={handleAddBlock} />
               )}
-
-              <ReorderItem
-                block={block}
-                isDragging={isDragging}
-                pageBlocks={blocks}
-                pageFiles={{}}
-                setBlocks={() => {}}
-                setIsDragging={setIsDragging}
-                removeBlock={deleteBlock}
-                updateBlock={updateBlockContent}
-                updateBlockMetadata={updateBlockMetadataSync}
-                updateDrawingScene={updateDrawingScene}
-                doc={doc}
-                sessionId={sessionId}
-                canWrite={!previewDoc && !!userPermissions?.can_write}
-              />
-            </div>
+            </Fragment>
           );
         })}
       </Reorder.Group>

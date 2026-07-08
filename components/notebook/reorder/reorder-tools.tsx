@@ -16,7 +16,7 @@ import {
   Waypoints,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CppIcon } from "@/components/icons/cpp-icon";
 import { GithubIcon } from "@/components/icons/github-icon";
 import { GoIcon } from "@/components/icons/go-icon";
@@ -25,9 +25,9 @@ import { ReactIcon } from "@/components/icons/react-icon";
 import { RustIcon } from "@/components/icons/rust-icon";
 import { ZigIcon } from "@/components/icons/zig-icon";
 import type { BlockMetadata, BlockType, Language } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface ReorderToolsProps {
-  hoveredIndex: number | null;
   index: number;
   addBlock: (
     index: number,
@@ -45,14 +45,41 @@ type ToolButtonConfig = {
   targetView?: string;
 };
 
-export function ReorderTools({
-  hoveredIndex,
-  index,
-  addBlock,
-}: ReorderToolsProps) {
+// Divisor sempre presente entre blocos (e no fim da lista) — antes o gatilho
+// só existia via hover, o que não funciona em touch e fazia o toque cair no
+// bloco por trás (nada estava de fato montado ali até o hover disparar).
+// Agora o botão "+" sempre existe no layout (não é absolutamente posicionado
+// sobre outro conteúdo) e abre/fecha por clique/toque em ambos os casos —
+// hover só aumenta a opacidade no desktop, não é requisito funcional.
+export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
+  const [open, setOpen] = useState(false);
   const [view, setView] = useState<string>("main");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const resetView = () => setView("main");
+
+  const close = () => {
+    setOpen(false);
+    resetView();
+  };
+
+  // Fecha ao clicar/tocar fora ou apertar Escape — mesmo comportamento em
+  // mouse e touch, sem depender de hover.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) close();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   const menuRegistry: Record<
     string,
@@ -248,59 +275,85 @@ export function ReorderTools({
       type: "callout",
       props: { type },
     });
-    resetView();
+    close();
   };
 
   const currentMenu = menuRegistry[view];
 
   return (
-    <AnimatePresence onExitComplete={resetView}>
-      {hoveredIndex === index && (
-        <motion.div
-          initial={{ y: 10, scale: 0.95, opacity: 0 }}
-          animate={{ y: 0, scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-5 w-max max-w-[90vw] print:hidden"
-        >
-          <div className="flex bg-card items-center gap-1 border border-border p-1.5 rounded-2xl shadow-2xl backdrop-blur-xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={view}
-                initial={{ x: 5, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -5, opacity: 0 }}
-                className="flex items-center gap-1"
-              >
-                {currentMenu.parent && (
-                  <BackButton onClick={() => setView(currentMenu.parent!)} />
-                )}
+    <div
+      ref={containerRef}
+      className="group relative flex items-center gap-2 py-1.5 print:hidden"
+    >
+      <div className="h-px flex-1 bg-border/0 transition-colors group-hover:bg-border" />
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Adicionar bloco"
+        aria-expanded={open}
+        className={cn(
+          "z-1 grid size-6 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-all hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100",
+          open && "opacity-100",
+        )}
+      >
+        <Plus
+          size={14}
+          className={cn("transition-transform", open && "rotate-45")}
+        />
+      </button>
+      <div className="h-px flex-1 bg-border/0 transition-colors group-hover:bg-border" />
 
-                <div
-                  className={
-                    currentMenu.buttons.length > 3
-                      ? "grid grid-rows-3 md:flex items-center gap-1 "
-                      : "flex items-center gap-1"
-                  }
+      <AnimatePresence onExitComplete={resetView}>
+        {open && (
+          <motion.div
+            initial={{ y: 6, scale: 0.95, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="absolute top-full left-1/2 z-20 mt-1 w-max max-w-[90vw] -translate-x-1/2"
+          >
+            <div className="flex bg-card items-center gap-1 border border-border p-1.5 rounded-2xl shadow-2xl backdrop-blur-xl">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={view}
+                  initial={{ x: 5, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -5, opacity: 0 }}
+                  className="flex items-center gap-1"
                 >
-                  {currentMenu.buttons.map((btn, i) => (
-                    <ToolButton
-                      key={btn.label}
-                      icon={btn.icon}
-                      label={btn.label}
-                      color={btn.color}
-                      onClick={() => {
-                        if (btn.targetView) setView(btn.targetView);
-                        if (btn.onClick) btn.onClick();
-                      }}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+                  {currentMenu.parent && (
+                    <BackButton onClick={() => setView(currentMenu.parent!)} />
+                  )}
+
+                  <div
+                    className={
+                      currentMenu.buttons.length > 3
+                        ? "grid grid-rows-3 md:flex items-center gap-1 "
+                        : "flex items-center gap-1"
+                    }
+                  >
+                    {currentMenu.buttons.map((btn) => (
+                      <ToolButton
+                        key={btn.label}
+                        icon={btn.icon}
+                        label={btn.label}
+                        color={btn.color}
+                        onClick={() => {
+                          if (btn.targetView) setView(btn.targetView);
+                          if (btn.onClick) {
+                            btn.onClick();
+                            close();
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
