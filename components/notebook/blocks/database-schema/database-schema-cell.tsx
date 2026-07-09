@@ -9,6 +9,7 @@ import {
   Controls,
   type Edge,
   ReactFlow,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import { Maximize2, Minimize2, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -134,6 +135,10 @@ export function DatabaseSchemaCell({
   const [edges, setEdges] = useState<Edge[]>(initial.edges);
   const lastSyncedContent = useRef(content);
   const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reactFlowRef = useRef<ReactFlowInstance<SchemaTableNode, Edge> | null>(
+    null,
+  );
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (content === lastSyncedContent.current) return;
@@ -147,6 +152,15 @@ export function DatabaseSchemaCell({
     return () => {
       if (commitTimer.current) clearTimeout(commitTimer.current);
     };
+  }, []);
+
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+    const observer = new ResizeObserver(() => {
+      reactFlowRef.current?.fitView({ padding: 0.2 });
+    });
+    observer.observe(wrapperRef.current);
+    return () => observer.disconnect();
   }, []);
 
   const commit = useCallback(
@@ -182,6 +196,7 @@ export function DatabaseSchemaCell({
 
   return (
     <div
+      ref={wrapperRef}
       style={
         fullscreen
           ? undefined
@@ -260,7 +275,12 @@ export function DatabaseSchemaCell({
             return next;
           });
         }}
+        onInit={(instance) => {
+          reactFlowRef.current = instance;
+        }}
         fitView
+        fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.1}
       >
         <Background />
         <Controls
