@@ -9,7 +9,8 @@ export type BlockType =
   | "free_drawing"
   | "database_schema"
   | "latex"
-  | "sql";
+  | "sql"
+  | "typst";
 
 export type DrawingElement = {
   id: string;
