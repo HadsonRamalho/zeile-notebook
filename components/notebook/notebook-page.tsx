@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  GitCompareArrows,
   Plus,
   RotateCw,
   X,
@@ -476,20 +477,22 @@ function PreviewDialog({
         >
           <ChevronDown className="size-4" />
         </button>
+        {canCompare && (
+          <button
+            type="button"
+            onClick={onCompare}
+            aria-label="Comparar com anterior"
+            title="Comparar com anterior"
+            className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <GitCompareArrows className="size-4" />
+          </button>
+        )}
       </div>
 
       <div className="h-px w-full bg-border md:h-6 md:w-px" />
 
       <div className="flex w-full items-center justify-center gap-2 md:w-auto">
-        {canCompare && (
-          <Button
-            onClick={onCompare}
-            variant="outline"
-            className="flex-1 md:flex-none h-9 px-4 rounded-xl md:rounded-full transition-colors text-xs md:text-sm"
-          >
-            Comparar com anterior
-          </Button>
-        )}
         <Button
           onClick={handleCancelPreview}
           variant="ghost"
