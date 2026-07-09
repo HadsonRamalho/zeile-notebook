@@ -23,18 +23,23 @@ use crate::{
 };
 
 pub fn load_push_state() -> Option<PushState> {
-    let key_path = get_var_from_env("VAPID_PRIVATE_KEY_PATH").ok()?;
     let subject = get_var_from_env("VAPID_SUBJECT").ok()?;
 
-    let pem = std::fs::read(&key_path)
-        .map_err(|e| {
-            tracing::warn!("Não foi possível ler VAPID_PRIVATE_KEY_PATH ({}): {}", key_path, e);
-        })
-        .ok()?;
-
-    let vapid_builder = VapidSignatureBuilder::from_pem_no_sub(pem.as_slice())
-        .map_err(|e| tracing::warn!("Chave VAPID inválida: {:?}", e))
-        .ok()?;
+    let vapid_builder = if let Ok(private_key) = get_var_from_env("VAPID_PRIVATE_KEY") {
+        VapidSignatureBuilder::from_base64_no_sub(private_key.trim())
+            .map_err(|e| tracing::warn!("VAPID_PRIVATE_KEY inválida: {:?}", e))
+            .ok()?
+    } else {
+        let key_path = get_var_from_env("VAPID_PRIVATE_KEY_PATH").ok()?;
+        let pem = std::fs::read(&key_path)
+            .map_err(|e| {
+                tracing::warn!("Não foi possível ler VAPID_PRIVATE_KEY_PATH ({}): {}", key_path, e);
+            })
+            .ok()?;
+        VapidSignatureBuilder::from_pem_no_sub(pem.as_slice())
+            .map_err(|e| tracing::warn!("Chave VAPID (PEM) inválida: {:?}", e))
+            .ok()?
+    };
 
     tracing::info!("Web Push configurado (VAPID carregado com sucesso)");
 
