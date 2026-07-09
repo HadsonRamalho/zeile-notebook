@@ -17,7 +17,6 @@ export default function manifest(): MetadataRoute.Manifest {
     launch_handler: {
       client_mode: ["navigate-existing", "auto"],
     },
-    orientation: "any",
     shortcuts: [
       {
         name: "Página Inicial",
