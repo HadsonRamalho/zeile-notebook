@@ -152,7 +152,7 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
           minHeight="160px"
           className="bg-muted"
         />
-        <div className="min-h-[160px] overflow-auto rounded-md border border-border bg-background p-4">
+        <div className="min-h-[160px] overflow-auto rounded-md border border-border bg-white p-4">
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : svgHtml ? (
@@ -162,7 +162,7 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
               dangerouslySetInnerHTML={{ __html: svgHtml }}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-neutral-500">
               Digite um documento Typst para ver a prévia.
             </p>
           )}
