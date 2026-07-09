@@ -2,12 +2,17 @@
 
 import { Dialog as DialogPrimitive } from "radix-ui";
 import {
+  Compass,
   FileText,
+  Moon,
   Plus,
   Search,
   Settings,
+  Sun,
+  User,
   Users,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -45,6 +50,7 @@ export function NotebookCommandPalette({
   const { pages, createPage } = useNotebookManager();
   const { teamPages, createTeamPage, deleteTeamPage, refreshTeamPages } =
     useTeamNotebookManager();
+  const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,25 +83,74 @@ export function NotebookCommandPalette({
     [teams, teamPages, query],
   );
 
-  const flat: FlatItem[] = [];
-  if (matches("criar novo caderno") || query.trim() === "") {
-    flat.push({
+  const globalActions: (FlatItem & { label: string; icon: React.ReactNode })[] = [
+    {
       key: "action-new-page",
+      label: "Criar novo caderno",
+      icon: <Plus className="size-4 shrink-0" />,
       onSelect: () => {
         createPage();
         onOpenChange(false);
       },
-    });
-  }
-  if (matches("criar novo time") || query.trim() === "") {
-    flat.push({
+    },
+    {
       key: "action-new-team",
+      label: "Criar novo time",
+      icon: <Users className="size-4 shrink-0" />,
       onSelect: () => {
         onRequestCreateTeam();
         onOpenChange(false);
       },
-    });
-  }
+    },
+    {
+      key: "action-explore",
+      label: "Explorar cadernos públicos",
+      icon: <Compass className="size-4 shrink-0" />,
+      onSelect: () => {
+        router.push("/explore");
+        onOpenChange(false);
+      },
+    },
+    {
+      key: "action-profile",
+      label: "Ir para o perfil",
+      icon: <User className="size-4 shrink-0" />,
+      onSelect: () => {
+        router.push("/profile");
+        onOpenChange(false);
+      },
+    },
+    {
+      key: "action-settings",
+      label: "Ir para as configurações",
+      icon: <Settings className="size-4 shrink-0" />,
+      onSelect: () => {
+        router.push("/settings");
+        onOpenChange(false);
+      },
+    },
+    {
+      key: "action-toggle-theme",
+      label:
+        resolvedTheme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro",
+      icon:
+        resolvedTheme === "dark" ? (
+          <Sun className="size-4 shrink-0" />
+        ) : (
+          <Moon className="size-4 shrink-0" />
+        ),
+      onSelect: () => {
+        setTheme(resolvedTheme === "dark" ? "light" : "dark");
+        onOpenChange(false);
+      },
+    },
+  ];
+
+  const filteredGlobalActions = globalActions.filter(
+    (action) => query.trim() === "" || matches(action.label),
+  );
+
+  const flat: FlatItem[] = [...filteredGlobalActions];
   for (const page of filteredPages) {
     flat.push({
       key: `page-${page.id}`,
@@ -187,39 +242,20 @@ export function NotebookCommandPalette({
               </p>
             )}
 
-            {(matches("criar novo caderno") || query.trim() === "") && (
+            {filteredGlobalActions.map((action) => (
               <button
+                key={action.key}
                 type="button"
-                onClick={() => {
-                  createPage();
-                  onOpenChange(false);
-                }}
+                onClick={action.onSelect}
                 onMouseEnter={() =>
-                  setActiveIndex(flat.findIndex((i) => i.key === "action-new-page"))
+                  setActiveIndex(flat.findIndex((i) => i.key === action.key))
                 }
-                className={rowClass("action-new-page")}
+                className={rowClass(action.key)}
               >
-                <Plus className="size-4 shrink-0" />
-                Criar novo caderno
+                {action.icon}
+                {action.label}
               </button>
-            )}
-
-            {(matches("criar novo time") || query.trim() === "") && (
-              <button
-                type="button"
-                onClick={() => {
-                  onRequestCreateTeam();
-                  onOpenChange(false);
-                }}
-                onMouseEnter={() =>
-                  setActiveIndex(flat.findIndex((i) => i.key === "action-new-team"))
-                }
-                className={rowClass("action-new-team")}
-              >
-                <Users className="size-4 shrink-0" />
-                Criar novo time
-              </button>
-            )}
+            ))}
 
             {filteredPages.length > 0 && (
               <div className="mt-2 mb-1 px-3 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
