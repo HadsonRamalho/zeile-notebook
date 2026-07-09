@@ -18,6 +18,7 @@ import { FreeDrawingCell } from "../blocks/free-drawing/free-drawing-cell";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import { LatexCell } from "../blocks/latex/latex-cell";
+import { SqlCell } from "../blocks/sql/sql-cell";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
 import { TextBlock } from "../blocks/text/text-block";
@@ -125,6 +126,13 @@ export function ReorderItem({
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
             canWrite={canWrite}
+          />
+        ) : block.type === "sql" ? (
+          <SqlCell
+            content={block.content}
+            onChange={(val) => updateBlock(block.id, val)}
+            canWrite={canWrite}
+            notebookId={doc?.id ?? "default"}
           />
         ) : block.type === "text" ? (
           <TextBlock

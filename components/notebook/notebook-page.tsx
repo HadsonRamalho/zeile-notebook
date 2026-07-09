@@ -38,6 +38,7 @@ import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
 import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
 import { defaultLatexContent } from "./blocks/latex/latex-cell";
+import { defaultSqlContent } from "./blocks/sql/sql-cell";
 import { CollabBar } from "./collaboration/collab-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
 import { HistoryDiffView } from "./history/history-diff-view";
@@ -191,7 +192,9 @@ export default function RustInteractivePage({
             ? defaultDatabaseSchemaContent
             : type === "latex"
               ? defaultLatexContent
-              : "Escreva aqui";
+              : type === "sql"
+                ? defaultSqlContent
+                : "Escreva aqui";
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
@@ -393,6 +396,7 @@ function getBlockTitle(
   if (type === "free_drawing") return "Desenho";
   if (type === "database_schema") return "Database Schema";
   if (type === "latex") return "LaTeX";
+  if (type === "sql") return "SQL";
   if (type !== "code") return "Bloco de Texto";
 
   const titles: Record<string, string> = {
