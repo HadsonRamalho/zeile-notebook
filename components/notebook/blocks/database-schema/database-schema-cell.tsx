@@ -190,7 +190,7 @@ export function DatabaseSchemaCell({
       className={
         fullscreen
           ? "fixed inset-0 z-overlay bg-background"
-          : "relative w-full rounded-lg border"
+          : "relative w-full overflow-hidden rounded-lg border bg-card"
       }
     >
       <div className={cn("absolute right-2 top-2 flex gap-2", fullscreen ? "z-overlay-controls" : "z-10")}>
@@ -219,7 +219,7 @@ export function DatabaseSchemaCell({
         style={
           {
             "--xy-background-color": "var(--card)",
-            "--xy-background-pattern-dots-color": "var(--border)",
+            "--xy-background-pattern-color": "var(--border)",
             "--xy-edge-stroke": "var(--muted-foreground)",
             "--xy-edge-stroke-selected": "var(--primary)",
             "--xy-node-border": "var(--border)",

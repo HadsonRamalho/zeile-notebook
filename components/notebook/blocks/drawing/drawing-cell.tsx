@@ -9,20 +9,51 @@ import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
 import type { DrawingElement, Notebook } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const Excalidraw = dynamic(
-  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
-  { ssr: false },
-);
+interface ExcalidrawCanvasProps {
+  excalidrawAPI: (api: ExcalidrawApi) => void;
+  initialData: { elements: unknown };
+  theme: "light" | "dark";
+  viewModeEnabled: boolean;
+  onChange: (elements: readonly DrawingElement[]) => void;
+}
 
-const ExcalidrawMainMenu = dynamic(
+const ExcalidrawCanvas = dynamic(
   async () => {
-    const { MainMenu } = await import("@excalidraw/excalidraw");
-    return function ZeileExcalidrawMainMenu() {
+    const { Excalidraw, MainMenu } = await import("@excalidraw/excalidraw");
+    return function ZeileExcalidrawCanvas({
+      excalidrawAPI,
+      initialData,
+      theme,
+      viewModeEnabled,
+      onChange,
+    }: ExcalidrawCanvasProps) {
       return (
-        <MainMenu>
-          <MainMenu.DefaultItems.SaveAsImage />
-          <MainMenu.DefaultItems.ClearCanvas />
-        </MainMenu>
+        <Excalidraw
+          // biome-ignore lint/suspicious/noExplicitAny: API do Excalidraw
+          excalidrawAPI={excalidrawAPI as any}
+          initialData={initialData as never}
+          theme={theme}
+          viewModeEnabled={viewModeEnabled}
+          // biome-ignore lint/suspicious/noExplicitAny: elementos do Excalidraw
+          onChange={(els: any) => onChange(els as DrawingElement[])}
+          UIOptions={{
+            canvasActions: {
+              changeViewBackgroundColor: false,
+              export: false,
+              loadScene: false,
+              saveToActiveFile: false,
+              toggleTheme: false,
+              saveAsImage: true,
+              clearCanvas: true,
+            },
+            tools: { image: false },
+          }}
+        >
+          <MainMenu>
+            <MainMenu.DefaultItems.SaveAsImage />
+            <MainMenu.DefaultItems.ClearCanvas />
+          </MainMenu>
+        </Excalidraw>
       );
     };
   },
@@ -31,7 +62,10 @@ const ExcalidrawMainMenu = dynamic(
 
 type ExcalidrawApi = {
   getSceneElements: () => readonly DrawingElement[];
-  updateScene: (scene: { elements: readonly DrawingElement[] }) => void;
+  updateScene: (scene: {
+    elements?: readonly DrawingElement[];
+    appState?: Record<string, unknown>;
+  }) => void;
 };
 
 interface DrawingCellProps {
@@ -53,6 +87,7 @@ export function DrawingCell({
   const { resolvedTheme } = useTheme();
   const [fullscreen, setFullscreen] = useState(false);
   const apiRef = useRef<ExcalidrawApi | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   // Assinatura de conteúdo do último estado sincronizado (aplicado ou enviado).
   // É a única fonte de verdade para detectar eco e quebrar o loop, sem depender
   // de timing entre updateScene e onChange.
@@ -75,6 +110,13 @@ export function DrawingCell({
     };
   }, []);
 
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api || !wrapperRef.current) return;
+    const cardColor = getComputedStyle(wrapperRef.current).backgroundColor;
+    api.updateScene({ appState: { viewBackgroundColor: cardColor } });
+  }, [resolvedTheme]);
+
   const onChange = useCallback(
     (elements: readonly DrawingElement[]) => {
       if (!canWrite) return;
@@ -94,6 +136,7 @@ export function DrawingCell({
 
   return (
     <div
+      ref={wrapperRef}
       style={
         fullscreen
           ? undefined
@@ -117,9 +160,8 @@ export function DrawingCell({
       >
         {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>
-      <Excalidraw
-        // biome-ignore lint/suspicious/noExplicitAny: API do Excalidraw
-        excalidrawAPI={(api: any) => {
+      <ExcalidrawCanvas
+        excalidrawAPI={(api) => {
           apiRef.current = api;
           // Estado inicial já reflete o doc: não deve gerar commit de eco.
           lastSyncedSig.current = sceneSignature(initial);
@@ -127,23 +169,8 @@ export function DrawingCell({
         initialData={{ elements: initial as never }}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         viewModeEnabled={!canWrite}
-        // biome-ignore lint/suspicious/noExplicitAny: elementos do Excalidraw
-        onChange={(els: any) => onChange(els as DrawingElement[])}
-        UIOptions={{
-          canvasActions: {
-            changeViewBackgroundColor: false,
-            export: false,
-            loadScene: false,
-            saveToActiveFile: false,
-            toggleTheme: false,
-            saveAsImage: true,
-            clearCanvas: true,
-          },
-          tools: { image: false },
-        }}
-      >
-        <ExcalidrawMainMenu />
-      </Excalidraw>
+        onChange={onChange}
+      />
     </div>
   );
 }
