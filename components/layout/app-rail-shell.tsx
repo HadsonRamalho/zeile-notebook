@@ -43,7 +43,8 @@ export function AppRailShell({ children }: { children: ReactNode }) {
           <div
             className={cn(
               "min-w-0 flex-1",
-              isNotebookRoute(pathname) && "p-6 md:p-8",
+              isNotebookRoute(pathname) &&
+                "px-6 pb-6 pt-20 md:px-8 md:pb-8 md:pt-8",
             )}
           >
             {children}

@@ -89,7 +89,7 @@ export function InlineTOC({ tocItems, blocks }: InlineTOCProps) {
         <div className="flex flex-col relative ml-4">
           <div className="absolute left-0 top-0 bottom-0 w-px bg-border/40" />
           <div
-            className="absolute left-0 w-0.5 bg-fd-primary rounded-sm transition-all duration-300 ease-out"
+            className="absolute left-0 w-0.5 bg-primary rounded-sm transition-all duration-300 ease-out"
             style={{
               top: markerStyle.top,
               height: markerStyle.height,
@@ -108,7 +108,7 @@ export function InlineTOC({ tocItems, blocks }: InlineTOCProps) {
                 "py-2 text-sm transition-colors duration-300 block no-underline",
                 item.depth <= 2 ? "pl-4" : "pl-8",
                 "text-muted-foreground hover:text-foreground",
-                "data-[active=true]:text-fd-primary data-[active=true]:font-medium",
+                "data-[active=true]:text-primary data-[active=true]:font-medium",
               )}
             >
               {item.title}

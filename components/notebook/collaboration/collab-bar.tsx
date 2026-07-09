@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, History, MessageSquare, RotateCw, Users } from "lucide-react";
+import { Database, History, MessageSquare, RotateCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ExpandableTabs, type ExpandableTabsItem } from "@/components/motion/expandable-tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -234,13 +234,22 @@ function ChatPanel({
   );
 }
 
-function PresencePanel({
+type PresenceUser = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  isGuest: boolean;
+  isMe: boolean;
+  color: string;
+};
+
+function usePresenceUsers({
   socketUserId,
   collaborators,
   currentUser,
 }: Pick<CollabBarProps, "socketUserId" | "collaborators" | "currentUser">) {
-  const allUsers = useMemo(() => {
-    const list = [
+  return useMemo<PresenceUser[]>(
+    () => [
       {
         id: socketUserId || "me",
         name: currentUser?.name || "Visitante",
@@ -254,15 +263,49 @@ function PresencePanel({
       ...collaborators.map((c) => ({
         id: c.id,
         name: c.name,
-        avatar: c.avatar,
+        avatar: c.avatar ?? null,
         isGuest: c.isGuest,
         isMe: false,
         color: c.color,
       })),
-    ];
-    return list;
-  }, [socketUserId, collaborators, currentUser]);
+    ],
+    [socketUserId, collaborators, currentUser],
+  );
+}
 
+function PresenceStack({ users }: { users: PresenceUser[] }) {
+  const visible = users.slice(0, 3);
+  const overflow = users.length - visible.length;
+
+  return (
+    <span className="flex items-center -space-x-2">
+      {visible.map((user) => (
+        <Avatar
+          key={user.id}
+          size="sm"
+          className="size-5 border-2 border-card"
+        >
+          {user.avatar ? (
+            <AvatarImage src={user.avatar} alt={user.name} />
+          ) : null}
+          <AvatarFallback
+            style={{ backgroundColor: user.color }}
+            className="text-[8px] font-medium text-white"
+          >
+            {getInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
+      ))}
+      {overflow > 0 && (
+        <span className="grid size-5 place-items-center rounded-full border-2 border-card bg-muted text-[8px] font-medium text-muted-foreground">
+          +{overflow}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function PresencePanel({ allUsers }: { allUsers: PresenceUser[] }) {
   return (
     <div className="flex h-[33vh] w-[min(36rem,90vw)] flex-col gap-2 overflow-y-auto p-1">
       {allUsers.map((user) => (
@@ -330,6 +373,7 @@ export function CollabBar({
   onActiveTabChange?: (id: string | null) => void;
 }) {
   const presenceCount = collaborators.length + 1;
+  const allUsers = usePresenceUsers({ socketUserId, collaborators, currentUser });
 
   const items: ExpandableTabsItem[] = [
     ...(canWriteHistory
@@ -368,30 +412,18 @@ export function CollabBar({
     {
       id: "presence",
       label: `Presença (${presenceCount})`,
-      icon: (
-        <span className="relative inline-flex">
-          <Users className="size-4" />
-          <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
-            {presenceCount}
-          </span>
-        </span>
-      ),
-      content: (
-        <PresencePanel
-          socketUserId={socketUserId}
-          collaborators={collaborators}
-          currentUser={currentUser}
-        />
-      ),
+      icon: <PresenceStack users={allUsers} />,
+      content: <PresencePanel allUsers={allUsers} />,
     },
   ];
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 print:hidden">
+    <div className="fixed top-4 right-4 z-50 print:hidden">
       <ExpandableTabs
         items={items}
         value={activeTab}
         onValueChange={onActiveTabChange}
+        classNames={{ root: "bg-card/85 backdrop-blur-lg shadow-lg" }}
       />
     </div>
   );

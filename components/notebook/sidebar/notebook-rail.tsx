@@ -9,6 +9,7 @@ import {
   Search,
   Sun,
   Users,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -116,6 +117,7 @@ function PageRow({
   teamId,
   deleteTeamPage,
   onDeleteTeamPage,
+  onNavigate,
 }: {
   page: NotebookMeta;
   icon: React.ReactNode;
@@ -124,6 +126,7 @@ function PageRow({
   teamId?: string;
   deleteTeamPage?: (teamId: string, pageId: string) => Promise<void>;
   onDeleteTeamPage?: (teamId: string) => void;
+  onNavigate?: () => void;
 }) {
   const title = page.title || "Sem título";
 
@@ -149,6 +152,7 @@ function PageRow({
     >
       <Link
         href={`/notebook/${page.id}`}
+        onClick={onNavigate}
         className={cn(
           "flex h-10 min-w-0 flex-1 items-center gap-2.5 truncate rounded-lg px-2.5 text-sm transition-colors",
           active
@@ -179,6 +183,7 @@ export function NotebookRail() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     setExpanded(localStorage.getItem(EXPANDED_STORAGE_KEY) === "1");
@@ -208,32 +213,32 @@ export function NotebookRail() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  return (
+  const railBody = (
+    isExpanded: boolean,
+    onNavigate?: () => void,
+    showCollapseToggle = true,
+  ) => (
     <>
-      <aside
+      <div
         className={cn(
-          "sticky top-0 flex h-screen shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar/95 py-3 backdrop-blur-lg transition-[width] duration-200 motion-reduce:transition-none",
-          expanded ? "w-64 items-stretch px-3" : "w-16",
+          "mb-1 flex items-center",
+          isExpanded ? "justify-between px-1" : "w-full justify-center",
         )}
       >
-        <div
-          className={cn(
-            "mb-1 flex items-center",
-            expanded ? "justify-between px-1" : "w-full justify-center",
-          )}
+        <Link
+          href="/notebook"
+          aria-label="Zeile"
+          onClick={onNavigate}
+          className="flex items-center gap-2"
         >
-          <Link
-            href="/notebook"
-            aria-label="Zeile"
-            className="flex items-center gap-2"
-          >
-            <Image src="/logo.png" alt="" width={26} height={26} />
-            {expanded && <span className="font-bold">Zeile</span>}
-          </Link>
-        </div>
+          <Image src="/logo.png" alt="" width={26} height={26} />
+          {isExpanded && <span className="font-bold">Zeile</span>}
+        </Link>
+      </div>
 
+      {showCollapseToggle && (
         <RailButton
-          expanded={expanded}
+          expanded={isExpanded}
           onClick={() => setExpanded((v) => !v)}
           label={expanded ? "Recolher sidebar" : "Expandir sidebar"}
         >
@@ -243,116 +248,162 @@ export function NotebookRail() {
             <PanelLeftOpen size={17} className="shrink-0" />
           )}
         </RailButton>
+      )}
 
-        <RailButton
-          expanded={expanded}
-          onClick={() => setPaletteOpen(true)}
-          label="Buscar ou trocar de caderno (⌘K)"
-        >
-          <Search size={18} className="shrink-0" />
-        </RailButton>
+      <RailButton
+        expanded={isExpanded}
+        onClick={() => setPaletteOpen(true)}
+        label="Buscar ou trocar de caderno (⌘K)"
+      >
+        <Search size={18} className="shrink-0" />
+      </RailButton>
 
-        <RailButton expanded={expanded} onClick={() => createPage()} label="Novo caderno">
-          <Plus size={18} className="shrink-0" />
-        </RailButton>
+      <RailButton expanded={isExpanded} onClick={() => createPage()} label="Novo caderno">
+        <Plus size={18} className="shrink-0" />
+      </RailButton>
 
-        <div className={cn(expanded ? "w-full" : "")}>
-          <SidebarBackup />
-        </div>
+      <div className={cn(isExpanded ? "w-full" : "")}>
+        <SidebarBackup />
+      </div>
 
-        <div
-          className={cn(
-            "my-2 h-px shrink-0 bg-sidebar-border",
-            expanded ? "w-full" : "w-8",
-          )}
-        />
+      <div
+        className={cn(
+          "my-2 h-px shrink-0 bg-sidebar-border",
+          isExpanded ? "w-full" : "w-8",
+        )}
+      />
 
-        <div
-          className={cn(
-            "flex w-full flex-1 flex-col gap-1 overflow-y-auto",
-            expanded ? "items-stretch" : "items-center px-2",
-          )}
-        >
-          {expanded && pages.length > 0 && (
-            <span className="px-2.5 pb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-              Meus cadernos
-            </span>
-          )}
-          {pages.map((page) => (
-            <PageRow
-              key={page.id}
-              page={page}
-              icon={<FileText size={17} className="shrink-0" />}
-              active={pathname === `/notebook/${page.id}`}
-              expanded={expanded}
-            />
-          ))}
+      <div
+        className={cn(
+          "flex w-full flex-1 flex-col gap-1 overflow-y-auto",
+          isExpanded ? "items-stretch" : "items-center px-2",
+        )}
+      >
+        {isExpanded && pages.length > 0 && (
+          <span className="px-2.5 pb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+            Meus cadernos
+          </span>
+        )}
+        {pages.map((page) => (
+          <PageRow
+            key={page.id}
+            page={page}
+            icon={<FileText size={17} className="shrink-0" />}
+            active={pathname === `/notebook/${page.id}`}
+            expanded={isExpanded}
+            onNavigate={onNavigate}
+          />
+        ))}
 
-          {teams.map(([team]) => {
-            const pagesOfTeam = teamPages[team.id] ?? [];
-            if (!expanded) {
-              return pagesOfTeam.map((page) => (
-                <PageRow
-                  key={page.id}
-                  page={page}
-                  icon={<Users size={17} className="shrink-0" />}
-                  active={pathname === `/notebook/${page.id}`}
-                  expanded={false}
-                />
-              ));
-            }
-            return (
-              <div key={team.id} className="mt-3 flex flex-col gap-1">
-                <div className="flex items-center gap-2 px-2.5 pb-1">
-                  <span className="truncate font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                    {team.name}
-                  </span>
-                  <span className="h-px flex-1 bg-sidebar-border" />
-                  <button
-                    type="button"
-                    onClick={() => createTeamPage(team.id)}
-                    aria-label={`Nova página em ${team.name}`}
-                    title={`Nova página em ${team.name}`}
-                    className="text-muted-foreground transition-colors hover:text-accent-foreground"
-                  >
-                    <Plus size={13} />
-                  </button>
-                </div>
-                {pagesOfTeam.length === 0 ? (
-                  <span className="px-2.5 text-xs italic text-muted-foreground">
-                    Sem cadernos
-                  </span>
-                ) : (
-                  pagesOfTeam.map((page) => (
-                    <PageRow
-                      key={page.id}
-                      page={page}
-                      icon={<Users size={17} className="shrink-0" />}
-                      active={pathname === `/notebook/${page.id}`}
-                      expanded
-                      teamId={team.id}
-                      deleteTeamPage={deleteTeamPage}
-                      onDeleteTeamPage={refreshTeamPages}
-                    />
-                  ))
-                )}
+        {teams.map(([team]) => {
+          const pagesOfTeam = teamPages[team.id] ?? [];
+          if (!isExpanded) {
+            return pagesOfTeam.map((page) => (
+              <PageRow
+                key={page.id}
+                page={page}
+                icon={<Users size={17} className="shrink-0" />}
+                active={pathname === `/notebook/${page.id}`}
+                expanded={false}
+              />
+            ));
+          }
+          return (
+            <div key={team.id} className="mt-3 flex flex-col gap-1">
+              <div className="flex items-center gap-2 px-2.5 pb-1">
+                <span className="truncate font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  {team.name}
+                </span>
+                <span className="h-px flex-1 bg-sidebar-border" />
+                <button
+                  type="button"
+                  onClick={() => createTeamPage(team.id)}
+                  aria-label={`Nova página em ${team.name}`}
+                  title={`Nova página em ${team.name}`}
+                  className="text-muted-foreground transition-colors hover:text-accent-foreground"
+                >
+                  <Plus size={13} />
+                </button>
               </div>
-            );
-          })}
-        </div>
+              {pagesOfTeam.length === 0 ? (
+                <span className="px-2.5 text-xs italic text-muted-foreground">
+                  Sem cadernos
+                </span>
+              ) : (
+                pagesOfTeam.map((page) => (
+                  <PageRow
+                    key={page.id}
+                    page={page}
+                    icon={<Users size={17} className="shrink-0" />}
+                    active={pathname === `/notebook/${page.id}`}
+                    expanded
+                    teamId={team.id}
+                    deleteTeamPage={deleteTeamPage}
+                    onDeleteTeamPage={refreshTeamPages}
+                    onNavigate={onNavigate}
+                  />
+                ))
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-        <div
-          className={cn(
-            "mt-2 flex w-full flex-col gap-1 border-t border-sidebar-border pt-2",
-            expanded ? "items-stretch" : "items-center px-2",
-          )}
-        >
-          <RailThemeToggle expanded={expanded} />
-          <div className={cn(expanded ? "w-full" : "")}>
-            <UserNav />
-          </div>
+      <div
+        className={cn(
+          "mt-2 flex w-full flex-col gap-1 border-t border-sidebar-border pt-2",
+          isExpanded ? "items-stretch" : "items-center px-2",
+        )}
+      >
+        <RailThemeToggle expanded={isExpanded} />
+        <div className={cn(isExpanded ? "w-full" : "")}>
+          <UserNav compact={!isExpanded} />
         </div>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar/95 py-3 backdrop-blur-lg transition-[width] duration-200 motion-reduce:transition-none md:flex",
+          expanded ? "w-64 items-stretch px-3" : "w-16",
+        )}
+      >
+        {railBody(expanded)}
       </aside>
+
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Abrir navegação"
+        className="fixed top-4 left-4 z-30 flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
+      >
+        <PanelLeftOpen size={20} />
+      </button>
+
+      {mobileOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Fechar navegação"
+            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 z-[55] bg-black/40 md:hidden"
+          />
+          <div className="fixed inset-y-0 left-0 z-[60] flex w-72 flex-col items-stretch gap-1 bg-sidebar px-3 py-3 shadow-2xl md:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fechar navegação"
+              className="mb-1 flex items-center justify-end px-1 text-muted-foreground transition-colors hover:text-accent-foreground"
+            >
+              <X size={18} />
+            </button>
+            {railBody(true, () => setMobileOpen(false), false)}
+          </div>
+        </>
+      )}
 
       <NotebookCommandPalette
         open={paletteOpen}

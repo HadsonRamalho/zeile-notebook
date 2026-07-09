@@ -272,19 +272,22 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
       ref={containerRef}
       className="group relative flex items-center gap-2 py-1.5 print:hidden"
     >
-      <div className="h-px flex-1 bg-border/0 transition-colors group-hover:bg-border" />
+      <div className="h-px flex-1 bg-border/25 transition-colors md:bg-border/0 md:group-hover:bg-border" />
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Adicionar bloco"
         aria-expanded={open}
         className={cn(
-          // Em mobile não há hover, então o gatilho fica sempre visível
-          // (opacity-100); só a partir de md ele se esconde por padrão e
-          // aparece no hover/foco — senão o botão fica invisível e
-          // inacessível em touch, sem nenhuma forma de abri-lo.
-          "z-floating grid size-6 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground opacity-100 shadow-sm transition-all hover:text-foreground md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
-          open && "md:opacity-100",
+          // Em mobile o gatilho fica sempre alcançável (sem hover em touch),
+          // mas só ganha o "chip" (borda/fundo/sombra) quando aberto — por
+          // padrão é só o glifo "+", pra não empilhar um círculo cheio entre
+          // cada bloco. A partir de md, o hover já resolve a descoberta, então
+          // o chip só aparece no hover/foco.
+          "z-floating grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground/70 transition-all hover:text-foreground",
+          "md:border md:border-border md:bg-card md:text-muted-foreground md:opacity-0 md:shadow-sm md:group-hover:opacity-100 md:focus-visible:opacity-100",
+          open &&
+            "border border-border bg-card text-foreground shadow-sm md:opacity-100",
         )}
       >
         <Plus
@@ -292,7 +295,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           className={cn("transition-transform", open && "rotate-45")}
         />
       </button>
-      <div className="h-px flex-1 bg-border/0 transition-colors group-hover:bg-border" />
+      <div className="h-px flex-1 bg-border/25 transition-colors md:bg-border/0 md:group-hover:bg-border" />
 
       <AnimatePresence onExitComplete={resetView}>
         {open && (

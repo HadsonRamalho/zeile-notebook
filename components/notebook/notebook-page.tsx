@@ -25,7 +25,6 @@ import type {
   Notebook,
 } from "@/lib/types";
 import type { TeamRole } from "@/lib/types/team-types";
-import { InlineTOC } from "../inline-toc";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
@@ -210,7 +209,7 @@ export default function RustInteractivePage({
   return (
     <div
       onPointerMove={handlePointerMove}
-      className="min-h-screen flex flex-row w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
+      className="min-h-screen flex flex-col w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
     >
       <CollabBar
         canWriteHistory={userPermissions.can_write}
@@ -231,6 +230,7 @@ export default function RustInteractivePage({
         onActiveTabChange={setActiveCollabTab}
       />
       <LiveCursors collaborators={collaborators} />
+      <ScrollProgress />
 
       {!isConnected && <Refreshing />}
 
@@ -313,12 +313,6 @@ export default function RustInteractivePage({
         })}
       </Reorder.Group>
       </div>
-      <aside className="hidden xl:block w-70 print:hidden">
-        <div className="sticky top-24">
-          <ScrollProgress className="top-0.5" />
-          <InlineTOC blocks={blocks} />
-        </div>
-      </aside>
     </div>
   );
 }

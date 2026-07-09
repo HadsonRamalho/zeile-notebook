@@ -22,7 +22,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
-export function UserNav() {
+export function UserNav({ compact = false }: { compact?: boolean } = {}) {
   const { user, isLoading, signOut } = useAuth();
   const t = useTranslations("homepage");
 
@@ -31,6 +31,21 @@ export function UserNav() {
   }
 
   if (!user) {
+    if (compact) {
+      return (
+        <Button
+          asChild
+          variant="secondary"
+          size="icon"
+          className="rounded-full"
+        >
+          <Link href="/login" aria-label={t("nav.login")} title={t("nav.login")}>
+            <User />
+          </Link>
+        </Button>
+      );
+    }
+
     return (
       <Button asChild variant="secondary" size="sm" className="px-4">
         <Link href="/login">
