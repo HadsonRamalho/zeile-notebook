@@ -17,6 +17,7 @@ import { DrawingCell } from "../blocks/drawing/drawing-cell";
 import { FreeDrawingCell } from "../blocks/free-drawing/free-drawing-cell";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
+import { LatexCell } from "../blocks/latex/latex-cell";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
 import { TextBlock } from "../blocks/text/text-block";
@@ -115,6 +116,12 @@ export function ReorderItem({
           />
         ) : block.type === "database_schema" ? (
           <DatabaseSchemaCell
+            content={block.content}
+            onChange={(val) => updateBlock(block.id, val)}
+            canWrite={canWrite}
+          />
+        ) : block.type === "latex" ? (
+          <LatexCell
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
             canWrite={canWrite}

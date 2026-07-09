@@ -47,6 +47,7 @@
     "framer-motion": "^12.34.2",
     "github-slugger": "^2.0.0",
     "idb-keyval": "^6.2.5",
+    "katex": "^0.17.0",
     "lucide-react": "^0.562.0",
     "motion": "^12.34.1",
     "next": "16.1.6",

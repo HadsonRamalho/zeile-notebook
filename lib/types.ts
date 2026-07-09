@@ -7,7 +7,8 @@ export type BlockType =
   | "component"
   | "drawing"
   | "free_drawing"
-  | "database_schema";
+  | "database_schema"
+  | "latex";
 
 export type DrawingElement = {
   id: string;
