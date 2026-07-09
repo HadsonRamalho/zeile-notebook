@@ -1,5 +1,9 @@
 import { defaultCache } from "@serwist/next/worker";
-import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
+import type {
+  PrecacheEntry,
+  SerwistGlobalConfig,
+  SerwistPlugin,
+} from "serwist";
 import { NetworkFirst, Serwist, StaleWhileRevalidate } from "serwist";
 
 declare global {
@@ -9,6 +13,15 @@ declare global {
 }
 
 declare const self: ServiceWorkerGlobalScope;
+
+const OFFLINE_URL = "/offline.html";
+
+const offlineFallbackPlugin: SerwistPlugin = {
+  handlerDidError: async () => {
+    const cached = await caches.match(OFFLINE_URL);
+    return cached ?? Response.error();
+  },
+};
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
@@ -22,6 +35,7 @@ const serwist = new Serwist({
       },
       handler: new NetworkFirst({
         cacheName: "navigations",
+        plugins: [offlineFallbackPlugin],
       }),
     },
     {
@@ -35,6 +49,7 @@ const serwist = new Serwist({
       },
       handler: new NetworkFirst({
         cacheName: "pages-runtime",
+        plugins: [offlineFallbackPlugin],
       }),
     },
     {

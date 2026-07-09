@@ -3,6 +3,7 @@
 import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   Compass,
+  Download,
   FileText,
   Moon,
   Plus,
@@ -24,6 +25,7 @@ import { DeletePageDialog } from "@/components/delete-page-dialog";
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { cn } from "@/lib/utils";
 import type { NotebookMeta } from "@/lib/types";
 import type { Team, TeamRole } from "@/lib/types/team-types";
@@ -51,6 +53,7 @@ export function NotebookCommandPalette({
   const { teamPages, createTeamPage, deleteTeamPage, refreshTeamPages } =
     useTeamNotebookManager();
   const { resolvedTheme, setTheme } = useTheme();
+  const { canInstall, promptInstall } = useInstallPrompt();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -144,6 +147,19 @@ export function NotebookCommandPalette({
         onOpenChange(false);
       },
     },
+    ...(canInstall
+      ? [
+          {
+            key: "action-install-app",
+            label: "Instalar o Zeile Notebook",
+            icon: <Download className="size-4 shrink-0" />,
+            onSelect: () => {
+              promptInstall();
+              onOpenChange(false);
+            },
+          },
+        ]
+      : []),
   ];
 
   const filteredGlobalActions = globalActions.filter(
