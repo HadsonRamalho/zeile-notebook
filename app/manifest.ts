@@ -17,6 +17,23 @@ export default function manifest(): MetadataRoute.Manifest {
     launch_handler: {
       client_mode: ["navigate-existing", "auto"],
     },
+    share_target: {
+      action: "/share",
+      method: "GET",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+      },
+    },
+    file_handlers: [
+      {
+        action: "/open-file",
+        accept: {
+          "text/markdown": [".md", ".markdown"],
+        },
+      },
+    ],
     shortcuts: [
       {
         name: "Página Inicial",

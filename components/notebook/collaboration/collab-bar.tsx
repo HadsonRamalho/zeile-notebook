@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { AutomergeHistoryEntry } from "@/hooks/use-automerge-sync";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
 import type { ChatMessage, Collaborator } from "@/hooks/use-presence";
+import { updateAppBadge } from "@/lib/appBadge";
 import type { Notebook } from "@/lib/types";
 import type { User } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
@@ -528,6 +529,11 @@ export function CollabBar({
   const [pulseUserId, setPulseUserId] = useState<string | null>(null);
   const seenMessageIds = useRef(new Set<string>());
   const mentionedMessageIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    updateAppBadge(unreadCount);
+    return () => updateAppBadge(0);
+  }, [unreadCount]);
 
   useEffect(() => {
     if (activeTab === "chat") {

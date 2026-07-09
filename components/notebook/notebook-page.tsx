@@ -44,6 +44,7 @@ import { defaultTypstContent } from "./blocks/typst/typst-cell";
 import { CollabBar } from "./collaboration/collab-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
 import { HistoryDiffView } from "./history/history-diff-view";
+import { consumePendingImport } from "@/lib/pendingImport";
 import { useNotebook } from "./notebook-context";
 import { ReorderItem } from "./reorder/reorder-item";
 import { ReorderTools } from "./reorder/reorder-tools";
@@ -174,6 +175,23 @@ export default function RustInteractivePage({
     const data = JSON.parse(JSON.stringify(displayDoc.blocks));
     return data as Block[];
   }, [displayDoc]);
+
+  const hasAppliedPendingImport = useRef(false);
+
+  useEffect(() => {
+    if (hasAppliedPendingImport.current) return;
+    if (!userPermissions?.can_write || blocks.length === 0) return;
+
+    const imported = consumePendingImport();
+    hasAppliedPendingImport.current = true;
+    if (!imported) return;
+
+    const firstBlock = blocks[0];
+    const nextContent = firstBlock.content
+      ? `${firstBlock.content}\n\n${imported}`
+      : imported;
+    updateBlockContent(firstBlock.id, nextContent);
+  }, [blocks, userPermissions, updateBlockContent]);
 
   const handlePointerMove = (e: React.PointerEvent) => {
     updateCursor(e.clientX, e.clientY);

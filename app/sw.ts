@@ -5,6 +5,11 @@ import type {
   SerwistPlugin,
 } from "serwist";
 import { NetworkFirst, Serwist, StaleWhileRevalidate } from "serwist";
+import {
+  BACKGROUND_SYNC_TAG,
+  getQueuedRequests,
+  removeQueuedRequest,
+} from "@/lib/backgroundSync";
 
 declare global {
   interface ServiceWorkerGlobalScope extends SerwistGlobalConfig {
@@ -13,6 +18,30 @@ declare global {
 }
 
 declare const self: ServiceWorkerGlobalScope;
+
+async function retryQueuedRequests() {
+  const queued = await getQueuedRequests();
+  for (const req of queued) {
+    try {
+      const response = await fetch(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: req.body ?? undefined,
+      });
+      if (response.ok) await removeQueuedRequest(req.id);
+    } catch {}
+  }
+}
+
+(self as unknown as EventTarget).addEventListener("sync", (event: Event) => {
+  const syncEvent = event as unknown as {
+    tag: string;
+    waitUntil: (p: Promise<void>) => void;
+  };
+  if (syncEvent.tag === BACKGROUND_SYNC_TAG) {
+    syncEvent.waitUntil(retryQueuedRequests());
+  }
+});
 
 const OFFLINE_URL = "/offline.html";
 

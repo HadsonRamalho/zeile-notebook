@@ -1,4 +1,5 @@
 import { getCookie } from "cookies-next";
+import { queueRequest } from "@/lib/backgroundSync";
 
 export const BASE_URL =
   process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
@@ -36,7 +37,20 @@ async function http<T>(path: string, config?: FetchOptions): Promise<T> {
     },
   };
 
-  const response = await fetch(url, init);
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (err) {
+    const method = (init.method ?? "GET").toUpperCase();
+    if (
+      typeof window !== "undefined" &&
+      err instanceof TypeError &&
+      method !== "GET"
+    ) {
+      await queueRequest(url, init).catch(() => {});
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
