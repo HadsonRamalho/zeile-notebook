@@ -20,6 +20,8 @@ export type ChatMessage = {
   color: string;
 };
 
+const CHAT_MESSAGE_LIFETIME_MS = 12000;
+
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
     return "hsl(157, 76%, 35%)";
@@ -127,7 +129,7 @@ export function usePresence(pageId: string, currentUser: User | null) {
 
           setTimeout(() => {
             setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
-          }, 6000);
+          }, CHAT_MESSAGE_LIFETIME_MS);
           return;
         }
 
@@ -194,7 +196,7 @@ export function usePresence(pageId: string, currentUser: User | null) {
       setMessages((prev) => [...prev, newMsg]);
       setTimeout(() => {
         setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
-      }, 6000);
+      }, CHAT_MESSAGE_LIFETIME_MS);
 
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(

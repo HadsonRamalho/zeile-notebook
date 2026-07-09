@@ -526,21 +526,29 @@ export function CollabBar({
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [pulseUserId, setPulseUserId] = useState<string | null>(null);
-  const processedMessageIds = useRef(new Set<string>());
+  const seenMessageIds = useRef(new Set<string>());
+  const mentionedMessageIds = useRef(new Set<string>());
 
   useEffect(() => {
-    const newMessages = messages.filter(
-      (msg) => !processedMessageIds.current.has(msg.id),
+    if (activeTab === "chat") {
+      for (const msg of messages) seenMessageIds.current.add(msg.id);
+      setUnreadCount(0);
+      return;
+    }
+
+    setUnreadCount(
+      messages.filter(
+        (msg) =>
+          msg.userId !== socketUserId && !seenMessageIds.current.has(msg.id),
+      ).length,
     );
-    if (newMessages.length === 0) return;
+  }, [messages, activeTab, socketUserId]);
 
-    for (const msg of newMessages) {
-      processedMessageIds.current.add(msg.id);
+  useEffect(() => {
+    for (const msg of messages) {
       if (msg.userId === socketUserId) continue;
-
-      if (activeTab !== "chat") {
-        setUnreadCount((count) => count + 1);
-      }
+      if (mentionedMessageIds.current.has(msg.id)) continue;
+      mentionedMessageIds.current.add(msg.id);
 
       const mentionsMe = splitMentions(msg.text, [currentUserName]).some(
         (part) => part.mention,
@@ -551,11 +559,7 @@ export function CollabBar({
         setTimeout(() => setPulseUserId(null), 1200);
       }
     }
-  }, [messages, activeTab, socketUserId, currentUserName]);
-
-  useEffect(() => {
-    if (activeTab === "chat") setUnreadCount(0);
-  }, [activeTab]);
+  }, [messages, socketUserId, currentUserName]);
 
   const items: ExpandableTabsItem[] = [
     ...(canWriteHistory
