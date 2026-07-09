@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/motion/select";
+} from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 
 export function LanguageSelect() {
@@ -17,7 +17,8 @@ export function LanguageSelect() {
   const currentLocale = useLocale();
 
   function onValueChange(newLocale: string) {
-    router.replace(newLocale);
+    const rest = path.replace(/^\/(pt-br|en)(?=\/|$)/, "") || "/";
+    router.replace(`/${newLocale}${rest === "/" ? "" : rest}`);
   }
 
   return (

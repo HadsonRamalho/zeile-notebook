@@ -20,7 +20,6 @@ import { UserNav } from "@/components/nav/user-nav";
 import { CreateTeamDialog } from "@/components/notebook/create-team-dialog";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
-import { SidebarBackup } from "@/components/sidebar-backup";
 import { useThemeToggle } from "@/components/ui/skiper-ui/skiper26";
 import { fetchUserTeams } from "@/lib/api/teams-service";
 import { cn } from "@/lib/cn";
@@ -35,6 +34,8 @@ function RailButton({
   href,
   active,
   label,
+  ariaLabel,
+  shortcut,
   expanded,
   children,
 }: {
@@ -42,6 +43,8 @@ function RailButton({
   href?: string;
   active?: boolean;
   label: string;
+  ariaLabel?: string;
+  shortcut?: string;
   expanded: boolean;
   children: React.ReactNode;
 }) {
@@ -59,6 +62,11 @@ function RailButton({
     <>
       {children}
       {expanded && <span className="truncate">{label}</span>}
+      {expanded && shortcut && (
+        <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground/70">
+          {shortcut}
+        </span>
+      )}
     </>
   );
 
@@ -67,7 +75,7 @@ function RailButton({
       <Link
         href={href}
         title={expanded ? undefined : label}
-        aria-label={label}
+        aria-label={ariaLabel ?? label}
         className={className}
       >
         {content}
@@ -80,7 +88,7 @@ function RailButton({
       type="button"
       onClick={onClick}
       title={expanded ? undefined : label}
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       className={className}
     >
       {content}
@@ -253,7 +261,9 @@ export function NotebookRail() {
       <RailButton
         expanded={isExpanded}
         onClick={() => setPaletteOpen(true)}
-        label="Buscar ou trocar de caderno (⌘K)"
+        label="Buscar"
+        ariaLabel="Buscar ou trocar de caderno"
+        shortcut="⌘K"
       >
         <Search size={18} className="shrink-0" />
       </RailButton>
@@ -261,10 +271,6 @@ export function NotebookRail() {
       <RailButton expanded={isExpanded} onClick={() => createPage()} label="Novo caderno">
         <Plus size={18} className="shrink-0" />
       </RailButton>
-
-      <div className={cn(isExpanded ? "w-full" : "")}>
-        <SidebarBackup />
-      </div>
 
       <div
         className={cn(
@@ -378,7 +384,7 @@ export function NotebookRail() {
         type="button"
         onClick={() => setMobileOpen(true)}
         aria-label="Abrir navegação"
-        className="fixed top-4 left-4 z-30 flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
+        className="fixed top-4 left-4 z-30 flex size-11 items-center justify-center rounded-full border border-border bg-card/85 text-foreground shadow-lg backdrop-blur-lg transition-transform active:scale-95 md:hidden"
       >
         <PanelLeftOpen size={20} />
       </button>
@@ -389,9 +395,9 @@ export function NotebookRail() {
             type="button"
             aria-label="Fechar navegação"
             onClick={() => setMobileOpen(false)}
-            className="fixed inset-0 z-[55] bg-black/40 md:hidden"
+            className="fixed inset-0 z-[45] bg-black/40 md:hidden"
           />
-          <div className="fixed inset-y-0 left-0 z-[60] flex w-72 flex-col items-stretch gap-1 bg-sidebar px-3 py-3 shadow-2xl md:hidden">
+          <div className="fixed inset-y-0 left-0 z-[48] flex w-72 flex-col items-stretch gap-1 bg-sidebar px-3 py-3 shadow-2xl md:hidden">
             <button
               type="button"
               onClick={() => setMobileOpen(false)}

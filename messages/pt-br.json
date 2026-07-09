@@ -125,6 +125,11 @@
   "profile": {
     "title": "Meu Perfil",
     "description": "Gerencie suas informações pessoais e preferências.",
+    "tabs": {
+      "general": "Geral",
+      "security": "Segurança",
+      "account": "Conta"
+    },
     "profile_card": {
       "title": "Informações Pessoais",
       "description": "Atualize seus detalhes pessoais aqui.",
@@ -158,28 +163,30 @@
   },
   "settings": {
     "title": "Configurações",
-    "description": "Gerencie suas preferências de conta e aparência.",
+    "description": "Gerencie suas preferências de aparência e do editor.",
     "save_button": "Salvar alterações",
     "success_message": "Configurações atualizadas com sucesso!",
-    "sections": {
-      "general": "Perfil",
-      "editor": "Editor & Aparência"
+    "tabs": {
+      "general": "Geral",
+      "editor": "Editor"
     },
     "fields": {
-      "username": { "label": "Nome de usuário" },
-      "email": { "label": "Email" },
-      "autosave": {
-        "label": "Salvamento Automático",
-        "description": "Salva seu conteúdo localmente enquanto você digita.",
-        "options": { "off": "Desativado" }
-      },
       "theme": {
         "label": "Tema",
+        "description": "Aplica-se em toda a aplicação, no claro e no escuro.",
         "options": {
           "light": "Claro",
           "dark": "Escuro",
           "system": "Sistema"
         }
+      },
+      "language": {
+        "label": "Idioma",
+        "description": "Muda o idioma da interface imediatamente."
+      },
+      "editor_font_size": {
+        "label": "Tamanho da fonte no editor de código",
+        "description": "Afeta todos os blocos de código da aplicação."
       }
     }
   },
@@ -288,8 +295,15 @@
     "description": "Descubra anotações e projetos compartilhados pela comunidade.",
     "badge_team": "Time",
     "badge_personal": "Pessoal",
+    "search_placeholder": "Buscar por título ou autor...",
+    "filter_all": "Todos",
+    "filter_personal": "Pessoais",
+    "filter_team": "Times",
+    "count": "{count} {count, plural, one {caderno} other {cadernos}}",
     "empty_state_title": "Nenhum notebook encontrado",
-    "empty_state_description": "Ainda não há notebooks públicos disponíveis na plataforma. Quando a comunidade compartilhar algo, aparecerá aqui."
+    "empty_state_description": "Ainda não há notebooks públicos disponíveis na plataforma. Quando a comunidade compartilhar algo, aparecerá aqui.",
+    "no_results_title": "Nada por aqui",
+    "no_results_description": "Nenhum caderno corresponde à sua busca ou filtro."
   },
   "forgot_password": {
     "title": "Recuperar Conta",

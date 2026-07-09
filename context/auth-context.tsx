@@ -64,7 +64,7 @@ export function AuthProvider({
       const profile = await api.get<User>("/user/me");
 
       setUser(profile);
-      router.push("/docs");
+      router.push("/notebook");
       router.refresh();
     } catch (error) {
       throw error;
@@ -80,7 +80,7 @@ export function AuthProvider({
       const profile = await api.get<User>("/user/me");
 
       setUser(profile);
-      router.push("/docs");
+      router.push("/notebook");
       router.refresh();
     } catch (error) {
       throw error;
@@ -99,7 +99,7 @@ export function AuthProvider({
       const profile = await api.get<User>("/user/me");
 
       setUser(profile);
-      router.push("/docs");
+      router.push("/notebook");
       router.refresh();
     } catch (error) {
       throw error;

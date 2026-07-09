@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/motion/select";
+import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
+import { useLocalStorage } from "@/hooks/use-local-storate";
 import type { BlockType, Language } from "@/lib/types";
 
 interface BlockEditorProps {
@@ -49,6 +51,8 @@ export const GenericBlockEditor = React.memo(
     minHeight = "40px",
   }: BlockEditorProps) => {
     const { resolvedTheme } = useTheme();
+    const isTouchDevice = useIsTouchDevice();
+    const [fontSize] = useLocalStorage<number>("editor-font-size", 14);
     const editorRef = useRef<ReactCodeMirrorRef>(null);
     const localContentRef = useRef(content);
 
@@ -74,8 +78,12 @@ export const GenericBlockEditor = React.memo(
     }, [language]);
 
     const extensions = useMemo(() => {
-      return [languageExtension, EditorView.lineWrapping] as Extension[];
-    }, [languageExtension]);
+      return [
+        languageExtension,
+        EditorView.lineWrapping,
+        EditorView.theme({ "&": { fontSize: `${fontSize}px` } }),
+      ] as Extension[];
+    }, [languageExtension, fontSize]);
 
     const basicSetup = useMemo(
       () => ({
@@ -180,7 +188,7 @@ export const GenericBlockEditor = React.memo(
           theme={resolvedTheme === "dark" ? vscodeDark : vscodeLight}
           extensions={extensions}
           onBlur={onBlur}
-          autoFocus={true}
+          autoFocus={!isTouchDevice}
           onChange={handleChange}
           editable={!readOnly}
           basicSetup={basicSetup}

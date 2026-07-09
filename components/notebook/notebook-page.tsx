@@ -2,7 +2,15 @@
 
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
-import { Check, Eye, Plus, RotateCw, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Plus,
+  RotateCw,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Fragment,
@@ -118,6 +126,25 @@ export default function RustInteractivePage({
       setPreviewDoc(null);
       setActiveCollabTab(null);
     }
+  };
+
+  // automergeHistory[0] é a versão mais recente; índices crescem para
+  // versões mais antigas (ver buildAutomergeHistory).
+  const previewIndex = automergeHistory.findIndex(
+    (entry) => entry.doc === previewDoc,
+  );
+  const hasOlderPreview =
+    previewIndex !== -1 && previewIndex + 1 < automergeHistory.length;
+  const hasNewerPreview = previewIndex > 0;
+
+  const handlePreviewOlder = () => {
+    if (!hasOlderPreview) return;
+    setPreviewDoc(automergeHistory[previewIndex + 1].doc);
+  };
+
+  const handlePreviewNewer = () => {
+    if (!hasNewerPreview) return;
+    setPreviewDoc(automergeHistory[previewIndex - 1].doc);
   };
 
   useEffect(() => {
@@ -238,6 +265,10 @@ export default function RustInteractivePage({
         <PreviewDialog
           handleCancelPreview={handleCancelPreview}
           handleConfirmRestore={handleConfirmRestore}
+          onOlder={handlePreviewOlder}
+          onNewer={handlePreviewNewer}
+          hasOlder={hasOlderPreview}
+          hasNewer={hasNewerPreview}
         />
       )}
 
@@ -367,35 +398,66 @@ function Refreshing() {
 interface PreviewDialogProps {
   handleCancelPreview: () => void;
   handleConfirmRestore: () => void;
+  onOlder: () => void;
+  onNewer: () => void;
+  hasOlder: boolean;
+  hasNewer: boolean;
 }
 
 function PreviewDialog({
   handleCancelPreview,
   handleConfirmRestore,
+  onOlder,
+  onNewer,
+  hasOlder,
+  hasNewer,
 }: PreviewDialogProps) {
   return (
-    <div className="fixed top-12 mt-4 md:top-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto bg-primary/95 backdrop-blur-md border border-primary text-primary-foreground px-4 py-3 md:px-5 rounded-2xl md:rounded-full shadow-2xl z-overlay flex flex-col md:flex-row items-center gap-3 md:gap-4 animate-in slide-in-from-top-4 fade-in duration-300">
-      <div className="flex items-center gap-2">
+    <div className="fixed bottom-4 left-1/2 z-overlay flex w-[min(26rem,92vw)] -translate-x-1/2 flex-col items-center gap-3 rounded-2xl border border-border bg-card/85 px-4 py-3 text-foreground shadow-lg backdrop-blur-lg animate-in slide-in-from-bottom-4 fade-in duration-300 md:w-auto md:flex-row md:gap-4 md:px-5">
+      <div className="flex items-center gap-2 text-primary">
         <Eye className="size-4 md:size-5" />
         <span className="font-semibold text-sm md:text-base tracking-tight whitespace-nowrap">
           Modo de Pré-visualização
         </span>
       </div>
 
-      <div className="w-full h-px md:w-px md:h-6 bg-primary-foreground/20" />
+      <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={onNewer}
+          disabled={!hasNewer}
+          aria-label="Versão mais recente"
+          title="Versão mais recente"
+          className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+        >
+          <ChevronUp className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={onOlder}
+          disabled={!hasOlder}
+          aria-label="Versão mais antiga"
+          title="Versão mais antiga"
+          className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+        >
+          <ChevronDown className="size-4" />
+        </button>
+      </div>
 
-      <div className="flex items-center justify-center gap-2 w-full md:w-auto">
+      <div className="h-px w-full bg-border md:h-6 md:w-px" />
+
+      <div className="flex w-full items-center justify-center gap-2 md:w-auto">
         <Button
           onClick={handleCancelPreview}
           variant="ghost"
-          className="flex-1 md:flex-none h-9 px-4 text-primary-foreground hover:bg-primary-foreground/10 rounded-xl md:rounded-full transition-colors text-xs md:text-sm"
+          className="flex-1 md:flex-none h-9 px-4 rounded-xl md:rounded-full transition-colors text-xs md:text-sm"
         >
           <X className="size-4 mr-1" />
           Cancelar
         </Button>
         <Button
           onClick={handleConfirmRestore}
-          className="flex-1 md:flex-none h-9 px-4 bg-primary-foreground text-primary hover:bg-primary-foreground/90 rounded-xl md:rounded-full font-bold shadow-sm transition-colors text-xs md:text-sm"
+          className="flex-1 md:flex-none h-9 px-4 rounded-xl md:rounded-full font-bold transition-colors text-xs md:text-sm"
         >
           <Check className="size-4 mr-1" />
           Restaurar

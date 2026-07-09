@@ -12,10 +12,13 @@ import type { Team, TeamRole } from "@/lib/types/team-types";
 
 function AmbientGlow() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-      <div className="animate-ambient-drift absolute top-8 left-[10%] size-72 rounded-full bg-accent-violet/15 blur-3xl" />
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+    >
+      <div className="animate-ambient-drift absolute -top-10 left-[5%] size-80 rounded-full bg-accent-violet/20 blur-3xl md:size-96" />
       <div
-        className="animate-ambient-drift absolute top-0 right-[10%] size-64 rounded-full bg-primary/10 blur-3xl"
+        className="animate-ambient-drift absolute -top-16 right-[5%] size-72 rounded-full bg-primary/15 blur-3xl md:size-80"
         style={{ animationDelay: "2s" }}
       />
     </div>
@@ -69,7 +72,7 @@ export default function NotebookHomePage() {
 
   if (pages.length === 0 && teams.length === 0) {
     return (
-      <div className="relative flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1">
         <AmbientGlow />
         <EmptyState />
       </div>
@@ -77,7 +80,7 @@ export default function NotebookHomePage() {
   }
 
   return (
-    <div className="relative flex flex-1 flex-col gap-12 overflow-hidden py-4">
+    <div className="relative flex flex-1 flex-col gap-12 py-4">
       <AmbientGlow />
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">

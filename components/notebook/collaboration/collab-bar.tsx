@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AutomergeHistoryEntry } from "@/hooks/use-automerge-sync";
+import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
 import type { ChatMessage, Collaborator } from "@/hooks/use-presence";
 import type { Notebook } from "@/lib/types";
 import type { User } from "@/lib/types/user-types";
@@ -172,11 +173,13 @@ function ChatPanel({
 }: Pick<CollabBarProps, "messages" | "sendChatMessage" | "socketUserId">) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const isTouchDevice = useIsTouchDevice();
 
   useEffect(() => {
+    if (isTouchDevice) return;
     const id = setTimeout(() => inputRef.current?.focus(), 60);
     return () => clearTimeout(id);
-  }, []);
+  }, [isTouchDevice]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -418,7 +421,7 @@ export function CollabBar({
   ];
 
   return (
-    <div className="fixed top-4 right-4 z-50 print:hidden">
+    <div className="fixed top-4 right-4 z-40 print:hidden">
       <ExpandableTabs
         items={items}
         value={activeTab}

@@ -125,6 +125,11 @@
   "profile": {
     "title": "My Profile",
     "description": "Manage your personal information and preferences.",
+    "tabs": {
+      "general": "General",
+      "security": "Security",
+      "account": "Account"
+    },
     "profile_card": {
       "title": "Personal Information",
       "description": "Update your personal details here.",
@@ -158,34 +163,30 @@
   },
   "settings": {
     "title": "Settings",
-    "description": "Manage your account preferences and appearance.",
+    "description": "Manage your appearance and editor preferences.",
     "save_button": "Save changes",
     "success_message": "Settings updated successfully!",
-    "sections": {
+    "tabs": {
       "general": "General",
-      "editor": "Editor & Appearance"
+      "editor": "Editor"
     },
     "fields": {
-      "username": {
-        "label": "Username"
-      },
-      "email": {
-        "label": "Email"
-      },
-      "autosave": {
-        "label": "Autosave",
-        "description": "Automatically saves your content locally as you type.",
-        "options": {
-          "off": "Disabled"
-        }
-      },
       "theme": {
         "label": "Theme",
+        "description": "Applies across the whole app, in light and dark.",
         "options": {
           "light": "Light",
           "dark": "Dark",
           "system": "System"
         }
+      },
+      "language": {
+        "label": "Language",
+        "description": "Changes the interface language immediately."
+      },
+      "editor_font_size": {
+        "label": "Code editor font size",
+        "description": "Affects every code block across the app."
       }
     }
   },
@@ -294,8 +295,15 @@
     "description": "Discover notes and projects shared by the community.",
     "badge_team": "Team",
     "badge_personal": "Personal",
+    "search_placeholder": "Search by title or author...",
+    "filter_all": "All",
+    "filter_personal": "Personal",
+    "filter_team": "Teams",
+    "count": "{count} {count, plural, one {notebook} other {notebooks}}",
     "empty_state_title": "No notebooks found",
-    "empty_state_description": "There are no public notebooks available on the platform yet. When the community shares something, it will appear here."
+    "empty_state_description": "There are no public notebooks available on the platform yet. When the community shares something, it will appear here.",
+    "no_results_title": "Nothing here",
+    "no_results_description": "No notebook matches your search or filter."
   },
   "forgot_password": {
     "title": "Recover Account",

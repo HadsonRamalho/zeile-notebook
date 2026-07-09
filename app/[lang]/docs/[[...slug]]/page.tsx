@@ -10,7 +10,6 @@ import {
   DocsPage,
   DocsTitle,
 } from "@/components/layout/docs/page";
-import { env } from "@/lib/env";
 import { getDocPage, getDocPages, getDocSource, getHeadings } from "@/lib/docs";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -24,22 +23,6 @@ export default async function Page(
   const page = getDocPage(slug);
 
   if (!page) notFound();
-
-  if (page.frontmatter.title === "API Reference") {
-    env.loadEnv();
-    const mode = env.get("NEXT_PUBLIC_MODE");
-    if (mode === "NO_ENDPOINTS") {
-      return (
-        <DocsPage>
-          <DocsTitle>Conteúdo indisponível</DocsTitle>
-          <DocsDescription className="mb-0">
-            Os endpoints não estão disponíveis no momento, pois o MODE da API
-            está configurado como {mode}.
-          </DocsDescription>
-        </DocsPage>
-      );
-    }
-  }
 
   const source = getDocSource(page);
   const toc = getHeadings(source);
