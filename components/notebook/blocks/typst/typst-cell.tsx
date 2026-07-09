@@ -143,16 +143,36 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
         </button>
       </div>
       <div className="grid grid-cols-1 gap-3 p-3 pt-12 lg:grid-cols-2 lg:pt-3">
-        <BlockEditor
-          content={content}
-          type="text"
-          onBlur={() => {}}
-          onChange={onChange}
-          readOnly={!canWrite}
-          minHeight="160px"
-          className="bg-muted"
-        />
-        <div className="min-h-[160px] overflow-auto rounded-md border border-border bg-white p-4">
+        <div
+          style={{
+            height: 240,
+            minHeight: 240,
+            maxHeight: 480,
+            resize: "vertical",
+            overflow: "auto",
+          }}
+          className="print:!h-auto print:!max-h-none print:!overflow-visible"
+        >
+          <BlockEditor
+            content={content}
+            type="text"
+            onBlur={() => {}}
+            onChange={onChange}
+            readOnly={!canWrite}
+            minHeight="240px"
+            className="h-full bg-muted"
+          />
+        </div>
+        <div
+          style={{
+            height: 240,
+            minHeight: 240,
+            maxHeight: 480,
+            resize: "vertical",
+            overflow: "auto",
+          }}
+          className="print:!h-auto print:!max-h-none print:!overflow-visible rounded-md border border-border bg-white p-4"
+        >
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : svgHtml ? (
