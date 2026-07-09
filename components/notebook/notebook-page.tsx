@@ -238,10 +238,18 @@ export default function RustInteractivePage({
     });
   };
 
-  if (!doc || !hasSyncedOnce) {
+  if (!doc || !hasSyncedOnce || !userPermissions) {
     return (
       <div className="flex h-screen w-full items-center justify-center text-muted-foreground">
         <h2>Conectando ao servidor...</h2>
+      </div>
+    );
+  }
+
+  if (!userPermissions.can_read) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <AppNotFound variant="forbidden" />
       </div>
     );
   }
@@ -250,21 +258,15 @@ export default function RustInteractivePage({
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center text-muted-foreground space-y-4">
         <h2>Esta página está vazia.</h2>
-        <Button
-          onClick={() => handleAddBlock(-1, "text")}
-          className="px-4 py-2 bg-fd-primary text-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Primeiro Bloco
-        </Button>
-      </div>
-    );
-  }
-
-  if (!userPermissions?.can_read) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <AppNotFound variant="forbidden" />
+        {userPermissions.can_write && (
+          <Button
+            onClick={() => handleAddBlock(-1, "text")}
+            className="px-4 py-2 bg-fd-primary text-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Primeiro Bloco
+          </Button>
+        )}
       </div>
     );
   }

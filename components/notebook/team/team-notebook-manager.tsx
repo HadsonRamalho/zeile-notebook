@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
@@ -44,6 +44,7 @@ export function TeamNotebookManagerProvider({
   const t = useTranslations("api_errors");
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [teamPages, setTeamPages] = useState<Record<string, NotebookMeta[]>>(
     {},
@@ -123,14 +124,19 @@ export function TeamNotebookManagerProvider({
       if (!user) return;
 
       try {
+        const wasOnDeletedPage = pathname.endsWith(`/notebook/${pageId}`);
+
         await deleteNotebook(pageId);
         await refreshTeamPages(teamId);
-        router.push("/docs");
+
+        if (wasOnDeletedPage) {
+          router.push("/notebook");
+        }
       } catch (err) {
         handleApiError({ err, t });
       }
     },
-    [user, refreshTeamPages, router, t],
+    [user, refreshTeamPages, router, pathname, t],
   );
 
   return (

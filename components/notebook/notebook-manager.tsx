@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import {
@@ -48,6 +48,7 @@ export function NotebookManagerProvider({
   const [pages, setPages] = useState<NotebookMeta[]>([]);
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const refreshPages = useCallback(async () => {
     if (!user) {
@@ -144,16 +145,20 @@ export function NotebookManagerProvider({
         if (!user) {
           return;
         }
+        const wasOnDeletedPage = pathname.endsWith(`/notebook/${id}`);
+
         await deleteNotebook(id);
 
         await refreshPages();
 
-        router.push("/docs");
+        if (wasOnDeletedPage) {
+          router.push("/notebook");
+        }
       } catch (err) {
         handleApiError({ err, t });
       }
     },
-    [user, refreshPages, router, t],
+    [user, refreshPages, router, pathname, t],
   );
 
   const downloadBackup = useCallback(async () => {
