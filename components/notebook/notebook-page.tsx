@@ -40,6 +40,7 @@ import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-
 import { defaultLatexContent } from "./blocks/latex/latex-cell";
 import { CollabBar } from "./collaboration/collab-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
+import { HistoryDiffView } from "./history/history-diff-view";
 import { useNotebook } from "./notebook-context";
 import { ReorderItem } from "./reorder/reorder-item";
 import { ReorderTools } from "./reorder/reorder-tools";
@@ -137,6 +138,13 @@ export default function RustInteractivePage({
   const hasOlderPreview =
     previewIndex !== -1 && previewIndex + 1 < automergeHistory.length;
   const hasNewerPreview = previewIndex > 0;
+
+  const [showHistoryDiff, setShowHistoryDiff] = useState(false);
+  const diffFromDoc = hasOlderPreview
+    ? automergeHistory[previewIndex + 1]?.doc
+    : previewIndex === 0
+      ? doc
+      : null;
 
   const handlePreviewOlder = () => {
     if (!hasOlderPreview) return;
@@ -272,6 +280,16 @@ export default function RustInteractivePage({
           onNewer={handlePreviewNewer}
           hasOlder={hasOlderPreview}
           hasNewer={hasNewerPreview}
+          canCompare={!!diffFromDoc}
+          onCompare={() => setShowHistoryDiff(true)}
+        />
+      )}
+
+      {showHistoryDiff && previewDoc && diffFromDoc && (
+        <HistoryDiffView
+          fromDoc={diffFromDoc}
+          toDoc={previewDoc}
+          onClose={() => setShowHistoryDiff(false)}
         />
       )}
 
@@ -406,6 +424,8 @@ interface PreviewDialogProps {
   onNewer: () => void;
   hasOlder: boolean;
   hasNewer: boolean;
+  canCompare: boolean;
+  onCompare: () => void;
 }
 
 function PreviewDialog({
@@ -415,6 +435,8 @@ function PreviewDialog({
   onNewer,
   hasOlder,
   hasNewer,
+  canCompare,
+  onCompare,
 }: PreviewDialogProps) {
   return (
     <div className="fixed bottom-4 left-1/2 z-overlay flex w-[min(26rem,92vw)] -translate-x-1/2 flex-col items-center gap-3 rounded-2xl border border-border bg-card/85 px-4 py-3 text-foreground shadow-lg backdrop-blur-lg animate-in slide-in-from-bottom-4 fade-in duration-300 md:w-auto md:flex-row md:gap-4 md:px-5">
@@ -451,6 +473,15 @@ function PreviewDialog({
       <div className="h-px w-full bg-border md:h-6 md:w-px" />
 
       <div className="flex w-full items-center justify-center gap-2 md:w-auto">
+        {canCompare && (
+          <Button
+            onClick={onCompare}
+            variant="outline"
+            className="flex-1 md:flex-none h-9 px-4 rounded-xl md:rounded-full transition-colors text-xs md:text-sm"
+          >
+            Comparar com anterior
+          </Button>
+        )}
         <Button
           onClick={handleCancelPreview}
           variant="ghost"
