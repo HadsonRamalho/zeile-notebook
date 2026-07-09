@@ -187,13 +187,14 @@ export function DatabaseSchemaCell({
           ? undefined
           : { height: 480, minHeight: 480, maxHeight: 960, resize: "vertical", overflow: "auto" }
       }
-      className={
+      className={cn(
+        "print:!h-auto print:!max-h-none print:!overflow-visible",
         fullscreen
           ? "fixed inset-0 z-overlay bg-background"
-          : "relative w-full overflow-hidden rounded-lg border bg-card"
-      }
+          : "relative w-full overflow-hidden rounded-lg border bg-card",
+      )}
     >
-      <div className={cn("absolute right-2 top-2 flex gap-2", fullscreen ? "z-overlay-controls" : "z-10")}>
+      <div className={cn("print:hidden absolute right-2 top-2 flex gap-2", fullscreen ? "z-overlay-controls" : "z-10")}>
         {canWrite && (
           <button
             type="button"
@@ -264,7 +265,7 @@ export function DatabaseSchemaCell({
         <Background />
         <Controls
           showInteractive={canWrite}
-          className="overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur"
+          className="print:hidden overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur"
           style={
             {
               "--xy-controls-button-background-color": "transparent",

@@ -93,7 +93,7 @@ export function SqlCell({
           resize: "vertical",
           overflow: "auto",
         }}
-        className="border-b border-border"
+        className="border-b border-border print:!h-auto print:!max-h-none print:!overflow-visible"
       >
         <CodeMirror
           value={localContentRef.current}
@@ -115,7 +115,7 @@ export function SqlCell({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2 p-2">
+      <div className="print:hidden flex items-center justify-between gap-2 p-2">
         <span className="text-xs text-muted-foreground">
           Banco compartilhado por este caderno
         </span>

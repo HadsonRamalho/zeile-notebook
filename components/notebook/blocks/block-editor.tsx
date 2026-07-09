@@ -153,7 +153,7 @@ export const BlockEditor = React.memo(
             resize: "vertical",
             overflow: "auto",
           }}
-          className={`rounded-md border border-border ${className}`}
+          className={`rounded-md border border-border print:!h-auto print:!max-h-none print:!overflow-visible ${className}`}
         >
           <CodeMirror
             ref={editorRef}

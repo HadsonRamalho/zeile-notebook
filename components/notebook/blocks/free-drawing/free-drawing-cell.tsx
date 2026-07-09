@@ -686,7 +686,7 @@ export function FreeDrawingCell({
             }
       }
       className={cn(
-        "relative w-full rounded-lg border bg-card",
+        "relative w-full rounded-lg border bg-card print:!h-auto print:!max-h-none print:!overflow-visible",
         fullscreen && "fixed inset-0 z-overlay bg-background",
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -694,7 +694,7 @@ export function FreeDrawingCell({
     >
       <div
         className={cn(
-          "absolute right-2 top-2 flex items-center gap-1.5",
+          "print:hidden absolute right-2 top-2 flex items-center gap-1.5",
           fullscreen ? "z-overlay-controls" : "z-10",
         )}
       >
@@ -745,7 +745,7 @@ export function FreeDrawingCell({
           onClick={() => setFocusMode((v) => !v)}
           aria-pressed={focusMode}
           className={cn(
-            "-translate-x-1/2 fixed bottom-4 left-1/2 z-overlay-controls rounded-md border border-border p-2 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground md:hidden",
+            "print:hidden -translate-x-1/2 fixed bottom-4 left-1/2 z-overlay-controls rounded-md border border-border p-2 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground md:hidden",
             focusMode
               ? "bg-foreground/[0.1] text-foreground"
               : "bg-card/85 text-foreground/70",
@@ -791,7 +791,7 @@ export function FreeDrawingCell({
         />
 
         {canWrite && !focusMode && (
-          <>
+          <div className="print:hidden contents">
             <BrushPalette
               tool={tool}
               onChangeTool={handleToolClick}
@@ -835,16 +835,18 @@ export function FreeDrawingCell({
               minimized={layersMinimized}
               onMinimizedChange={setLayersMinimized}
             />
-          </>
+          </div>
         )}
 
         {!focusMode && (
-          <ZoomControls
-            zoom={camera.zoom}
-            onIn={() => zoomBy(1.2)}
-            onOut={() => zoomBy(1 / 1.2)}
-            onFit={fitToContent}
-          />
+          <div className="print:hidden contents">
+            <ZoomControls
+              zoom={camera.zoom}
+              onIn={() => zoomBy(1.2)}
+              onOut={() => zoomBy(1 / 1.2)}
+              onFit={fitToContent}
+            />
+          </div>
         )}
       </div>
     </div>

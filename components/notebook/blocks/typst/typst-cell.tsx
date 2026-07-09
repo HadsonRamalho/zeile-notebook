@@ -108,7 +108,7 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
     >
       <div
         className={cn(
-          "absolute right-2 top-2 flex gap-2",
+          "print:hidden absolute right-2 top-2 flex gap-2",
           fullscreen ? "z-overlay-controls" : "z-10",
         )}
       >

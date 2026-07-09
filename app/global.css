@@ -294,6 +294,18 @@
         animation: none !important;
     }
 
+    .cm-editor,
+    .cm-scroller,
+    .cm-content {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .cm-gutters {
+        position: static !important;
+    }
+
     @page {
         margin: 1cm;
     }

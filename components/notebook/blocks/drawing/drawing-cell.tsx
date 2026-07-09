@@ -142,17 +142,18 @@ export function DrawingCell({
           ? undefined
           : { height: 480, minHeight: 480, maxHeight: 960, resize: "vertical", overflow: "auto" }
       }
-      className={
+      className={cn(
+        "print:!h-auto print:!max-h-none print:!overflow-visible",
         fullscreen
           ? "fixed inset-0 z-overlay bg-background"
-          : "relative w-full rounded-lg border bg-card"
-      }
+          : "relative w-full rounded-lg border bg-card",
+      )}
     >
       <button
         type="button"
         onClick={() => setFullscreen((v) => !v)}
         className={cn(
-          "absolute right-2 top-2 rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground",
+          "print:hidden absolute right-2 top-2 rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground",
           fullscreen ? "z-overlay-controls" : "z-10",
         )}
         title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}

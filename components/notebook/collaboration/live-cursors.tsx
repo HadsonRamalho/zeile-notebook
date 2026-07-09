@@ -11,7 +11,7 @@ export function LiveCursors({
   const seenIds = useRef<Set<string>>(new Set());
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-overlay overflow-hidden">
+    <div className="print:hidden pointer-events-none fixed inset-0 z-overlay overflow-hidden">
       {collaborators.map((collab) => {
         if (!collab.cursor) return null;
 

@@ -47,7 +47,7 @@ export function LatexCell({ content, onChange, canWrite }: LatexCellProps) {
         type="button"
         onClick={() => setFullscreen((v) => !v)}
         className={cn(
-          "absolute right-2 top-2 rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground",
+          "print:hidden absolute right-2 top-2 rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground",
           fullscreen ? "z-overlay-controls" : "z-10",
         )}
         title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
