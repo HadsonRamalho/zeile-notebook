@@ -174,6 +174,7 @@ Pedido explícito do usuário, então a restrição anterior deste documento ("n
 - `src/routes/notebook.rs` — `POST`/`DELETE /notebook/push/subscribe` (autenticado, mesmo padrão de `extract_claims_from_header` dos outros endpoints).
 - `src/controllers/sync.rs` — `PresenceRoom.subscribers` passou de `HashMap<Uuid, Sender>` para `HashMap<Uuid, PresenceMember>`, onde `PresenceMember` guarda `tx` + `user_id: Option<Uuid>` (da autenticação da conexão) + `name: Option<String>` (preenchido a partir da própria mensagem `"type":"presence"` que o cliente já manda).
 - `src/controllers/websocket.rs` (`handle_presence_socket`) — ao receber `"type":"chat"`, procura `@Nome` no texto contra os nomes conhecidos dos outros membros conectados na sala; para cada `user_id` autenticado mencionado, dispara `send_push_to_user` numa task separada (não bloqueia o relay da mensagem). O relay de mensagens em si continua idêntico ao anterior.
+- `src/controllers/team_invitation.rs` (`api_invite_member`) — segundo gatilho: ao enviar um convite de time (mesmo ponto onde já dispara o e-mail de convite), notifica por push o usuário convidado, com link direto pra tela de aceite (`/invite?token=...`). Também disparado numa task separada, não bloqueia a resposta do endpoint.
 - `.env`/`.env.example` (`rust-server/`) — `VAPID_PRIVATE_KEY_PATH`, `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`. Chave real gerada localmente com `openssl ecparam` e guardada em `rust-server/vapid_private.pem` (git-ignorado, adicionado `*.pem` ao `.gitignore` do backend).
 - `cargo check`/`cargo build` rodam limpos (só 2 warnings pré-existentes, sem relação com esta feature). Confirmei pelo log do próprio processo que o VAPID carrega com sucesso no boot ("Web Push configurado").
 
@@ -184,10 +185,26 @@ Pedido explícito do usuário, então a restrição anterior deste documento ("n
 - `components/interface/settings/settings-form.tsx` — toggle "Notificações push" na aba Geral das Configurações (só aparece se `isSupported`; desabilitado com aviso se o navegador já negou a permissão).
 - `.env`/`.env.local` (raiz) — `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, mesmo valor da chave pública do backend.
 
-### O que falta / precisa de mim (ou do usuário) antes de considerar "pronto"
+### Validação feita antes do deploy
 
-1. **Reiniciar o `rust-server` rodando** — existe um processo `target/release/rust-server` já de pé (PID visto durante a implementação, ~24min de uptime) que não foi tocado de propósito, pra não interromper o que já está rodando. Ele não tem o código novo. Precisa de um restart (ou redeploy) pra essas rotas existirem de verdade.
-2. **Testar de ponta a ponta num navegador real** — eu implementei e validei compilação/tipos/build, mas não consigo clicar em "Permitir" num prompt de notificação nem confirmar visualmente que o push chega. Fluxo de teste: abrir um caderno em duas contas/abas diferentes, ativar notificações em Configurações nas duas, mencionar uma da outra no chat, conferir se a notificação aparece (inclusive com a aba em segundo plano/fechada).
-3. **Chaves VAPID de produção** — as chaves atuais são só para o ambiente local (arquivo `.pem` git-ignorado). Em produção, gerar um novo par (mesmo comando `openssl`) e configurar `VAPID_PRIVATE_KEY_PATH`/`VAPID_PUBLIC_KEY`/`VAPID_SUBJECT` no ambiente do servidor de produção, e `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (mesmo valor da pública) no ambiente do frontend de produção — isso eu não tenho como fazer, não tenho acesso à infraestrutura de produção.
-4. **Decisão de produto: escopo dos gatilhos.** Hoje o único evento que dispara push é "fui mencionado no chat". Extender pra outros eventos (alguém editou um caderno que compartilho, convite de time aceito, etc.) é escopo novo — cada um precisa de um ponto de disparo próprio no backend (o chat já tinha o ponto de entrada mais óbvio porque é tempo real e já passa pelo servidor; edição de bloco, por exemplo, hoje só passa pelo CRDT/Automerge, que não tem noção de "isso é uma notícia relevante pra notificar" sem trabalho adicional de design).
-5. **HTTPS em produção** — a Push API e Service Workers exigem contexto seguro (`https://` ou `localhost`); não é um passo extra a fazer, só uma pré-condição a confirmar que já é atendida na infra de produção do Zeile.
+- Reiniciado o `rust-server` local (release build) com o código novo — confirmado no log que o VAPID carrega ("Web Push configurado").
+- Fluxo completo de subscribe/unsubscribe testado de ponta a ponta contra o Postgres local com um usuário real (registro → login → `POST /notebook/push/subscribe` → linha criada no banco → `DELETE /notebook/push/subscribe` → linha removida).
+- WebSocket de presença testado com dois clientes autenticados reais (registro + login) na mesma sala: handshake `init`, broadcast de `presence` e relay de `chat` continuam funcionando após o refactor de `PresenceRoom` — sem regressão no relay existente.
+- `cargo check`/`cargo build --release` limpos, só os 2 warnings pré-existentes sem relação com esta feature.
+- Dados de teste (usuários/notebook criados para os testes acima) removidos do banco local depois.
+
+### Deploy (2026-07-09)
+
+`main` mergeado em `prod` (merge, não fast-forward — `prod` tinha um commit próprio re-adicionando `rust-server/Cargo.lock`, preservado no merge) e `prod` enviado ao remoto, disparando `.github/workflows/deploy-backend.yml`. As duas jobs (`build-and-push` e `deploy`) terminaram com sucesso — imagem nova publicada no Docker Hub e o container da API reiniciado na VPS.
+
+**Por que isso era seguro de fazer sem quebrar nada:**
+- `load_push_state()` retorna `None` (não `panic!`/erro) se as env vars de VAPID não estiverem configuradas — o servidor sobe normalmente com push desativado.
+- Se a tabela `push_subscriptions` não existir ainda no banco de produção (a migração roda manual, não faz parte do pipeline de deploy), as chamadas às rotas novas retornam erro de banco tratado (não derruba o servidor), e `send_push_to_user` já ignora esse erro silenciosamente — nenhuma feature existente depende dessa tabela.
+- Nenhuma rota/comportamento existente foi alterado, só adicionado (rotas novas) ou teve dependências internas trocadas sem mudar o contrato observável (`PresenceRoom`).
+
+**O que ainda precisa do usuário (não tenho acesso pra fazer):**
+1. **Rodar a migração no banco de produção** (`diesel migration run` com o `DATABASE_URL` de produção, ou aplicar `migrations/2026-07-09-024044-0000_create_push_subscriptions/up.sql` manualmente) — sem isso, os endpoints de push respondem erro em produção mesmo com o deploy já feito.
+2. **Configurar as env vars de VAPID na VPS** — gerar um par de chaves de produção (mesmo comando `openssl ecparam`), disponibilizar o `.pem` pro container (volume/secret) e setar `VAPID_PRIVATE_KEY_PATH`/`VAPID_PUBLIC_KEY`/`VAPID_SUBJECT` no ambiente do container `api`.
+3. **`NEXT_PUBLIC_VAPID_PUBLIC_KEY` no build de produção do frontend** — mesmo valor da chave pública gerada no passo 2 (esse deploy não passou pelo frontend; não há workflow de frontend neste repo).
+4. **Testar de ponta a ponta num navegador real** — eu não consigo clicar em "Permitir" num prompt de notificação nem confirmar visualmente que o push chega. Fluxo: duas contas, ativar notificações em Configurações nas duas, mencionar uma da outra no chat (ou mandar um convite de time), conferir se a notificação aparece — inclusive com a aba em segundo plano/fechada.
+5. **HTTPS em produção** — pré-condição da Push API, só confirmar que já é atendida (não é um passo extra).
