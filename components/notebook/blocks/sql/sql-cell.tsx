@@ -4,6 +4,7 @@ import { sql } from "@codemirror/lang-sql";
 import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import CodeMirror from "@uiw/react-codemirror";
+import { Database, Terminal } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
@@ -84,7 +85,25 @@ export function SqlCell({
   }, [notebookId]);
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border bg-card">
+    <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-2 print:hidden">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Terminal size={16} />
+          <span className="text-xs font-mono uppercase tracking-widest">
+            query.sql
+          </span>
+          <span className="hidden items-center gap-1 text-xs text-muted-foreground/70 sm:flex">
+            <Database size={12} />
+            Banco compartilhado por este caderno
+          </span>
+        </div>
+        <RunButton
+          isRunning={isRunning}
+          isLoading={!dbReady}
+          handleRun={handleRun}
+        />
+      </div>
+
       <div
         style={{
           height: 200,
@@ -93,7 +112,7 @@ export function SqlCell({
           resize: "vertical",
           overflow: "auto",
         }}
-        className="border-b border-border print:!h-auto print:!max-h-none print:!overflow-visible"
+        className="print:!h-auto print:!max-h-none print:!overflow-visible"
       >
         <CodeMirror
           value={localContentRef.current}
@@ -112,17 +131,6 @@ export function SqlCell({
             tabSize: 2,
           }}
           className="text-sm w-full h-full overflow-auto"
-        />
-      </div>
-
-      <div className="print:hidden flex items-center justify-between gap-2 p-2">
-        <span className="text-xs text-muted-foreground">
-          Banco compartilhado por este caderno
-        </span>
-        <RunButton
-          isRunning={isRunning}
-          isLoading={!dbReady}
-          handleRun={handleRun}
         />
       </div>
 
