@@ -11,6 +11,7 @@ use crate::{
             api_rename_notebook, api_save_notebook_content, api_search_notebooks,
             api_update_notebook_visibility,
         },
+        push::{api_subscribe_push, api_unsubscribe_push},
         user::api_get_user_notebook_permissions,
         websocket::{websocket_handler, websocket_presence_handler},
     },
@@ -32,7 +33,11 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/ws/{notebook_id}", get(websocket_handler))
         .route("/ws/presence/{id}", get(websocket_presence_handler))
         .route("/all", get(api_get_notebooks))
-        .route("/all/public", get(api_get_public_notebooks));
+        .route("/all/public", get(api_get_public_notebooks))
+        .route(
+            "/push/subscribe",
+            post(api_subscribe_push).delete(api_unsubscribe_push),
+        );
 
     routes
 }

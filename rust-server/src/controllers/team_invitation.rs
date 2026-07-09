@@ -70,6 +70,22 @@ pub async fn api_invite_member(
     let _ = send_team_invitation_email(&invited_user, &magic_link, &team.name, &invited_by.name)
         .await?;
 
+    let push_state = state.clone();
+    let push_user_id = invited_user.id;
+    let push_title = format!("Convite para o time {}", team.name);
+    let push_body = format!("{} te convidou para o time {}", invited_by.name, team.name);
+    let push_url = format!("/invite?token={}", token);
+    tokio::spawn(async move {
+        crate::controllers::push::send_push_to_user(
+            &push_state,
+            push_user_id,
+            &push_title,
+            &push_body,
+            &push_url,
+        )
+        .await;
+    });
+
     Ok(StatusCode::OK)
 }
 

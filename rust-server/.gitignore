@@ -3,3 +3,4 @@
 diesel.toml
 /files
 /logs
+*.pem

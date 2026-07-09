@@ -10,7 +10,7 @@ use bytes::Bytes;
 use diesel_async::{AsyncPgConnection, pooled_connection::deadpool::Pool};
 use futures::{SinkExt, stream::StreamExt};
 use hyper::HeaderMap;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::{Notify, RwLock, mpsc};
 use uuid::Uuid;
 
@@ -19,7 +19,10 @@ use automerge::sync::{Message as SyncMessage, State as SyncState, SyncDoc};
 use crate::{
     controllers::{
         jwt::extract_claims_from_ws_headers,
-        sync::{ActiveNotebook, NotebookInner, PeerHandle, PresenceRoom, SyncRegistry, PEER_CHANNEL_CAP},
+        sync::{
+            ActiveNotebook, NotebookInner, PeerHandle, PresenceMember, PresenceRoom, SyncRegistry,
+            PEER_CHANNEL_CAP,
+        },
         user::get_user_notebook_permissions,
     },
     models::{
@@ -233,25 +236,17 @@ pub async fn websocket_presence_handler(
         Err(_) => None,
     };
 
-    ws.protocols(["access_token"]).on_upgrade(move |socket| {
-        handle_presence_socket(
-            socket,
-            notebook_id,
-            user_token,
-            state.presence_registry.to_owned(),
-            state.pool.to_owned(),
-        )
-    })
+    ws.protocols(["access_token"])
+        .on_upgrade(move |socket| handle_presence_socket(socket, notebook_id, user_token, state))
 }
 
 async fn handle_presence_socket(
     mut socket: WebSocket,
     notebook_id: Uuid,
     original_user_id: Option<Uuid>,
-    registry: Arc<RwLock<HashMap<Uuid, Arc<RwLock<PresenceRoom>>>>>,
-    pool: Pool<AsyncPgConnection>,
+    state: Arc<AppState>,
 ) {
-    let permissions = get_user_notebook_permissions(&pool, &notebook_id, original_user_id)
+    let permissions = get_user_notebook_permissions(&state.pool, &notebook_id, original_user_id)
         .await
         .unwrap()
         .0;
@@ -269,6 +264,7 @@ async fn handle_presence_socket(
 
     let _ = tx.send(format!(r#"{{"type":"init","userId":"{}"}}"#, session_id));
 
+    let registry = state.presence_registry.clone();
     let room = {
         let mut reg = registry.write().await;
         let room_arc = reg
@@ -280,7 +276,14 @@ async fn handle_presence_socket(
 
     {
         let mut r = room.write().await;
-        r.subscribers.insert(session_id, tx);
+        r.subscribers.insert(
+            session_id,
+            PresenceMember {
+                tx,
+                user_id: original_user_id,
+                name: None,
+            },
+        );
     }
 
     let mut send_task = tokio::spawn(async move {
@@ -292,12 +295,73 @@ async fn handle_presence_socket(
     });
 
     let room_for_recv = room.clone();
+    let state_for_recv = state.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
+            let parsed: Option<serde_json::Value> = serde_json::from_str(&text).ok();
+            let msg_type = parsed
+                .as_ref()
+                .and_then(|v| v.get("type"))
+                .and_then(|v| v.as_str());
+
+            if msg_type == Some("presence") {
+                let name = parsed
+                    .as_ref()
+                    .and_then(|v| v.get("name"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let mut r = room_for_recv.write().await;
+                if let Some(member) = r.subscribers.get_mut(&session_id) {
+                    member.name = name;
+                }
+            }
+
+            if msg_type == Some("chat") {
+                if let (Some(sender_name), Some(chat_text)) = (
+                    parsed
+                        .as_ref()
+                        .and_then(|v| v.get("name"))
+                        .and_then(|v| v.as_str()),
+                    parsed
+                        .as_ref()
+                        .and_then(|v| v.get("text"))
+                        .and_then(|v| v.as_str()),
+                ) {
+                    let r = room_for_recv.read().await;
+                    for (peer_session_id, member) in r.subscribers.iter() {
+                        if *peer_session_id == session_id {
+                            continue;
+                        }
+                        let (Some(mentioned_user_id), Some(mentioned_name)) =
+                            (member.user_id, member.name.as_deref())
+                        else {
+                            continue;
+                        };
+                        if !mentions_name(chat_text, mentioned_name) {
+                            continue;
+                        }
+                        let state_for_push = state_for_recv.clone();
+                        let title = format!("{} mencionou você no chat", sender_name);
+                        let body = chat_text.to_string();
+                        let url = format!("/notebook/{}", notebook_id);
+                        tokio::spawn(async move {
+                            crate::controllers::push::send_push_to_user(
+                                &state_for_push,
+                                mentioned_user_id,
+                                &title,
+                                &body,
+                                &url,
+                            )
+                            .await;
+                        });
+                    }
+                }
+            }
+
             let r = room_for_recv.read().await;
-            for (peer_session_id, peer_tx) in r.subscribers.iter() {
+            for (peer_session_id, member) in r.subscribers.iter() {
                 if *peer_session_id != session_id {
-                    let _ = peer_tx.send(text.to_string());
+                    let _ = member.tx.send(text.to_string());
                 }
             }
         }
@@ -313,8 +377,8 @@ async fn handle_presence_socket(
         r.subscribers.remove(&session_id);
 
         let disconnect_msg = format!(r#"{{"type":"disconnect","userId":"{}"}}"#, session_id);
-        for peer_tx in r.subscribers.values() {
-            let _ = peer_tx.send(disconnect_msg.clone());
+        for member in r.subscribers.values() {
+            let _ = member.tx.send(disconnect_msg.clone());
         }
 
         r.subscribers.is_empty()
@@ -324,4 +388,9 @@ async fn handle_presence_socket(
         let mut reg = registry.write().await;
         reg.remove(&notebook_id);
     }
+}
+
+fn mentions_name(text: &str, name: &str) -> bool {
+    let pattern = format!("@{}", name);
+    text.to_lowercase().contains(&pattern.to_lowercase())
 }

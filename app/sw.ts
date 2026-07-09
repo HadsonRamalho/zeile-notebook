@@ -43,6 +43,79 @@ async function retryQueuedRequests() {
   }
 });
 
+interface PushPayload {
+  title?: string;
+  body?: string;
+  url?: string;
+}
+
+interface NotificationClient {
+  url: string;
+  focus: () => Promise<NotificationClient>;
+}
+
+interface PushCapableScope {
+  registration: {
+    showNotification: (
+      title: string,
+      options: {
+        body?: string;
+        icon?: string;
+        badge?: string;
+        data?: { url: string };
+      },
+    ) => Promise<void>;
+  };
+  clients: {
+    matchAll: (options: { type: string }) => Promise<NotificationClient[]>;
+    openWindow: (url: string) => Promise<NotificationClient | null>;
+  };
+}
+
+const pushSelf = self as unknown as PushCapableScope;
+
+(self as unknown as EventTarget).addEventListener("push", (event: Event) => {
+  const pushEvent = event as unknown as {
+    data?: { json: () => PushPayload };
+    waitUntil: (p: Promise<void>) => void;
+  };
+
+  const payload = pushEvent.data?.json() ?? {};
+  const title = payload.title ?? "Zeile Notebook";
+
+  pushEvent.waitUntil(
+    pushSelf.registration.showNotification(title, {
+      body: payload.body,
+      icon: "/icon-128.png",
+      badge: "/icon-128.png",
+      data: { url: payload.url ?? "/" },
+    }),
+  );
+});
+
+(self as unknown as EventTarget).addEventListener(
+  "notificationclick",
+  (event: Event) => {
+    const clickEvent = event as unknown as {
+      notification: { close: () => void; data?: { url?: string } };
+      waitUntil: (p: Promise<void>) => void;
+    };
+
+    clickEvent.notification.close();
+    const url = clickEvent.notification.data?.url ?? "/";
+
+    clickEvent.waitUntil(
+      pushSelf.clients.matchAll({ type: "window" }).then((clients) => {
+        const existing = clients.find((client) => client.url.includes(url));
+        if (existing) {
+          return existing.focus().then(() => undefined);
+        }
+        return pushSelf.clients.openWindow(url).then(() => undefined);
+      }),
+    );
+  },
+);
+
 const OFFLINE_URL = "/offline.html";
 
 const offlineFallbackPlugin: SerwistPlugin = {

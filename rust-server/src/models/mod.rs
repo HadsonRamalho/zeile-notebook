@@ -3,6 +3,7 @@ pub mod error;
 pub mod jwt;
 pub mod notebook;
 pub mod oauth;
+pub mod push_subscription;
 pub mod state;
 pub mod team;
 pub mod team_invitation;

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Palette, Save, SlidersHorizontal } from "lucide-react";
+import { Bell, BellOff, Palette, Save, SlidersHorizontal } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useLocalStorage } from "@/hooks/use-local-storate";
+import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { BackButton } from "../back-button";
 
 const settingsSchema = z.object({
@@ -45,6 +46,7 @@ export function SettingsForm() {
   const pathname = usePathname();
   const currentLocale = useLocale();
   const [activeTab, setActiveTab] = useState<"general" | "editor">("general");
+  const pushSubscription = usePushSubscription();
 
   const [fontSize, setFontSize] = useLocalStorage<number>(
     "editor-font-size",
@@ -166,6 +168,49 @@ export function SettingsForm() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {pushSubscription.isSupported && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">
+                          Notificações push
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {pushSubscription.permission === "denied"
+                            ? "Bloqueadas nas configurações do navegador."
+                            : "Receba um aviso quando alguém te mencionar no chat de um caderno."}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant={pushSubscription.isSubscribed ? "outline" : "default"}
+                        disabled={
+                          pushSubscription.isLoading ||
+                          pushSubscription.permission === "denied"
+                        }
+                        onClick={() =>
+                          pushSubscription.isSubscribed
+                            ? pushSubscription.unsubscribe()
+                            : pushSubscription.subscribe()
+                        }
+                      >
+                        {pushSubscription.isSubscribed ? (
+                          <>
+                            <BellOff className="size-4" />
+                            Desativar
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="size-4" />
+                            Ativar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </TabsContent>
 

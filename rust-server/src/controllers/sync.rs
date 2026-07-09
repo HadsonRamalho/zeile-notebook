@@ -39,8 +39,14 @@ impl ActiveNotebook {
     }
 }
 
+pub struct PresenceMember {
+    pub tx: mpsc::UnboundedSender<String>,
+    pub user_id: Option<Uuid>,
+    pub name: Option<String>,
+}
+
 pub struct PresenceRoom {
-    pub subscribers: HashMap<Uuid, mpsc::UnboundedSender<String>>,
+    pub subscribers: HashMap<Uuid, PresenceMember>,
 }
 
 impl PresenceRoom {

@@ -50,6 +50,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    push_subscriptions (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        endpoint -> Text,
+        p256dh -> Text,
+        auth -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     team_invitations (id) {
         id -> Uuid,
         team_id -> Uuid,
@@ -130,6 +141,7 @@ diesel::table! {
 diesel::joinable!(blocks -> notebooks (notebook_id));
 diesel::joinable!(notebooks -> teams (team_id));
 diesel::joinable!(notebooks -> users (user_id));
+diesel::joinable!(push_subscriptions -> users (user_id));
 diesel::joinable!(team_invitations -> team_roles (role_id));
 diesel::joinable!(team_invitations -> teams (team_id));
 diesel::joinable!(team_members -> team_roles (role_id));
@@ -140,6 +152,7 @@ diesel::joinable!(team_roles -> teams (team_id));
 diesel::allow_tables_to_appear_in_same_query!(
     blocks,
     notebooks,
+    push_subscriptions,
     team_invitations,
     team_members,
     team_roles,

@@ -78,6 +78,7 @@ pub async fn init_routes() -> Router {
             presence_registry,
             pool,
             sync_registry,
+            push: crate::controllers::push::load_push_state(),
         });
 
         let app = OpenApiRouter::<Arc<AppState>>::new()
