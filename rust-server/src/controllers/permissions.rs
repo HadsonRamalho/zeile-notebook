@@ -317,6 +317,11 @@ pub async fn broadcast_capability_change_for_team(
     }
 }
 
+pub async fn api_get_permission_catalog()
+-> (StatusCode, Json<&'static crate::sec::catalog::Catalog>) {
+    (StatusCode::OK, Json(catalog()))
+}
+
 pub async fn api_get_notebook_capabilities(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

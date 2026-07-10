@@ -32,6 +32,7 @@ use utoipa_axum::router::OpenApiRouter;
 pub mod admin;
 pub mod docs;
 pub mod notebook;
+pub mod permissions;
 pub mod run_rust;
 pub mod team;
 pub mod user;
@@ -92,6 +93,10 @@ pub async fn init_routes() -> Router {
             .nest("/api/notebook", notebook_routes().await.into())
             .nest("/api/team", team_routes().await.into())
             .nest("/api/admin", admin_routes().await.into())
+            .nest(
+                "/api/permissions",
+                crate::routes::permissions::permissions_routes().await.into(),
+            )
             .merge(utoipa_swagger_ui::SwaggerUi::new("/docs").url(
                 "/api-docs/openapi.json",
                 crate::routes::docs::get_api_docs(),

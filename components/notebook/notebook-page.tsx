@@ -12,7 +12,6 @@ import {
   RotateCw,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   Fragment,
   type ReactNode,
@@ -21,11 +20,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 import { AppNotFound } from "@/components/motion/not-found";
 import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
+import { useCapabilities } from "@/hooks/use-capabilities";
 import { usePresence } from "@/hooks/use-presence";
-import { getUserNotebookPermissions } from "@/lib/api/notebook-service";
+import { consumePendingImport } from "@/lib/pendingImport";
 import type {
   Block,
   BlockMetadata,
@@ -33,7 +34,6 @@ import type {
   Language,
   Notebook,
 } from "@/lib/types";
-import type { TeamRole } from "@/lib/types/team-types";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
@@ -44,8 +44,8 @@ import { defaultTypstContent } from "./blocks/typst/typst-cell";
 import { CollabBar } from "./collaboration/collab-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
 import { HistoryDiffView } from "./history/history-diff-view";
-import { consumePendingImport } from "@/lib/pendingImport";
 import { useNotebook } from "./notebook-context";
+import { CapabilitiesProvider } from "./permissions/capabilities";
 import { ReorderItem } from "./reorder/reorder-item";
 import { ReorderTools } from "./reorder/reorder-tools";
 
@@ -63,7 +63,22 @@ export default function RustInteractivePage({
   const tokenX = getCookie("auth_token");
   const token = tokenX?.toString() || "";
   const sessionId = useRef(crypto.randomUUID()).current;
-  const [userPermissions, setUserPermissions] = useState<TeamRole | null>(null);
+  const capabilities = useCapabilities(pageId);
+  const {
+    can: canDo,
+    ready: capabilitiesReady,
+    refetch: refetchCapabilities,
+  } = capabilities;
+  const userPermissions = useMemo(
+    () =>
+      capabilitiesReady
+        ? {
+            can_read: canDo("notebook.view"),
+            can_write: canDo("notebook.edit"),
+          }
+        : null,
+    [canDo, capabilitiesReady],
+  );
 
   const {
     doc,
@@ -87,7 +102,7 @@ export default function RustInteractivePage({
     messages,
     sendChatMessage,
     updateFocus,
-  } = usePresence(pageId, user);
+  } = usePresence(pageId, user, refetchCapabilities);
 
   const AUTOMERGE_HISTORY_PAGE_SIZE = 50;
   const [automergeHistory, setAutomergeHistory] = useState<
@@ -159,16 +174,6 @@ export default function RustInteractivePage({
     if (!hasNewerPreview) return;
     setPreviewDoc(automergeHistory[previewIndex - 1].doc);
   };
-
-  useEffect(() => {
-    const loadUserPermissions = async () => {
-      const tempPermissions = await getUserNotebookPermissions(pageId);
-      setUserPermissions(tempPermissions);
-    };
-    if (!userPermissions && (isConnected || hasSyncedOnce)) {
-      loadUserPermissions();
-    }
-  }, [userPermissions, hasSyncedOnce, pageId, isConnected]);
 
   const blocks = useMemo(() => {
     if (!displayDoc || !displayDoc.blocks) return [];
@@ -272,127 +277,130 @@ export default function RustInteractivePage({
   }
 
   return (
-    <div
-      onPointerMove={handlePointerMove}
-      className="min-h-screen flex flex-col w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
-    >
-      <CollabBar
-        canWriteHistory={userPermissions.can_write}
-        automergeHistory={automergeHistory}
-        automergeHistoryVisibleCount={automergeHistoryVisibleCount}
-        isLoadingAutomergeHistory={isLoadingAutomergeHistory}
-        automergeHistoryProgress={automergeHistoryProgress}
-        onLoadAutomergeHistory={handleLoadAutomergeHistory}
-        onLoadMoreAutomergeHistory={handleLoadMoreAutomergeHistory}
-        previewDoc={previewDoc}
-        setPreviewDoc={setPreviewDoc}
-        messages={messages}
-        sendChatMessage={sendChatMessage}
-        socketUserId={socketUserId}
-        collaborators={collaborators}
-        currentUser={user}
-        activeTab={activeCollabTab}
-        onActiveTabChange={setActiveCollabTab}
-      />
-      <LiveCursors collaborators={collaborators} />
-      <ScrollProgress />
-
-      {!isConnected && <Refreshing />}
-
-      {previewDoc && (
-        <PreviewDialog
-          handleCancelPreview={handleCancelPreview}
-          handleConfirmRestore={handleConfirmRestore}
-          onOlder={handlePreviewOlder}
-          onNewer={handlePreviewNewer}
-          hasOlder={hasOlderPreview}
-          hasNewer={hasNewerPreview}
-          canCompare={!!diffFromDoc}
-          onCompare={() => setShowHistoryDiff(true)}
-        />
-      )}
-
-      {showHistoryDiff && previewDoc && diffFromDoc && (
-        <HistoryDiffView
-          fromDoc={diffFromDoc}
-          toDoc={previewDoc}
-          onClose={() => setShowHistoryDiff(false)}
-        />
-      )}
-
-      <div className="flex flex-1 min-w-0 flex-col">
-      {header}
-      <Reorder.Group
-        axis="y"
-        values={blocks}
-        onReorder={reorderBlocks}
-        className="w-full"
+    <CapabilitiesProvider value={capabilities}>
+      <div
+        onPointerMove={handlePointerMove}
+        className="min-h-screen flex flex-col w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
       >
-        {blocks.map((block, index) => {
-          const focusedUsers = collaborators.filter(
-            (c) => c.focusedBlockId === block.id,
-          );
-          const borderColor =
-            focusedUsers.length > 0 ? focusedUsers[0].color : "transparent";
+        <CollabBar
+          canWriteHistory={userPermissions.can_write}
+          automergeHistory={automergeHistory}
+          automergeHistoryVisibleCount={automergeHistoryVisibleCount}
+          isLoadingAutomergeHistory={isLoadingAutomergeHistory}
+          automergeHistoryProgress={automergeHistoryProgress}
+          onLoadAutomergeHistory={handleLoadAutomergeHistory}
+          onLoadMoreAutomergeHistory={handleLoadMoreAutomergeHistory}
+          previewDoc={previewDoc}
+          setPreviewDoc={setPreviewDoc}
+          messages={messages}
+          sendChatMessage={sendChatMessage}
+          socketUserId={socketUserId}
+          collaborators={collaborators}
+          currentUser={user}
+          activeTab={activeCollabTab}
+          onActiveTabChange={setActiveCollabTab}
+        />
+        <LiveCursors collaborators={collaborators} />
+        <ScrollProgress />
 
-          return (
-            <Fragment key={block.id}>
-              {userPermissions?.can_write && (
-                <ReorderTools index={index - 1} addBlock={handleAddBlock} />
-              )}
+        {!isConnected && <Refreshing />}
 
-              <div
-                onFocus={() => updateFocus(block.id)}
-                onBlur={() => updateFocus(null)}
-                className="relative overflow-visible"
-                style={{
-                  boxShadow:
-                    focusedUsers.length > 0
-                      ? `0 0 0 2px ${borderColor}`
-                      : "none",
-                }}
-              >
-                {focusedUsers.length > 0 && (
-                  <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
-                    {focusedUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className="size-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold"
-                        style={{ backgroundColor: user.color }}
-                        title={`${user.name} está editando`}
-                      >
-                        {user.name.charAt(0)}
+        {previewDoc && (
+          <PreviewDialog
+            handleCancelPreview={handleCancelPreview}
+            handleConfirmRestore={handleConfirmRestore}
+            onOlder={handlePreviewOlder}
+            onNewer={handlePreviewNewer}
+            hasOlder={hasOlderPreview}
+            hasNewer={hasNewerPreview}
+            canCompare={!!diffFromDoc}
+            onCompare={() => setShowHistoryDiff(true)}
+          />
+        )}
+
+        {showHistoryDiff && previewDoc && diffFromDoc && (
+          <HistoryDiffView
+            fromDoc={diffFromDoc}
+            toDoc={previewDoc}
+            onClose={() => setShowHistoryDiff(false)}
+          />
+        )}
+
+        <div className="flex flex-1 min-w-0 flex-col">
+          {header}
+          <Reorder.Group
+            axis="y"
+            values={blocks}
+            onReorder={reorderBlocks}
+            className="w-full"
+          >
+            {blocks.map((block, index) => {
+              const focusedUsers = collaborators.filter(
+                (c) => c.focusedBlockId === block.id,
+              );
+              const borderColor =
+                focusedUsers.length > 0 ? focusedUsers[0].color : "transparent";
+
+              return (
+                <Fragment key={block.id}>
+                  {userPermissions?.can_write && (
+                    <ReorderTools index={index - 1} addBlock={handleAddBlock} />
+                  )}
+
+                  <div
+                    onFocus={() => updateFocus(block.id)}
+                    onBlur={() => updateFocus(null)}
+                    className="relative overflow-visible"
+                    style={{
+                      boxShadow:
+                        focusedUsers.length > 0
+                          ? `0 0 0 2px ${borderColor}`
+                          : "none",
+                    }}
+                  >
+                    {focusedUsers.length > 0 && (
+                      <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
+                        {focusedUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="size-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold"
+                            style={{ backgroundColor: user.color }}
+                            title={`${user.name} está editando`}
+                          >
+                            {user.name.charAt(0)}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    <ReorderItem
+                      block={block}
+                      isDragging={isDragging}
+                      pageBlocks={blocks}
+                      pageFiles={{}}
+                      setBlocks={() => {}}
+                      setIsDragging={setIsDragging}
+                      removeBlock={handleDeleteBlock}
+                      updateBlock={updateBlockContent}
+                      updateBlockMetadata={updateBlockMetadataSync}
+                      updateDrawingScene={updateDrawingScene}
+                      doc={doc}
+                      sessionId={sessionId}
+                      canWrite={!previewDoc && !!userPermissions?.can_write}
+                    />
                   </div>
-                )}
 
-                <ReorderItem
-                  block={block}
-                  isDragging={isDragging}
-                  pageBlocks={blocks}
-                  pageFiles={{}}
-                  setBlocks={() => {}}
-                  setIsDragging={setIsDragging}
-                  removeBlock={handleDeleteBlock}
-                  updateBlock={updateBlockContent}
-                  updateBlockMetadata={updateBlockMetadataSync}
-                  updateDrawingScene={updateDrawingScene}
-                  doc={doc}
-                  sessionId={sessionId}
-                  canWrite={!previewDoc && !!userPermissions?.can_write}
-                />
-              </div>
-
-              {userPermissions?.can_write && index === blocks.length - 1 && (
-                <ReorderTools index={index} addBlock={handleAddBlock} />
-              )}
-            </Fragment>
-          );
-        })}
-      </Reorder.Group>
+                  {userPermissions?.can_write &&
+                    index === blocks.length - 1 && (
+                      <ReorderTools index={index} addBlock={handleAddBlock} />
+                    )}
+                </Fragment>
+              );
+            })}
+          </Reorder.Group>
+        </div>
       </div>
-    </div>
+    </CapabilitiesProvider>
   );
 }
 
@@ -532,4 +540,3 @@ function PreviewDialog({
     </div>
   );
 }
-

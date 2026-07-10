@@ -33,7 +33,14 @@ const stringToColor = (str: string) => {
   return `hsl(${hash % 360}, 60%, 40%)`;
 };
 
-export function usePresence(pageId: string, currentUser: User | null) {
+export function usePresence(
+  pageId: string,
+  currentUser: User | null,
+  onCapabilitiesChanged?: () => void,
+) {
+  const onCapabilitiesChangedRef = useRef(onCapabilitiesChanged);
+  onCapabilitiesChangedRef.current = onCapabilitiesChanged;
+
   const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
     new Map(),
   );
@@ -107,6 +114,12 @@ export function usePresence(pageId: string, currentUser: User | null) {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        if (data.type === "capabilities_updated") {
+          onCapabilitiesChangedRef.current?.();
+          return;
+        }
+
         if (data.userId === socketUserIdRef.current) return;
 
         if (data.type === "init") {

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[ExistingTypePath = "crate::schema::sql_types::GrantSubjectKind"]
 pub enum GrantSubjectKind {
     Role,
@@ -14,6 +15,7 @@ pub enum GrantSubjectKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[ExistingTypePath = "crate::schema::sql_types::GrantTargetKind"]
 pub enum GrantTargetKind {
     Team,
@@ -25,6 +27,7 @@ pub enum GrantTargetKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[ExistingTypePath = "crate::schema::sql_types::GrantEffect"]
 pub enum GrantEffect {
     Allow,
