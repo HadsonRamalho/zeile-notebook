@@ -3,6 +3,7 @@ pub mod email;
 pub mod jwt;
 pub mod notebook;
 pub mod oauth;
+pub mod permissions;
 pub mod push;
 pub mod sync;
 pub mod team;
