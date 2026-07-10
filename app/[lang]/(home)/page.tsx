@@ -1,12 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
-import {
-  BookSearch,
-  Code,
-  Lock,
-  NotebookPen,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { BookSearch, Code, Lock, Sparkles, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -14,8 +7,8 @@ import {
   HomeMarquee,
   LanguageShowcaseGrid,
 } from "@/components/interface/home/languages";
+import { NotebooksCta } from "@/components/interface/home/notebooks-cta";
 import { RetroGrid } from "@/components/ui/retro-grid";
-import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { baseOptions } from "@/lib/layout.shared";
 
 export default function HomePage() {
@@ -45,17 +38,7 @@ export default function HomePage() {
             </p>
 
             <div className="mt-8 grid grid-cols-1 md:flex flex-row justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
-              <Link href="/notebook">
-                <ShimmerButton
-                  background="var(--primary)"
-                  className="shadow-2xl h-14 px-8 text-sm font-bold w-full"
-                >
-                  <span className="flex items-center gap-2 text-primary-foreground">
-                    <NotebookPen className="h-4 w-4" />
-                    {t("nav.my_notebooks")}
-                  </span>
-                </ShimmerButton>
-              </Link>
+              <NotebooksCta label={t("nav.my_notebooks")} />
 
               <Link
                 href="/explore"
