@@ -1,14 +1,21 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
+use axum::extract::{Path, State};
+use axum::{Json, http::HeaderMap};
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, pooled_connection::deadpool::Pool};
+use hyper::StatusCode;
+use serde::Serialize;
 use uuid::Uuid;
 
+use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::utils::get_conn;
 use crate::models::error::ApiError;
 use crate::models::permission_grant::{
     GrantEffect, GrantSubjectKind, GrantTargetKind, PermissionGrant,
 };
+use crate::models::state::AppState;
 use crate::models::team::find_team_member_with_role;
 use crate::schema::permission_grants;
 use crate::sec::catalog::catalog;
@@ -157,6 +164,20 @@ pub async fn resolve_capabilities(
     }
 
     if ctx.is_public {
+        grants.push(PermissionGrant {
+            id: Uuid::nil(),
+            subject_kind: GrantSubjectKind::Principal,
+            subject_id: None,
+            subject_principal: Some("public_baseline".to_string()),
+            scope_team_id: None,
+            permission_key: "notebook.view".to_string(),
+            target_kind: GrantTargetKind::Notebook,
+            target_id: Some(ctx.notebook_id),
+            target_value: None,
+            effect: GrantEffect::Allow,
+            created_at: chrono::Utc::now().naive_utc(),
+        });
+
         let principal = match user_id {
             Some(_) => "authenticated",
             None => "anonymous",
@@ -186,6 +207,55 @@ pub async fn resolve_capabilities(
     Ok(caps)
 }
 
+#[derive(Debug, Serialize)]
+pub struct GrantView {
+    pub permission_key: String,
+    pub effect: GrantEffect,
+    pub target_kind: GrantTargetKind,
+    pub target_id: Option<Uuid>,
+    pub target_value: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CapabilitySnapshot {
+    pub all: bool,
+    pub grants: Vec<GrantView>,
+}
+
+impl CapabilitySet {
+    pub fn snapshot(&self) -> CapabilitySnapshot {
+        CapabilitySnapshot {
+            all: self.all,
+            grants: self
+                .grants
+                .iter()
+                .map(|g| GrantView {
+                    permission_key: g.permission_key.clone(),
+                    effect: g.effect,
+                    target_kind: g.target_kind,
+                    target_id: g.target_id,
+                    target_value: g.target_value.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
+pub async fn require(
+    pool: &Pool<AsyncPgConnection>,
+    user_id: Option<Uuid>,
+    notebook_id: Uuid,
+    key: &str,
+    target: &TargetCtx,
+) -> Result<CapabilitySet, ApiError> {
+    let caps = capabilities(pool, user_id, notebook_id).await?;
+    if caps.can(key, target) {
+        Ok(caps)
+    } else {
+        Err(ApiError::PermissionDenied(key.to_string()))
+    }
+}
+
 pub async fn capabilities(
     pool: &Pool<AsyncPgConnection>,
     user_id: Option<Uuid>,
@@ -205,6 +275,21 @@ pub async fn capabilities(
     };
 
     resolve_capabilities(conn, ctx, user_id).await
+}
+
+pub async fn api_get_notebook_capabilities(
+    State(state): State<Arc<AppState>>,
+    Path(notebook_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<CapabilitySnapshot>), ApiError> {
+    let user_id = match extract_claims_from_header(&headers).await {
+        Ok(data) => Some(data.1.id),
+        Err(_) => None,
+    };
+
+    let caps = capabilities(&state.pool, user_id, notebook_id).await?;
+
+    Ok((StatusCode::OK, Json(caps.snapshot())))
 }
 
 #[cfg(test)]
@@ -312,6 +397,18 @@ mod tests {
         };
         assert!(!c.can("notebook.blocks.go.view", &go));
         assert!(c.can("notebook.blocks.rust.view", &rust));
+    }
+
+    #[test]
+    fn public_baseline_allows_view_not_edit() {
+        let c = caps(vec![grant(
+            "notebook.view",
+            GrantEffect::Allow,
+            GrantTargetKind::Notebook,
+            None,
+        )]);
+        assert!(c.can("notebook.view", &TargetCtx::default()));
+        assert!(!c.can("notebook.edit", &TargetCtx::default()));
     }
 
     #[test]

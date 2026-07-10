@@ -139,15 +139,20 @@ pub async fn api_rename_notebook(
 ) -> Result<StatusCode, ApiError> {
     let id = extract_claims_from_header(&headers).await?.1.id;
 
+    crate::controllers::permissions::require(
+        &state.pool,
+        Some(id),
+        notebook_id,
+        "notebook.edit_name",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
     let mut conn = state
         .pool
         .get()
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
-
-    if let Err(e) = is_notebook_owner(&mut conn, Some(id), &notebook_id).await {
-        return Err(e);
-    }
 
     match update_notebook_title(&mut conn, notebook_id, payload.title).await {
         Ok(_) => Ok(StatusCode::OK),
@@ -163,15 +168,20 @@ pub async fn api_update_notebook_visibility(
 ) -> Result<StatusCode, ApiError> {
     let id = extract_claims_from_header(&headers).await?.1.id;
 
+    crate::controllers::permissions::require(
+        &state.pool,
+        Some(id),
+        notebook_id,
+        "notebook.manage_privacy",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
     let mut conn = state
         .pool
         .get()
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
-
-    if let Err(e) = is_notebook_owner(&mut conn, Some(id), &notebook_id).await {
-        return Err(e);
-    }
 
     match models::notebook::update_notebook_visibility(&mut conn, notebook_id, payload.is_visible)
         .await
@@ -188,15 +198,20 @@ pub async fn api_delete_notebook(
 ) -> Result<StatusCode, ApiError> {
     let id = extract_claims_from_header(&headers).await?.1.id;
 
+    crate::controllers::permissions::require(
+        &state.pool,
+        Some(id),
+        notebook_id,
+        "notebook.delete",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
     let mut conn = state
         .pool
         .get()
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
-
-    if let Err(e) = is_notebook_owner(&mut conn, Some(id), &notebook_id).await {
-        return Err(e);
-    }
 
     match delete_notebook(&mut conn, &notebook_id).await {
         Ok(_) => Ok(StatusCode::OK),

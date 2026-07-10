@@ -63,6 +63,9 @@ pub enum ApiError {
 
     #[error("Error sending the e-mail")]
     SendingEmail,
+
+    #[error("Permission denied: {0}")]
+    PermissionDenied(String),
 }
 
 impl ApiError {
@@ -85,6 +88,7 @@ impl ApiError {
             ApiError::MissingEnv(_) => "MISSING_ENV_VAR",
             ApiError::PasswordsDoNotMatch => "PASSWORDS_DO_NOT_MATCH",
             ApiError::SendingEmail => "ERROR_SENDING_EMAIL",
+            ApiError::PermissionDenied(_) => "PERMISSION_DENIED",
         }
     }
 
@@ -124,6 +128,7 @@ impl IntoResponse for ApiError {
                 StatusCode::FORBIDDEN,
                 "User account is inactive".to_string(),
             ),
+            ApiError::PermissionDenied(_) => (StatusCode::FORBIDDEN, self.to_string()),
             ApiError::WrongProvider(p) => {
                 (StatusCode::BAD_REQUEST, format!("Please log in with {}", p))
             }

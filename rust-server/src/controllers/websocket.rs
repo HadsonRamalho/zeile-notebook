@@ -23,12 +23,11 @@ use crate::{
             ActiveNotebook, NotebookInner, PeerHandle, PresenceMember, PresenceRoom, SyncRegistry,
             PEER_CHANNEL_CAP,
         },
-        user::get_user_notebook_permissions,
+        permissions::{CapabilitySet, TargetCtx, capabilities},
     },
     models::{
         notebook::{load_notebook_data, save_notebook_data},
         state::AppState,
-        team::TeamRole,
     },
 };
 
@@ -65,12 +64,15 @@ async fn handle_socket(
 ) {
     let user_id = original_user_id.unwrap_or(Uuid::new_v4());
 
-    let permissions = get_user_notebook_permissions(&pool, &notebook_id, original_user_id)
-        .await
-        .unwrap()
-        .0;
+    let permissions = match capabilities(&pool, original_user_id, notebook_id).await {
+        Ok(caps) => caps,
+        Err(_) => {
+            let _ = socket.close().await;
+            return;
+        }
+    };
 
-    if !permissions.can_read {
+    if !permissions.can("notebook.view", &TargetCtx::default()) {
         tracing::warn!(
             "Acesso negado: Tentativa de leitura em notebook privado {}",
             notebook_id
@@ -182,14 +184,14 @@ async fn process_msg(
     sender_id: Uuid,
     data: Bytes,
     notebook: &Arc<ActiveNotebook>,
-    permission: &TeamRole,
+    permission: &CapabilitySet,
 ) -> bool {
     let msg = match SyncMessage::decode(&data) {
         Ok(m) => m,
         Err(_) => return true,
     };
 
-    if !permission.can_write && !msg.changes.is_empty() {
+    if !permission.can("notebook.edit", &TargetCtx::default()) && !msg.changes.is_empty() {
         tracing::warn!("Usuário sem permissão tentou enviar alterações. Desconectando.");
         return false;
     }
@@ -246,12 +248,15 @@ async fn handle_presence_socket(
     original_user_id: Option<Uuid>,
     state: Arc<AppState>,
 ) {
-    let permissions = get_user_notebook_permissions(&state.pool, &notebook_id, original_user_id)
-        .await
-        .unwrap()
-        .0;
+    let permissions = match capabilities(&state.pool, original_user_id, notebook_id).await {
+        Ok(caps) => caps,
+        Err(_) => {
+            let _ = socket.close().await;
+            return;
+        }
+    };
 
-    if !permissions.can_read {
+    if !permissions.can("notebook.view", &TargetCtx::default()) {
         let _ = socket.close().await;
         return;
     }
