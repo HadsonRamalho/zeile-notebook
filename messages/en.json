@@ -284,7 +284,30 @@
         "can_remove_users": "Remove Users"
       },
       "active": "Yes",
-      "inactive": "No"
+      "inactive": "No",
+      "defaults": {
+        "owner": "Owner",
+        "member": "Member"
+      },
+      "rename_button": "Rename",
+      "name_placeholder": "Role name",
+      "select_role": "Select role",
+      "save": "Save",
+      "cancel": "Cancel",
+      "granular_toggle": "Granular permissions",
+      "granular_hint": "General permissions cover the common cases; granular ones allow fine exceptions per block type or action.",
+      "effect_neutral": "Neutral",
+      "effect_allow": "Allow",
+      "effect_deny": "Block",
+      "badge_confidential": "confidential",
+      "badge_cosmetic": "visual",
+      "role_created": "Role created.",
+      "role_renamed": "Role renamed.",
+      "modules": {
+        "notebook": "Notebook",
+        "team": "Team",
+        "chat": "Chat"
+      }
     }
   },
   "team_sidebar": {

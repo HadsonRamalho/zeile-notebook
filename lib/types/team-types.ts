@@ -69,6 +69,7 @@ export interface NewTeamRoleRequest {
   can_invite_users: boolean;
   can_remove_users: boolean;
   can_manage_permissions: boolean;
+  can_manage_team: boolean;
 }
 
 export interface UpdateTeam {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, KeyRound, Settings, Shield, Users } from "lucide-react";
+import { Home, Settings, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -30,7 +30,6 @@ import type {
 import { TeamData } from "./team-data";
 import { TeamMembers } from "./team-members";
 import { TeamPermissions } from "./team-permissions";
-import { TeamRoles } from "./team-roles";
 
 interface TeamSettingsFormProps {
   teamId: string;
@@ -39,9 +38,9 @@ interface TeamSettingsFormProps {
 export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   const t = useTranslations("team_settings.team_form");
 
-  const [activeTab, setActiveTab] = useState<
-    "general" | "members" | "roles" | "permissions"
-  >("general");
+  const [activeTab, setActiveTab] = useState<"general" | "members" | "roles">(
+    "general",
+  );
 
   const [team, setTeam] = useState<Team | null>(null);
   const [roles, setRoles] = useState<TeamRole[]>([]);
@@ -172,16 +171,6 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
               {t("role_tab")}
             </TabsTrigger>
           )}
-          {roles.length > 0 && (
-            <TabsTrigger
-              value="permissions"
-              className="gap-2"
-              indicatorClassName="bg-primary"
-            >
-              <KeyRound size={16} />
-              Permissões
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="general" className="w-full">
@@ -207,17 +196,11 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
 
         {roles.length > 0 && (
           <TabsContent value="roles" className="w-full">
-            <TeamRoles
-              roles={roles}
+            <TeamPermissions
               teamId={teamId}
-              onUpdate={reloadTeamRoles}
+              roles={roles}
+              onRolesChanged={reloadTeamRoles}
             />
-          </TabsContent>
-        )}
-
-        {roles.length > 0 && (
-          <TabsContent value="permissions" className="w-full">
-            <TeamPermissions teamId={teamId} roles={roles} />
           </TabsContent>
         )}
       </Tabs>

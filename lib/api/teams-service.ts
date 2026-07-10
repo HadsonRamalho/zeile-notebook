@@ -40,7 +40,7 @@ export async function updateRole(teamId: string, role: UpdateTeamRole) {
 }
 
 export async function createTeamRole(teamId: string, role: NewTeamRoleRequest) {
-  return await api.post(`/team/${teamId}/members`, role);
+  return await api.post(`/team/${teamId}/roles`, role);
 }
 
 export async function createTeamPage(teamId: string) {

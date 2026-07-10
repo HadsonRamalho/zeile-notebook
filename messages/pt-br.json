@@ -284,7 +284,30 @@
         "can_remove_users": "Remover Usuários"
       },
       "active": "Sim",
-      "inactive": "Não"
+      "inactive": "Não",
+      "defaults": {
+        "owner": "Proprietário",
+        "member": "Membro"
+      },
+      "rename_button": "Renomear",
+      "name_placeholder": "Nome do cargo",
+      "select_role": "Selecionar cargo",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "granular_toggle": "Permissões granulares",
+      "granular_hint": "As permissões gerais cobrem os casos comuns; as granulares permitem exceções finas por tipo de bloco ou ação.",
+      "effect_neutral": "Neutro",
+      "effect_allow": "Permitir",
+      "effect_deny": "Bloquear",
+      "badge_confidential": "confidencial",
+      "badge_cosmetic": "visual",
+      "role_created": "Cargo criado.",
+      "role_renamed": "Cargo renomeado.",
+      "modules": {
+        "notebook": "Notebook",
+        "team": "Time",
+        "chat": "Chat"
+      }
     }
   },
   "team_sidebar": {
