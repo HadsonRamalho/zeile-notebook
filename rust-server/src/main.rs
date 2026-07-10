@@ -5,6 +5,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::controllers::utils::auto_delete_files;
 
 pub mod controllers;
+pub mod db_migrations;
 pub mod file;
 pub mod http;
 pub mod models;
@@ -41,6 +42,8 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    crate::db_migrations::run_pending_migrations();
 
     let app = crate::routes::init_routes()
         .await
