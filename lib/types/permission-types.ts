@@ -43,3 +43,29 @@ export interface PermissionTarget {
   blockId?: string | null;
   blockType?: string | null;
 }
+
+export type GrantSubjectKind = "role" | "user" | "principal";
+
+export interface TeamGrant {
+  id: string;
+  subject_kind: GrantSubjectKind;
+  subject_id: string | null;
+  subject_principal: string | null;
+  scope_team_id: string | null;
+  permission_key: string;
+  target_kind: PermissionTargetKind;
+  target_id: string | null;
+  target_value: string | null;
+  effect: GrantEffect;
+  created_at: string;
+}
+
+export interface CreateGrantRequest {
+  subject_kind: "role" | "user";
+  subject_id: string;
+  permission_key: string;
+  target_kind: PermissionTargetKind;
+  target_id?: string | null;
+  target_value?: string | null;
+  effect: GrantEffect;
+}

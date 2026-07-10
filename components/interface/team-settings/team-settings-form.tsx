@@ -1,13 +1,18 @@
 "use client";
 
-import { Home, Settings, Shield, Users } from "lucide-react";
-import { Loader } from "@/components/motion/loader";
+import { Home, KeyRound, Settings, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/interface/back-button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { Loader } from "@/components/motion/loader";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/motion/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { handleApiError } from "@/lib/api/handle-api-error";
@@ -24,6 +29,7 @@ import type {
 } from "@/lib/types/team-types";
 import { TeamData } from "./team-data";
 import { TeamMembers } from "./team-members";
+import { TeamPermissions } from "./team-permissions";
 import { TeamRoles } from "./team-roles";
 
 interface TeamSettingsFormProps {
@@ -33,9 +39,9 @@ interface TeamSettingsFormProps {
 export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   const t = useTranslations("team_settings.team_form");
 
-  const [activeTab, setActiveTab] = useState<"general" | "members" | "roles">(
-    "general",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "general" | "members" | "roles" | "permissions"
+  >("general");
 
   const [team, setTeam] = useState<Team | null>(null);
   const [roles, setRoles] = useState<TeamRole[]>([]);
@@ -140,18 +146,40 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
         className="w-full"
       >
         <TabsList className="w-fit">
-          <TabsTrigger value="general" className="gap-2" indicatorClassName="bg-primary">
+          <TabsTrigger
+            value="general"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
             <Settings size={16} />
             {t("general_tab")}
           </TabsTrigger>
-          <TabsTrigger value="members" className="gap-2" indicatorClassName="bg-primary">
+          <TabsTrigger
+            value="members"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
             <Users size={16} />
             {t("member_tab")}
           </TabsTrigger>
           {roles.length > 0 && (
-            <TabsTrigger value="roles" className="gap-2" indicatorClassName="bg-primary">
+            <TabsTrigger
+              value="roles"
+              className="gap-2"
+              indicatorClassName="bg-primary"
+            >
               <Shield size={16} />
               {t("role_tab")}
+            </TabsTrigger>
+          )}
+          {roles.length > 0 && (
+            <TabsTrigger
+              value="permissions"
+              className="gap-2"
+              indicatorClassName="bg-primary"
+            >
+              <KeyRound size={16} />
+              Permissões
             </TabsTrigger>
           )}
         </TabsList>
@@ -179,7 +207,17 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
 
         {roles.length > 0 && (
           <TabsContent value="roles" className="w-full">
-            <TeamRoles roles={roles} teamId={teamId} onUpdate={reloadTeamRoles} />
+            <TeamRoles
+              roles={roles}
+              teamId={teamId}
+              onUpdate={reloadTeamRoles}
+            />
+          </TabsContent>
+        )}
+
+        {roles.length > 0 && (
+          <TabsContent value="permissions" className="w-full">
+            <TeamPermissions teamId={teamId} roles={roles} />
           </TabsContent>
         )}
       </Tabs>
