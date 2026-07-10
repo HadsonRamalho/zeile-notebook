@@ -1,3 +1,5 @@
+pub mod catalog;
+
 pub fn verify_code(code: &str) -> Result<(), String> {
     let critical_tokens = [
         "include_str!",

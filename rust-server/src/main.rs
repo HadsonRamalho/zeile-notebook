@@ -30,6 +30,8 @@ async fn main() {
         .install_default()
         .expect("Falha ao instalar provedor de criptografia rustls");
 
+    crate::sec::catalog::init();
+
     tokio::spawn(auto_delete_files());
 
     tracing_subscriber::registry()
