@@ -16,6 +16,18 @@ pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "user_role"))]
     pub struct UserRole;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "grant_subject_kind"))]
+    pub struct GrantSubjectKind;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "grant_target_kind"))]
+    pub struct GrantTargetKind;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "grant_effect"))]
+    pub struct GrantEffect;
 }
 
 diesel::table! {
@@ -138,6 +150,28 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::GrantSubjectKind;
+    use super::sql_types::GrantTargetKind;
+    use super::sql_types::GrantEffect;
+
+    permission_grants (id) {
+        id -> Uuid,
+        subject_kind -> GrantSubjectKind,
+        subject_id -> Nullable<Uuid>,
+        subject_principal -> Nullable<Varchar>,
+        scope_team_id -> Nullable<Uuid>,
+        permission_key -> Varchar,
+        target_kind -> GrantTargetKind,
+        target_id -> Nullable<Uuid>,
+        target_value -> Nullable<Varchar>,
+        effect -> GrantEffect,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::joinable!(permission_grants -> teams (scope_team_id));
 diesel::joinable!(blocks -> notebooks (notebook_id));
 diesel::joinable!(notebooks -> teams (team_id));
 diesel::joinable!(notebooks -> users (user_id));
@@ -152,6 +186,7 @@ diesel::joinable!(team_roles -> teams (team_id));
 diesel::allow_tables_to_appear_in_same_query!(
     blocks,
     notebooks,
+    permission_grants,
     push_subscriptions,
     team_invitations,
     team_members,
