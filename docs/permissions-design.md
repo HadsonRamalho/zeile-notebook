@@ -253,6 +253,20 @@ O catálogo Rust gera `permissions.generated.ts` (pipeline análogo ao
 7. **[PENDENTE — sob demanda] Confidencial**: projeção server-side pros tipos
    marcados. Deliberadamente adiado até surgir um caso real de sigilo.
 
+### Migrações idempotentes (obrigatório)
+
+As migrações rodam embutidas no boot (`db_migrations::run_pending_migrations`). Se
+`__diesel_schema_migrations` tiver uma versão divergente da que o Diesel computa (ele
+normaliza o timestamp da pasta removendo hífens, ex.: `2026-07-09-024044-0000` →
+`202607090240440000`), o Diesel considera a migração pendente e **re-executa o
+`up.sql`**. Para que isso seja um no-op seguro em vez de um panic (`already exists`)
+que trava o boot em loop, todo `up.sql` **deve ser idempotente**:
+
+- `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`;
+- tipos via `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname=...) THEN CREATE TYPE ...; END IF; END $$;`;
+- backfills de dados guardados com `WHERE NOT EXISTS (...)` no nível da chave lógica,
+  para não duplicar linhas em uma re-execução.
+
 ### Nota de deploy
 
 A migração `2026-07-10-120000-0000_add_permission_grants` precisa ser aplicada em
