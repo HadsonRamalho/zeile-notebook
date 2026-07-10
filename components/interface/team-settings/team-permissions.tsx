@@ -258,13 +258,14 @@ function PermissionRow({
   busy: boolean;
   onChange: (next: Effect) => void;
 }) {
+  const tp = useTranslations("perm");
+  const label = tp.has(perm.key) ? tp(perm.key) : perm.key;
+
   return (
     <div className="flex items-center justify-between gap-4 bg-card px-4 py-3">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <code className="text-sm font-medium text-foreground">
-            {perm.key}
-          </code>
+          <span className="text-sm font-medium text-foreground">{label}</span>
           {perm.view === "confidential" && (
             <Badge variant="outline" className="gap-1 text-[11px]">
               <EyeOff className="size-3" /> confidencial
@@ -279,6 +280,9 @@ function PermissionRow({
             </Badge>
           )}
         </div>
+        <code className="block truncate text-xs text-muted-foreground/70">
+          {perm.key}
+        </code>
       </div>
 
       <div className="shrink-0">

@@ -338,5 +338,89 @@
   },
   "toc": {
     "title": "Nesta página"
+  },
+  "perm": {
+    "notebook": {
+      "view": "Ver notebook",
+      "edit": "Editar notebook",
+      "delete": "Excluir notebook",
+      "edit_name": "Editar nome do notebook",
+      "manage_privacy": "Gerenciar visibilidade do notebook",
+      "manage_clones": "Gerenciar clonagem do notebook",
+      "pages": {
+        "add": "Adicionar página",
+        "delete": "Excluir página"
+      },
+      "blocks": {
+        "view": "Ver blocos",
+        "add": "Adicionar blocos",
+        "edit": "Editar blocos",
+        "delete": "Excluir blocos",
+        "execute": "Executar blocos",
+        "rust": {
+          "view": "Ver blocos Rust",
+          "add": "Adicionar blocos Rust",
+          "edit": "Editar blocos Rust",
+          "execute": "Executar blocos Rust"
+        },
+        "go": {
+          "view": "Ver blocos Go",
+          "add": "Adicionar blocos Go",
+          "edit": "Editar blocos Go",
+          "execute": "Executar blocos Go"
+        },
+        "python": {
+          "view": "Ver blocos Python",
+          "add": "Adicionar blocos Python",
+          "edit": "Editar blocos Python",
+          "execute": "Executar blocos Python"
+        },
+        "cpp": {
+          "view": "Ver blocos C++",
+          "add": "Adicionar blocos C++",
+          "edit": "Editar blocos C++",
+          "execute": "Executar blocos C++"
+        },
+        "zig": {
+          "view": "Ver blocos Zig",
+          "add": "Adicionar blocos Zig",
+          "edit": "Editar blocos Zig",
+          "execute": "Executar blocos Zig"
+        },
+        "tsx": {
+          "view": "Ver blocos TSX",
+          "add": "Adicionar blocos TSX",
+          "edit": "Editar blocos TSX",
+          "execute": "Executar blocos TSX"
+        },
+        "drawing": {
+          "view": "Ver blocos de desenho",
+          "add": "Adicionar blocos de desenho",
+          "edit": "Editar blocos de desenho"
+        },
+        "text": {
+          "view": "Ver blocos de texto",
+          "add": "Adicionar blocos de texto",
+          "edit": "Editar blocos de texto"
+        }
+      }
+    },
+    "team": {
+      "manage": "Gerenciar time",
+      "edit_name": "Editar nome do time",
+      "invite_users": "Convidar membros",
+      "remove_users": "Remover membros",
+      "roles": {
+        "create_role": "Criar cargo",
+        "edit_role_name": "Editar nome do cargo",
+        "edit_role_permissions": "Editar permissões do cargo"
+      }
+    },
+    "chat": {
+      "view": "Ver chat",
+      "messages": {
+        "send": "Enviar mensagens no chat"
+      }
+    }
   }
 }

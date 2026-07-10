@@ -338,5 +338,89 @@
   },
   "toc": {
     "title": "On this page"
+  },
+  "perm": {
+    "notebook": {
+      "view": "View notebook",
+      "edit": "Edit notebook",
+      "delete": "Delete notebook",
+      "edit_name": "Edit notebook name",
+      "manage_privacy": "Manage notebook visibility",
+      "manage_clones": "Manage notebook cloning",
+      "pages": {
+        "add": "Add page",
+        "delete": "Delete page"
+      },
+      "blocks": {
+        "view": "View blocks",
+        "add": "Add blocks",
+        "edit": "Edit blocks",
+        "delete": "Delete blocks",
+        "execute": "Run blocks",
+        "rust": {
+          "view": "View Rust blocks",
+          "add": "Add Rust blocks",
+          "edit": "Edit Rust blocks",
+          "execute": "Run Rust blocks"
+        },
+        "go": {
+          "view": "View Go blocks",
+          "add": "Add Go blocks",
+          "edit": "Edit Go blocks",
+          "execute": "Run Go blocks"
+        },
+        "python": {
+          "view": "View Python blocks",
+          "add": "Add Python blocks",
+          "edit": "Edit Python blocks",
+          "execute": "Run Python blocks"
+        },
+        "cpp": {
+          "view": "View C++ blocks",
+          "add": "Add C++ blocks",
+          "edit": "Edit C++ blocks",
+          "execute": "Run C++ blocks"
+        },
+        "zig": {
+          "view": "View Zig blocks",
+          "add": "Add Zig blocks",
+          "edit": "Edit Zig blocks",
+          "execute": "Run Zig blocks"
+        },
+        "tsx": {
+          "view": "View TSX blocks",
+          "add": "Add TSX blocks",
+          "edit": "Edit TSX blocks",
+          "execute": "Run TSX blocks"
+        },
+        "drawing": {
+          "view": "View drawing blocks",
+          "add": "Add drawing blocks",
+          "edit": "Edit drawing blocks"
+        },
+        "text": {
+          "view": "View text blocks",
+          "add": "Add text blocks",
+          "edit": "Edit text blocks"
+        }
+      }
+    },
+    "team": {
+      "manage": "Manage team",
+      "edit_name": "Edit team name",
+      "invite_users": "Invite members",
+      "remove_users": "Remove members",
+      "roles": {
+        "create_role": "Create role",
+        "edit_role_name": "Edit role name",
+        "edit_role_permissions": "Edit role permissions"
+      }
+    },
+    "chat": {
+      "view": "View chat",
+      "messages": {
+        "send": "Send chat messages"
+      }
+    }
   }
 }
