@@ -10,7 +10,9 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::controllers::jwt::extract_claims_from_header;
+use crate::controllers::sync::PresenceRegistry;
 use crate::controllers::utils::get_conn;
+use crate::schema::notebooks;
 use crate::models::error::ApiError;
 use crate::models::permission_grant::{
     GrantEffect, GrantSubjectKind, GrantTargetKind, PermissionGrant,
@@ -275,6 +277,44 @@ pub async fn capabilities(
     };
 
     resolve_capabilities(conn, ctx, user_id).await
+}
+
+pub const CAPABILITIES_UPDATED_SIGNAL: &str = r#"{"type":"capabilities_updated"}"#;
+
+pub async fn broadcast_capability_change(presence: &PresenceRegistry, notebook_id: Uuid) {
+    let room = {
+        let map = presence.read().await;
+        map.get(&notebook_id).cloned()
+    };
+
+    if let Some(room) = room {
+        let room = room.read().await;
+        for member in room.subscribers.values() {
+            let _ = member.tx.send(CAPABILITIES_UPDATED_SIGNAL.to_string());
+        }
+    }
+}
+
+pub async fn broadcast_capability_change_for_team(
+    pool: &Pool<AsyncPgConnection>,
+    presence: &PresenceRegistry,
+    team_id: Uuid,
+) {
+    let conn = &mut match get_conn(pool).await {
+        Ok(conn) => conn,
+        Err(_) => return,
+    };
+
+    let ids: Vec<Uuid> = notebooks::table
+        .filter(notebooks::team_id.eq(team_id))
+        .select(notebooks::id)
+        .load(conn)
+        .await
+        .unwrap_or_default();
+
+    for id in ids {
+        broadcast_capability_change(presence, id).await;
+    }
 }
 
 pub async fn api_get_notebook_capabilities(

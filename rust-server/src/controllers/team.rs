@@ -239,7 +239,15 @@ pub async fn api_update_team_role(
     }
 
     match models::team::update_team_role(conn, payload.id, &payload).await {
-        Ok(_) => Ok(StatusCode::OK),
+        Ok(_) => {
+            crate::controllers::permissions::broadcast_capability_change_for_team(
+                &state.pool,
+                &state.presence_registry,
+                team_id,
+            )
+            .await;
+            Ok(StatusCode::OK)
+        }
         Err(e) => Err(e),
     }
 }
@@ -262,7 +270,15 @@ pub async fn api_remove_user_from_team(
     }
 
     match models::team::remove_user_from_team(conn, team_id, target).await {
-        Ok(_) => Ok(StatusCode::OK),
+        Ok(_) => {
+            crate::controllers::permissions::broadcast_capability_change_for_team(
+                &state.pool,
+                &state.presence_registry,
+                team_id,
+            )
+            .await;
+            Ok(StatusCode::OK)
+        }
         Err(e) => Err(e),
     }
 }
