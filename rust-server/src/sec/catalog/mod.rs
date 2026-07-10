@@ -144,7 +144,9 @@ impl Catalog {
     }
 
     pub fn implied_by(&self, key: &str) -> &[String] {
-        self.get(key).map(|p| p.implied_by.as_slice()).unwrap_or(&[])
+        self.get(key)
+            .map(|p| p.implied_by.as_slice())
+            .unwrap_or(&[])
     }
 
     pub fn expands_to(&self, general_key: &str) -> &[String] {

@@ -1,5 +1,5 @@
-use super::perm;
 use super::Permission;
+use super::perm;
 
 pub fn permissions() -> Vec<Permission> {
     vec![
