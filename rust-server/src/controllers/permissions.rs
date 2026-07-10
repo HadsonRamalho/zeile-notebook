@@ -258,6 +258,26 @@ pub async fn require(
     }
 }
 
+pub async fn require_team_permission(
+    conn: &mut AsyncPgConnection,
+    user_id: Uuid,
+    team_id: Uuid,
+    key: &str,
+) -> Result<(), ApiError> {
+    let ctx = NotebookCtx {
+        notebook_id: Uuid::nil(),
+        team_id: Some(team_id),
+        owner_user_id: None,
+        is_public: false,
+    };
+    let caps = resolve_capabilities(conn, ctx, Some(user_id)).await?;
+    if caps.can(key, &TargetCtx::default()) {
+        Ok(())
+    } else {
+        Err(ApiError::PermissionDenied(key.to_string()))
+    }
+}
+
 pub async fn capabilities(
     pool: &Pool<AsyncPgConnection>,
     user_id: Option<Uuid>,

@@ -1,6 +1,8 @@
 pub mod admin;
 pub mod email;
+pub mod grants;
 pub mod jwt;
+pub mod metrics;
 pub mod notebook;
 pub mod oauth;
 pub mod permissions;
