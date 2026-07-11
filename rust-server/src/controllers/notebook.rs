@@ -4,7 +4,6 @@ use axum::{
     Json,
     extract::{Path, Query, State},
 };
-use diesel_async::AsyncPgConnection;
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
 
@@ -79,28 +78,6 @@ pub async fn api_get_notebooks(
     }
 }
 
-pub async fn is_notebook_owner(
-    mut conn: &mut AsyncPgConnection,
-    user_id: Option<Uuid>,
-    notebook_id: &Uuid,
-) -> Result<(), ApiError> {
-    if user_id.is_none() {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
-    let user_id = user_id.unwrap();
-    match models::notebook::find_notebook_by_id(&mut conn, &notebook_id).await {
-        Ok(notebook) => {
-            if let Some(id) = notebook.user_id
-                && id != user_id.clone()
-            {
-                return Err(ApiError::InvalidAuthorizationToken);
-            }
-            Ok(())
-        }
-        Err(e) => return Err(e),
-    }
-}
-
 pub async fn api_get_single_notebook(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -115,20 +92,18 @@ pub async fn api_get_single_notebook(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    match models::notebook::find_notebook_by_id(conn, &notebook_id).await {
-        Ok(notebook) => {
-            if notebook.is_public {
-                return Ok((StatusCode::OK, Json(notebook)));
-            }
-            if let Err(e) = is_notebook_owner(conn, id, &notebook_id).await
-                && !notebook.is_public
-            {
-                return Err(e);
-            }
-            Ok((StatusCode::OK, Json(notebook)))
-        }
-        Err(e) => Err(e),
-    }
+    let notebook = models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
+
+    crate::controllers::permissions::require(
+        &state.pool,
+        id,
+        notebook_id,
+        "notebook.view",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
+    Ok((StatusCode::OK, Json(notebook)))
 }
 
 pub async fn api_rename_notebook(
@@ -233,20 +208,20 @@ pub async fn api_get_single_notebook_with_blocks(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    match models::notebook::get_notebook_with_blocks(conn, &notebook_id).await {
-        Ok(notebook) => {
-            if notebook.meta.is_public {
-                return Ok((StatusCode::OK, Json(notebook)));
-            }
-            if let Err(e) = is_notebook_owner(conn, id, &notebook_id).await
-                && !notebook.meta.is_public
-            {
-                return Err(e);
-            }
-            Ok((StatusCode::OK, Json(notebook)))
-        }
-        Err(e) => Err(ApiError::Database(e)),
-    }
+    let notebook = models::notebook::get_notebook_with_blocks(conn, &notebook_id)
+        .await
+        .map_err(ApiError::Database)?;
+
+    crate::controllers::permissions::require(
+        &state.pool,
+        id,
+        notebook_id,
+        "notebook.view",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
+    Ok((StatusCode::OK, Json(notebook)))
 }
 
 pub async fn api_save_notebook_content(
@@ -257,15 +232,20 @@ pub async fn api_save_notebook_content(
 ) -> Result<StatusCode, ApiError> {
     let id = extract_claims_from_header(&headers).await?.1.id;
 
+    crate::controllers::permissions::require(
+        &state.pool,
+        Some(id),
+        notebook_id,
+        "notebook.edit",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
     let mut conn = state
         .pool
         .get()
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
-
-    if let Err(e) = is_notebook_owner(&mut conn, Some(id), &notebook_id).await {
-        return Err(e);
-    }
 
     let blocks_to_insert: Vec<NewBlock> = payload
         .blocks
@@ -311,17 +291,18 @@ pub async fn api_clone_notebook(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let target_notebook = match models::notebook::find_notebook_by_id(conn, &notebook_id).await {
-        Ok(notebook) => {
-            if let Err(e) = is_notebook_owner(conn, Some(id), &notebook_id).await
-                && !notebook.is_public
-            {
-                return Err(e);
-            }
-            notebook
-        }
-        Err(e) => return Err(e),
-    };
+    let target_notebook = models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
+
+    if !target_notebook.is_public {
+        crate::controllers::permissions::require(
+            &state.pool,
+            Some(id),
+            notebook_id,
+            "notebook.manage_clones",
+            &crate::controllers::permissions::TargetCtx::default(),
+        )
+        .await?;
+    }
 
     let new_notebook_id = Uuid::new_v4();
     let new_notebook_title = format!("Cópia de \"{}\"", target_notebook.title);
