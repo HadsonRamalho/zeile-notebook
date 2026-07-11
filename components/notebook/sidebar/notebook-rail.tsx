@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChevronDown,
   FileText,
   Moon,
   PanelLeftClose,
@@ -28,6 +29,8 @@ import type { Team, TeamRole } from "@/lib/types/team-types";
 import { NotebookCommandPalette } from "./notebook-command-palette";
 
 const EXPANDED_STORAGE_KEY = "notebook-rail-expanded";
+const COLLAPSED_GROUPS_STORAGE_KEY = "notebook-rail-collapsed-groups";
+const MY_NOTEBOOKS_GROUP = "my-notebooks";
 
 function RailButton({
   onClick,
@@ -192,14 +195,37 @@ export function NotebookRail() {
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    new Set(),
+  );
 
   useEffect(() => {
     setExpanded(localStorage.getItem(EXPANDED_STORAGE_KEY) === "1");
+    try {
+      const raw = localStorage.getItem(COLLAPSED_GROUPS_STORAGE_KEY);
+      if (raw) setCollapsedGroups(new Set(JSON.parse(raw) as string[]));
+    } catch {}
   }, []);
 
   useEffect(() => {
     localStorage.setItem(EXPANDED_STORAGE_KEY, expanded ? "1" : "0");
   }, [expanded]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      COLLAPSED_GROUPS_STORAGE_KEY,
+      JSON.stringify([...collapsedGroups]),
+    );
+  }, [collapsedGroups]);
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchUserTeams()
@@ -286,20 +312,33 @@ export function NotebookRail() {
         )}
       >
         {isExpanded && pages.length > 0 && (
-          <span className="px-2.5 pb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-            Meus cadernos
-          </span>
+          <button
+            type="button"
+            onClick={() => toggleGroup(MY_NOTEBOOKS_GROUP)}
+            aria-expanded={!collapsedGroups.has(MY_NOTEBOOKS_GROUP)}
+            className="flex items-center gap-1 rounded-md px-2.5 pb-1 pt-0.5 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-accent-foreground"
+          >
+            <ChevronDown
+              size={12}
+              className={cn(
+                "shrink-0 transition-transform",
+                collapsedGroups.has(MY_NOTEBOOKS_GROUP) && "-rotate-90",
+              )}
+            />
+            <span className="truncate">Meus cadernos</span>
+          </button>
         )}
-        {pages.map((page) => (
-          <PageRow
-            key={page.id}
-            page={page}
-            icon={<FileText size={17} className="shrink-0" />}
-            active={pathname === `/notebook/${page.id}`}
-            expanded={isExpanded}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {(!isExpanded || !collapsedGroups.has(MY_NOTEBOOKS_GROUP)) &&
+          pages.map((page) => (
+            <PageRow
+              key={page.id}
+              page={page}
+              icon={<FileText size={17} className="shrink-0" />}
+              active={pathname === `/notebook/${page.id}`}
+              expanded={isExpanded}
+              onNavigate={onNavigate}
+            />
+          ))}
 
         {teams.map(([team]) => {
           const pagesOfTeam = teamPages[team.id] ?? [];
@@ -314,12 +353,26 @@ export function NotebookRail() {
               />
             ));
           }
+          const groupKey = `team:${team.id}`;
+          const teamCollapsed = collapsedGroups.has(groupKey);
           return (
             <div key={team.id} className="mt-3 flex flex-col gap-1">
               <div className="flex items-center gap-2 px-2.5 pb-1">
-                <span className="truncate font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  {team.name}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(groupKey)}
+                  aria-expanded={!teamCollapsed}
+                  className="flex min-w-0 items-center gap-1 rounded-md font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-accent-foreground"
+                >
+                  <ChevronDown
+                    size={12}
+                    className={cn(
+                      "shrink-0 transition-transform",
+                      teamCollapsed && "-rotate-90",
+                    )}
+                  />
+                  <span className="truncate">{team.name}</span>
+                </button>
                 <span className="h-px flex-1 bg-sidebar-border" />
                 <button
                   type="button"
@@ -331,7 +384,7 @@ export function NotebookRail() {
                   <Plus size={13} />
                 </button>
               </div>
-              {pagesOfTeam.length === 0 ? (
+              {teamCollapsed ? null : pagesOfTeam.length === 0 ? (
                 <span className="px-2.5 text-xs italic text-muted-foreground">
                   Sem cadernos
                 </span>

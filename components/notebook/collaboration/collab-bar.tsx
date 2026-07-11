@@ -644,7 +644,7 @@ export function CollabBar({
   ];
 
   return (
-    <div className="fixed top-4 right-4 z-40 print:hidden">
+    <div className="fixed top-4 right-4 z-overlay-controls print:hidden">
       <ExpandableTabs
         items={items}
         value={activeTab}

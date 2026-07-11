@@ -25,6 +25,9 @@ export type ChatMessage = {
 };
 
 const CHAT_MESSAGE_LIFETIME_MS = 12000;
+const PRESENCE_HEARTBEAT_MS = 4000;
+const PRESENCE_STALE_MS = 12000;
+const PRESENCE_PRUNE_INTERVAL_MS = 3000;
 
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
@@ -52,6 +55,7 @@ export function usePresence(
   const handleRef = useRef<NotebookSocketHandle | null>(null);
   const socketUserIdRef = useRef<string | null>(null);
   const [socketUserId, setSocketUserId] = useState<string | null>(null);
+  const lastSeenRef = useRef<Map<string, number>>(new Map());
 
   const lastSendTime = useRef(0);
   const myState = useRef({
@@ -114,6 +118,7 @@ export function usePresence(
             const next = new Map(prev);
             for (const u of data.updates || []) {
               if (!u?.userId || u.userId === socketUserIdRef.current) continue;
+              lastSeenRef.current.set(u.userId, Date.now());
               next.set(u.userId, {
                 id: u.userId,
                 name: u.name || "Visitante",
@@ -126,6 +131,7 @@ export function usePresence(
             }
             for (const goneId of data.gone || []) {
               next.delete(goneId);
+              lastSeenRef.current.delete(goneId);
             }
             return next;
           });
@@ -159,6 +165,7 @@ export function usePresence(
         }
 
         if (data.type === "disconnect") {
+          lastSeenRef.current.delete(data.userId);
           setCollaborators((prev) => {
             const next = new Map(prev);
             next.delete(data.userId);
@@ -168,6 +175,7 @@ export function usePresence(
         }
 
         if (data.type === "presence") {
+          lastSeenRef.current.set(data.userId, Date.now());
           setCollaborators((prev) => {
             const next = new Map(prev);
             next.set(data.userId, {
@@ -189,18 +197,43 @@ export function usePresence(
       onClose: () => {
         socketUserIdRef.current = null;
         setSocketUserId(null);
+        lastSeenRef.current.clear();
+        setCollaborators(new Map());
       },
     });
 
     handleRef.current = handle;
 
+    const heartbeat = setInterval(() => {
+      broadcastPresence();
+    }, PRESENCE_HEARTBEAT_MS);
+
+    const prune = setInterval(() => {
+      const now = Date.now();
+      setCollaborators((prev) => {
+        let changed = false;
+        const next = new Map(prev);
+        for (const [id, seen] of lastSeenRef.current) {
+          if (now - seen > PRESENCE_STALE_MS) {
+            next.delete(id);
+            lastSeenRef.current.delete(id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, PRESENCE_PRUNE_INTERVAL_MS);
+
     return () => {
+      clearInterval(heartbeat);
+      clearInterval(prune);
       handle.unsubscribe();
       handleRef.current = null;
       socketUserIdRef.current = null;
       setSocketUserId(null);
+      lastSeenRef.current.clear();
     };
-  }, [pageId, broadcastPresenceWithId]);
+  }, [pageId, broadcastPresence, broadcastPresenceWithId]);
 
   const sendChatMessage = useCallback(
     (text: string) => {
