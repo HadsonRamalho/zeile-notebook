@@ -52,6 +52,14 @@ pub fn permissions() -> Vec<Permission> {
             view: ,
         ),
         perm!(
+            key: "notebook.manage_public",
+            tier: General,
+            targets: [Notebook],
+            label: "perm.notebook.manage_public",
+            implied_by: [],
+            view: ,
+        ),
+        perm!(
             key: "notebook.pages.add",
             tier: Granular,
             targets: [Notebook],

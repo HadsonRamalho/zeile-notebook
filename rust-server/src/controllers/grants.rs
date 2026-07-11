@@ -9,7 +9,8 @@ use uuid::Uuid;
 
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{
-    broadcast_capability_change, broadcast_capability_change_for_team, require_team_permission,
+    NotebookCtx, TargetCtx, broadcast_capability_change, broadcast_capability_change_for_team,
+    require_team_permission, resolve_capabilities,
 };
 use crate::controllers::utils::get_conn;
 use crate::models::error::ApiError;
@@ -193,9 +194,19 @@ async fn require_notebook_owner(
     user_id: Uuid,
 ) -> Result<(), ApiError> {
     let notebook = crate::models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
-    match notebook.user_id {
-        Some(owner) if owner == user_id => Ok(()),
-        _ => Err(ApiError::PermissionDenied("notebook.manage_privacy".to_string())),
+    let ctx = NotebookCtx {
+        notebook_id,
+        team_id: notebook.team_id,
+        owner_user_id: notebook.user_id,
+        is_public: notebook.is_public,
+    };
+    let caps = resolve_capabilities(conn, ctx, Some(user_id)).await?;
+    if caps.can("notebook.manage_public", &TargetCtx::default()) {
+        Ok(())
+    } else {
+        Err(ApiError::PermissionDenied(
+            "notebook.manage_public".to_string(),
+        ))
     }
 }
 

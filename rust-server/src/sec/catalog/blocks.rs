@@ -48,6 +48,14 @@ pub fn permissions() -> Vec<Permission> {
             implied_by: vec![],
             view: None,
         },
+        Permission {
+            key: "notebook.blocks.reorder".to_string(),
+            tier: Tier::General,
+            targets: vec![TargetKind::Notebook],
+            label: "perm.notebook.blocks.reorder".to_string(),
+            implied_by: vec!["notebook.blocks.edit".to_string()],
+            view: None,
+        },
     ];
 
     for ty in BLOCK_TYPES {
