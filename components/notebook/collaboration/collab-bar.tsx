@@ -3,7 +3,10 @@
 import { Database, History, MessageSquare, RotateCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ExpandableTabs, type ExpandableTabsItem } from "@/components/motion/expandable-tabs";
+import {
+  ExpandableTabs,
+  type ExpandableTabsItem,
+} from "@/components/motion/expandable-tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +17,7 @@ import { updateAppBadge } from "@/lib/appBadge";
 import type { Notebook } from "@/lib/types";
 import type { User } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
+import { useCan } from "../permissions/capabilities";
 
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
@@ -157,9 +161,7 @@ function HistoryPanel({
     <div
       className={cn(
         "h-[33vh] overflow-y-auto p-1",
-        history.length === 0
-          ? "flex items-center justify-center"
-          : "space-y-2",
+        history.length === 0 ? "flex items-center justify-center" : "space-y-2",
       )}
     >
       {history.length === 0 ? (
@@ -181,7 +183,8 @@ function HistoryPanel({
             >
               <div className="flex items-center gap-1 text-xs">
                 <RotateCw className="size-3" />
-                {snap.timestamp.toLocaleDateString()} {snap.timestamp.toLocaleTimeString()}
+                {snap.timestamp.toLocaleDateString()}{" "}
+                {snap.timestamp.toLocaleTimeString()}
               </div>
             </Button>
           );
@@ -272,6 +275,7 @@ function ChatPanel({
   const [mentionIndex, setMentionIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const isTouchDevice = useIsTouchDevice();
+  const canSend = useCan()("chat.messages.send");
 
   const allNames = useMemo(() => allUsers.map((u) => u.name), [allUsers]);
 
@@ -345,7 +349,9 @@ function ChatPanel({
                 key={msg.id}
                 className={cn(
                   "max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white",
-                  isMe ? "self-end rounded-tr-none" : "self-start rounded-tl-none",
+                  isMe
+                    ? "self-end rounded-tr-none"
+                    : "self-start rounded-tl-none",
                 )}
                 style={{ backgroundColor: msg.color }}
               >
@@ -358,48 +364,54 @@ function ChatPanel({
           })
         )}
       </div>
-      <form onSubmit={handleSubmit} className="relative">
-        {mentionMatches.length > 0 && (
-          <div className="absolute bottom-full mb-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
-            {mentionMatches.map((user, index) => (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => applyMention(user)}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-                  index === mentionIndex
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-accent",
-                )}
-              >
-                <Avatar size="sm" className="size-5">
-                  {user.avatar ? (
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                  ) : null}
-                  <AvatarFallback
-                    style={{ backgroundColor: user.color }}
-                    className="text-[8px] font-medium text-white"
-                  >
-                    {getInitials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-                {user.name}
-              </button>
-            ))}
-          </div>
-        )}
-        <input
-          ref={inputRef}
-          type="text"
-          enterKeyHint="send"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Digite uma mensagem... use @ para mencionar"
-          className="h-10 w-full rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
-        />
-      </form>
+      {!canSend ? (
+        <p className="rounded-full border border-border bg-muted/40 px-4 py-2.5 text-center text-xs text-muted-foreground">
+          Você não pode enviar mensagens neste chat.
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className="relative">
+          {mentionMatches.length > 0 && (
+            <div className="absolute bottom-full mb-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
+              {mentionMatches.map((user, index) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => applyMention(user)}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
+                    index === mentionIndex
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-accent",
+                  )}
+                >
+                  <Avatar size="sm" className="size-5">
+                    {user.avatar ? (
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                    ) : null}
+                    <AvatarFallback
+                      style={{ backgroundColor: user.color }}
+                      className="text-[8px] font-medium text-white"
+                    >
+                      {getInitials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {user.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <input
+            ref={inputRef}
+            type="text"
+            enterKeyHint="send"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Digite uma mensagem... use @ para mencionar"
+            className="h-10 w-full rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
+          />
+        </form>
+      )}
     </div>
   );
 }
@@ -462,7 +474,9 @@ function PresencePanel({
           <div className="flex items-center gap-2">
             <Avatar
               size="sm"
-              className={cn(user.id === pulseUserId && "animate-presence-pulse")}
+              className={cn(
+                user.id === pulseUserId && "animate-presence-pulse",
+              )}
             >
               {user.avatar ? (
                 <AvatarImage src={user.avatar} alt={user.name} />
@@ -522,7 +536,11 @@ export function CollabBar({
   onActiveTabChange?: (id: string | null) => void;
 }) {
   const presenceCount = collaborators.length + 1;
-  const allUsers = usePresenceUsers({ socketUserId, collaborators, currentUser });
+  const allUsers = usePresenceUsers({
+    socketUserId,
+    collaborators,
+    currentUser,
+  });
   const currentUserName = currentUser?.name || "Visitante";
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -567,6 +585,8 @@ export function CollabBar({
     }
   }, [messages, socketUserId, currentUserName]);
 
+  const canViewChat = useCan()("chat.view");
+
   const items: ExpandableTabsItem[] = [
     ...(canWriteHistory
       ? [
@@ -589,28 +609,32 @@ export function CollabBar({
           },
         ]
       : []),
-    {
-      id: "chat",
-      label: unreadCount > 0 ? `Chat (${unreadCount})` : "Chat",
-      icon: (
-        <span className="relative">
-          <MessageSquare className="size-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </span>
-      ),
-      content: (
-        <ChatPanel
-          messages={messages}
-          sendChatMessage={sendChatMessage}
-          socketUserId={socketUserId}
-          allUsers={allUsers}
-        />
-      ),
-    },
+    ...(canViewChat
+      ? [
+          {
+            id: "chat",
+            label: unreadCount > 0 ? `Chat (${unreadCount})` : "Chat",
+            icon: (
+              <span className="relative">
+                <MessageSquare className="size-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </span>
+            ),
+            content: (
+              <ChatPanel
+                messages={messages}
+                sendChatMessage={sendChatMessage}
+                socketUserId={socketUserId}
+                allUsers={allUsers}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       id: "presence",
       label: `Presença (${presenceCount})`,

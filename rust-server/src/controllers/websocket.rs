@@ -495,6 +495,7 @@ async fn handle_presence_socket(
     let room_for_recv = room.clone();
     let state_for_recv = state.clone();
     let member_for_recv = member.clone();
+    let perm_for_recv = permissions.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
             let parsed: Option<serde_json::Value> = serde_json::from_str(&text).ok();
@@ -518,6 +519,9 @@ async fn handle_presence_socket(
                 }
                 // chat: difunde imediatamente + push de menção
                 Some("chat") => {
+                    if !perm_for_recv.can("chat.messages.send", &TargetCtx::default()) {
+                        continue;
+                    }
                     let sender_name = parsed
                         .as_ref()
                         .and_then(|v| v.get("name"))
@@ -658,6 +662,7 @@ async fn handle_presence_text(
     member: &Arc<PresenceMember>,
     state: &Arc<AppState>,
     notebook_id: Uuid,
+    permission: &CapabilitySet,
 ) {
     let parsed: Option<serde_json::Value> = serde_json::from_str(&text).ok();
     let msg_type = parsed
@@ -676,6 +681,9 @@ async fn handle_presence_text(
             }
         }
         Some("chat") => {
+            if !permission.can("chat.messages.send", &TargetCtx::default()) {
+                return;
+            }
             let sender_name = parsed
                 .as_ref()
                 .and_then(|v| v.get("name"))
@@ -858,6 +866,7 @@ async fn handle_combined_socket(
                         &member_recv,
                         &state_recv,
                         notebook_id,
+                        &perm,
                     )
                     .await;
                 }
