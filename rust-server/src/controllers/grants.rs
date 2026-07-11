@@ -10,13 +10,13 @@ use uuid::Uuid;
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{
     NotebookCtx, TargetCtx, broadcast_capability_change, broadcast_capability_change_for_team,
-    require_team_permission, resolve_capabilities,
+    caller_role_in_team, ensure_team_not_locked, require_team_permission, resolve_capabilities,
 };
 use crate::controllers::utils::get_conn;
 use crate::models::error::ApiError;
 use crate::models::permission_grant::{
     CreateGrantRequest, GrantSubjectKind, GrantTargetKind, NewPermissionGrant, PermissionGrant,
-    PublicGrantRequest, create_grant, delete_grant_in_team, delete_notebook_grant,
+    PublicGrantRequest, create_grant, delete_grant_in_team, delete_notebook_grant, find_team_grant,
     list_notebook_principal_grants, list_team_grants,
 };
 use crate::models::state::AppState;
@@ -120,6 +120,22 @@ pub async fn api_list_team_grants(
     Ok((StatusCode::OK, Json(grants)))
 }
 
+async fn is_self_subject(
+    conn: &mut AsyncPgConnection,
+    team_id: Uuid,
+    caller_id: Uuid,
+    subject_kind: GrantSubjectKind,
+    subject_id: Option<Uuid>,
+) -> bool {
+    match subject_kind {
+        GrantSubjectKind::User => subject_id == Some(caller_id),
+        GrantSubjectKind::Role => {
+            subject_id.is_some() && caller_role_in_team(conn, team_id, caller_id).await == subject_id
+        }
+        GrantSubjectKind::Principal => false,
+    }
+}
+
 pub async fn api_create_team_grant(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -135,6 +151,12 @@ pub async fn api_create_team_grant(
     require_team_permission(conn, user_id, team_id, MANAGE_GRANTS_KEY).await?;
 
     validate_grant(&req)?;
+
+    if is_self_subject(conn, team_id, user_id, req.subject_kind, req.subject_id).await {
+        return Err(ApiError::PermissionDenied(
+            "Você não pode gerenciar as suas próprias permissões".to_string(),
+        ));
+    }
 
     if req.subject_kind == GrantSubjectKind::Role {
         let role_id = req.subject_id.ok_or(ApiError::InvalidData)?;
@@ -161,6 +183,11 @@ pub async fn api_create_team_grant(
     )
     .await?;
 
+    if let Err(e) = ensure_team_not_locked(conn, team_id, None).await {
+        delete_grant_in_team(conn, grant.id, team_id).await?;
+        return Err(e);
+    }
+
     broadcast_capability_change_for_team(&state.pool, &state.presence_registry, team_id).await;
 
     Ok((StatusCode::CREATED, Json(grant)))
@@ -179,11 +206,39 @@ pub async fn api_delete_team_grant(
 
     require_team_permission(conn, user_id, team_id, MANAGE_GRANTS_KEY).await?;
 
-    let deleted = delete_grant_in_team(conn, grant_id, team_id).await?;
+    let grant = match find_team_grant(conn, grant_id, team_id).await? {
+        Some(g) => g,
+        None => return Ok(StatusCode::OK),
+    };
 
-    if deleted > 0 {
-        broadcast_capability_change_for_team(&state.pool, &state.presence_registry, team_id).await;
+    if is_self_subject(conn, team_id, user_id, grant.subject_kind, grant.subject_id).await {
+        return Err(ApiError::PermissionDenied(
+            "Você não pode gerenciar as suas próprias permissões".to_string(),
+        ));
     }
+
+    delete_grant_in_team(conn, grant_id, team_id).await?;
+
+    if let Err(e) = ensure_team_not_locked(conn, team_id, None).await {
+        create_grant(
+            conn,
+            NewPermissionGrant {
+                subject_kind: grant.subject_kind,
+                subject_id: grant.subject_id,
+                subject_principal: grant.subject_principal,
+                scope_team_id: grant.scope_team_id,
+                permission_key: grant.permission_key,
+                target_kind: grant.target_kind,
+                target_id: grant.target_id,
+                target_value: grant.target_value,
+                effect: grant.effect,
+            },
+        )
+        .await?;
+        return Err(e);
+    }
+
+    broadcast_capability_change_for_team(&state.pool, &state.presence_registry, team_id).await;
 
     Ok(StatusCode::OK)
 }

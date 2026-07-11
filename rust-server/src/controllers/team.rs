@@ -243,6 +243,14 @@ pub async fn api_remove_user_from_team(
 
     require_team_permission(conn, user_id, team_id, "team.remove_users").await?;
 
+    if target == user_id {
+        return Err(ApiError::PermissionDenied(
+            "Você não pode remover a si mesmo do time".to_string(),
+        ));
+    }
+
+    crate::controllers::permissions::ensure_team_not_locked(conn, team_id, Some(target)).await?;
+
     match models::team::remove_user_from_team(conn, team_id, target).await {
         Ok(_) => {
             crate::controllers::permissions::broadcast_capability_change_for_team(
@@ -270,6 +278,12 @@ pub async fn api_update_member_role(
 
     require_team_permission(conn, user_id, team_id, "team.roles.edit_role_permissions").await?;
 
+    if payload.user_id == user_id {
+        return Err(ApiError::PermissionDenied(
+            "Você não pode alterar o seu próprio cargo".to_string(),
+        ));
+    }
+
     let roles = models::team::find_roles_by_team(conn, team_id).await?;
     if !roles.iter().any(|r| r.id == payload.role_id) {
         return Err(ApiError::Request(
@@ -277,7 +291,18 @@ pub async fn api_update_member_role(
         ));
     }
 
+    let previous_role = models::team::find_team_member_with_role(conn, team_id, payload.user_id)
+        .await
+        .map(|(_, role)| role.id)?;
+
     models::team::update_member_role(conn, team_id, payload.user_id, payload.role_id).await?;
+
+    if let Err(e) =
+        crate::controllers::permissions::ensure_team_not_locked(conn, team_id, None).await
+    {
+        models::team::update_member_role(conn, team_id, payload.user_id, previous_role).await?;
+        return Err(e);
+    }
 
     crate::controllers::permissions::broadcast_capability_change_for_team(
         &state.pool,

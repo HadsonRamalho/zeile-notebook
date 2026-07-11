@@ -319,7 +319,7 @@ export function TeamMembers({
                     </Badge>
                   )}
 
-                  {canManageRoles && (
+                  {canManageRoles && member[0].user_id !== user.id && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button

@@ -175,6 +175,21 @@ pub async fn delete_notebook_grant(
     .map_err(|e| ApiError::Database(e.to_string()))
 }
 
+pub async fn find_team_grant(
+    conn: &mut AsyncPgConnection,
+    grant_id: Uuid,
+    team_id: Uuid,
+) -> Result<Option<PermissionGrant>, ApiError> {
+    permission_grants::table
+        .filter(permission_grants::id.eq(grant_id))
+        .filter(permission_grants::scope_team_id.eq(team_id))
+        .select(PermissionGrant::as_select())
+        .first(conn)
+        .await
+        .optional()
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
 pub async fn list_team_grants(
     conn: &mut AsyncPgConnection,
     team_id: Uuid,

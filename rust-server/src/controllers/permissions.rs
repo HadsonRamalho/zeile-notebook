@@ -283,6 +283,66 @@ pub async fn require_team_permission(
     }
 }
 
+pub const CRITICAL_TEAM_KEYS: &[&str] = &[
+    "notebook.manage_privacy",
+    "notebook.pages.delete",
+    "team.invite_users",
+    "team.remove_users",
+];
+
+pub async fn member_has_capability(
+    conn: &mut AsyncPgConnection,
+    team_id: Uuid,
+    user_id: Uuid,
+    key: &str,
+) -> Result<bool, ApiError> {
+    let ctx = NotebookCtx {
+        notebook_id: Uuid::nil(),
+        team_id: Some(team_id),
+        owner_user_id: None,
+        is_public: false,
+    };
+    let caps = resolve_capabilities(conn, ctx, Some(user_id)).await?;
+    Ok(caps.can(key, &TargetCtx::default()))
+}
+
+pub async fn caller_role_in_team(
+    conn: &mut AsyncPgConnection,
+    team_id: Uuid,
+    user_id: Uuid,
+) -> Option<Uuid> {
+    crate::models::team::find_team_member_with_role(conn, team_id, user_id)
+        .await
+        .ok()
+        .map(|(_, role)| role.id)
+}
+
+pub async fn ensure_team_not_locked(
+    conn: &mut AsyncPgConnection,
+    team_id: Uuid,
+    exclude_user: Option<Uuid>,
+) -> Result<(), ApiError> {
+    let members = crate::models::team::find_team_members_with_roles(conn, team_id).await?;
+    for key in CRITICAL_TEAM_KEYS {
+        let mut covered = false;
+        for (member, _) in &members {
+            if Some(member.user_id) == exclude_user {
+                continue;
+            }
+            if member_has_capability(conn, team_id, member.user_id, key).await? {
+                covered = true;
+                break;
+            }
+        }
+        if !covered {
+            return Err(ApiError::Request(format!(
+                "A operação deixaria o time sem nenhum membro com a permissão '{key}'",
+            )));
+        }
+    }
+    Ok(())
+}
+
 pub async fn capabilities(
     pool: &Pool<AsyncPgConnection>,
     user_id: Option<Uuid>,
