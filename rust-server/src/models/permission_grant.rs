@@ -104,6 +104,40 @@ pub async fn delete_grant_in_team(
     .map_err(|e| ApiError::Database(e.to_string()))
 }
 
+pub async fn seed_team_role_grants(
+    conn: &mut AsyncPgConnection,
+    role_id: Uuid,
+    team_id: Uuid,
+    keys: &[&str],
+) -> Result<(), ApiError> {
+    if keys.is_empty() {
+        return Ok(());
+    }
+
+    let rows: Vec<NewPermissionGrant> = keys
+        .iter()
+        .map(|key| NewPermissionGrant {
+            subject_kind: GrantSubjectKind::Role,
+            subject_id: Some(role_id),
+            subject_principal: None,
+            scope_team_id: Some(team_id),
+            permission_key: key.to_string(),
+            target_kind: GrantTargetKind::Team,
+            target_id: None,
+            target_value: None,
+            effect: GrantEffect::Allow,
+        })
+        .collect();
+
+    diesel::insert_into(permission_grants::table)
+        .values(&rows)
+        .execute(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    Ok(())
+}
+
 pub async fn list_team_grants(
     conn: &mut AsyncPgConnection,
     team_id: Uuid,

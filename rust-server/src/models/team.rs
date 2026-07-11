@@ -247,18 +247,62 @@ pub async fn delete_team(
     }
 }
 
+fn default_grant_keys(role: &NewTeamRole) -> Vec<&'static str> {
+    let mut keys = Vec::new();
+    if role.can_read {
+        keys.extend(["notebook.view", "chat.view"]);
+    }
+    if role.can_write {
+        keys.extend([
+            "notebook.edit",
+            "notebook.blocks.execute",
+            "chat.messages.send",
+        ]);
+    }
+    if role.can_manage_privacy {
+        keys.push("notebook.manage_privacy");
+    }
+    if role.can_manage_clones {
+        keys.push("notebook.manage_clones");
+    }
+    if role.can_invite_users {
+        keys.push("team.invite_users");
+    }
+    if role.can_remove_users {
+        keys.push("team.remove_users");
+    }
+    if role.can_manage_permissions {
+        keys.extend([
+            "team.roles.edit_role_permissions",
+            "team.roles.create_role",
+            "team.roles.edit_role_name",
+        ]);
+    }
+    if role.can_manage_team {
+        keys.push("team.manage");
+    }
+    keys
+}
+
 pub async fn create_team_role(
     conn: &mut AsyncPgConnection,
     data: &NewTeamRole,
 ) -> Result<TeamRole, ApiError> {
-    match diesel::insert_into(team_roles::table)
+    let role: TeamRole = diesel::insert_into(team_roles::table)
         .values(data)
         .get_result(conn)
         .await
-    {
-        Ok(role) => Ok(role),
-        Err(e) => Err(ApiError::Database(e.to_string())),
-    }
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    crate::models::permission_grant::seed_team_role_grants(
+        conn,
+        role.id,
+        role.team_id,
+        &default_grant_keys(data),
+    )
+    .await?;
+
+    Ok(role)
 }
 
 pub async fn find_roles_by_team(
