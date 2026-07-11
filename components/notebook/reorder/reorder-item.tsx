@@ -25,6 +25,7 @@ import { TextBlock } from "../blocks/text/text-block";
 import { TsxEditor } from "../blocks/tsx/tsx-editor";
 import { TypstCell } from "../blocks/typst/typst-cell";
 import { ZigEditor } from "../blocks/zig/zig-editor";
+import { useCapabilitiesContext } from "../permissions/capabilities";
 
 interface ReorderItemProps {
   block: Block;
@@ -44,6 +45,29 @@ interface ReorderItemProps {
   canWrite: boolean;
 }
 
+const KNOWN_BLOCK_TYPES = new Set([
+  "rust",
+  "go",
+  "python",
+  "cpp",
+  "zig",
+  "tsx",
+  "drawing",
+  "text",
+]);
+const EXEC_LANGS = ["rust", "go", "cpp", "zig"];
+
+function blockPermType(block: Block): string | null {
+  if (block.type === "code") {
+    const lang = block.language === "typescript" ? "tsx" : block.language;
+    return lang && KNOWN_BLOCK_TYPES.has(lang) ? lang : null;
+  }
+  if (block.type === "text") return "text";
+  if (block.type === "drawing" || block.type === "free_drawing")
+    return "drawing";
+  return null;
+}
+
 export function ReorderItem({
   block,
   setIsDragging,
@@ -61,6 +85,7 @@ export function ReorderItem({
   canWrite,
 }: ReorderItemProps) {
   const dragControls = useDragControls();
+  const { can, ready } = useCapabilitiesContext();
 
   const handleUpdateContent = useCallback(
     (val: string) => {
@@ -68,6 +93,23 @@ export function ReorderItem({
     },
     [block.id, updateBlock],
   );
+
+  const permType = blockPermType(block);
+  const canView =
+    !ready ||
+    can(
+      permType ? `notebook.blocks.${permType}.view` : "notebook.blocks.view",
+      {
+        blockType: permType ?? undefined,
+      },
+    );
+  const execType = permType && EXEC_LANGS.includes(permType) ? permType : null;
+  const canExecute =
+    !ready ||
+    !execType ||
+    can(`notebook.blocks.${execType}.execute`, { blockType: execType });
+
+  if (!canView) return null;
 
   return (
     <Reorder.Item
@@ -174,6 +216,7 @@ export function ReorderItem({
             isDragging={isDragging}
             sessionId={sessionId}
             notebookId={notebookId}
+            canExecute={canExecute}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         ) : block.language === "cpp" ? (
@@ -182,6 +225,7 @@ export function ReorderItem({
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
             sessionId={sessionId}
             notebookId={notebookId}
+            canExecute={canExecute}
           />
         ) : block.language === "zig" ? (
           <ZigEditor
@@ -189,6 +233,7 @@ export function ReorderItem({
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
             sessionId={sessionId}
             notebookId={notebookId}
+            canExecute={canExecute}
           />
         ) : block.language === "generic" ? (
           (() => {
@@ -230,6 +275,7 @@ export function ReorderItem({
             isDragging={isDragging}
             sessionId={sessionId}
             notebookId={notebookId}
+            canExecute={canExecute}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         )}

@@ -14,6 +14,7 @@ interface RustNotebookProps {
   isDragging?: boolean;
   sessionId: string;
   notebookId?: string;
+  canExecute?: boolean;
 }
 
 export function RustEditor({
@@ -21,6 +22,7 @@ export function RustEditor({
   onCodeChange,
   sessionId,
   notebookId,
+  canExecute = true,
   isDragging = false,
 }: RustNotebookProps) {
   const [output, setOutput] = useState("");
@@ -63,11 +65,13 @@ export function RustEditor({
             setShowPreview={() => {}}
             showPreview={false}
           />
-          <RunButton
-            isRunning={isRunning}
-            handleRun={handleRun}
-            isLoading={false}
-          />
+          {canExecute && (
+            <RunButton
+              isRunning={isRunning}
+              handleRun={handleRun}
+              isLoading={false}
+            />
+          )}
         </div>
 
         <div className="relative group bg-card">

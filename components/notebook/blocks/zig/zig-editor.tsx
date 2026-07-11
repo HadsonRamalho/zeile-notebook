@@ -14,6 +14,7 @@ interface ZigNotebookProps {
   isDragging?: boolean;
   sessionId: string;
   notebookId?: string;
+  canExecute?: boolean;
 }
 
 export function ZigEditor({
@@ -21,6 +22,7 @@ export function ZigEditor({
   onCodeChange,
   sessionId,
   notebookId,
+  canExecute = true,
   isDragging = false,
 }: ZigNotebookProps) {
   const [output, setOutput] = useState("");
@@ -63,11 +65,13 @@ export function ZigEditor({
             setShowPreview={() => {}}
             showPreview={false}
           />
-          <RunButton
-            isRunning={isRunning}
-            handleRun={handleRun}
-            isLoading={false}
-          />
+          {canExecute && (
+            <RunButton
+              isRunning={isRunning}
+              handleRun={handleRun}
+              isLoading={false}
+            />
+          )}
         </div>
 
         <div className="relative group bg-card">

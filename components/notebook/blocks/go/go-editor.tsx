@@ -14,6 +14,7 @@ interface GoNotebookProps {
   isDragging?: boolean;
   sessionId: string;
   notebookId?: string;
+  canExecute?: boolean;
 }
 
 export function GoEditor({
@@ -21,6 +22,7 @@ export function GoEditor({
   onCodeChange,
   sessionId,
   notebookId,
+  canExecute = true,
   isDragging = false,
 }: GoNotebookProps) {
   const [output, setOutput] = useState("");
@@ -63,11 +65,13 @@ export function GoEditor({
             setShowPreview={() => {}}
             showPreview={false}
           />
-          <RunButton
-            isRunning={isRunning}
-            handleRun={handleRun}
-            isLoading={false}
-          />
+          {canExecute && (
+            <RunButton
+              isRunning={isRunning}
+              handleRun={handleRun}
+              isLoading={false}
+            />
+          )}
         </div>
 
         <div className="relative group bg-card">

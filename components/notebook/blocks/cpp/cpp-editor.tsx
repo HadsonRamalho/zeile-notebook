@@ -14,6 +14,7 @@ interface CppNotebookProps {
   isDragging?: boolean;
   sessionId: string;
   notebookId?: string;
+  canExecute?: boolean;
 }
 
 export function CppEditor({
@@ -21,6 +22,7 @@ export function CppEditor({
   onCodeChange,
   sessionId,
   notebookId,
+  canExecute = true,
   isDragging = false,
 }: CppNotebookProps) {
   const [output, setOutput] = useState("");
@@ -63,11 +65,13 @@ export function CppEditor({
             setShowPreview={() => {}}
             showPreview={false}
           />
-          <RunButton
-            isRunning={isRunning}
-            handleRun={handleRun}
-            isLoading={false}
-          />
+          {canExecute && (
+            <RunButton
+              isRunning={isRunning}
+              handleRun={handleRun}
+              isLoading={false}
+            />
+          )}
         </div>
 
         <div className="relative group bg-card">
