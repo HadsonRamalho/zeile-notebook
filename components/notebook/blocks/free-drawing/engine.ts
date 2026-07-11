@@ -2,7 +2,6 @@ import { getStroke } from "perfect-freehand";
 
 export type BrushKind = "pen" | "marker" | "calligraphy" | "eraser";
 
-/** Formas de pincel disponíveis para criação de pincéis customizados. */
 export type BrushShape =
   | "pencil"
   | "dot"
@@ -68,9 +67,6 @@ export interface StrokeElement {
   opacity: number;
   pressureSensitive: boolean;
   points: StrokePoint[];
-  // Modelo novo (pincéis com forma + afinamento/opacidade variável ao longo do
-  // traço). Quando `shape` está presente o renderizador usa este caminho; do
-  // contrário cai no legado (brush + size + opacity uniformes).
   shape?: BrushShape;
   sizeStart?: number;
   sizeEnd?: number;
@@ -201,7 +197,6 @@ function calligraphyQuads(
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-/** Hash FNV-1a → semente estável a partir do id do traço. */
 function hashSeed(str: string): number {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -211,7 +206,6 @@ function hashSeed(str: string): number {
   return h >>> 0;
 }
 
-/** PRNG mulberry32: determinístico por semente, para textura estável entre redraws. */
 function mulberry32(seed: number): () => number {
   let a = seed;
   return () => {
@@ -239,13 +233,11 @@ function resolveTaper(s: StrokeElement): ResolvedTaper {
   };
 }
 
-/** Largura máxima do traço (para bounds e hit test). */
 export function strokeMaxWidth(s: StrokeElement): number {
   if (s.shape) return Math.max(s.sizeStart ?? s.size, s.sizeEnd ?? s.size);
   return s.size;
 }
 
-/** Contorno preenchido (perfect-freehand) com afinamento start→end. */
 function shapedPenPath(
   s: StrokeElement,
   t: ResolvedTaper,
@@ -278,7 +270,6 @@ function shapedPenPath(
   return path;
 }
 
-/** Polilinha com largura/opacidade variável por segmento. */
 function drawTaperedPolyline(
   ctx: CanvasRenderingContext2D,
   s: StrokeElement,
@@ -300,7 +291,6 @@ function drawTaperedPolyline(
   }
 }
 
-/** Carimba círculos ao longo do trajeto, com espaçamento e jitter opcionais. */
 function stampAlong(
   ctx: CanvasRenderingContext2D,
   s: StrokeElement,
@@ -353,7 +343,6 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
     }
     case "pencil": {
       ctx.fill(shapedPenPath(s, { ...t, opStart: 1, opEnd: 1 }, 0.3));
-      // grão seco por cima para textura de lápis
       stampAlong(ctx, s, t, {
         spacing: 0.35,
         jitter: 0.9,
@@ -401,7 +390,6 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
       break;
     }
     case "watercolor": {
-      // várias passadas largas, baixa opacidade, com pequeno deslocamento → sangramento
       for (let pass = 0; pass < 3; pass++) {
         const off = pass === 0 ? 0 : (rng() - 0.5) * (t.sizeStart + t.sizeEnd) * 0.15;
         ctx.save();
@@ -419,7 +407,6 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
       break;
     }
     case "oil": {
-      // corpo opaco espesso + passadas deslocadas para relevo (impasto)
       ctx.globalAlpha = (t.opStart + t.opEnd) / 2;
       drawTaperedPolyline(ctx, s, t, "round");
       for (let pass = 0; pass < 2; pass++) {
@@ -779,18 +766,12 @@ export interface LaserStroke {
   id: string;
   points: { x: number; y: number }[];
   bornAt: number;
-  /** null enquanto o traço ainda está sendo desenhado; timestamp quando soltou. */
   releasedAt: number | null;
 }
 
 export const LASER_FADE_MS = 900;
 export const LASER_COLOR = "#ff2d55";
 
-/**
- * Desenha os traços de laser (efêmeros) sobre a cena, no espaço de tela, usando
- * a mesma transform da câmera. Cada traço some em `LASER_FADE_MS` após soltar.
- * Retorna true se ainda há algum traço vivo (para manter o loop de animação).
- */
 export function drawLaser(
   ctx: CanvasRenderingContext2D,
   cssWidth: number,
@@ -824,12 +805,10 @@ export function drawLaser(
     const path = new Path2D();
     path.moveTo(laser.points[0]!.x, laser.points[0]!.y);
     for (const p of laser.points.slice(1)) path.lineTo(p.x, p.y);
-    // brilho externo suave
     ctx.globalAlpha = alpha * 0.35;
     ctx.strokeStyle = LASER_COLOR;
     ctx.lineWidth = 14 / camera.zoom;
     ctx.stroke(path);
-    // núcleo
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 4 / camera.zoom;
@@ -840,7 +819,6 @@ export function drawLaser(
     ctx.stroke(path);
   }
   ctx.restore();
-  // remove backing store leftover: quando não há vivos o chamador redesenha a cena
   void cssWidth;
   void cssHeight;
   return anyAlive;

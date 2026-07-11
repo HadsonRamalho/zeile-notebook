@@ -379,8 +379,6 @@ export function FreeDrawingCell({
     redraw();
   }, [redraw]);
 
-  // Loop de animação do laser: enquanto houver traços vivos, redesenha e poda
-  // os que já esvaeceram. Traços de laser são efêmeros e não entram na cena.
   const tickLaser = useCallback(() => {
     if (laserRaf.current !== null) return;
     const loop = () => {

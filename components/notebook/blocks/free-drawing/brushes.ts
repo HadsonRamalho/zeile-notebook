@@ -14,7 +14,6 @@ export interface Brush {
 export const brushSize = (b: Brush): number =>
   Math.round(Math.max(b.sizeStart, b.sizeEnd));
 
-/** Reescala start/end preservando a proporção (afinamento) do pincel. */
 export const scaleBrushSize = (b: Brush, nextSize: number): Brush => {
   const current = Math.max(b.sizeStart, b.sizeEnd, 0.1);
   const ratio = Math.max(1, nextSize) / current;
