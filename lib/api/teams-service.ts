@@ -29,6 +29,13 @@ export async function fetchTeamMembers(id: string) {
   return await api.get<TeamMemberWithRoleAndUserData[]>(`/team/${id}/members`);
 }
 
+export async function updateMemberRole(
+  teamId: string,
+  body: { user_id: string; role_id: string },
+) {
+  return await api.patch(`/team/${teamId}/members`, body);
+}
+
 export async function removeMember(teamId: string, userId: string) {
   return await api.delete(`/team/${teamId}/members`, {
     body: JSON.stringify(userId),

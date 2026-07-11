@@ -1,10 +1,25 @@
 "use client";
 
-import { Plus, Send, Trash2, Users } from "lucide-react";
-import { Loader } from "@/components/motion/loader";
+import {
+  KeyRound,
+  MoreVertical,
+  Plus,
+  Send,
+  Shield,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Loader } from "@/components/motion/loader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/motion/select";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -15,6 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,18 +40,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/motion/select";
 import { useAuth } from "@/context/auth-context";
 import { handleApiError } from "@/lib/api/handle-api-error";
-import { inviteTeamMember, removeMember } from "@/lib/api/teams-service";
+import {
+  inviteTeamMember,
+  removeMember,
+  updateMemberRole,
+} from "@/lib/api/teams-service";
 import type { TeamMemberWithUserData, TeamRole } from "@/lib/types/team-types";
 
 interface TeamMembersProps {
@@ -44,6 +67,22 @@ interface TeamMembersProps {
   roles: TeamRole[];
   members: [TeamMemberWithUserData, TeamRole][];
   onUpdate: () => void;
+  onEditRolePermissions: (roleId: string) => void;
+  onEditMemberPermissions: (userId: string) => void;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function roleDisplayName(role: TeamRole, t: (k: string) => string) {
+  if (role.name === "Owner") return t("defaults.owner");
+  if (role.name === "Member") return t("defaults.member");
+  return role.name;
 }
 
 export function TeamMembers({
@@ -52,11 +91,26 @@ export function TeamMembers({
   roles,
   members,
   onUpdate,
+  onEditRolePermissions,
+  onEditMemberPermissions,
 }: TeamMembersProps) {
   const { user } = useAuth();
   const a = useTranslations("team_settings.team_member");
+  const rt = useTranslations("team_settings.team_role");
   const t = useTranslations("api_errors");
   const locale = useLocale();
+
+  const canManageRoles = !!userPermissions?.can_manage_permissions;
+
+  const handleChangeRole = async (userId: string, roleId: string) => {
+    try {
+      await updateMemberRole(teamId, { user_id: userId, role_id: roleId });
+      toast.success(a("role_updated"));
+      onUpdate();
+    } catch (err) {
+      handleApiError({ err, t });
+    }
+  };
 
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -159,7 +213,10 @@ export function TeamMembers({
                   </div>
                   <div className="space-y-2">
                     <Label>{a("user_role")}</Label>
-                    <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
+                    <Select
+                      value={inviteRoleId}
+                      onValueChange={setInviteRoleId}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={a("select_role")} />
                       </SelectTrigger>
@@ -206,11 +263,30 @@ export function TeamMembers({
             {members.map((member) => (
               <div
                 key={member[0].id}
-                className="grid grid-cols-1 justify-end p-4 space-y-2 hover:bg-muted/50 transition-colors"
+                className="flex flex-wrap items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
               >
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">{member[0].name}</span>
-                  <span className="text-xs text-muted-foreground">
+                <Avatar className="size-9 shrink-0">
+                  {member[0].avatar_url && (
+                    <AvatarImage
+                      src={member[0].avatar_url}
+                      alt={member[0].name}
+                    />
+                  )}
+                  <AvatarFallback className="text-xs">
+                    {getInitials(member[0].name)}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-sm font-medium">
+                    {member[0].name}
+                    {member[0].user_id === user.id && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({a("you")})
+                      </span>
+                    )}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
                     {member[0].email}
                   </span>
                   <span className="text-xs text-muted-foreground opacity-75">
@@ -222,9 +298,75 @@ export function TeamMembers({
                     })}
                   </span>
                 </div>
-                <div className="flex items-center justify-between md:justify-end gap-4">
-                  <Badge variant="secondary">{member[1].name}</Badge>
-                  {member[0].user_id === user.id && <Badge>Você</Badge>}
+
+                <div className="flex shrink-0 items-center gap-2">
+                  {canManageRoles ? (
+                    <button
+                      type="button"
+                      onClick={() => onEditRolePermissions(member[1].id)}
+                      title={rt("notebook_permissions")}
+                    >
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-secondary/70"
+                      >
+                        {roleDisplayName(member[1], rt)}
+                      </Badge>
+                    </button>
+                  ) : (
+                    <Badge variant="secondary">
+                      {roleDisplayName(member[1], rt)}
+                    </Badge>
+                  )}
+
+                  {canManageRoles && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={a("member_actions")}
+                        >
+                          <MoreVertical size={16} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>
+                          {a("change_role")}
+                        </DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          value={member[0].role_id}
+                          onValueChange={(rid) =>
+                            handleChangeRole(member[0].user_id, rid)
+                          }
+                        >
+                          {roles.map((role) => (
+                            <DropdownMenuRadioItem
+                              key={role.id}
+                              value={role.id}
+                            >
+                              {roleDisplayName(role, rt)}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() =>
+                            onEditMemberPermissions(member[0].user_id)
+                          }
+                        >
+                          <KeyRound size={16} />
+                          {a("edit_member_permissions")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onEditRolePermissions(member[1].id)}
+                        >
+                          <Shield size={16} />
+                          {a("edit_role_permissions")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
 
                   {!member[1].can_manage_team &&
                     (userPermissions?.can_manage_team ||

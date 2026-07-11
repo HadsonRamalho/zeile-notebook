@@ -267,7 +267,13 @@
       "no_members_found": "No members found.",
       "remove_member_title": "Remove Member",
       "remove_member_description": "Are you sure you want to remove <strong>{name}</strong> from this team? They will immediately lose access to all shared notebooks and resources.",
-      "confirm_remove_button": "Remove Member"
+      "confirm_remove_button": "Remove Member",
+      "you": "You",
+      "role_updated": "Role updated.",
+      "member_actions": "Member actions",
+      "change_role": "Change role",
+      "edit_member_permissions": "Member permissions",
+      "edit_role_permissions": "Role permissions"
     },
     "team_role": {
       "title": "Roles and Permissions",
@@ -316,7 +322,11 @@
       "public_permissions": "Public permissions",
       "public_permissions_hint": "Set what any logged-in user can do in this public notebook.",
       "notebook_permissions": "Notebook permissions",
-      "notebook_permissions_hint": "Adjust role permissions specifically for this notebook."
+      "notebook_permissions_hint": "Adjust role permissions specifically for this notebook.",
+      "tab_roles": "Roles",
+      "tab_members": "Members",
+      "member_search_placeholder": "Search member by name or email",
+      "member_search_empty": "No members found."
     }
   },
   "team_sidebar": {

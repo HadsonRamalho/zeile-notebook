@@ -268,7 +268,7 @@ pub async fn api_update_member_role(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    require_team_permission(conn, user_id, team_id, "team.manage").await?;
+    require_team_permission(conn, user_id, team_id, "team.roles.edit_role_permissions").await?;
 
     let roles = models::team::find_roles_by_team(conn, team_id).await?;
     if !roles.iter().any(|r| r.id == payload.role_id) {

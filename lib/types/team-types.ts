@@ -41,6 +41,7 @@ export interface TeamMemberWithUserData {
 
   name: string;
   email: string;
+  avatar_url: string | null;
 
   team_id: string;
   user_id: string;

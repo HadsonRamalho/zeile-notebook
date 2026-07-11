@@ -267,7 +267,13 @@
       "no_members_found": "Nenhum membro encontrado.",
       "remove_member_title": "Remover Membro",
       "remove_member_description": "Tem certeza que deseja remover <strong>{name}</strong> deste time? Eles perderão acesso a todos os cadernos e recursos compartilhados imediatamente.",
-      "confirm_remove_button": "Remover Membro"
+      "confirm_remove_button": "Remover Membro",
+      "you": "Você",
+      "role_updated": "Cargo atualizado.",
+      "member_actions": "Ações do membro",
+      "change_role": "Trocar cargo",
+      "edit_member_permissions": "Permissões do membro",
+      "edit_role_permissions": "Permissões do cargo"
     },
     "team_role": {
       "title": "Cargos e Permissões",
@@ -316,7 +322,11 @@
       "public_permissions": "Permissões públicas",
       "public_permissions_hint": "Defina o que qualquer usuário logado pode fazer neste notebook público.",
       "notebook_permissions": "Permissões do notebook",
-      "notebook_permissions_hint": "Ajuste as permissões dos cargos especificamente para este notebook."
+      "notebook_permissions_hint": "Ajuste as permissões dos cargos especificamente para este notebook.",
+      "tab_roles": "Cargos",
+      "tab_members": "Membros",
+      "member_search_placeholder": "Buscar membro por nome ou e-mail",
+      "member_search_empty": "Nenhum membro encontrado."
     }
   },
   "team_sidebar": {

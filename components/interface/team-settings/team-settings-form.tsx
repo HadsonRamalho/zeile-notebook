@@ -58,6 +58,20 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   const [userPermissions, setUserPermissions] = useState<TeamRole | undefined>(
     undefined,
   );
+  const [permInitial, setPermInitial] = useState<{
+    kind: "role" | "user";
+    id: string;
+  } | null>(null);
+
+  const goToRolePerms = (roleId: string) => {
+    setPermInitial({ kind: "role", id: roleId });
+    setActiveTab("roles");
+  };
+
+  const goToMemberPerms = (userId: string) => {
+    setPermInitial({ kind: "user", id: userId });
+    setActiveTab("roles");
+  };
 
   const reloadTeamRoles = async () => {
     try {
@@ -212,6 +226,8 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
             roles={roles}
             members={members}
             onUpdate={reloadTeamMembers}
+            onEditRolePermissions={goToRolePerms}
+            onEditMemberPermissions={goToMemberPerms}
           />
         </TabsContent>
 
@@ -221,6 +237,7 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
               teamId={teamId}
               roles={roles}
               onRolesChanged={reloadTeamRoles}
+              initialTarget={permInitial}
             />
           </TabsContent>
         )}
