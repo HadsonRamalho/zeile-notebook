@@ -241,15 +241,15 @@ export function BrushPicker({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] gap-0 overflow-hidden p-0 max-md:top-auto max-md:bottom-0 max-md:translate-y-0 max-md:rounded-b-none max-md:max-w-full sm:max-w-md">
-        <DialogHeader className="border-b border-border p-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 max-md:top-auto max-md:bottom-0 max-md:translate-y-0 max-md:rounded-b-none max-md:max-w-full sm:max-w-md">
+        <DialogHeader className="shrink-0 border-b border-border p-4">
           <DialogTitle>Pincéis</DialogTitle>
           <DialogDescription>
             Escolha um pincel ou crie um novo com forma e afinamento próprios.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 overflow-y-auto p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
           <div className="grid grid-cols-2 gap-2">
             {brushes.map((brush) => (
               <div
