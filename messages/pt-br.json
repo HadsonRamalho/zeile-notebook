@@ -295,7 +295,7 @@
       "save": "Salvar",
       "cancel": "Cancelar",
       "granular_toggle": "Permissões granulares",
-      "granular_hint": "As permissões gerais cobrem os casos comuns; as granulares permitem exceções finas por tipo de bloco ou ação.",
+      "granular_hint": "As permissões gerais cobrem os casos comuns; as granulares permitem exceções finas por tipo de bloco ou ação. Neutro = sem regra explícita (herda o padrão/escopo mais amplo).",
       "effect_neutral": "Neutro",
       "effect_allow": "Permitir",
       "effect_deny": "Bloquear",

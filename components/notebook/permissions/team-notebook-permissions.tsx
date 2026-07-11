@@ -4,6 +4,10 @@ import { ChevronDown, KeyRound, SlidersHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader } from "@/components/motion/loader";
+import {
+  PermissionRow,
+  permissionsSheetClass,
+} from "@/components/permissions/permission-controls";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -33,7 +37,6 @@ import {
   getTeamGrants,
 } from "@/lib/api/permissions-service";
 import { fetchTeamRoles } from "@/lib/api/teams-service";
-import { cn } from "@/lib/cn";
 import type {
   CatalogPermission,
   GrantEffect,
@@ -166,7 +169,7 @@ export function TeamNotebookPermissions({
           {tr("notebook_permissions")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={permissionsSheetClass}>
         <DialogHeader>
           <DialogTitle>{tr("notebook_permissions")}</DialogTitle>
           <DialogDescription>
@@ -199,7 +202,7 @@ export function TeamNotebookPermissions({
 
             <div className="divide-y divide-border overflow-hidden rounded-lg border">
               {buckets.general.map((perm) => (
-                <PermRow
+                <PermissionRow
                   key={perm.key}
                   perm={perm}
                   effect={effectFor(perm.key)}
@@ -222,7 +225,7 @@ export function TeamNotebookPermissions({
                 <CollapsibleContent>
                   <div className="mt-2 divide-y divide-border overflow-hidden rounded-lg border">
                     {buckets.granular.map((perm) => (
-                      <PermRow
+                      <PermissionRow
                         key={perm.key}
                         perm={perm}
                         effect={effectFor(perm.key)}
@@ -238,69 +241,5 @@ export function TeamNotebookPermissions({
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PermRow({
-  perm,
-  effect,
-  busy,
-  onChange,
-}: {
-  perm: CatalogPermission;
-  effect: Effect;
-  busy: boolean;
-  onChange: (next: Effect) => void;
-}) {
-  const tp = useTranslations("perm");
-  const tr = useTranslations("team_settings.team_role");
-  const label = tp.has(perm.key) ? tp(perm.key) : perm.key;
-
-  const options: { value: Effect; label: string; active: string }[] = [
-    {
-      value: "none",
-      label: tr("effect_neutral"),
-      active: "bg-muted text-foreground",
-    },
-    {
-      value: "allow",
-      label: tr("effect_allow"),
-      active: "bg-primary text-primary-foreground",
-    },
-    {
-      value: "deny",
-      label: tr("effect_deny"),
-      active: "bg-destructive text-white",
-    },
-  ];
-
-  return (
-    <div className="flex items-center justify-between gap-4 bg-card px-4 py-3">
-      <span className="min-w-0 truncate text-sm font-medium text-foreground">
-        {label}
-      </span>
-      {busy ? (
-        <Loader variant="spinner" size={16} className="text-muted-foreground" />
-      ) : (
-        <div className="inline-flex shrink-0 items-center gap-0.5 rounded-md border bg-muted/40 p-0.5">
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={effect === option.value}
-              onClick={() => onChange(option.value)}
-              className={cn(
-                "rounded-[5px] px-2.5 py-1 text-xs font-medium transition-colors duration-150",
-                effect === option.value
-                  ? option.active
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

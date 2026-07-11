@@ -6,6 +6,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::{
     controllers::{
         grants::{api_create_team_grant, api_delete_team_grant, api_list_team_grants},
+        permissions::api_get_team_capabilities,
         team::{
             api_create_team, api_create_team_page, api_create_team_role, api_delete_team,
             api_get_team, api_get_team_members, api_get_team_pages, api_get_team_roles,
@@ -24,6 +25,7 @@ pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/{id}/roles", get(api_get_team_roles))
         .route("/{id}/roles", post(api_create_team_role))
         .route("/{id}/roles", patch(api_update_team_role))
+        .route("/{id}/capabilities", get(api_get_team_capabilities))
         .route("/{id}/grants", get(api_list_team_grants))
         .route("/{id}/grants", post(api_create_team_grant))
         .route("/{id}/grants/{grant_id}", delete(api_delete_team_grant))

@@ -85,7 +85,7 @@ export function NotebookControls() {
   };
 
   return (
-    <div className="flex w-full justify-start gap-2 print:hidden">
+    <div className="flex w-full flex-wrap justify-start gap-2 print:hidden">
       <ControlActions
         rules={rules}
         isPublic={isPublic}

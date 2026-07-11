@@ -3,8 +3,6 @@
 import {
   Check,
   ChevronDown,
-  Eye,
-  EyeOff,
   Pencil,
   Plus,
   ShieldCheck,
@@ -15,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader } from "@/components/motion/loader";
-import { Badge } from "@/components/ui/badge";
+import { PermissionRow } from "@/components/permissions/permission-controls";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -44,7 +42,6 @@ import {
   fetchTeamRoles,
   updateRole,
 } from "@/lib/api/teams-service";
-import { cn } from "@/lib/cn";
 import type { Notebook } from "@/lib/types";
 import type {
   CatalogPermission,
@@ -457,114 +454,6 @@ export function TeamPermissions({
           </section>
         ))
       )}
-    </div>
-  );
-}
-
-function PermissionRow({
-  perm,
-  effect,
-  busy,
-  onChange,
-}: {
-  perm: CatalogPermission;
-  effect: Effect;
-  busy: boolean;
-  onChange: (next: Effect) => void;
-}) {
-  const tp = useTranslations("perm");
-  const tr = useTranslations("team_settings.team_role");
-  const label = tp.has(perm.key) ? tp(perm.key) : perm.key;
-
-  return (
-    <div className="flex items-center justify-between gap-4 bg-card px-4 py-3">
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{label}</span>
-          {perm.view === "confidential" && (
-            <Badge variant="outline" className="gap-1 text-[11px]">
-              <EyeOff className="size-3" /> {tr("badge_confidential")}
-            </Badge>
-          )}
-          {perm.view === "cosmetic" && (
-            <Badge
-              variant="ghost"
-              className="gap-1 text-[11px] text-muted-foreground"
-            >
-              <Eye className="size-3" /> {tr("badge_cosmetic")}
-            </Badge>
-          )}
-        </div>
-        <code className="block truncate text-xs text-muted-foreground/70">
-          {perm.key}
-        </code>
-      </div>
-
-      <div className="shrink-0">
-        {busy ? (
-          <div className="flex h-8 w-[190px] items-center justify-center">
-            <Loader
-              variant="spinner"
-              size={16}
-              className="text-muted-foreground"
-            />
-          </div>
-        ) : (
-          <EffectControl value={effect} onChange={onChange} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function EffectControl({
-  value,
-  onChange,
-}: {
-  value: Effect;
-  onChange: (next: Effect) => void;
-}) {
-  const tr = useTranslations("team_settings.team_role");
-
-  const options: { value: Effect; label: string; active: string }[] = [
-    {
-      value: "none",
-      label: tr("effect_neutral"),
-      active: "bg-muted text-foreground",
-    },
-    {
-      value: "allow",
-      label: tr("effect_allow"),
-      active: "bg-primary text-primary-foreground",
-    },
-    {
-      value: "deny",
-      label: tr("effect_deny"),
-      active: "bg-destructive text-white",
-    },
-  ];
-
-  return (
-    <div className="inline-flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5">
-      {options.map((option) => {
-        const selected = value === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "rounded-[5px] px-2.5 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              selected
-                ? option.active
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {option.label}
-          </button>
-        );
-      })}
     </div>
   );
 }

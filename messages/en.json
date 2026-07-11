@@ -295,7 +295,7 @@
       "save": "Save",
       "cancel": "Cancel",
       "granular_toggle": "Granular permissions",
-      "granular_hint": "General permissions cover the common cases; granular ones allow fine exceptions per block type or action.",
+      "granular_hint": "General permissions cover the common cases; granular ones allow fine exceptions per block type or action. Neutral = no explicit rule (inherits the default/broader scope).",
       "effect_neutral": "Neutral",
       "effect_allow": "Allow",
       "effect_deny": "Block",

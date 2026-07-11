@@ -450,6 +450,31 @@ pub async fn api_get_permission_catalog()
     (StatusCode::OK, Json(catalog()))
 }
 
+pub async fn api_get_team_capabilities(
+    State(state): State<Arc<AppState>>,
+    Path(team_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<CapabilitySnapshot>), ApiError> {
+    let user_id = match extract_claims_from_header(&headers).await {
+        Ok(data) => Some(data.1.id),
+        Err(_) => None,
+    };
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let ctx = NotebookCtx {
+        notebook_id: Uuid::nil(),
+        team_id: Some(team_id),
+        owner_user_id: None,
+        is_public: false,
+    };
+    let caps = resolve_capabilities(conn, ctx, user_id).await?;
+
+    Ok((StatusCode::OK, Json(caps.snapshot())))
+}
+
 pub async fn api_get_notebook_capabilities(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

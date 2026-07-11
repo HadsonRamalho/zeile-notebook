@@ -17,11 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
+  getPermissionCatalog,
+  getTeamCapabilities,
+} from "@/lib/api/permissions-service";
+import {
   fetchTeam,
   fetchTeamMembers,
   fetchTeamRoles,
-  getUserTeamPermissions,
 } from "@/lib/api/teams-service";
+import { buildImpliedIndex, can as evalCan } from "@/lib/permissions/engine";
 import type {
   Team,
   TeamMemberWithUserData,
@@ -76,18 +80,35 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   useEffect(() => {
     setIsLoading(true);
     Promise.all([
-      getUserTeamPermissions(teamId),
+      getTeamCapabilities(teamId),
+      getPermissionCatalog(),
       fetchTeam(teamId),
       fetchTeamMembers(teamId),
     ])
-      .then(async ([p, t, m]) => {
-        const fetchedPermissions = p[1];
+      .then(async ([snapshot, catalog, teamData, m]) => {
+        const implied = buildImpliedIndex(catalog);
+        const teamCan = (key: string) =>
+          evalCan(snapshot, implied, key, { notebookId: "" });
 
-        setUserPermissions(fetchedPermissions);
-        setTeam(t);
+        const perms: TeamRole = {
+          id: "",
+          team_id: teamId,
+          name: "",
+          can_read: teamCan("notebook.view"),
+          can_write: teamCan("notebook.edit"),
+          can_manage_privacy: teamCan("notebook.manage_privacy"),
+          can_manage_clones: teamCan("notebook.manage_clones"),
+          can_invite_users: teamCan("team.invite_users"),
+          can_remove_users: teamCan("team.remove_users"),
+          can_manage_permissions: teamCan("team.roles.edit_role_permissions"),
+          can_manage_team: teamCan("team.edit_name"),
+        };
+
+        setUserPermissions(perms);
+        setTeam(teamData);
         setMembers(m);
 
-        if (fetchedPermissions?.can_manage_permissions) {
+        if (perms.can_manage_permissions) {
           const r = await fetchTeamRoles(teamId);
           setRoles(r);
         } else {

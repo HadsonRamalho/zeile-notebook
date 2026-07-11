@@ -14,6 +14,10 @@ export async function getPermissionCatalog() {
   return await api.get<PermissionCatalog>(`/permissions/catalog`);
 }
 
+export async function getTeamCapabilities(teamId: string) {
+  return await api.get<CapabilitySnapshot>(`/team/${teamId}/capabilities`);
+}
+
 export async function getTeamGrants(teamId: string) {
   return await api.get<TeamGrant[]>(`/team/${teamId}/grants`);
 }
