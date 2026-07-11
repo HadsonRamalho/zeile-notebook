@@ -295,11 +295,18 @@ function stampAlong(
   ctx: CanvasRenderingContext2D,
   s: StrokeElement,
   t: ResolvedTaper,
-  opts: { spacing: number; jitter: number; radiusScale: number; rng: () => number },
+  opts: {
+    spacing: number;
+    jitter: number;
+    radiusScale: number;
+    rng: () => number;
+    grain?: number;
+  },
 ) {
   const pts = s.points;
   const n = pts.length;
   if (n === 0) return;
+  const grain = opts.grain ?? 1;
   let carry = 0;
   for (let i = 0; i < n - 1; i++) {
     const a = pts[i]!;
@@ -314,13 +321,18 @@ function stampAlong(
     const step = Math.max(0.5, width * opts.spacing);
     for (let d = carry; d < segLen; d += step) {
       const f = d / segLen;
-      const jx = (opts.rng() - 0.5) * width * opts.jitter;
-      const jy = (opts.rng() - 0.5) * width * opts.jitter;
-      const r = (width / 2) * opts.radiusScale * (0.7 + opts.rng() * 0.6);
-      ctx.globalAlpha = alpha * (0.6 + opts.rng() * 0.4);
-      ctx.beginPath();
-      ctx.arc(a.x + dx * f + jx, a.y + dy * f + jy, Math.max(0.3, r), 0, Math.PI * 2);
-      ctx.fill();
+      const cx = a.x + dx * f;
+      const cy = a.y + dy * f;
+      for (let g = 0; g < grain; g++) {
+        const jx = (opts.rng() - 0.5) * width * opts.jitter;
+        const jy = (opts.rng() - 0.5) * width * opts.jitter;
+        const r =
+          (width / 2) * opts.radiusScale * (0.5 + opts.rng() * 0.7);
+        ctx.globalAlpha = alpha * (0.4 + opts.rng() * 0.5);
+        ctx.beginPath();
+        ctx.arc(cx + jx, cy + jy, Math.max(0.25, r), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     carry = ((carry - segLen) % step + step) % step;
   }
@@ -430,9 +442,10 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
     }
     case "charcoal": {
       stampAlong(ctx, s, t, {
-        spacing: 0.3,
-        jitter: 0.7,
-        radiusScale: 0.6,
+        spacing: 0.16,
+        jitter: 0.95,
+        radiusScale: 0.28,
+        grain: 5,
         rng,
       });
       break;
@@ -448,6 +461,67 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
     }
   }
   ctx.restore();
+}
+
+export type GeoShape = "line" | "rectangle" | "ellipse" | "triangle" | "arrow";
+
+export const GEO_SHAPE_LABELS: Record<GeoShape, string> = {
+  line: "Linha",
+  rectangle: "Retângulo",
+  ellipse: "Elipse",
+  triangle: "Triângulo",
+  arrow: "Seta",
+};
+
+export const GEO_SHAPES: GeoShape[] = [
+  "line",
+  "rectangle",
+  "ellipse",
+  "triangle",
+  "arrow",
+];
+
+/** Gera os pontos que traçam uma forma geométrica entre (x0,y0) e (x1,y1). */
+export function geoShapePoints(
+  kind: GeoShape,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): StrokePoint[] {
+  const p = (x: number, y: number): StrokePoint => ({ x, y, pressure: 0.5 });
+  switch (kind) {
+    case "line":
+      return [p(x0, y0), p(x1, y1)];
+    case "rectangle":
+      return [p(x0, y0), p(x1, y0), p(x1, y1), p(x0, y1), p(x0, y0)];
+    case "triangle":
+      return [p((x0 + x1) / 2, y0), p(x1, y1), p(x0, y1), p((x0 + x1) / 2, y0)];
+    case "ellipse": {
+      const cx = (x0 + x1) / 2;
+      const cy = (y0 + y1) / 2;
+      const rx = Math.abs(x1 - x0) / 2;
+      const ry = Math.abs(y1 - y0) / 2;
+      const pts: StrokePoint[] = [];
+      const steps = 56;
+      for (let i = 0; i <= steps; i++) {
+        const a = (i / steps) * Math.PI * 2;
+        pts.push(p(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry));
+      }
+      return pts;
+    }
+    case "arrow": {
+      const angle = Math.atan2(y1 - y0, x1 - x0);
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      const head = Math.min(24, len * 0.3);
+      const wing = Math.PI / 7;
+      const lx = x1 - Math.cos(angle - wing) * head;
+      const ly = y1 - Math.sin(angle - wing) * head;
+      const rx = x1 - Math.cos(angle + wing) * head;
+      const ry = y1 - Math.sin(angle + wing) * head;
+      return [p(x0, y0), p(x1, y1), p(lx, ly), p(x1, y1), p(rx, ry)];
+    }
+  }
 }
 
 /** Renderiza um traço em um contexto 2D já configurado (globalAlpha/composite). */
