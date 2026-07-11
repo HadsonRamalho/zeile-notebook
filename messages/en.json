@@ -326,7 +326,12 @@
       "tab_roles": "Roles",
       "tab_members": "Members",
       "member_search_placeholder": "Search member by name or email",
-      "member_search_empty": "No members found."
+      "member_search_empty": "No members found.",
+      "tab_notebooks": "Notebooks",
+      "role_search_placeholder": "Search role",
+      "notebook_search_placeholder": "Search notebook",
+      "notebook_search_empty": "No notebooks found.",
+      "select_subject_hint": "Select a subject (and a notebook, if applicable) to configure permissions."
     }
   },
   "team_sidebar": {

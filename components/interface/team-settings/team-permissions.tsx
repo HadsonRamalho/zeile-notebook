@@ -1,11 +1,11 @@
 "use client";
 
 import {
+  BookOpen,
   Check,
   ChevronDown,
   Pencil,
   Plus,
-  Search,
   Shield,
   ShieldCheck,
   SlidersHorizontal,
@@ -17,8 +17,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader } from "@/components/motion/loader";
 import { PermissionRow } from "@/components/permissions/permission-controls";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import {
+  type PickerItem,
+  SearchPicker,
+} from "@/components/permissions/search-picker";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -33,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/context/auth-context";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
   createTeamGrant,
@@ -64,14 +67,6 @@ type Effect = GrantEffect | "none";
 
 const MODULE_ORDER = ["notebook", "team", "chat"];
 
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
 const BLANK_ROLE = {
   can_read: false,
   can_write: false,
@@ -98,16 +93,18 @@ export function TeamPermissions({
 }: TeamPermissionsProps) {
   const tr = useTranslations("team_settings.team_role");
   const te = useTranslations("api_errors");
+  const { user: authUser } = useAuth();
 
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null);
   const [grants, setGrants] = useState<TeamGrant[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>(rolesProp);
   const [members, setMembers] = useState<TeamMemberWithRoleAndUserData[]>([]);
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-  const [mode, setMode] = useState<"role" | "member">("role");
+  const [mode, setMode] = useState<"role" | "member" | "notebook">("role");
   const [roleId, setRoleId] = useState<string>(rolesProp[0]?.id ?? "");
   const [memberUserId, setMemberUserId] = useState<string>("");
-  const [memberSearch, setMemberSearch] = useState("");
+  const [nbNotebookId, setNbNotebookId] = useState<string>("");
+  const [nbSubjectKind, setNbSubjectKind] = useState<"role" | "member">("role");
   const [scopeSel, setScopeSel] = useState<string>("team");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Set<string>>(new Set());
@@ -156,12 +153,31 @@ export function TeamPermissions({
     }
   }, [initialTarget]);
 
-  const subjectKind: "role" | "user" = mode === "role" ? "role" : "user";
-  const subjectId = mode === "role" ? roleId : memberUserId;
+  const subjectKind: "role" | "user" =
+    mode === "member"
+      ? "user"
+      : mode === "role"
+        ? "role"
+        : nbSubjectKind === "member"
+          ? "user"
+          : "role";
+  const subjectId = subjectKind === "role" ? roleId : memberUserId;
   const targetKind: "team" | "notebook" =
-    scopeSel === "team" ? "team" : "notebook";
+    mode === "notebook"
+      ? "notebook"
+      : scopeSel === "team"
+        ? "team"
+        : "notebook";
   const targetId =
-    scopeSel === "team" ? null : scopeSel.slice("notebook:".length);
+    mode === "notebook"
+      ? nbNotebookId || null
+      : scopeSel === "team"
+        ? null
+        : scopeSel.slice("notebook:".length);
+
+  const selfUserId = authUser?.id;
+  const selfRoleId = members.find(([m]) => m.user_id === selfUserId)?.[0]
+    .role_id;
 
   const matchesSelection = useCallback(
     (g: TeamGrant, key: string) =>
@@ -313,14 +329,40 @@ export function TeamPermissions({
     );
   }, [catalog, targetKind]);
 
-  const filteredMembers = useMemo(() => {
-    const q = memberSearch.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter(
-      ([m]) =>
-        m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q),
-    );
-  }, [members, memberSearch]);
+  const roleItems = useMemo<PickerItem[]>(
+    () =>
+      roles.map((r) => ({
+        id: r.id,
+        primary: roleLabel(r),
+        disabled: r.id === selfRoleId,
+      })),
+    [roles, roleLabel, selfRoleId],
+  );
+
+  const memberItems = useMemo<PickerItem[]>(
+    () =>
+      members.map(([m]) => {
+        const role = roles.find((r) => r.id === m.role_id);
+        return {
+          id: m.user_id,
+          primary: m.name,
+          secondary: m.email,
+          badge: role ? roleLabel(role) : undefined,
+          avatarUrl: m.avatar_url,
+          showAvatar: true,
+          disabled: m.user_id === selfUserId,
+        };
+      }),
+    [members, roles, roleLabel, selfUserId],
+  );
+
+  const notebookItems = useMemo<PickerItem[]>(
+    () => notebooks.map((nb) => ({ id: nb.id, primary: nb.title })),
+    [notebooks],
+  );
+
+  const gridReady =
+    mode === "notebook" ? !!nbNotebookId && !!subjectId : !!subjectId;
 
   const scopeSelect = (
     <div className="w-full sm:w-56">
@@ -355,8 +397,8 @@ export function TeamPermissions({
         </p>
       </div>
 
-      <div className="inline-flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5">
-        {(["role", "member"] as const).map((m) => (
+      <div className="inline-flex flex-wrap items-center gap-0.5 rounded-md border bg-muted/40 p-0.5">
+        {(["role", "member", "notebook"] as const).map((m) => (
           <button
             key={m}
             type="button"
@@ -371,158 +413,161 @@ export function TeamPermissions({
           >
             {m === "role" ? (
               <Shield className="size-4" />
-            ) : (
+            ) : m === "member" ? (
               <Users className="size-4" />
+            ) : (
+              <BookOpen className="size-4" />
             )}
-            {m === "role" ? tr("tab_roles") : tr("tab_members")}
+            {tr(
+              m === "role"
+                ? "tab_roles"
+                : m === "member"
+                  ? "tab_members"
+                  : "tab_notebooks",
+            )}
           </button>
         ))}
       </div>
 
-      {mode === "role" ? (
-        <div className="flex flex-wrap items-end gap-2">
-          {editorMode === "idle" ? (
-            <>
-              <div className="w-full sm:w-72">
-                <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                  {tr("subject_role_prefix")}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Select value={roleId} onValueChange={setRoleId}>
-                    <SelectTrigger aria-label={tr("select_role")}>
-                      <SelectValue placeholder={tr("select_role")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
-                          {roleLabel(role)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    aria-label={tr("rename_button")}
-                    title={tr("rename_button")}
-                    onClick={startRename}
-                    disabled={!roleId}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" onClick={startCreate}>
-                <Plus className="size-4" />
-                {tr("new_role_button")}
-              </Button>
-              {scopeSelect}
-            </>
-          ) : (
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              <Input
-                autoFocus
-                value={editorValue}
-                onChange={(e) => setEditorValue(e.target.value)}
-                placeholder={tr("name_placeholder")}
-                className="w-full sm:w-64"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitEditor();
-                  if (e.key === "Escape") cancelEditor();
-                }}
-              />
-              <Button
-                size="sm"
-                onClick={submitEditor}
-                disabled={savingRole || editorValue.trim().length < 2}
-              >
-                {savingRole ? (
-                  <Loader variant="spinner" size={16} />
-                ) : (
-                  <Check className="size-4" />
-                )}
-                {tr("save")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={cancelEditor}
-                disabled={savingRole}
-              >
-                <X className="size-4" />
-                {tr("cancel")}
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
+      {mode === "role" && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
-            <div className="relative w-full sm:w-72">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                {tr("subject_user_prefix")}
-              </span>
-              <Search className="absolute left-3 top-[calc(50%+0.35rem)] size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder={tr("member_search_placeholder")}
-                className="pl-9"
-              />
-            </div>
+            {editorMode === "idle" ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={startRename}
+                  disabled={!roleId}
+                >
+                  <Pencil className="size-4" />
+                  {tr("rename_button")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={startCreate}>
+                  <Plus className="size-4" />
+                  {tr("new_role_button")}
+                </Button>
+              </>
+            ) : (
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <Input
+                  autoFocus
+                  value={editorValue}
+                  onChange={(e) => setEditorValue(e.target.value)}
+                  placeholder={tr("name_placeholder")}
+                  className="w-full sm:w-64"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitEditor();
+                    if (e.key === "Escape") cancelEditor();
+                  }}
+                />
+                <Button
+                  size="sm"
+                  onClick={submitEditor}
+                  disabled={savingRole || editorValue.trim().length < 2}
+                >
+                  {savingRole ? (
+                    <Loader variant="spinner" size={16} />
+                  ) : (
+                    <Check className="size-4" />
+                  )}
+                  {tr("save")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelEditor}
+                  disabled={savingRole}
+                >
+                  <X className="size-4" />
+                  {tr("cancel")}
+                </Button>
+              </div>
+            )}
             {scopeSelect}
           </div>
+          <SearchPicker
+            items={roleItems}
+            value={roleId}
+            onSelect={setRoleId}
+            placeholder={tr("role_search_placeholder")}
+            emptyText={tr("member_search_empty")}
+          />
+        </div>
+      )}
 
-          <div className="max-h-56 divide-y divide-border overflow-y-auto rounded-lg border">
-            {filteredMembers.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                {tr("member_search_empty")}
-              </p>
-            ) : (
-              filteredMembers.map(([m]) => {
-                const role = roles.find((r) => r.id === m.role_id);
-                return (
+      {mode === "member" && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end gap-2">{scopeSelect}</div>
+          <SearchPicker
+            items={memberItems}
+            value={memberUserId}
+            onSelect={setMemberUserId}
+            placeholder={tr("member_search_placeholder")}
+            emptyText={tr("member_search_empty")}
+          />
+        </div>
+      )}
+
+      {mode === "notebook" && (
+        <div className="space-y-3">
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              {tr("tab_notebooks")}
+            </span>
+            <SearchPicker
+              items={notebookItems}
+              value={nbNotebookId}
+              onSelect={setNbNotebookId}
+              placeholder={tr("notebook_search_placeholder")}
+              emptyText={tr("notebook_search_empty")}
+            />
+          </div>
+
+          {nbNotebookId && (
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5">
+                {(["role", "member"] as const).map((k) => (
                   <button
-                    key={m.user_id}
+                    key={k}
                     type="button"
-                    aria-pressed={memberUserId === m.user_id}
-                    onClick={() => setMemberUserId(m.user_id)}
+                    aria-pressed={nbSubjectKind === k}
+                    onClick={() => setNbSubjectKind(k)}
                     className={cn(
-                      "flex w-full items-center gap-3 px-3 py-2 text-left transition-colors",
-                      memberUserId === m.user_id
-                        ? "bg-primary/15 ring-1 ring-inset ring-primary"
-                        : "hover:bg-accent",
+                      "flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 text-sm font-medium transition-colors",
+                      nbSubjectKind === k
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    <Avatar className="size-8">
-                      {m.avatar_url && (
-                        <AvatarImage src={m.avatar_url} alt={m.name} />
-                      )}
-                      <AvatarFallback className="text-xs">
-                        {getInitials(m.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {m.name}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {m.email}
-                      </p>
-                    </div>
-                    {role && (
-                      <Badge variant="secondary" className="shrink-0">
-                        {roleLabel(role)}
-                      </Badge>
+                    {k === "role" ? (
+                      <Shield className="size-4" />
+                    ) : (
+                      <Users className="size-4" />
                     )}
-                    {memberUserId === m.user_id && (
-                      <Check className="size-4 shrink-0 text-primary" />
-                    )}
+                    {tr(k === "role" ? "tab_roles" : "tab_members")}
                   </button>
-                );
-              })
-            )}
-          </div>
+                ))}
+              </div>
+              {nbSubjectKind === "role" ? (
+                <SearchPicker
+                  items={roleItems}
+                  value={roleId}
+                  onSelect={setRoleId}
+                  placeholder={tr("role_search_placeholder")}
+                  emptyText={tr("member_search_empty")}
+                />
+              ) : (
+                <SearchPicker
+                  items={memberItems}
+                  value={memberUserId}
+                  onSelect={setMemberUserId}
+                  placeholder={tr("member_search_placeholder")}
+                  emptyText={tr("member_search_empty")}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -534,6 +579,10 @@ export function TeamPermissions({
             className="text-muted-foreground"
           />
         </div>
+      ) : !gridReady ? (
+        <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+          {tr("select_subject_hint")}
+        </p>
       ) : (
         modules.map(([module, buckets]) => (
           <section key={module} className="space-y-3">

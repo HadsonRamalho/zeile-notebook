@@ -326,7 +326,12 @@
       "tab_roles": "Cargos",
       "tab_members": "Membros",
       "member_search_placeholder": "Buscar membro por nome ou e-mail",
-      "member_search_empty": "Nenhum membro encontrado."
+      "member_search_empty": "Nenhum membro encontrado.",
+      "tab_notebooks": "Notebooks",
+      "role_search_placeholder": "Buscar cargo",
+      "notebook_search_placeholder": "Buscar notebook",
+      "notebook_search_empty": "Nenhum notebook encontrado.",
+      "select_subject_hint": "Selecione um sujeito (e um notebook, se aplicável) para configurar as permissões."
     }
   },
   "team_sidebar": {
