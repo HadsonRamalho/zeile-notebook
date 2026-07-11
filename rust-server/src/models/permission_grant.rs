@@ -67,6 +67,12 @@ pub struct NewPermissionGrant {
 }
 
 #[derive(Deserialize)]
+pub struct PublicGrantRequest {
+    pub permission_key: String,
+    pub effect: GrantEffect,
+}
+
+#[derive(Deserialize)]
 pub struct CreateGrantRequest {
     pub subject_kind: GrantSubjectKind,
     pub subject_id: Option<Uuid>,
@@ -136,6 +142,37 @@ pub async fn seed_team_role_grants(
         .map_err(|e| ApiError::Database(e.to_string()))?;
 
     Ok(())
+}
+
+pub async fn list_notebook_principal_grants(
+    conn: &mut AsyncPgConnection,
+    notebook_id: Uuid,
+) -> Result<Vec<PermissionGrant>, ApiError> {
+    permission_grants::table
+        .filter(permission_grants::subject_kind.eq(GrantSubjectKind::Principal))
+        .filter(permission_grants::subject_principal.eq("authenticated"))
+        .filter(permission_grants::target_kind.eq(GrantTargetKind::Notebook))
+        .filter(permission_grants::target_id.eq(notebook_id))
+        .select(PermissionGrant::as_select())
+        .load(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn delete_notebook_grant(
+    conn: &mut AsyncPgConnection,
+    grant_id: Uuid,
+    notebook_id: Uuid,
+) -> Result<usize, ApiError> {
+    diesel::delete(
+        permission_grants::table
+            .filter(permission_grants::id.eq(grant_id))
+            .filter(permission_grants::target_id.eq(notebook_id))
+            .filter(permission_grants::subject_kind.eq(GrantSubjectKind::Principal)),
+    )
+    .execute(conn)
+    .await
+    .map_err(|e| ApiError::Database(e.to_string()))
 }
 
 pub async fn list_team_grants(

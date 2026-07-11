@@ -28,3 +28,23 @@ export async function createTeamGrant(
 export async function deleteTeamGrant(teamId: string, grantId: string) {
   return await api.delete<void>(`/team/${teamId}/grants/${grantId}`);
 }
+
+export async function getPublicGrants(notebookId: string) {
+  return await api.get<TeamGrant[]>(`/notebook/${notebookId}/public-grants`);
+}
+
+export async function createPublicGrant(
+  notebookId: string,
+  body: { permission_key: string; effect: "allow" | "deny" },
+) {
+  return await api.post<TeamGrant>(
+    `/notebook/${notebookId}/public-grants`,
+    body,
+  );
+}
+
+export async function deletePublicGrant(notebookId: string, grantId: string) {
+  return await api.delete<void>(
+    `/notebook/${notebookId}/public-grants/${grantId}`,
+  );
+}

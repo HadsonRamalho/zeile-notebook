@@ -5,6 +5,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     controllers::{
+        grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
         notebook::{
             api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
             api_get_public_notebooks, api_get_single_notebook, api_get_single_notebook_with_blocks,
@@ -31,6 +32,14 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/{id}/visibility", patch(api_update_notebook_visibility))
         .route("/{id}/permissions", get(api_get_user_notebook_permissions))
         .route("/{id}/capabilities", get(api_get_notebook_capabilities))
+        .route(
+            "/{id}/public-grants",
+            get(api_list_public_grants).post(api_create_public_grant),
+        )
+        .route(
+            "/{id}/public-grants/{grant_id}",
+            delete(api_delete_public_grant),
+        )
         .route("/search/", get(api_search_notebooks))
         .route("/ws/{notebook_id}", get(websocket_handler))
         .route("/ws/presence/{id}", get(websocket_presence_handler))

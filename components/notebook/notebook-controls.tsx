@@ -7,6 +7,7 @@ import { getUserNotebookPermissions } from "@/lib/api/notebook-service";
 import type { TeamRole } from "@/lib/types/team-types";
 import { useNotebook } from "./notebook-context";
 import { ControlActions } from "./notebook-controls-actions";
+import { PublicNotebookPermissions } from "./permissions/public-notebook-permissions";
 
 type ControlRules = {
   showPrivacySelector: boolean;
@@ -93,6 +94,9 @@ export function NotebookControls() {
         onShare={handleShare}
         onExport={() => window.print()}
       />
+      {isPublic && notebook && (
+        <PublicNotebookPermissions notebookId={notebook.id} />
+      )}
     </div>
   );
 }

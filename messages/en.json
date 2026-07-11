@@ -312,7 +312,9 @@
       "scope_label": "Scope",
       "scope_team": "Entire team",
       "subject_role_prefix": "Role",
-      "subject_user_prefix": "Member"
+      "subject_user_prefix": "Member",
+      "public_permissions": "Public permissions",
+      "public_permissions_hint": "Set what any logged-in user can do in this public notebook."
     }
   },
   "team_sidebar": {

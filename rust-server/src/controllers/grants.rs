@@ -8,16 +8,19 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::controllers::jwt::extract_claims_from_header;
-use crate::controllers::permissions::{broadcast_capability_change_for_team, require_team_permission};
+use crate::controllers::permissions::{
+    broadcast_capability_change, broadcast_capability_change_for_team, require_team_permission,
+};
 use crate::controllers::utils::get_conn;
 use crate::models::error::ApiError;
 use crate::models::permission_grant::{
     CreateGrantRequest, GrantSubjectKind, GrantTargetKind, NewPermissionGrant, PermissionGrant,
-    create_grant, delete_grant_in_team, list_team_grants,
+    PublicGrantRequest, create_grant, delete_grant_in_team, delete_notebook_grant,
+    list_notebook_principal_grants, list_team_grants,
 };
 use crate::models::state::AppState;
 use crate::schema::team_roles;
-use crate::sec::catalog::{TargetKind, catalog};
+use crate::sec::catalog::{TargetKind, Tier, catalog};
 
 const MANAGE_GRANTS_KEY: &str = "team.roles.edit_role_permissions";
 
@@ -179,6 +182,108 @@ pub async fn api_delete_team_grant(
 
     if deleted > 0 {
         broadcast_capability_change_for_team(&state.pool, &state.presence_registry, team_id).await;
+    }
+
+    Ok(StatusCode::OK)
+}
+
+async fn require_notebook_owner(
+    conn: &mut AsyncPgConnection,
+    notebook_id: Uuid,
+    user_id: Uuid,
+) -> Result<(), ApiError> {
+    let notebook = crate::models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
+    match notebook.user_id {
+        Some(owner) if owner == user_id => Ok(()),
+        _ => Err(ApiError::PermissionDenied("notebook.manage_privacy".to_string())),
+    }
+}
+
+pub async fn api_list_public_grants(
+    State(state): State<Arc<AppState>>,
+    Path(notebook_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Vec<PermissionGrant>>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_notebook_owner(conn, notebook_id, user_id).await?;
+
+    let grants = list_notebook_principal_grants(conn, notebook_id).await?;
+
+    Ok((StatusCode::OK, Json(grants)))
+}
+
+pub async fn api_create_public_grant(
+    State(state): State<Arc<AppState>>,
+    Path(notebook_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(req): Json<PublicGrantRequest>,
+) -> Result<(StatusCode, Json<PermissionGrant>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_notebook_owner(conn, notebook_id, user_id).await?;
+
+    let permission = catalog()
+        .get(&req.permission_key)
+        .ok_or_else(|| ApiError::Request(format!("Permissão desconhecida: {}", req.permission_key)))?;
+
+    if permission.tier != Tier::General {
+        return Err(ApiError::Request(
+            "Notebooks públicos aceitam apenas permissões gerais".to_string(),
+        ));
+    }
+    if req.permission_key == "notebook.delete" {
+        return Err(ApiError::Request(
+            "Exclusão não pode ser concedida em notebook público".to_string(),
+        ));
+    }
+
+    let grant = create_grant(
+        conn,
+        NewPermissionGrant {
+            subject_kind: GrantSubjectKind::Principal,
+            subject_id: None,
+            subject_principal: Some("authenticated".to_string()),
+            scope_team_id: None,
+            permission_key: req.permission_key,
+            target_kind: GrantTargetKind::Notebook,
+            target_id: Some(notebook_id),
+            target_value: None,
+            effect: req.effect,
+        },
+    )
+    .await?;
+
+    broadcast_capability_change(&state.pool, &state.presence_registry, notebook_id).await;
+
+    Ok((StatusCode::CREATED, Json(grant)))
+}
+
+pub async fn api_delete_public_grant(
+    State(state): State<Arc<AppState>>,
+    Path((notebook_id, grant_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+) -> Result<StatusCode, ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_notebook_owner(conn, notebook_id, user_id).await?;
+
+    let deleted = delete_notebook_grant(conn, grant_id, notebook_id).await?;
+
+    if deleted > 0 {
+        broadcast_capability_change(&state.pool, &state.presence_registry, notebook_id).await;
     }
 
     Ok(StatusCode::OK)
