@@ -1,5 +1,9 @@
 import { getCookie } from "cookies-next";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type NotebookSocketHandle,
+  subscribeNotebookSocket,
+} from "@/lib/notebook-socket";
 import type { User } from "@/lib/types/user-types";
 
 export type Collaborator = {
@@ -45,7 +49,7 @@ export function usePresence(
     new Map(),
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
+  const handleRef = useRef<NotebookSocketHandle | null>(null);
   const socketUserIdRef = useRef<string | null>(null);
   const [socketUserId, setSocketUserId] = useState<string | null>(null);
 
@@ -57,8 +61,8 @@ export function usePresence(
 
   const broadcastPresence = useCallback(() => {
     const myId = socketUserIdRef.current;
-    if (wsRef.current?.readyState === WebSocket.OPEN && myId) {
-      wsRef.current.send(
+    if (handleRef.current?.isOpen() && myId) {
+      handleRef.current.sendText(
         JSON.stringify({
           type: "presence",
           userId: myId,
@@ -74,8 +78,8 @@ export function usePresence(
 
   const broadcastPresenceWithId = useCallback(
     (myId: string) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
+      if (handleRef.current?.isOpen()) {
+        handleRef.current.sendText(
           JSON.stringify({
             type: "presence",
             userId: myId,
@@ -92,31 +96,39 @@ export function usePresence(
   );
 
   useEffect(() => {
-    if (wsRef.current) {
-      if (
-        wsRef.current.readyState === WebSocket.OPEN ||
-        wsRef.current.readyState === WebSocket.CONNECTING
-      )
-        return;
-      wsRef.current.close();
-    }
-
-    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    const host =
-      process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
-    const wsUrl = `${protocol}${host}/notebook/ws/presence/${pageId}`;
+    // presença divide o mesmo socket do sync (mensagens chegam como texto)
     const token = getCookie("auth_token")?.toString() || "";
-    const protocols = token.length > 0 ? ["access_token", token] : undefined;
-
-    const ws = new WebSocket(wsUrl, protocols);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+    const handle = subscribeNotebookSocket(pageId, token, {
+      onText: (raw) => {
+        try {
+          const data = JSON.parse(raw);
 
         if (data.type === "capabilities_updated") {
           onCapabilitiesChangedRef.current?.();
+          return;
+        }
+
+        // o servidor coalesce a presença num batch periódico (updates + gone)
+        if (data.type === "presence_batch") {
+          setCollaborators((prev) => {
+            const next = new Map(prev);
+            for (const u of data.updates || []) {
+              if (!u?.userId || u.userId === socketUserIdRef.current) continue;
+              next.set(u.userId, {
+                id: u.userId,
+                name: u.name || "Visitante",
+                color: stringToColor(u.name || u.userId),
+                cursor: u.cursor ?? null,
+                focusedBlockId: u.focusedBlockId ?? null,
+                avatar: u.avatar ?? null,
+                isGuest: u.isGuest ?? true,
+              });
+            }
+            for (const goneId of data.gone || []) {
+              next.delete(goneId);
+            }
+            return next;
+          });
           return;
         }
 
@@ -170,23 +182,21 @@ export function usePresence(
             return next;
           });
         }
-      } catch (e) {
-        console.error("Erro ao ler WebSocket:", e);
-      }
-    };
+        } catch (e) {
+          console.error("Erro ao ler WebSocket:", e);
+        }
+      },
+      onClose: () => {
+        socketUserIdRef.current = null;
+        setSocketUserId(null);
+      },
+    });
 
-    ws.onopen = () => {
-      // Wait for init message to broadcast
-    };
+    handleRef.current = handle;
 
     return () => {
-      if (ws) {
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onclose = null;
-        ws.close();
-      }
-      wsRef.current = null;
+      handle.unsubscribe();
+      handleRef.current = null;
       socketUserIdRef.current = null;
       setSocketUserId(null);
     };
@@ -211,8 +221,8 @@ export function usePresence(
         setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
       }, CHAT_MESSAGE_LIFETIME_MS);
 
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
+      if (handleRef.current?.isOpen()) {
+        handleRef.current.sendText(
           JSON.stringify({
             type: "chat",
             msgId,

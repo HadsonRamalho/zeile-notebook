@@ -1,6 +1,11 @@
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::LazyLock;
+use std::time::{Duration, Instant};
 
+use dashmap::DashMap;
+use rustls::ClientConfig;
+use rustls_platform_verifier::ConfigVerifierExt;
 use axum::extract::{Path, State};
 use axum::{Json, http::HeaderMap};
 use diesel::prelude::*;
@@ -299,20 +304,123 @@ pub async fn capabilities(
     resolve_capabilities(conn, ctx, user_id).await
 }
 
-pub const CAPABILITIES_UPDATED_SIGNAL: &str = r#"{"type":"capabilities_updated"}"#;
+// cache de capabilities no connect, por (user, notebook) com ttl + invalidação no fan-out
+const CAPS_TTL: Duration = Duration::from_secs(30);
+const CAPS_CACHE_MAX: usize = 100_000;
 
-pub async fn broadcast_capability_change(presence: &PresenceRegistry, notebook_id: Uuid) {
-    let room = {
-        let map = presence.read().await;
-        map.get(&notebook_id).cloned()
-    };
+static CAPS_CACHE: LazyLock<DashMap<(Option<Uuid>, Uuid), (CapabilitySet, Instant)>> =
+    LazyLock::new(DashMap::new);
 
-    if let Some(room) = room {
-        let room = room.read().await;
-        for member in room.subscribers.values() {
-            let _ = member.tx.send(CAPABILITIES_UPDATED_SIGNAL.to_string());
+pub async fn capabilities_cached(
+    pool: &Pool<AsyncPgConnection>,
+    user_id: Option<Uuid>,
+    notebook_id: Uuid,
+) -> Result<CapabilitySet, ApiError> {
+    let key = (user_id, notebook_id);
+    if let Some(entry) = CAPS_CACHE.get(&key) {
+        if entry.1.elapsed() < CAPS_TTL {
+            return Ok(entry.0.clone());
         }
     }
+
+    let caps = capabilities(pool, user_id, notebook_id).await?;
+
+    // limpa entradas velhas se estourar o teto
+    if CAPS_CACHE.len() >= CAPS_CACHE_MAX {
+        CAPS_CACHE.retain(|_, v| v.1.elapsed() < CAPS_TTL);
+    }
+    CAPS_CACHE.insert(key, (caps.clone(), Instant::now()));
+    Ok(caps)
+}
+
+pub fn invalidate_caps_cache(notebook_id: Uuid) {
+    CAPS_CACHE.retain(|k, _| k.1 != notebook_id);
+}
+
+pub const CAPABILITIES_UPDATED_SIGNAL: &str = r#"{"type":"capabilities_updated"}"#;
+
+// invalida o cache e empurra `capabilities_updated` aos rooms locais
+pub async fn broadcast_capability_change_local(presence: &PresenceRegistry, notebook_id: Uuid) {
+    invalidate_caps_cache(notebook_id);
+
+    // coleta os canais antes de enviar, sem segurar ref do dashmap no await
+    let txs: Vec<tokio::sync::mpsc::Sender<String>> = match presence.get(&notebook_id) {
+        Some(room) => room
+            .subscribers
+            .iter()
+            .map(|m| m.value().tx.clone())
+            .collect(),
+        None => return,
+    };
+
+    for tx in txs {
+        let _ = tx.send(CAPABILITIES_UPDATED_SIGNAL.to_string()).await;
+    }
+}
+
+pub async fn broadcast_capability_change(
+    pool: &Pool<AsyncPgConnection>,
+    presence: &PresenceRegistry,
+    notebook_id: Uuid,
+) {
+    broadcast_capability_change_local(presence, notebook_id).await;
+
+    // avisa outros nós (best-effort); notebook_id é uuid validado
+    if let Ok(mut conn) = get_conn(pool).await {
+        let _ = diesel::sql_query(format!(
+            "SELECT pg_notify('zeile_caps', '{}')",
+            notebook_id
+        ))
+        .execute(&mut conn)
+        .await;
+    }
+}
+
+// escuta NOTIFY zeile_caps e aplica o fan-out local; reconecta em caso de queda
+pub async fn caps_listen_loop(db_url: String, presence: PresenceRegistry) {
+    loop {
+        if let Err(e) = run_caps_listener(&db_url, &presence).await {
+            tracing::warn!("listener de capabilities indisponível: {e}; retry em 5s");
+        }
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+}
+
+async fn run_caps_listener(
+    db_url: &str,
+    presence: &PresenceRegistry,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let rustls_config = ClientConfig::with_platform_verifier()?;
+    let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config);
+    let (client, mut connection) = tokio_postgres::connect(db_url, tls).await?;
+
+    // uma task dirige a conexão para poder ler as notificações
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let conn_task = tokio::spawn(async move {
+        let mut stream =
+            futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+        while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
+            match msg {
+                Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
+                    let _ = tx.send(n.payload().to_string());
+                }
+                Ok(_) => {}
+                Err(_) => break,
+            }
+        }
+    });
+
+    client.batch_execute("LISTEN zeile_caps").await?;
+    tracing::info!("LISTEN zeile_caps ativo");
+
+    while let Some(payload) = rx.recv().await {
+        if let Ok(notebook_id) = Uuid::parse_str(&payload) {
+            broadcast_capability_change_local(presence, notebook_id).await;
+        }
+    }
+
+    conn_task.abort();
+    Ok(())
 }
 
 pub async fn broadcast_capability_change_for_team(
@@ -333,7 +441,7 @@ pub async fn broadcast_capability_change_for_team(
         .unwrap_or_default();
 
     for id in ids {
-        broadcast_capability_change(presence, id).await;
+        broadcast_capability_change(pool, presence, id).await;
     }
 }
 

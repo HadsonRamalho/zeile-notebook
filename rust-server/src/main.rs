@@ -51,8 +51,7 @@ async fn main() {
         .await
         .layer(TraceLayer::new_for_http());
 
-    // Porta configurável por env (default 3099). Permite subir instâncias
-    // paralelas para benchmark/teste sem conflitar com o servidor principal.
+    // porta configurável por env (default 3099)
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())

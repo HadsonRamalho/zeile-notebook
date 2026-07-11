@@ -14,7 +14,7 @@ use crate::{
         permissions::api_get_notebook_capabilities,
         push::{api_subscribe_push, api_unsubscribe_push},
         user::api_get_user_notebook_permissions,
-        websocket::{websocket_handler, websocket_presence_handler},
+        websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
     },
     models::state::AppState,
 };
@@ -34,6 +34,8 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/search/", get(api_search_notebooks))
         .route("/ws/{notebook_id}", get(websocket_handler))
         .route("/ws/presence/{id}", get(websocket_presence_handler))
+        // socket combinado: sync + presença numa conexão
+        .route("/ws/combined/{notebook_id}", get(websocket_combined_handler))
         .route("/all", get(api_get_notebooks))
         .route("/all/public", get(api_get_public_notebooks))
         .route(

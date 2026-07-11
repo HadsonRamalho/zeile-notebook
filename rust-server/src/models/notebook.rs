@@ -586,6 +586,26 @@ pub async fn save_notebook_data(
         .ok();
 }
 
+/// persiste o estado autoritativo do doc sem checagem de permissão (a escrita já foi
+/// autorizada por mutação); usado pelo checkpoint periódico
+pub async fn checkpoint_notebook_data(
+    conn: &mut AsyncPgConnection,
+    notebook_id_param: Uuid,
+    data: Vec<u8>,
+) {
+    use crate::schema::notebooks::dsl::*;
+
+    diesel::update(notebooks)
+        .filter(id.eq(notebook_id_param))
+        .set((
+            document_data.eq(data),
+            updated_at.eq(chrono::Utc::now().naive_utc()),
+        ))
+        .execute(conn)
+        .await
+        .ok();
+}
+
 pub async fn check_permission(
     pool: &Pool<AsyncPgConnection>,
     user_id: Option<Uuid>,

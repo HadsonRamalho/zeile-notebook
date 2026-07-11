@@ -12,6 +12,10 @@ import type {
   Notebook,
 } from "@/lib/types";
 import { writeSceneElements } from "@/lib/drawing-scene";
+import {
+  type NotebookSocketHandle,
+  subscribeNotebookSocket,
+} from "@/lib/notebook-socket";
 
 type AutomergeLib = typeof AutomergeType;
 
@@ -30,7 +34,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
   const docRef = useRef<Notebook | null>(null);
   const automerge = useRef<AutomergeLib | null>(null);
   const syncState = useRef<any>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+  const handleRef = useRef<NotebookSocketHandle | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,36 +83,12 @@ export function useAutomergeSync(notebookId: string, token: string) {
   useEffect(() => {
     if (!notebookId || !automerge.current || !docRef.current) return;
 
-    let reconnectTimer: NodeJS.Timeout;
-
-    const connect = () => {
-      if (
-        socketRef.current?.readyState === WebSocket.OPEN ||
-        socketRef.current?.readyState === WebSocket.CONNECTING
-      ) {
-        return;
-      }
-
-      // Inicializa um novo estado de sincronização para cada nova conexão
-      syncState.current = automerge.current!.initSyncState();
-
-      const validToken = token.length > 0;
-      const protocol =
-        window.location.protocol === "https:" ? "wss://" : "ws://";
-      const host =
-        process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
-      const wsUrl = `${protocol}${host}/notebook/ws/${notebookId}`;
-
-      const protocols = validToken ? ["access_token", token] : undefined;
-      const socket = new WebSocket(wsUrl, protocols);
-      socket.binaryType = "arraybuffer";
-
-      socketRef.current = socket;
-
-      const handleOpen = () => {
+    // socket único compartilhado; reconexão/backoff no gerenciador notebook-socket
+    const handle = subscribeNotebookSocket(notebookId, token, {
+      onOpen: () => {
         setIsConnected(true);
-        console.log("WebSocket connected to notebook:", notebookId);
-
+        // novo estado de sync a cada (re)conexão
+        syncState.current = automerge.current!.initSyncState();
         if (automerge.current && docRef.current) {
           const [nextSyncState, message] =
             automerge.current.generateSyncMessage(
@@ -116,22 +96,14 @@ export function useAutomergeSync(notebookId: string, token: string) {
               syncState.current,
             );
           syncState.current = nextSyncState;
-          if (message && socket.readyState === WebSocket.OPEN) {
-            socket.send(message);
-          }
+          if (message) handleRef.current?.sendBinary(message);
         }
-      };
-
-      const handleClose = () => {
-        setIsConnected(false);
-        console.log("WebSocket disconnected from notebook:", notebookId);
-        reconnectTimer = setTimeout(connect, 3000);
-      };
-
-      const handleMessage = (event: MessageEvent) => {
+      },
+      onClose: () => setIsConnected(false),
+      onBinary: (buf) => {
         if (!automerge.current || !docRef.current) return;
 
-        const binaryMessage = new Uint8Array(event.data);
+        const binaryMessage = new Uint8Array(buf);
         const currentDoc = docRef.current;
 
         const [nextDoc, nextSyncState] = automerge.current.receiveSyncMessage(
@@ -139,7 +111,6 @@ export function useAutomergeSync(notebookId: string, token: string) {
           syncState.current,
           binaryMessage,
         );
-
         syncState.current = nextSyncState;
 
         if (nextDoc !== currentDoc) {
@@ -148,41 +119,23 @@ export function useAutomergeSync(notebookId: string, token: string) {
           persistLocally(nextDoc);
         }
 
-        if (!hasSyncedOnce) {
-          console.log("Initial sync completed for notebook:", notebookId);
-          setHasSyncedOnce(true);
-        }
+        if (!hasSyncedOnce) setHasSyncedOnce(true);
 
         const [updatedSyncState, responseMessage] =
           automerge.current.generateSyncMessage(nextDoc, syncState.current);
-
         syncState.current = updatedSyncState;
 
-        if (responseMessage && socket.readyState === WebSocket.OPEN) {
-          socket.send(responseMessage);
-        }
-      };
+        if (responseMessage) handleRef.current?.sendBinary(responseMessage);
+      },
+    });
 
-      socket.addEventListener("open", handleOpen);
-      socket.addEventListener("close", handleClose);
-      socket.addEventListener("message", handleMessage);
-    };
-
-    connect();
+    handleRef.current = handle;
 
     return () => {
-      clearTimeout(reconnectTimer);
-
-      if (socketRef.current) {
-        socketRef.current.onopen = null;
-        socketRef.current.onclose = null;
-        socketRef.current.onmessage = null;
-
-        socketRef.current.close();
-        socketRef.current = null;
-      }
+      handle.unsubscribe();
+      handleRef.current = null;
     };
-  }, [notebookId, token, !!doc, persistLocally]);
+  }, [notebookId, token, !!doc, persistLocally, hasSyncedOnce]);
 
   const updateDoc = useCallback(
     (callback: (d: Notebook) => void) => {
@@ -200,9 +153,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
       );
       syncState.current = nextSyncState;
 
-      if (message && socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(message);
-      }
+      if (message) handleRef.current?.sendBinary(message);
     },
     [persistLocally],
   );

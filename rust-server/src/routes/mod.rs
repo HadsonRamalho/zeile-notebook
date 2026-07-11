@@ -22,9 +22,7 @@ use futures_util::future::BoxFuture;
 use hyper::StatusCode;
 use rustls::ClientConfig;
 use rustls_platform_verifier::ConfigVerifierExt;
-use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use utoipa_axum::router::OpenApiRouter;
@@ -68,9 +66,10 @@ pub async fn init_routes() -> Router {
     config.custom_setup = Box::new(establish_connection);
 
     let sync_registry: SyncRegistry = Arc::new(DashMap::new());
-    let presence_registry: PresenceRegistry = Arc::new(RwLock::new(HashMap::new()));
+    let presence_registry: PresenceRegistry = Arc::new(DashMap::new());
 
     if let Some(db_url) = db_url {
+        let db_url_listen = db_url.clone();
         let mgr =
             AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(db_url, config);
         let pool = Pool::builder(mgr).max_size(50).build().unwrap();
@@ -82,8 +81,24 @@ pub async fn init_routes() -> Router {
             push: crate::controllers::push::load_push_state(),
         });
 
+        // checkpoint periódico de notebooks ativos
+        tokio::spawn(crate::controllers::websocket::checkpoint_loop(
+            app_state.sync_registry.clone(),
+            app_state.pool.clone(),
+        ));
+
+        // backplane multi-nó: escuta NOTIFY de mudança de capabilities de outros nós
+        tokio::spawn(crate::controllers::permissions::caps_listen_loop(
+            db_url_listen,
+            app_state.presence_registry.clone(),
+        ));
+
         let app = OpenApiRouter::<Arc<AppState>>::new()
             .route("/common", get(print_common_route))
+            .route(
+                "/metrics",
+                get(crate::controllers::metrics::metrics_handler),
+            )
             .nest_service("/images", get_service(ServeDir::new("./images")));
 
         return Router::new()
