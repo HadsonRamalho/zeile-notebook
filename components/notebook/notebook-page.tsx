@@ -386,6 +386,7 @@ export default function RustInteractivePage({
                       updateDrawingScene={updateDrawingScene}
                       doc={doc}
                       sessionId={sessionId}
+                      notebookId={pageId}
                       canWrite={!previewDoc && !!userPermissions?.can_write}
                     />
                   </div>

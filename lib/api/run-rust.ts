@@ -8,6 +8,7 @@ interface RunCodeProps {
   code: string;
   sessionId: string;
   language: Language;
+  notebookId?: string;
 }
 
 interface RunCodeApiResponse {
@@ -34,6 +35,7 @@ export async function RunCode({
   code,
   sessionId,
   language,
+  notebookId,
 }: RunCodeProps) {
   setIsRunning(true);
   setStatus("idle");
@@ -45,6 +47,7 @@ export async function RunCode({
     const data: RunCodeApiResponse = await api.post(endpoint, {
       code,
       session_id: sessionId,
+      notebook_id: notebookId,
     });
 
     const stderr = data.stderr || "";

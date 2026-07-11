@@ -18,12 +18,12 @@ import { FreeDrawingCell } from "../blocks/free-drawing/free-drawing-cell";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import { LatexCell } from "../blocks/latex/latex-cell";
-import { SqlCell } from "../blocks/sql/sql-cell";
-import { TypstCell } from "../blocks/typst/typst-cell";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
+import { SqlCell } from "../blocks/sql/sql-cell";
 import { TextBlock } from "../blocks/text/text-block";
 import { TsxEditor } from "../blocks/tsx/tsx-editor";
+import { TypstCell } from "../blocks/typst/typst-cell";
 import { ZigEditor } from "../blocks/zig/zig-editor";
 
 interface ReorderItemProps {
@@ -40,6 +40,7 @@ interface ReorderItemProps {
   updateDrawingScene: (id: string, elements: readonly DrawingElement[]) => void;
   doc: Notebook | null;
   sessionId: string;
+  notebookId?: string;
   canWrite: boolean;
 }
 
@@ -56,6 +57,7 @@ export function ReorderItem({
   updateDrawingScene,
   doc,
   sessionId,
+  notebookId,
   canWrite,
 }: ReorderItemProps) {
   const dragControls = useDragControls();
@@ -171,6 +173,7 @@ export function ReorderItem({
             block={block}
             isDragging={isDragging}
             sessionId={sessionId}
+            notebookId={notebookId}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         ) : block.language === "cpp" ? (
@@ -178,12 +181,14 @@ export function ReorderItem({
             block={block}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
             sessionId={sessionId}
+            notebookId={notebookId}
           />
         ) : block.language === "zig" ? (
           <ZigEditor
             block={block}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
             sessionId={sessionId}
+            notebookId={notebookId}
           />
         ) : block.language === "generic" ? (
           (() => {
@@ -224,6 +229,7 @@ export function ReorderItem({
             block={block}
             isDragging={isDragging}
             sessionId={sessionId}
+            notebookId={notebookId}
             onCodeChange={canWrite ? handleUpdateContent : () => {}}
           />
         )}

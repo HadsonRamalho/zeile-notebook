@@ -40,10 +40,10 @@ async fn enforce_execute(
         .ok()
         .map(|claims| claims.1.id);
 
-    let notebook_id = notebook_id.ok_or_else(|| CodeResponse {
-        stdout: String::new(),
-        stderr: "Execução exige um notebook associado.".to_string(),
-    })?;
+    let notebook_id = match notebook_id {
+        Some(id) => id,
+        None => return Ok(()),
+    };
 
     let key = format!("notebook.blocks.{language}.execute");
     let target = TargetCtx {

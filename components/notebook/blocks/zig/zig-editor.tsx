@@ -13,12 +13,14 @@ interface ZigNotebookProps {
   onCodeChange: (newCode: string) => void;
   isDragging?: boolean;
   sessionId: string;
+  notebookId?: string;
 }
 
 export function ZigEditor({
   block,
   onCodeChange,
   sessionId,
+  notebookId,
   isDragging = false,
 }: ZigNotebookProps) {
   const [output, setOutput] = useState("");
@@ -32,6 +34,7 @@ export function ZigEditor({
       setStatus,
       code: block.content,
       sessionId,
+      notebookId,
       language: "zig",
     });
   }

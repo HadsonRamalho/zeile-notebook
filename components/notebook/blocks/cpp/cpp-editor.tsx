@@ -13,12 +13,14 @@ interface CppNotebookProps {
   onCodeChange: (newCode: string) => void;
   isDragging?: boolean;
   sessionId: string;
+  notebookId?: string;
 }
 
 export function CppEditor({
   block,
   onCodeChange,
   sessionId,
+  notebookId,
   isDragging = false,
 }: CppNotebookProps) {
   const [output, setOutput] = useState("");
@@ -32,6 +34,7 @@ export function CppEditor({
       setStatus,
       code: block.content,
       sessionId,
+      notebookId,
       language: "cpp",
     });
   }

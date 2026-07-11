@@ -13,12 +13,14 @@ interface RustNotebookProps {
   onCodeChange: (newCode: string) => void;
   isDragging?: boolean;
   sessionId: string;
+  notebookId?: string;
 }
 
 export function RustEditor({
   block,
   onCodeChange,
   sessionId,
+  notebookId,
   isDragging = false,
 }: RustNotebookProps) {
   const [output, setOutput] = useState("");
@@ -31,6 +33,7 @@ export function RustEditor({
       setOutput,
       setStatus,
       sessionId,
+      notebookId,
       code: block.content,
       language: "rust",
     });
