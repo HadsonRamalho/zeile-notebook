@@ -307,7 +307,12 @@
         "notebook": "Notebook",
         "team": "Team",
         "chat": "Chat"
-      }
+      },
+      "subject_label": "Subject",
+      "scope_label": "Scope",
+      "scope_team": "Entire team",
+      "subject_role_prefix": "Role",
+      "subject_user_prefix": "Member"
     }
   },
   "team_sidebar": {

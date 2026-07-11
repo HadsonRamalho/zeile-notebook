@@ -39,17 +39,23 @@ import {
 } from "@/lib/api/permissions-service";
 import {
   createTeamRole,
+  fetchTeamMembers,
+  fetchTeamPages,
   fetchTeamRoles,
   updateRole,
 } from "@/lib/api/teams-service";
 import { cn } from "@/lib/cn";
+import type { Notebook } from "@/lib/types";
 import type {
   CatalogPermission,
   GrantEffect,
   PermissionCatalog,
   TeamGrant,
 } from "@/lib/types/permission-types";
-import type { TeamRole } from "@/lib/types/team-types";
+import type {
+  TeamMemberWithRoleAndUserData,
+  TeamRole,
+} from "@/lib/types/team-types";
 
 type Effect = GrantEffect | "none";
 
@@ -83,7 +89,12 @@ export function TeamPermissions({
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null);
   const [grants, setGrants] = useState<TeamGrant[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>(rolesProp);
-  const [roleId, setRoleId] = useState<string>(rolesProp[0]?.id ?? "");
+  const [members, setMembers] = useState<TeamMemberWithRoleAndUserData[]>([]);
+  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
+  const [subjectSel, setSubjectSel] = useState<string>(
+    rolesProp[0] ? `role:${rolesProp[0].id}` : "",
+  );
+  const [scopeSel, setScopeSel] = useState<string>("team");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Set<string>>(new Set());
 
@@ -100,11 +111,18 @@ export function TeamPermissions({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    Promise.all([getPermissionCatalog(), getTeamGrants(teamId)])
-      .then(([cat, grs]) => {
+    Promise.all([
+      getPermissionCatalog(),
+      getTeamGrants(teamId),
+      fetchTeamMembers(teamId),
+      fetchTeamPages(teamId),
+    ])
+      .then(([cat, grs, mbs, nbs]) => {
         if (!active) return;
         setCatalog(cat);
         setGrants(grs);
+        setMembers(mbs);
+        setNotebooks(nbs);
       })
       .catch((err) => handleApiError({ err, t: te }))
       .finally(() => active && setLoading(false));
@@ -112,6 +130,30 @@ export function TeamPermissions({
       active = false;
     };
   }, [teamId, te]);
+
+  const [subjectKind, subjectId] = (() => {
+    const idx = subjectSel.indexOf(":");
+    if (idx < 0) return ["role", ""] as const;
+    return [
+      subjectSel.slice(0, idx) as "role" | "user",
+      subjectSel.slice(idx + 1),
+    ] as const;
+  })();
+  const isRoleSubject = subjectKind === "role";
+  const targetKind: "team" | "notebook" =
+    scopeSel === "team" ? "team" : "notebook";
+  const targetId =
+    scopeSel === "team" ? null : scopeSel.slice("notebook:".length);
+
+  const matchesSelection = useCallback(
+    (g: TeamGrant, key: string) =>
+      g.subject_kind === subjectKind &&
+      g.subject_id === subjectId &&
+      g.target_kind === targetKind &&
+      (targetKind === "team" || g.target_id === targetId) &&
+      g.permission_key === key,
+    [subjectKind, subjectId, targetKind, targetId],
+  );
 
   const roleLabel = useCallback(
     (role: TeamRole) => {
@@ -124,30 +166,20 @@ export function TeamPermissions({
 
   const effectFor = useCallback(
     (key: string): Effect =>
-      grants.find(
-        (g) =>
-          g.subject_kind === "role" &&
-          g.subject_id === roleId &&
-          g.target_kind === "team" &&
-          g.permission_key === key,
-      )?.effect ?? "none",
-    [grants, roleId],
+      grants.find((g) => matchesSelection(g, key))?.effect ?? "none",
+    [grants, matchesSelection],
   );
+
+  const rowKey = (key: string) => `${subjectSel}:${scopeSel}:${key}`;
 
   const setEffect = useCallback(
     async (key: string, next: Effect) => {
-      if (!roleId || effectFor(key) === next) return;
+      if (!subjectId || effectFor(key) === next) return;
 
-      const rowId = `${roleId}:${key}`;
+      const rowId = `${subjectSel}:${scopeSel}:${key}`;
       setPending((prev) => new Set(prev).add(rowId));
 
-      const existing = grants.filter(
-        (g) =>
-          g.subject_kind === "role" &&
-          g.subject_id === roleId &&
-          g.target_kind === "team" &&
-          g.permission_key === key,
-      );
+      const existing = grants.filter((g) => matchesSelection(g, key));
 
       try {
         for (const grant of existing) {
@@ -155,10 +187,11 @@ export function TeamPermissions({
         }
         if (next !== "none") {
           await createTeamGrant(teamId, {
-            subject_kind: "role",
-            subject_id: roleId,
+            subject_kind: subjectKind,
+            subject_id: subjectId,
             permission_key: key,
-            target_kind: "team",
+            target_kind: targetKind,
+            target_id: targetId ?? undefined,
             effect: next,
           });
         }
@@ -173,7 +206,19 @@ export function TeamPermissions({
         });
       }
     },
-    [roleId, grants, teamId, effectFor, te],
+    [
+      subjectId,
+      subjectKind,
+      subjectSel,
+      scopeSel,
+      targetKind,
+      targetId,
+      grants,
+      teamId,
+      effectFor,
+      matchesSelection,
+      te,
+    ],
   );
 
   const startCreate = () => {
@@ -182,7 +227,7 @@ export function TeamPermissions({
   };
 
   const startRename = () => {
-    const current = roles.find((r) => r.id === roleId);
+    const current = roles.find((r) => r.id === subjectId);
     if (!current) return;
     setEditorMode("rename");
     setEditorValue(current.name);
@@ -205,10 +250,10 @@ export function TeamPermissions({
         const fresh = await fetchTeamRoles(teamId);
         setRoles(fresh);
         const created = fresh.find((r) => !before.has(r.id));
-        if (created) setRoleId(created.id);
+        if (created) setSubjectSel(`role:${created.id}`);
         toast.success(tr("role_created"));
       } else if (editorMode === "rename") {
-        await updateRole(teamId, { id: roleId, name });
+        await updateRole(teamId, { id: subjectId, name });
         setRoles(await fetchTeamRoles(teamId));
         toast.success(tr("role_renamed"));
       }
@@ -256,36 +301,68 @@ export function TeamPermissions({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         {editorMode === "idle" ? (
           <>
             <div className="w-full sm:w-64">
-              <Select value={roleId} onValueChange={setRoleId}>
-                <SelectTrigger aria-label={tr("select_role")}>
-                  <SelectValue placeholder={tr("select_role")} />
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                {tr("subject_label")}
+              </span>
+              <Select value={subjectSel} onValueChange={setSubjectSel}>
+                <SelectTrigger aria-label={tr("subject_label")}>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {roleLabel(role)}
+                    <SelectItem key={role.id} value={`role:${role.id}`}>
+                      {tr("subject_role_prefix")}: {roleLabel(role)}
+                    </SelectItem>
+                  ))}
+                  {members.map(([m]) => (
+                    <SelectItem key={m.user_id} value={`user:${m.user_id}`}>
+                      {tr("subject_user_prefix")}: {m.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={startRename}
-              disabled={!roleId}
-            >
-              <Pencil className="size-4" />
-              {tr("rename_button")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={startCreate}>
-              <Plus className="size-4" />
-              {tr("new_role_button")}
-            </Button>
+
+            <div className="w-full sm:w-56">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                {tr("scope_label")}
+              </span>
+              <Select value={scopeSel} onValueChange={setScopeSel}>
+                <SelectTrigger aria-label={tr("scope_label")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="team">{tr("scope_team")}</SelectItem>
+                  {notebooks.map((nb) => (
+                    <SelectItem key={nb.id} value={`notebook:${nb.id}`}>
+                      {nb.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isRoleSubject && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={startRename}
+                  disabled={!subjectId}
+                >
+                  <Pencil className="size-4" />
+                  {tr("rename_button")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={startCreate}>
+                  <Plus className="size-4" />
+                  {tr("new_role_button")}
+                </Button>
+              </>
+            )}
           </>
         ) : (
           <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -346,7 +423,7 @@ export function TeamPermissions({
                   key={perm.key}
                   perm={perm}
                   effect={effectFor(perm.key)}
-                  busy={pending.has(`${roleId}:${perm.key}`)}
+                  busy={pending.has(rowKey(perm.key))}
                   onChange={(next) => setEffect(perm.key, next)}
                 />
               ))}
@@ -369,7 +446,7 @@ export function TeamPermissions({
                         key={perm.key}
                         perm={perm}
                         effect={effectFor(perm.key)}
-                        busy={pending.has(`${roleId}:${perm.key}`)}
+                        busy={pending.has(rowKey(perm.key))}
                         onChange={(next) => setEffect(perm.key, next)}
                       />
                     ))}

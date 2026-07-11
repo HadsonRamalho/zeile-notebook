@@ -307,7 +307,12 @@
         "notebook": "Notebook",
         "team": "Time",
         "chat": "Chat"
-      }
+      },
+      "subject_label": "Sujeito",
+      "scope_label": "Escopo",
+      "scope_team": "Time inteiro",
+      "subject_role_prefix": "Cargo",
+      "subject_user_prefix": "Membro"
     }
   },
   "team_sidebar": {
