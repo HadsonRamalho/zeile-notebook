@@ -463,6 +463,7 @@ async fn handle_presence_socket(
         name: std::sync::Mutex::new(None),
         latest: std::sync::Mutex::new(None),
         changed: std::sync::atomic::AtomicBool::new(false),
+        can_view_chat: permissions.can("chat.view", &TargetCtx::default()),
     });
 
     // insere sob o mesmo shard lock do dashmap para não correr com a remoção da sala vazia
@@ -532,6 +533,9 @@ async fn handle_presence_socket(
                         .and_then(|v| v.as_str());
                     for m in room_for_recv.subscribers.iter() {
                         if *m.key() == session_id {
+                            continue;
+                        }
+                        if !m.value().can_view_chat {
                             continue;
                         }
                         let _ = m.value().tx.try_send(text.to_string());
@@ -696,6 +700,9 @@ async fn handle_presence_text(
                 if *m.key() == session_id {
                     continue;
                 }
+                if !m.value().can_view_chat {
+                    continue;
+                }
                 let _ = m.value().tx.try_send(text.to_string());
                 if let (Some(sender_name), Some(chat_text)) = (sender_name, chat_text) {
                     let mentioned_name = m.value().name.lock().unwrap().clone();
@@ -818,6 +825,7 @@ async fn handle_combined_socket(
         name: std::sync::Mutex::new(None),
         latest: std::sync::Mutex::new(None),
         changed: std::sync::atomic::AtomicBool::new(false),
+        can_view_chat: permissions.can("chat.view", &TargetCtx::default()),
     });
     let _ = member
         .tx

@@ -68,6 +68,7 @@ pub struct PresenceMember {
     // último estado recebido; a task de flush reenvia só o último por tick (coalescência)
     pub latest: std::sync::Mutex<Option<serde_json::Value>>,
     pub changed: std::sync::atomic::AtomicBool,
+    pub can_view_chat: bool,
 }
 
 pub struct PresenceRoom {
