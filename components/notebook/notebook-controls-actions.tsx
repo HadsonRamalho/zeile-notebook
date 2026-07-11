@@ -1,7 +1,15 @@
-import { Copy, Lock, Printer, Share2, Users } from "lucide-react";
+import {
+  Copy,
+  Globe,
+  KeyRound,
+  Lock,
+  Printer,
+  Share2,
+  Users,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Dock, DockIcon } from "@/components/ui/dock";
 import { Loader } from "@/components/motion/loader";
+import { Dock, DockIcon } from "@/components/ui/dock";
 import {
   Tooltip,
   TooltipContent,
@@ -13,6 +21,8 @@ export type ControlRules = {
   showClone: boolean;
   showShare: boolean;
   showExport: boolean;
+  showPublicPerms: boolean;
+  showTeamPerms: boolean;
 };
 
 interface ControlActionsProps {
@@ -23,6 +33,8 @@ interface ControlActionsProps {
   onClone: () => void;
   onShare: () => void;
   onExport: () => void;
+  onManagePublic: () => void;
+  onManageTeamPerms: () => void;
 }
 
 function DockAction({
@@ -69,14 +81,19 @@ export function ControlActions({
   onClone,
   onShare,
   onExport,
+  onManagePublic,
+  onManageTeamPerms,
 }: ControlActionsProps) {
   const t = useTranslations("notebook_controls");
+  const tp = useTranslations("team_settings.team_role");
 
   const hasAny =
     rules.showPrivacySelector ||
     rules.showClone ||
     rules.showShare ||
-    rules.showExport;
+    rules.showExport ||
+    rules.showPublicPerms ||
+    rules.showTeamPerms;
 
   if (!hasAny) return null;
 
@@ -128,6 +145,22 @@ export function ControlActions({
           icon={<Printer className="size-4" />}
           label={t("pdf")}
           onClick={onExport}
+        />
+      )}
+
+      {rules.showTeamPerms && (
+        <DockAction
+          icon={<KeyRound className="size-4" />}
+          label={tp("notebook_permissions")}
+          onClick={onManageTeamPerms}
+        />
+      )}
+
+      {rules.showPublicPerms && (
+        <DockAction
+          icon={<Globe className="size-4" />}
+          label={tp("public_permissions")}
+          onClick={onManagePublic}
         />
       )}
     </Dock>

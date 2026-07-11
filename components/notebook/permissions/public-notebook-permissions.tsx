@@ -1,6 +1,5 @@
 "use client";
 
-import { Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader } from "@/components/motion/loader";
@@ -8,14 +7,12 @@ import {
   PermissionRow,
   permissionsSheetClass,
 } from "@/components/permissions/permission-controls";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
@@ -34,13 +31,16 @@ type Effect = GrantEffect | "none";
 
 export function PublicNotebookPermissions({
   notebookId,
+  open,
+  onOpenChange,
 }: {
   notebookId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const tr = useTranslations("team_settings.team_role");
   const te = useTranslations("api_errors");
 
-  const [open, setOpen] = useState(false);
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null);
   const [grants, setGrants] = useState<TeamGrant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,13 +110,7 @@ export function PublicNotebookPermissions({
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Globe className="size-4" />
-          {tr("public_permissions")}
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={permissionsSheetClass}>
         <DialogHeader>
           <DialogTitle>{tr("public_permissions")}</DialogTitle>

@@ -444,8 +444,10 @@
           "view": "View text blocks",
           "add": "Add text blocks",
           "edit": "Edit text blocks"
-        }
-      }
+        },
+        "reorder": "Reorder blocks"
+      },
+      "manage_public": "Manage public permissions"
     },
     "team": {
       "manage": "Manage team",

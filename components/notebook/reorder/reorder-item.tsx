@@ -111,6 +111,7 @@ export function ReorderItem({
   const canDelete =
     !ready ||
     can("notebook.blocks.delete", { blockType: permType ?? undefined });
+  const canReorder = !ready || can("notebook.blocks.reorder");
   const canEditContent =
     canWrite &&
     (!ready ||
@@ -131,15 +132,18 @@ export function ReorderItem({
       onDragEnd={() => setIsDragging(false)}
       dragListener={false}
     >
-      {canWrite && (
-        <div
-          className="absolute -left-6 top-2 flex flex-col gap-2 transition-opacity opacity-100 md:opacity-0 group-hover/item:opacity-100 hover:cursor-grab active:cursor-grabbing select-none touch-none print:hidden"
-          onPointerDown={(e) => dragControls.start(e)}
-        >
-          <GripVertical
-            size={16}
-            className="text-muted-foreground cursor-grab active:cursor-grabbing"
-          />
+      {(canReorder || canDelete) && (
+        <div className="absolute -left-6 top-2 flex flex-col gap-2 transition-opacity opacity-100 md:opacity-0 group-hover/item:opacity-100 select-none touch-none print:hidden">
+          {canReorder && (
+            <button
+              type="button"
+              aria-label="Reordenar bloco"
+              className="cursor-grab active:cursor-grabbing text-muted-foreground"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
+              <GripVertical size={16} />
+            </button>
+          )}
           {pageBlocks.length > 1 && canDelete && (
             <button
               type="button"

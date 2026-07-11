@@ -444,8 +444,10 @@
           "view": "Ver blocos de texto",
           "add": "Adicionar blocos de texto",
           "edit": "Editar blocos de texto"
-        }
-      }
+        },
+        "reorder": "Reordenar blocos"
+      },
+      "manage_public": "Gerenciar permissões públicas"
     },
     "team": {
       "manage": "Gerenciar time",

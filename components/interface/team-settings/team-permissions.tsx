@@ -294,6 +294,9 @@ export function TeamPermissions({
       { general: CatalogPermission[]; granular: CatalogPermission[] }
     >();
     for (const perm of catalog.permissions) {
+      if (targetKind === "notebook" && !perm.targets.includes("notebook")) {
+        continue;
+      }
       const module = perm.key.split(".")[0];
       let bucket = byModule.get(module);
       if (!bucket) {
@@ -308,7 +311,7 @@ export function TeamPermissions({
         (MODULE_ORDER.indexOf(a[0]) + 1 || 99) -
         (MODULE_ORDER.indexOf(b[0]) + 1 || 99),
     );
-  }, [catalog]);
+  }, [catalog, targetKind]);
 
   const filteredMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
@@ -482,11 +485,12 @@ export function TeamPermissions({
                   <button
                     key={m.user_id}
                     type="button"
+                    aria-pressed={memberUserId === m.user_id}
                     onClick={() => setMemberUserId(m.user_id)}
                     className={cn(
                       "flex w-full items-center gap-3 px-3 py-2 text-left transition-colors",
                       memberUserId === m.user_id
-                        ? "bg-primary/10"
+                        ? "bg-primary/15 ring-1 ring-inset ring-primary"
                         : "hover:bg-accent",
                     )}
                   >
@@ -510,6 +514,9 @@ export function TeamPermissions({
                       <Badge variant="secondary" className="shrink-0">
                         {roleLabel(role)}
                       </Badge>
+                    )}
+                    {memberUserId === m.user_id && (
+                      <Check className="size-4 shrink-0 text-primary" />
                     )}
                   </button>
                 );

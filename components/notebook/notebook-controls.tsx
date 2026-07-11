@@ -5,17 +5,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
 import { getNotebookMeta, type NotebookMeta } from "@/lib/api/notebook-service";
 import { useNotebook } from "./notebook-context";
-import { ControlActions } from "./notebook-controls-actions";
+import { ControlActions, type ControlRules } from "./notebook-controls-actions";
 import { useCan } from "./permissions/capabilities";
 import { PublicNotebookPermissions } from "./permissions/public-notebook-permissions";
 import { TeamNotebookPermissions } from "./permissions/team-notebook-permissions";
-
-type ControlRules = {
-  showPrivacySelector: boolean;
-  showClone: boolean;
-  showShare: boolean;
-  showExport: boolean;
-};
 
 export function NotebookControls() {
   const { user } = useAuth();
@@ -27,6 +20,8 @@ export function NotebookControls() {
     isCloning,
   } = useNotebook();
   const [meta, setMeta] = useState<NotebookMeta | null>(null);
+  const [publicPermsOpen, setPublicPermsOpen] = useState(false);
+  const [teamPermsOpen, setTeamPermsOpen] = useState(false);
 
   useEffect(() => {
     if (!notebook?.id) return;
@@ -53,7 +48,7 @@ export function NotebookControls() {
       try {
         await navigator.clipboard.writeText(url);
         toast.success("Link copiado para a área de transferência!");
-      } catch (err) {
+      } catch (_err) {
         toast.error("Não foi possível copiar o link.");
       }
     };
@@ -82,6 +77,8 @@ export function NotebookControls() {
     showClone: !!user,
     showShare: true,
     showExport: true,
+    showPublicPerms: isPublic && can("notebook.manage_public"),
+    showTeamPerms: !!meta?.team_id && can("team.roles.edit_role_permissions"),
   };
 
   return (
@@ -94,14 +91,22 @@ export function NotebookControls() {
         onClone={triggerClone}
         onShare={handleShare}
         onExport={() => window.print()}
+        onManagePublic={() => setPublicPermsOpen(true)}
+        onManageTeamPerms={() => setTeamPermsOpen(true)}
       />
-      {isPublic && notebook && meta && !meta.team_id && (
-        <PublicNotebookPermissions notebookId={notebook.id} />
+      {notebook && rules.showPublicPerms && (
+        <PublicNotebookPermissions
+          notebookId={notebook.id}
+          open={publicPermsOpen}
+          onOpenChange={setPublicPermsOpen}
+        />
       )}
-      {notebook && meta?.team_id && can("team.roles.edit_role_permissions") && (
+      {notebook && meta?.team_id && rules.showTeamPerms && (
         <TeamNotebookPermissions
           notebookId={notebook.id}
           teamId={meta.team_id}
+          open={teamPermsOpen}
+          onOpenChange={setTeamPermsOpen}
         />
       )}
     </div>

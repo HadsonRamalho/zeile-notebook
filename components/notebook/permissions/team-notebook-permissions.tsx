@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, KeyRound, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader } from "@/components/motion/loader";
@@ -8,7 +8,6 @@ import {
   PermissionRow,
   permissionsSheetClass,
 } from "@/components/permissions/permission-controls";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -20,7 +19,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -50,14 +48,17 @@ type Effect = GrantEffect | "none";
 export function TeamNotebookPermissions({
   notebookId,
   teamId,
+  open,
+  onOpenChange,
 }: {
   notebookId: string;
   teamId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const tr = useTranslations("team_settings.team_role");
   const te = useTranslations("api_errors");
 
-  const [open, setOpen] = useState(false);
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null);
   const [grants, setGrants] = useState<TeamGrant[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>([]);
@@ -162,13 +163,7 @@ export function TeamNotebookPermissions({
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <KeyRound className="size-4" />
-          {tr("notebook_permissions")}
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={permissionsSheetClass}>
         <DialogHeader>
           <DialogTitle>{tr("notebook_permissions")}</DialogTitle>
