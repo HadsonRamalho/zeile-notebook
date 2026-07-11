@@ -11,6 +11,8 @@ import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
   type Extension,
+  keymap,
+  Prec,
   type ReactCodeMirrorRef,
 } from "@uiw/react-codemirror";
 import diff from "fast-diff";
@@ -26,6 +28,8 @@ interface BlockEditorProps {
   language?: Language;
   onBlur: () => void;
   onChange: (val: string) => void;
+  onRun?: () => void;
+  onCreateEditor?: (view: EditorView) => void;
   readOnly?: boolean;
   className?: string;
   minHeight?: string;
@@ -38,6 +42,8 @@ export const BlockEditor = React.memo(
     type,
     language,
     onChange,
+    onRun,
+    onCreateEditor,
     readOnly = false,
     className,
     minHeight = "40px",
@@ -48,6 +54,8 @@ export const BlockEditor = React.memo(
     const editorRef = useRef<ReactCodeMirrorRef>(null);
 
     const localContentRef = useRef(content);
+    const onRunRef = useRef(onRun);
+    onRunRef.current = onRun;
 
     const languageExtension = useMemo(() => {
       if (type === "text") {
@@ -78,6 +86,20 @@ export const BlockEditor = React.memo(
 
     const extensions = useMemo(() => {
       return [
+        Prec.highest(
+          keymap.of([
+            {
+              key: "Mod-Enter",
+              run: () => {
+                if (onRunRef.current) {
+                  onRunRef.current();
+                  return true;
+                }
+                return false;
+              },
+            },
+          ]),
+        ),
         languageExtension,
         EditorView.lineWrapping,
         EditorView.theme({ "&": { fontSize: `${fontSize}px` } }),
@@ -183,6 +205,7 @@ export const BlockEditor = React.memo(
         onBlur={onBlur}
         autoFocus={!isTouchDevice}
         onChange={handleChange}
+        onCreateEditor={onCreateEditor}
         editable={!readOnly}
         basicSetup={basicSetup}
         className={`text-sm w-full border border-border rounded-md overflow-hidden ${className}`}

@@ -83,6 +83,7 @@ export function GoEditor({
             minHeight="280px"
             className="border-none rounded-none"
             onBlur={() => {}}
+            onRun={canExecute ? handleRun : undefined}
             type="code"
           />
         </div>

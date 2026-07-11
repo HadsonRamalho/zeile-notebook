@@ -221,7 +221,7 @@ export default function RustInteractivePage({
                 ? defaultSqlContent
                 : type === "typst"
                   ? defaultTypstContent
-                  : "Escreva aqui";
+                  : "";
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
@@ -230,6 +230,15 @@ export default function RustInteractivePage({
   // Deletar um bloco não pede confirmação (fricção alta demais para uma ação
   // do dia a dia), mas também não é definitivo: um toast com "Desfazer"
   // reinsere o bloco exato (mesmo id/conteúdo) na mesma posição.
+  const handleMoveBlock = (id: string, direction: -1 | 1) => {
+    const index = blocks.findIndex((b) => b.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= blocks.length) return;
+    const next = [...blocks];
+    [next[index], next[target]] = [next[target], next[index]];
+    reorderBlocks(next);
+  };
+
   const handleDeleteBlock = (id: string) => {
     const index = blocks.findIndex((b) => b.id === id);
     const removed = blocks[index];
@@ -381,6 +390,7 @@ export default function RustInteractivePage({
                       setBlocks={() => {}}
                       setIsDragging={setIsDragging}
                       removeBlock={handleDeleteBlock}
+                      moveBlock={handleMoveBlock}
                       updateBlock={updateBlockContent}
                       updateBlockMetadata={updateBlockMetadataSync}
                       updateDrawingScene={updateDrawingScene}

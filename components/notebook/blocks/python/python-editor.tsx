@@ -76,6 +76,7 @@ export default function PythonSandbox({
             minHeight="280px"
             className="border-none rounded-none"
             onBlur={() => {}}
+            onRun={handleRun}
             type="code"
           />
         </div>

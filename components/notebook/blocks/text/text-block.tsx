@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
+import type { EditorView } from "@codemirror/view";
+import { useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { BlockEditor } from "../block-editor";
+import { MarkdownToolbar } from "./markdown-toolbar";
 
 interface TextBlockProps {
   content: string;
@@ -12,19 +14,26 @@ interface TextBlockProps {
 
 export function TextBlock({ content, onChange }: TextBlockProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const viewRef = useRef<EditorView | null>(null);
 
   if (isEditing) {
     return (
-      <BlockEditor
-        className="w-full bg-muted text-foreground text-lg outline-none resize-none py-2"
-        content={content}
-        onBlur={() => {
-          setIsEditing(false);
-        }}
-        onChange={(e) => onChange(e)}
-        minHeight="60px"
-        type="text"
-      />
+      <div className="flex flex-col gap-1.5">
+        <MarkdownToolbar getView={() => viewRef.current} />
+        <BlockEditor
+          className="w-full bg-muted text-foreground text-lg outline-none resize-none py-2"
+          content={content}
+          onBlur={() => {
+            setIsEditing(false);
+          }}
+          onChange={(e) => onChange(e)}
+          onCreateEditor={(view) => {
+            viewRef.current = view;
+          }}
+          minHeight="60px"
+          type="text"
+        />
+      </div>
     );
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Reorder, useDragControls } from "framer-motion";
-import { GripVertical, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 import type {
   Block,
@@ -36,6 +36,7 @@ interface ReorderItemProps {
   setBlocks: (b: Block[]) => void;
   setIsDragging: (d: boolean) => void;
   removeBlock: (id: string) => void;
+  moveBlock?: (id: string, direction: -1 | 1) => void;
   updateBlock: (id: string, newContent: string) => void;
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
   updateDrawingScene: (id: string, elements: readonly DrawingElement[]) => void;
@@ -77,6 +78,7 @@ export function ReorderItem({
   setBlocks,
   updateBlock,
   removeBlock,
+  moveBlock,
   updateBlockMetadata,
   updateDrawingScene,
   doc,
@@ -143,6 +145,30 @@ export function ReorderItem({
             >
               <GripVertical size={16} />
             </button>
+          )}
+          {canReorder && moveBlock && pageBlocks.length > 1 && (
+            <>
+              <button
+                type="button"
+                disabled={pageBlocks[0]?.id === block.id}
+                onClick={() => moveBlock(block.id, -1)}
+                aria-label="Mover bloco para cima"
+                title="Mover para cima"
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                type="button"
+                disabled={pageBlocks[pageBlocks.length - 1]?.id === block.id}
+                onClick={() => moveBlock(block.id, 1)}
+                aria-label="Mover bloco para baixo"
+                title="Mover para baixo"
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
+              >
+                <ArrowDown size={14} />
+              </button>
+            </>
           )}
           {pageBlocks.length > 1 && canDelete && (
             <button
