@@ -181,7 +181,14 @@ pub struct TeamMemberResponse {
     pub role_id: Uuid,
     pub name: String,
     pub email: String,
+    pub avatar_url: Option<String>,
     pub joined_at: NaiveDateTime,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateMemberRoleRequest {
+    pub user_id: Uuid,
+    pub role_id: Uuid,
 }
 
 #[derive(Insertable, Deserialize)]
@@ -365,6 +372,22 @@ pub async fn remove_user_from_team(
     }
 }
 
+pub async fn update_member_role(
+    conn: &mut AsyncPgConnection,
+    team_id_param: Uuid,
+    user_id_param: Uuid,
+    role_id_param: Uuid,
+) -> Result<(), ApiError> {
+    diesel::update(team_members::table)
+        .filter(team_members::team_id.eq(team_id_param))
+        .filter(team_members::user_id.eq(user_id_param))
+        .set(team_members::role_id.eq(role_id_param))
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
 pub async fn find_team_member_with_role(
     conn: &mut AsyncPgConnection,
     team_id_param: Uuid,
@@ -404,6 +427,7 @@ pub async fn find_team_members_with_roles(
                 team_members::role_id,
                 users::name,
                 users::email,
+                users::avatar_url,
                 team_members::joined_at,
             ),
             team_roles::all_columns,

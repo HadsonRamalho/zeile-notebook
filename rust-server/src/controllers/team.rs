@@ -19,7 +19,7 @@ use crate::{
         state::AppState,
         team::{
             NewTeam, NewTeamMember, NewTeamRole, NewTeamRoleRequest, Team, TeamMember,
-            TeamMemberResponse, TeamRole, UpdateTeam, UpdateTeamRole,
+            TeamMemberResponse, TeamRole, UpdateMemberRoleRequest, UpdateTeam, UpdateTeamRole,
         },
     },
 };
@@ -255,6 +255,38 @@ pub async fn api_remove_user_from_team(
         }
         Err(e) => Err(e),
     }
+}
+
+pub async fn api_update_member_role(
+    State(state): State<Arc<AppState>>,
+    Path(team_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdateMemberRoleRequest>,
+) -> Result<StatusCode, ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_team_permission(conn, user_id, team_id, "team.manage").await?;
+
+    let roles = models::team::find_roles_by_team(conn, team_id).await?;
+    if !roles.iter().any(|r| r.id == payload.role_id) {
+        return Err(ApiError::Request(
+            "O cargo não pertence a este time".to_string(),
+        ));
+    }
+
+    models::team::update_member_role(conn, team_id, payload.user_id, payload.role_id).await?;
+
+    crate::controllers::permissions::broadcast_capability_change_for_team(
+        &state.pool,
+        &state.presence_registry,
+        team_id,
+    )
+    .await;
+
+    Ok(StatusCode::OK)
 }
 
 pub async fn api_get_team_members(
