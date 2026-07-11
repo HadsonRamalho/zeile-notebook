@@ -17,6 +17,8 @@ pub mod sec;
 pub struct CodeRequest {
     pub code: String,
     pub session_id: String,
+    #[serde(default)]
+    pub notebook_id: Option<uuid::Uuid>,
 }
 
 #[derive(Serialize)]
@@ -49,9 +51,18 @@ async fn main() {
         .await
         .layer(TraceLayer::new_for_http());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3099").await.unwrap();
+    // Porta configurável por env (default 3099). Permite subir instâncias
+    // paralelas para benchmark/teste sem conflitar com o servidor principal.
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3099);
 
-    tracing::info!("Servidor rodando em http://0.0.0.0:3099");
+    let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
+        .await
+        .unwrap();
+
+    tracing::info!("Servidor rodando em http://0.0.0.0:{port}");
 
     axum::serve(
         listener,

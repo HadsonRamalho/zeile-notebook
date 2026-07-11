@@ -1,17 +1,25 @@
 use axum::extract::ConnectInfo;
 use axum::extract::Json;
+use axum::extract::State;
 use axum::http::HeaderMap;
+use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::deadpool::Pool;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::process::Command;
 use tokio::time::timeout;
 use tracing::error;
 use tracing::info;
+use uuid::Uuid;
 
 use crate::CodeRequest;
 use crate::CodeResponse;
+use crate::controllers::jwt::extract_claims_from_header;
+use crate::controllers::permissions::{TargetCtx, require};
+use crate::models::state::AppState;
 use crate::controllers::utils::extract_module_name;
 use crate::file::register_log;
 use crate::file::run_safe_bin;
@@ -21,11 +29,47 @@ use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
 use crate::sec::verify_zig_code;
 
+async fn enforce_execute(
+    pool: &Pool<AsyncPgConnection>,
+    headers: &HeaderMap,
+    notebook_id: Option<Uuid>,
+    language: &str,
+) -> Result<(), CodeResponse> {
+    let user_id = extract_claims_from_header(headers)
+        .await
+        .ok()
+        .map(|claims| claims.1.id);
+
+    let notebook_id = notebook_id.ok_or_else(|| CodeResponse {
+        stdout: String::new(),
+        stderr: "Execução exige um notebook associado.".to_string(),
+    })?;
+
+    let key = format!("notebook.blocks.{language}.execute");
+    let target = TargetCtx {
+        block_id: None,
+        block_type: Some(language.to_string()),
+    };
+
+    match require(pool, user_id, notebook_id, &key, &target).await {
+        Ok(_) => Ok(()),
+        Err(_) => Err(CodeResponse {
+            stdout: String::new(),
+            stderr: "Você não tem permissão para executar este tipo de bloco.".to_string(),
+        }),
+    }
+}
+
 pub async fn verify_request(
+    State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "rust").await {
+        return Json(denied);
+    }
+
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
@@ -238,10 +282,14 @@ pub async fn verify_request(
 }
 
 pub async fn verify_go_request(
+    State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await {
+        return Json(denied);
+    }
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
@@ -325,10 +373,14 @@ pub async fn verify_go_request(
 }
 
 pub async fn verify_cpp_request(
+    State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "cpp").await {
+        return Json(denied);
+    }
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
@@ -446,10 +498,14 @@ pub async fn verify_cpp_request(
 }
 
 pub async fn verify_zig_request(
+    State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "zig").await {
+        return Json(denied);
+    }
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
