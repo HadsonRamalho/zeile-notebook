@@ -2,7 +2,9 @@
 
 import { Reorder, useDragControls } from "framer-motion";
 import {
+  ArrowUpRight,
   ChevronDown,
+  Circle,
   Download,
   Eraser,
   EyeIcon,
@@ -14,19 +16,25 @@ import {
   LockIcon,
   Maximize2,
   Minimize2,
+  Minus,
   PaintBucket,
   Paintbrush,
   Palette,
   PlusIcon,
   Redo2,
   Scan,
+  Settings2,
+  Shapes,
+  Square,
   Trash2,
+  Triangle,
   Undo2,
   UnlockIcon,
   Zap,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { useLocale } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -39,6 +47,13 @@ import { toast } from "sonner";
 import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
 import type { DrawingElement, Notebook } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
@@ -56,6 +71,10 @@ import {
   exportSceneToCanvas,
   findTopStrokeAt,
   type FreeDrawingElement,
+  GEO_SHAPE_LABELS,
+  GEO_SHAPES,
+  type GeoShape,
+  geoShapePoints,
   isCanvasSettings,
   isLayer,
   isStroke,
@@ -78,7 +97,7 @@ import {
 } from "./brushes";
 import { BrushPicker } from "./brush-picker";
 
-type ToolKind = "draw" | "eraser" | "bucket" | "hand" | "laser";
+type ToolKind = "draw" | "eraser" | "bucket" | "hand" | "laser" | "shapes";
 
 const SWATCHES = [
   "#0f172a",
@@ -96,6 +115,7 @@ const TOOL_ICONS: Record<ToolKind, typeof Paintbrush> = {
   bucket: PaintBucket,
   hand: Hand,
   laser: Zap,
+  shapes: Shapes,
 };
 
 const TOOL_LABELS: Record<ToolKind, string> = {
@@ -104,7 +124,54 @@ const TOOL_LABELS: Record<ToolKind, string> = {
   bucket: "Balde de tinta",
   hand: "Mão (mover)",
   laser: "Laser (temporário)",
+  shapes: "Formas",
 };
+
+// Atalhos de teclado por idioma (letra sobreposta ao ícone da ferramenta).
+const TOOL_SHORTCUTS: Record<string, Partial<Record<ToolKind, string>>> = {
+  "pt-br": { draw: "P", eraser: "B", bucket: "T", hand: "M", laser: "L", shapes: "F" },
+  en: { draw: "P", eraser: "E", bucket: "F", hand: "H", laser: "L", shapes: "S" },
+};
+
+const shortcutsFor = (locale: string): Partial<Record<ToolKind, string>> =>
+  TOOL_SHORTCUTS[locale] ?? TOOL_SHORTCUTS["pt-br"]!;
+
+const GEO_ICONS: Record<GeoShape, typeof Square> = {
+  line: Minus,
+  rectangle: Square,
+  ellipse: Circle,
+  triangle: Triangle,
+  arrow: ArrowUpRight,
+};
+
+type GestureAction = "none" | "undo" | "redo" | "fullscreen" | "focus";
+
+const GESTURE_ACTION_LABELS: Record<GestureAction, string> = {
+  none: "Nada",
+  undo: "Desfazer",
+  redo: "Refazer",
+  fullscreen: "Tela cheia",
+  focus: "Modo foco",
+};
+
+const GESTURE_FINGERS = [2, 3, 4];
+const GESTURE_STORAGE_KEY = "free-drawing-touch-gestures";
+const DEFAULT_GESTURES: Record<number, GestureAction> = {
+  2: "undo",
+  3: "redo",
+  4: "none",
+};
+
+function loadGestures(): Record<number, GestureAction> {
+  if (typeof localStorage === "undefined") return { ...DEFAULT_GESTURES };
+  try {
+    const raw = localStorage.getItem(GESTURE_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_GESTURES };
+    return { ...DEFAULT_GESTURES, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_GESTURES };
+  }
+}
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 8;
@@ -152,6 +219,12 @@ export function FreeDrawingCell({
   );
   const [eraserSize, setEraserSize] = useState(8);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [geoShape, setGeoShape] = useState<GeoShape>("rectangle");
+  const [gestures, setGestures] =
+    useState<Record<number, GestureAction>>(DEFAULT_GESTURES);
+  const [gesturesOpen, setGesturesOpen] = useState(false);
+  const locale = useLocale();
+  const shortcuts = shortcutsFor(locale);
   // Vive aqui (não dentro de LayersPanel) porque o painel desmonta ao entrar
   // em modo foco (só é renderizado quando `!focusMode`) — um `useState`
   // local perderia o estado de minimizado a cada entrada/saída do foco.
@@ -183,12 +256,23 @@ export function FreeDrawingCell({
   const laserStrokes = useRef<LaserStroke[]>([]);
   const activeLaserId = useRef<string | null>(null);
   const laserRaf = useRef<number | null>(null);
+  const shapeStart = useRef<StrokePoint | null>(null);
+  const gestureState = useRef<{
+    count: number;
+    startTime: number;
+    x: number;
+    y: number;
+    moved: boolean;
+  } | null>(null);
+  const gesturesRef = useRef(gestures);
+  gesturesRef.current = gestures;
 
   const activeBrush = brushes.find((b) => b.id === activeBrushId) ?? brushes[0]!;
 
   useEffect(() => {
     const custom = loadCustomBrushes();
     if (custom.length > 0) setBrushes([...BUILTIN_BRUSHES, ...custom]);
+    setGestures(loadGestures());
   }, []);
 
   const createBrush = (brush: Brush) => {
@@ -564,6 +648,12 @@ export function FreeDrawingCell({
       tickLaser();
       return;
     }
+    if (tool === "shapes") {
+      if (!activeLayer || activeLayer.locked) return;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      shapeStart.current = getPoint(e);
+      return;
+    }
     if (!activeLayer || activeLayer.locked) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     orderCounter.current += 1;
@@ -621,6 +711,38 @@ export function FreeDrawingCell({
       laser?.points.push({ x: p.x, y: p.y });
       return;
     }
+    if (shapeStart.current) {
+      if (!activeLayer) return;
+      const start = shapeStart.current;
+      const cur = getPoint(e);
+      const size = brushSize(activeBrush);
+      const points = geoShapePoints(geoShape, start.x, start.y, cur.x, cur.y);
+      if (!pendingStroke.current) {
+        orderCounter.current += 1;
+        pendingStroke.current = {
+          id: nextElementId("stroke"),
+          version: 1,
+          kind: "stroke",
+          layerId: activeLayer.id,
+          order: orderCounter.current,
+          brush: "pen",
+          color,
+          size,
+          opacity: 100,
+          pressureSensitive: false,
+          points,
+          shape: "pen",
+          sizeStart: size,
+          sizeEnd: size,
+          opacityStart: 100,
+          opacityEnd: 100,
+        };
+      } else {
+        pendingStroke.current.points = points;
+      }
+      redraw();
+      return;
+    }
     if (!pendingStroke.current) return;
     pendingStroke.current.points.push(getPoint(e));
     redraw();
@@ -648,11 +770,13 @@ export function FreeDrawingCell({
 
   const onPointerUp = () => {
     panState.current = null;
+    shapeStart.current = null;
     releaseLaser();
     finishStroke();
   };
   const onPointerLeave = () => {
     panState.current = null;
+    shapeStart.current = null;
     releaseLaser();
     if (pendingStroke.current) finishStroke();
   };
@@ -757,11 +881,12 @@ export function FreeDrawingCell({
     updateDrawingScene(blockId, next as unknown as DrawingElement[]);
   };
 
-  // Ctrl+Z desfaz, Ctrl+Shift+Z ou Ctrl+Y refaz (ou Cmd no mac) — só quando o
-  // cursor está sobre este bloco, pra não roubar o atalho de outros
-  // blocos/editores na mesma página.
+  // Ctrl+Z desfaz, Ctrl+Shift+Z ou Ctrl+Y refaz (ou Cmd no mac); letras soltas
+  // selecionam ferramentas (atalhos por idioma). Só quando o cursor está sobre
+  // este bloco, pra não roubar o atalho de outros blocos/editores da página.
   useEffect(() => {
     if (!canWrite || !isHovered) return;
+    const sc = shortcutsFor(locale);
     const onKeyDown = (e: KeyboardEvent) => {
       const isTypingTarget =
         e.target instanceof HTMLElement &&
@@ -769,21 +894,111 @@ export function FreeDrawingCell({
           e.target.tagName === "TEXTAREA" ||
           e.target.isContentEditable);
       if (isTypingTarget) return;
-      const isMod = e.ctrlKey || e.metaKey;
-      if (!isMod) return;
-      const key = e.key.toLowerCase();
-      if (key === "y") {
-        e.preventDefault();
-        redo();
-      } else if (key === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
+      if (e.ctrlKey || e.metaKey) {
+        const key = e.key.toLowerCase();
+        if (key === "y") {
+          e.preventDefault();
+          redo();
+        } else if (key === "z") {
+          e.preventDefault();
+          if (e.shiftKey) redo();
+          else undo();
+        }
+        return;
+      }
+      if (e.altKey) return;
+      const up = e.key.toUpperCase();
+      for (const [t, k] of Object.entries(sc)) {
+        if (k === up) {
+          e.preventDefault();
+          setTool(t as ToolKind);
+          return;
+        }
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canWrite, isHovered, undo, redo]);
+  }, [canWrite, isHovered, locale, undo, redo]);
+
+  const gestureActionRef = useRef<(a: GestureAction) => void>(() => {});
+  gestureActionRef.current = (action: GestureAction) => {
+    if (action === "undo") undo();
+    else if (action === "redo") redo();
+    else if (action === "fullscreen") setFullscreen((v) => !v);
+    else if (action === "focus") setFocusMode((v) => !v);
+  };
+
+  const setGesture = (fingers: number, action: GestureAction) => {
+    setGestures((prev) => {
+      const next = { ...prev, [fingers]: action };
+      try {
+        localStorage.setItem(GESTURE_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Gestos multitoque (customizáveis): toque com N dedos dispara a ação mapeada.
+  useEffect(() => {
+    if (!canWrite) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const cancelDrawing = () => {
+      pendingStroke.current = null;
+      shapeStart.current = null;
+      panState.current = null;
+      if (activeLaserId.current) {
+        laserStrokes.current = laserStrokes.current.filter(
+          (l) => l.id !== activeLaserId.current,
+        );
+        activeLaserId.current = null;
+      }
+    };
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length < 2) return;
+      cancelDrawing();
+      const t0 = e.touches[0]!;
+      const g = gestureState.current;
+      gestureState.current = {
+        count: Math.max(g?.count ?? 0, e.touches.length),
+        startTime: g?.startTime ?? Date.now(),
+        x: t0.clientX,
+        y: t0.clientY,
+        moved: g?.moved ?? false,
+      };
+      e.preventDefault();
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const g = gestureState.current;
+      if (!g) return;
+      const t0 = e.touches[0];
+      if (t0 && Math.hypot(t0.clientX - g.x, t0.clientY - g.y) > 12) {
+        g.moved = true;
+      }
+      e.preventDefault();
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const g = gestureState.current;
+      if (!g) return;
+      if (e.touches.length > 0) return;
+      gestureState.current = null;
+      const dur = Date.now() - g.startTime;
+      if (!g.moved && dur < 500 && g.count >= 2) {
+        const action = gesturesRef.current[g.count] ?? "none";
+        if (action !== "none") gestureActionRef.current(action);
+      }
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [canWrite]);
 
   return (
     <div
@@ -908,11 +1123,13 @@ export function FreeDrawingCell({
             <BrushPalette
               tool={tool}
               activeBrush={activeBrush}
+              shortcuts={shortcuts}
               onSelectTool={setTool}
               onOpenBrushes={() => {
                 setTool("draw");
                 setPickerOpen(true);
               }}
+              onOpenGestures={() => setGesturesOpen(true)}
               onUndo={undo}
               onRedo={redo}
             />
@@ -926,6 +1143,9 @@ export function FreeDrawingCell({
                   tool === "eraser" ? setEraserSize(v) : setActiveBrushSize(v)
                 }
               />
+            )}
+            {tool === "shapes" && (
+              <GeoShapePicker shape={geoShape} onShape={setGeoShape} />
             )}
             <ColorPicker color={color} onColor={setColor} />
             <BackgroundControl
@@ -981,6 +1201,103 @@ export function FreeDrawingCell({
         onCreate={createBrush}
         onDelete={deleteBrush}
       />
+
+      <GestureConfigDialog
+        open={gesturesOpen}
+        onOpenChange={setGesturesOpen}
+        gestures={gestures}
+        onSet={setGesture}
+      />
+    </div>
+  );
+}
+
+function GestureConfigDialog({
+  open,
+  onOpenChange,
+  gestures,
+  onSet,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  gestures: Record<number, GestureAction>;
+  onSet: (fingers: number, action: GestureAction) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-md:top-auto max-md:bottom-0 max-md:translate-y-0 max-md:rounded-b-none max-md:max-w-full sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Gestos de toque</DialogTitle>
+          <DialogDescription>
+            Escolha a ação disparada ao tocar com cada número de dedos.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          {GESTURE_FINGERS.map((fingers) => (
+            <div key={fingers} className="flex items-center justify-between gap-3">
+              <span className="text-sm text-foreground">
+                {fingers} dedos
+              </span>
+              <div className="flex flex-wrap justify-end gap-1">
+                {(Object.keys(GESTURE_ACTION_LABELS) as GestureAction[]).map(
+                  (action) => (
+                    <button
+                      key={action}
+                      type="button"
+                      onClick={() => onSet(fingers, action)}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-xs transition-colors",
+                        (gestures[fingers] ?? "none") === action
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      )}
+                    >
+                      {GESTURE_ACTION_LABELS[action]}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GeoShapePicker({
+  shape,
+  onShape,
+}: {
+  shape: GeoShape;
+  onShape: (s: GeoShape) => void;
+}) {
+  return (
+    <div className="absolute top-3 left-16 z-10 flex items-center gap-1 rounded-full border border-border bg-card/85 px-2 py-1.5 shadow-lg backdrop-blur">
+      {GEO_SHAPES.map((s) => {
+        const Icon = GEO_ICONS[s];
+        return (
+          <Tooltip key={s}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={GEO_SHAPE_LABELS[s]}
+                aria-pressed={s === shape}
+                onClick={() => onShape(s)}
+                className={cn(
+                  "grid size-7 place-items-center rounded-md transition-colors",
+                  s === shape
+                    ? "bg-foreground/[0.1] text-foreground"
+                    : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{GEO_SHAPE_LABELS[s]}</TooltipContent>
+          </Tooltip>
+        );
+      })}
     </div>
   );
 }
@@ -988,10 +1305,12 @@ export function FreeDrawingCell({
 function ToolButton({
   id,
   isActive,
+  shortcut,
   onClick,
 }: {
   id: ToolKind;
   isActive: boolean;
+  shortcut?: string;
   onClick: (t: ToolKind) => void;
 }) {
   const Icon = TOOL_ICONS[id];
@@ -1004,16 +1323,24 @@ function ToolButton({
           aria-pressed={isActive}
           onClick={() => onClick(id)}
           className={cn(
-            "grid size-9 place-items-center rounded-md transition-colors",
+            "relative grid size-9 place-items-center rounded-md transition-colors",
             isActive
               ? "bg-foreground/[0.1] text-foreground"
               : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground",
           )}
         >
+          {shortcut && (
+            <span className="pointer-events-none absolute right-0.5 bottom-0.5 font-mono text-[8px] leading-none text-muted-foreground">
+              {shortcut}
+            </span>
+          )}
           <Icon className="size-4" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">{TOOL_LABELS[id]}</TooltipContent>
+      <TooltipContent side="right">
+        {TOOL_LABELS[id]}
+        {shortcut ? ` (${shortcut})` : ""}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -1021,19 +1348,23 @@ function ToolButton({
 function BrushPalette({
   tool,
   activeBrush,
+  shortcuts,
   onSelectTool,
   onOpenBrushes,
+  onOpenGestures,
   onUndo,
   onRedo,
 }: {
   tool: ToolKind;
   activeBrush: Brush;
+  shortcuts: Partial<Record<ToolKind, string>>;
   onSelectTool: (t: ToolKind) => void;
   onOpenBrushes: () => void;
+  onOpenGestures: () => void;
   onUndo: () => void;
   onRedo: () => void;
 }) {
-  const actions: ToolKind[] = ["bucket", "hand", "laser"];
+  const actions: ToolKind[] = ["bucket", "hand", "laser", "shapes"];
   const BrushIcon = TOOL_ICONS.draw;
   return (
     <div className="absolute top-3 left-3 z-10 flex flex-col gap-0.5 rounded-xl border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
@@ -1045,24 +1376,35 @@ function BrushPalette({
             aria-pressed={tool === "draw"}
             onClick={onOpenBrushes}
             className={cn(
-              "grid size-9 place-items-center rounded-md transition-colors",
+              "relative grid size-9 place-items-center rounded-md transition-colors",
               tool === "draw"
                 ? "bg-foreground/[0.1] text-foreground"
                 : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground",
             )}
           >
+            {shortcuts.draw && (
+              <span className="pointer-events-none absolute right-0.5 bottom-0.5 font-mono text-[8px] leading-none text-muted-foreground">
+                {shortcuts.draw}
+              </span>
+            )}
             <BrushIcon className="size-4" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right">Pincéis — {activeBrush.name}</TooltipContent>
       </Tooltip>
-      <ToolButton id="eraser" isActive={tool === "eraser"} onClick={onSelectTool} />
+      <ToolButton
+        id="eraser"
+        isActive={tool === "eraser"}
+        shortcut={shortcuts.eraser}
+        onClick={onSelectTool}
+      />
       <div className="my-1 h-px bg-border" />
       {actions.map((a) => (
         <ToolButton
           key={a}
           id={a}
           isActive={tool === a}
+          shortcut={shortcuts[a]}
           onClick={onSelectTool}
         />
       ))}
@@ -1093,6 +1435,14 @@ function BrushPalette({
         </TooltipTrigger>
         <TooltipContent side="right">Refazer</TooltipContent>
       </Tooltip>
+      <button
+        type="button"
+        aria-label="Gestos de toque"
+        onClick={onOpenGestures}
+        className="grid size-9 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground md:hidden"
+      >
+        <Settings2 className="size-4" />
+      </button>
     </div>
   );
 }
