@@ -7,7 +7,6 @@ import {
   Eraser,
   EyeIcon,
   EyeOffIcon,
-  Feather,
   Focus,
   GripVertical,
   Hand,
@@ -16,15 +15,15 @@ import {
   Maximize2,
   Minimize2,
   PaintBucket,
+  Paintbrush,
   Palette,
-  Pen,
   PlusIcon,
   Redo2,
   Scan,
-  Square,
   Trash2,
   Undo2,
   UnlockIcon,
+  Zap,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -47,20 +46,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  BRUSH_LABELS,
-  type BrushKind,
   type Camera,
   type CanvasSettingsElement,
   computeContentBounds,
   DEFAULT_CAMERA,
   defaultCanvasSettings,
   defaultLayer,
+  drawLaser,
   exportSceneToCanvas,
   findTopStrokeAt,
   type FreeDrawingElement,
   isCanvasSettings,
   isLayer,
   isStroke,
+  LASER_FADE_MS,
+  type LaserStroke,
   type LayerElement,
   nextElementId,
   renderScene,
@@ -68,8 +68,17 @@ import {
   type StrokePoint,
   upsertCanvasSettings,
 } from "./engine";
+import {
+  type Brush,
+  BUILTIN_BRUSHES,
+  brushSize,
+  loadCustomBrushes,
+  saveCustomBrushes,
+  scaleBrushSize,
+} from "./brushes";
+import { BrushPicker } from "./brush-picker";
 
-type ToolKind = BrushKind | "bucket" | "hand";
+type ToolKind = "draw" | "eraser" | "bucket" | "hand" | "laser";
 
 const SWATCHES = [
   "#0f172a",
@@ -81,19 +90,20 @@ const SWATCHES = [
   "#8b5cf6",
 ];
 
-const TOOL_ICONS: Record<ToolKind, typeof Pen> = {
-  pen: Pen,
-  marker: Square,
-  calligraphy: Feather,
+const TOOL_ICONS: Record<ToolKind, typeof Paintbrush> = {
+  draw: Paintbrush,
   eraser: Eraser,
   bucket: PaintBucket,
   hand: Hand,
+  laser: Zap,
 };
 
 const TOOL_LABELS: Record<ToolKind, string> = {
-  ...BRUSH_LABELS,
+  draw: "Pincel",
+  eraser: "Borracha",
   bucket: "Balde de tinta",
   hand: "Mão (mover)",
+  laser: "Laser (temporário)",
 };
 
 const MIN_ZOOM = 0.1;
@@ -134,17 +144,14 @@ export function FreeDrawingCell({
   const [activeLayerId, setActiveLayerId] = useState<string | null>(
     () => elements.find(isLayer)?.id ?? null,
   );
-  const [tool, setTool] = useState<ToolKind>("pen");
+  const [tool, setTool] = useState<ToolKind>("draw");
   const [color, setColor] = useState("#0f172a");
-  const [sizeByBrush, setSizeByBrush] = useState<Record<BrushKind, number>>({
-    pen: 8,
-    marker: 8,
-    calligraphy: 8,
-    eraser: 8,
-  });
-  const [expandedSizeTool, setExpandedSizeTool] = useState<BrushKind | null>(
-    null,
+  const [brushes, setBrushes] = useState<Brush[]>(BUILTIN_BRUSHES);
+  const [activeBrushId, setActiveBrushId] = useState<string>(
+    BUILTIN_BRUSHES[0]!.id,
   );
+  const [eraserSize, setEraserSize] = useState(8);
+  const [pickerOpen, setPickerOpen] = useState(false);
   // Vive aqui (não dentro de LayersPanel) porque o painel desmonta ao entrar
   // em modo foco (só é renderizado quando `!focusMode`) — um `useState`
   // local perderia o estado de minimizado a cada entrada/saída do foco.
@@ -172,6 +179,45 @@ export function FreeDrawingCell({
   const opacityBaseline = useRef<FreeDrawingElement[] | null>(null);
   const reorderBaseline = useRef<FreeDrawingElement[] | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+
+  const laserStrokes = useRef<LaserStroke[]>([]);
+  const activeLaserId = useRef<string | null>(null);
+  const laserRaf = useRef<number | null>(null);
+
+  const activeBrush = brushes.find((b) => b.id === activeBrushId) ?? brushes[0]!;
+
+  useEffect(() => {
+    const custom = loadCustomBrushes();
+    if (custom.length > 0) setBrushes([...BUILTIN_BRUSHES, ...custom]);
+  }, []);
+
+  const createBrush = (brush: Brush) => {
+    setBrushes((prev) => {
+      const next = [...prev, brush];
+      saveCustomBrushes(next);
+      return next;
+    });
+    setActiveBrushId(brush.id);
+  };
+
+  const deleteBrush = (id: string) => {
+    setBrushes((prev) => {
+      const next = prev.filter((b) => b.id !== id);
+      saveCustomBrushes(next);
+      return next;
+    });
+    if (activeBrushId === id) setActiveBrushId(BUILTIN_BRUSHES[0]!.id);
+  };
+
+  const setActiveBrushSize = (nextSize: number) => {
+    setBrushes((prev) => {
+      const next = prev.map((b) =>
+        b.id === activeBrushId ? scaleBrushSize(b, nextSize) : b,
+      );
+      saveCustomBrushes(next);
+      return next;
+    });
+  };
 
   // Reconcilia mudanças remotas (outros peers) na cena, com a mesma
   // detecção de eco por assinatura de conteúdo usada no bloco de Excalidraw.
@@ -315,11 +361,47 @@ export function FreeDrawingCell({
       liveStrokes,
       offscreenRef.current,
     );
+
+    if (laserStrokes.current.length > 0) {
+      drawLaser(
+        ctx,
+        canvasSize.width,
+        canvasSize.height,
+        dpr,
+        camera,
+        laserStrokes.current,
+        Date.now(),
+      );
+    }
   }, [canvasSize, dpr, camera, layers, strokes]);
 
   useEffect(() => {
     redraw();
   }, [redraw]);
+
+  // Loop de animação do laser: enquanto houver traços vivos, redesenha e poda
+  // os que já esvaeceram. Traços de laser são efêmeros e não entram na cena.
+  const tickLaser = useCallback(() => {
+    if (laserRaf.current !== null) return;
+    const loop = () => {
+      laserRaf.current = null;
+      const now = Date.now();
+      laserStrokes.current = laserStrokes.current.filter(
+        (l) => l.releasedAt === null || now - l.releasedAt < LASER_FADE_MS,
+      );
+      redraw();
+      if (laserStrokes.current.length > 0) {
+        laserRaf.current = requestAnimationFrame(loop);
+      }
+    };
+    laserRaf.current = requestAnimationFrame(loop);
+  }, [redraw]);
+
+  useEffect(() => {
+    return () => {
+      if (laserRaf.current !== null) cancelAnimationFrame(laserRaf.current);
+    };
+  }, []);
 
   // Converte um ponto de tela (relativo ao canvas) para o espaço-mundo do
   // canvas infinito, desfazendo o pan/zoom atual da câmera.
@@ -455,25 +537,6 @@ export function FreeDrawingCell({
     commit(upsertCanvasSettings(elements, next), elements);
   };
 
-  const isBrushKind = (t: ToolKind): t is BrushKind =>
-    t === "pen" || t === "marker" || t === "calligraphy" || t === "eraser";
-
-  // Clicar de novo na ferramenta já ativa expande o slider de tamanho
-  // específico daquele pincel; clicar numa ferramenta diferente só troca a
-  // ferramenta e fecha qualquer slider aberto.
-  const handleToolClick = (t: ToolKind) => {
-    if (t === tool && isBrushKind(t)) {
-      setExpandedSizeTool((cur) => (cur === t ? null : t));
-      return;
-    }
-    setTool(t);
-    setExpandedSizeTool(null);
-  };
-
-  const setSizeForBrush = (brush: BrushKind, value: number) => {
-    setSizeByBrush((prev) => ({ ...prev, [brush]: value }));
-  };
-
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!canWrite) return;
     if (e.button !== 0) return;
@@ -491,22 +554,54 @@ export function FreeDrawingCell({
       applyBucket(world.x, world.y);
       return;
     }
+    if (tool === "laser") {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const p = getPoint(e);
+      const id = nextElementId("laser");
+      activeLaserId.current = id;
+      laserStrokes.current = [
+        ...laserStrokes.current,
+        { id, points: [{ x: p.x, y: p.y }], bornAt: Date.now(), releasedAt: null },
+      ];
+      tickLaser();
+      return;
+    }
     if (!activeLayer || activeLayer.locked) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     orderCounter.current += 1;
-    pendingStroke.current = {
-      id: nextElementId("stroke"),
-      version: 1,
-      kind: "stroke",
-      layerId: activeLayer.id,
-      order: orderCounter.current,
-      brush: tool,
-      color,
-      size: sizeByBrush[tool],
-      opacity: 100,
-      pressureSensitive: e.pointerType === "pen",
-      points: [getPoint(e)],
-    };
+    pendingStroke.current =
+      tool === "eraser"
+        ? {
+            id: nextElementId("stroke"),
+            version: 1,
+            kind: "stroke",
+            layerId: activeLayer.id,
+            order: orderCounter.current,
+            brush: "eraser",
+            color,
+            size: eraserSize,
+            opacity: 100,
+            pressureSensitive: e.pointerType === "pen",
+            points: [getPoint(e)],
+          }
+        : {
+            id: nextElementId("stroke"),
+            version: 1,
+            kind: "stroke",
+            layerId: activeLayer.id,
+            order: orderCounter.current,
+            brush: "pen",
+            color,
+            size: brushSize(activeBrush),
+            opacity: activeBrush.opacityStart,
+            pressureSensitive: e.pointerType === "pen",
+            points: [getPoint(e)],
+            shape: activeBrush.shape,
+            sizeStart: activeBrush.sizeStart,
+            sizeEnd: activeBrush.sizeEnd,
+            opacityStart: activeBrush.opacityStart,
+            opacityEnd: activeBrush.opacityEnd,
+          };
     forceTick((t) => t + 1);
   };
 
@@ -520,9 +615,27 @@ export function FreeDrawingCell({
       });
       return;
     }
+    if (activeLaserId.current) {
+      const p = getPoint(e);
+      const laser = laserStrokes.current.find(
+        (l) => l.id === activeLaserId.current,
+      );
+      laser?.points.push({ x: p.x, y: p.y });
+      return;
+    }
     if (!pendingStroke.current) return;
     pendingStroke.current.points.push(getPoint(e));
     redraw();
+  };
+
+  const releaseLaser = () => {
+    if (!activeLaserId.current) return;
+    const laser = laserStrokes.current.find(
+      (l) => l.id === activeLaserId.current,
+    );
+    if (laser) laser.releasedAt = Date.now();
+    activeLaserId.current = null;
+    tickLaser();
   };
 
   const finishStroke = () => {
@@ -537,10 +650,12 @@ export function FreeDrawingCell({
 
   const onPointerUp = () => {
     panState.current = null;
+    releaseLaser();
     finishStroke();
   };
   const onPointerLeave = () => {
     panState.current = null;
+    releaseLaser();
     if (pendingStroke.current) finishStroke();
   };
 
@@ -794,15 +909,24 @@ export function FreeDrawingCell({
           <div className="print:hidden contents">
             <BrushPalette
               tool={tool}
-              onChangeTool={handleToolClick}
+              activeBrush={activeBrush}
+              onSelectTool={setTool}
+              onOpenBrushes={() => {
+                setTool("draw");
+                setPickerOpen(true);
+              }}
               onUndo={undo}
               onRedo={redo}
             />
-            {expandedSizeTool && (
+            {(tool === "draw" || tool === "eraser") && (
               <BrushSizePopover
-                brush={expandedSizeTool}
-                size={sizeByBrush[expandedSizeTool]}
-                onSize={(v) => setSizeForBrush(expandedSizeTool, v)}
+                label={tool === "eraser" ? "Borracha" : activeBrush.name}
+                size={
+                  tool === "eraser" ? eraserSize : brushSize(activeBrush)
+                }
+                onSize={(v) =>
+                  tool === "eraser" ? setEraserSize(v) : setActiveBrushSize(v)
+                }
               />
             )}
             <ColorPicker color={color} onColor={setColor} />
@@ -849,6 +973,16 @@ export function FreeDrawingCell({
           </div>
         )}
       </div>
+
+      <BrushPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        brushes={brushes}
+        activeBrushId={activeBrushId}
+        onSelect={setActiveBrushId}
+        onCreate={createBrush}
+        onDelete={deleteBrush}
+      />
     </div>
   );
 }
@@ -888,34 +1022,50 @@ function ToolButton({
 
 function BrushPalette({
   tool,
-  onChangeTool,
+  activeBrush,
+  onSelectTool,
+  onOpenBrushes,
   onUndo,
   onRedo,
 }: {
   tool: ToolKind;
-  onChangeTool: (t: ToolKind) => void;
+  activeBrush: Brush;
+  onSelectTool: (t: ToolKind) => void;
+  onOpenBrushes: () => void;
   onUndo: () => void;
   onRedo: () => void;
 }) {
-  const brushes: ToolKind[] = ["pen", "marker", "calligraphy", "eraser"];
-  const actions: ToolKind[] = ["bucket", "hand"];
+  const actions: ToolKind[] = ["bucket", "hand", "laser"];
+  const BrushIcon = TOOL_ICONS.draw;
   return (
     <div className="absolute top-3 left-3 z-10 flex flex-col gap-0.5 rounded-xl border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
-      {brushes.map((b) => (
-        <ToolButton
-          key={b}
-          id={b}
-          isActive={tool === b}
-          onClick={onChangeTool}
-        />
-      ))}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Pincéis (${activeBrush.name})`}
+            aria-pressed={tool === "draw"}
+            onClick={onOpenBrushes}
+            className={cn(
+              "grid size-9 place-items-center rounded-md transition-colors",
+              tool === "draw"
+                ? "bg-foreground/[0.1] text-foreground"
+                : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground",
+            )}
+          >
+            <BrushIcon className="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Pincéis — {activeBrush.name}</TooltipContent>
+      </Tooltip>
+      <ToolButton id="eraser" isActive={tool === "eraser"} onClick={onSelectTool} />
       <div className="my-1 h-px bg-border" />
       {actions.map((a) => (
         <ToolButton
           key={a}
           id={a}
           isActive={tool === a}
-          onClick={onChangeTool}
+          onClick={onSelectTool}
         />
       ))}
       <div className="my-1 h-px bg-border" />
@@ -988,36 +1138,45 @@ function ColorPicker({
   );
 }
 
-// Aparece só quando se clica de novo na ferramenta já ativa (ver
-// `handleToolClick`) — o slider de tamanho é próprio de cada pincel, não
-// compartilhado, então cada abertura mostra/edita o valor daquele pincel.
+// Tamanho da ferramenta ativa (pincel ou borracha), com slider e input numérico
+// para escolher um valor exato.
 function BrushSizePopover({
-  brush,
+  label,
   size,
   onSize,
 }: {
-  brush: BrushKind;
+  label: string;
   size: number;
   onSize: (s: number) => void;
 }) {
   return (
     <div className="absolute top-3 left-16 z-10 flex items-center gap-2 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur">
-      <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-        {BRUSH_LABELS[brush]}
+      <span className="max-w-[84px] truncate font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+        {label}
       </span>
       <div className="h-5 w-px bg-border" />
-      <div className="flex w-32 items-center gap-2">
-        <span className="w-6 font-mono text-[10px] text-muted-foreground tabular-nums">
-          {size}px
-        </span>
+      <div className="flex w-44 items-center gap-2">
         <Slider
           className={cn("flex-1", COMPACT_SLIDER)}
           min={1}
-          max={64}
+          max={120}
           value={[size]}
           onValueChange={(v) =>
             onSize(Math.round(Array.isArray(v) ? v[0]! : v))
           }
+        />
+        <input
+          type="number"
+          min={1}
+          max={120}
+          value={size}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isNaN(n)) return;
+            onSize(Math.min(120, Math.max(1, Math.round(n))));
+          }}
+          aria-label="Tamanho em pixels"
+          className="w-12 rounded border border-border bg-background px-1 py-0.5 text-center font-mono text-[10px] tabular-nums outline-none"
         />
       </div>
     </div>

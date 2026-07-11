@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import {
   Fragment,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -230,6 +232,55 @@ export default function RustInteractivePage({
   // Deletar um bloco não pede confirmação (fricção alta demais para uma ação
   // do dia a dia), mas também não é definitivo: um toast com "Desfazer"
   // reinsere o bloco exato (mesmo id/conteúdo) na mesma posição.
+  const blocksRootRef = useRef<HTMLDivElement>(null);
+
+  const focusBlockAt = useCallback((index: number) => {
+    const root = blocksRootRef.current;
+    if (!root || index < 0) return;
+    root
+      .querySelector<HTMLElement>(`[data-block-index="${index}"]`)
+      ?.focus();
+  }, []);
+
+  const handleBlockKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>, index: number) => {
+      const wrapper = e.currentTarget;
+      const onWrapper = e.target === wrapper;
+
+      if (e.key === "Escape") {
+        if (!onWrapper) {
+          e.stopPropagation();
+          wrapper.focus();
+        }
+        return;
+      }
+
+      if (!onWrapper) return;
+
+      if (e.key === "Tab") {
+        e.preventDefault();
+        focusBlockAt(index + (e.shiftKey ? -1 : 1));
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        focusBlockAt(index + 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        focusBlockAt(index - 1);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const trigger = wrapper.querySelector<HTMLElement>("[data-edit-trigger]");
+        if (trigger) {
+          trigger.click();
+        } else {
+          wrapper
+            .querySelector<HTMLElement>('.cm-content, textarea, [contenteditable="true"]')
+            ?.focus();
+        }
+      }
+    },
+    [focusBlockAt],
+  );
+
   const handleMoveBlock = (id: string, direction: -1 | 1) => {
     const index = blocks.findIndex((b) => b.id === id);
     const target = index + direction;
@@ -335,7 +386,7 @@ export default function RustInteractivePage({
           />
         )}
 
-        <div className="flex flex-1 min-w-0 flex-col">
+        <div ref={blocksRootRef} className="flex flex-1 min-w-0 flex-col">
           {header}
           <Reorder.Group
             axis="y"
@@ -357,9 +408,12 @@ export default function RustInteractivePage({
                   )}
 
                   <div
+                    tabIndex={0}
+                    data-block-index={index}
+                    onKeyDown={(e) => handleBlockKeyDown(e, index)}
                     onFocus={() => updateFocus(block.id)}
                     onBlur={() => updateFocus(null)}
-                    className="relative overflow-visible"
+                    className="relative overflow-visible rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     style={{
                       boxShadow:
                         focusedUsers.length > 0

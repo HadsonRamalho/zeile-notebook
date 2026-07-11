@@ -2,6 +2,42 @@ import { getStroke } from "perfect-freehand";
 
 export type BrushKind = "pen" | "marker" | "calligraphy" | "eraser";
 
+/** Formas de pincel disponíveis para criação de pincéis customizados. */
+export type BrushShape =
+  | "pencil"
+  | "dot"
+  | "pen"
+  | "marker"
+  | "airbrush"
+  | "watercolor"
+  | "oil"
+  | "charcoal"
+  | "chalk";
+
+export const BRUSH_SHAPE_LABELS: Record<BrushShape, string> = {
+  pencil: "Lápis",
+  dot: "Ponto",
+  pen: "Caneta",
+  marker: "Marcador",
+  airbrush: "Aerógrafo",
+  watercolor: "Pincel de água",
+  oil: "Óleo",
+  charcoal: "Carvão",
+  chalk: "Giz",
+};
+
+export const BRUSH_SHAPES: BrushShape[] = [
+  "pencil",
+  "dot",
+  "pen",
+  "marker",
+  "airbrush",
+  "watercolor",
+  "oil",
+  "charcoal",
+  "chalk",
+];
+
 export interface StrokePoint {
   x: number;
   y: number;
@@ -32,6 +68,14 @@ export interface StrokeElement {
   opacity: number;
   pressureSensitive: boolean;
   points: StrokePoint[];
+  // Modelo novo (pincéis com forma + afinamento/opacidade variável ao longo do
+  // traço). Quando `shape` está presente o renderizador usa este caminho; do
+  // contrário cai no legado (brush + size + opacity uniformes).
+  shape?: BrushShape;
+  sizeStart?: number;
+  sizeEnd?: number;
+  opacityStart?: number;
+  opacityEnd?: number;
   [key: string]: unknown;
 }
 
@@ -155,9 +199,277 @@ function calligraphyQuads(
   return quads;
 }
 
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/** Hash FNV-1a → semente estável a partir do id do traço. */
+function hashSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** PRNG mulberry32: determinístico por semente, para textura estável entre redraws. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+interface ResolvedTaper {
+  sizeStart: number;
+  sizeEnd: number;
+  opStart: number;
+  opEnd: number;
+}
+
+function resolveTaper(s: StrokeElement): ResolvedTaper {
+  return {
+    sizeStart: s.sizeStart ?? s.size,
+    sizeEnd: s.sizeEnd ?? s.size,
+    opStart: (s.opacityStart ?? s.opacity) / 100,
+    opEnd: (s.opacityEnd ?? s.opacity) / 100,
+  };
+}
+
+/** Largura máxima do traço (para bounds e hit test). */
+export function strokeMaxWidth(s: StrokeElement): number {
+  if (s.shape) return Math.max(s.sizeStart ?? s.size, s.sizeEnd ?? s.size);
+  return s.size;
+}
+
+/** Contorno preenchido (perfect-freehand) com afinamento start→end. */
+function shapedPenPath(
+  s: StrokeElement,
+  t: ResolvedTaper,
+  smoothing: number,
+): Path2D {
+  const n = s.points.length;
+  const max = Math.max(t.sizeStart, t.sizeEnd, 0.1);
+  const pts = s.points.map((p, i) => {
+    const u = n <= 1 ? 0 : i / (n - 1);
+    const w = lerp(t.sizeStart, t.sizeEnd, u);
+    const pressure = s.pressureSensitive ? p.pressure : 1;
+    return [p.x, p.y, Math.max(0.02, (pressure * w) / max)] as [
+      number,
+      number,
+      number,
+    ];
+  });
+  const outline = getStroke(pts, {
+    size: max,
+    thinning: 1,
+    smoothing,
+    streamline: 0.5,
+    simulatePressure: false,
+  });
+  const path = new Path2D();
+  if (outline.length === 0) return path;
+  path.moveTo(outline[0]![0], outline[0]![1]);
+  for (const [x, y] of outline.slice(1)) path.lineTo(x, y);
+  path.closePath();
+  return path;
+}
+
+/** Polilinha com largura/opacidade variável por segmento. */
+function drawTaperedPolyline(
+  ctx: CanvasRenderingContext2D,
+  s: StrokeElement,
+  t: ResolvedTaper,
+  cap: CanvasLineCap,
+) {
+  const pts = s.points;
+  const n = pts.length;
+  ctx.lineJoin = "round";
+  ctx.lineCap = cap;
+  for (let i = 0; i < n - 1; i++) {
+    const u = n <= 1 ? 0 : i / (n - 1);
+    ctx.globalAlpha = lerp(t.opStart, t.opEnd, u);
+    ctx.lineWidth = Math.max(0.5, lerp(t.sizeStart, t.sizeEnd, u));
+    ctx.beginPath();
+    ctx.moveTo(pts[i]!.x, pts[i]!.y);
+    ctx.lineTo(pts[i + 1]!.x, pts[i + 1]!.y);
+    ctx.stroke();
+  }
+}
+
+/** Carimba círculos ao longo do trajeto, com espaçamento e jitter opcionais. */
+function stampAlong(
+  ctx: CanvasRenderingContext2D,
+  s: StrokeElement,
+  t: ResolvedTaper,
+  opts: { spacing: number; jitter: number; radiusScale: number; rng: () => number },
+) {
+  const pts = s.points;
+  const n = pts.length;
+  if (n === 0) return;
+  let carry = 0;
+  for (let i = 0; i < n - 1; i++) {
+    const a = pts[i]!;
+    const b = pts[i + 1]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const segLen = Math.hypot(dx, dy);
+    if (segLen < 0.001) continue;
+    const u = n <= 1 ? 0 : i / (n - 1);
+    const width = lerp(t.sizeStart, t.sizeEnd, u);
+    const alpha = lerp(t.opStart, t.opEnd, u);
+    const step = Math.max(0.5, width * opts.spacing);
+    for (let d = carry; d < segLen; d += step) {
+      const f = d / segLen;
+      const jx = (opts.rng() - 0.5) * width * opts.jitter;
+      const jy = (opts.rng() - 0.5) * width * opts.jitter;
+      const r = (width / 2) * opts.radiusScale * (0.7 + opts.rng() * 0.6);
+      ctx.globalAlpha = alpha * (0.6 + opts.rng() * 0.4);
+      ctx.beginPath();
+      ctx.arc(a.x + dx * f + jx, a.y + dy * f + jy, Math.max(0.3, r), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    carry = ((carry - segLen) % step + step) % step;
+  }
+}
+
+function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
+  const t = resolveTaper(s);
+  const shape = s.shape as BrushShape;
+  const rng = mulberry32(hashSeed(s.id));
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = s.color;
+  ctx.strokeStyle = s.color;
+
+  switch (shape) {
+    case "pen": {
+      ctx.globalAlpha = (t.opStart + t.opEnd) / 2;
+      ctx.fill(shapedPenPath(s, t, 0.55));
+      break;
+    }
+    case "pencil": {
+      ctx.fill(shapedPenPath(s, { ...t, opStart: 1, opEnd: 1 }, 0.3));
+      // grão seco por cima para textura de lápis
+      stampAlong(ctx, s, t, {
+        spacing: 0.35,
+        jitter: 0.9,
+        radiusScale: 0.35,
+        rng,
+      });
+      break;
+    }
+    case "marker": {
+      drawTaperedPolyline(ctx, s, t, "square");
+      break;
+    }
+    case "dot": {
+      stampAlong(ctx, s, t, {
+        spacing: 1.4,
+        jitter: 0.05,
+        radiusScale: 1,
+        rng,
+      });
+      break;
+    }
+    case "airbrush": {
+      const pts = s.points;
+      const n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const u = n <= 1 ? 0 : i / (n - 1);
+        const width = lerp(t.sizeStart, t.sizeEnd, u);
+        const alpha = lerp(t.opStart, t.opEnd, u);
+        const density = Math.max(6, Math.round(width * 1.2));
+        for (let k = 0; k < density; k++) {
+          const ang = rng() * Math.PI * 2;
+          const rad = rng() * width;
+          ctx.globalAlpha = alpha * 0.08;
+          ctx.beginPath();
+          ctx.arc(
+            pts[i]!.x + Math.cos(ang) * rad,
+            pts[i]!.y + Math.sin(ang) * rad,
+            width * 0.12,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case "watercolor": {
+      // várias passadas largas, baixa opacidade, com pequeno deslocamento → sangramento
+      for (let pass = 0; pass < 3; pass++) {
+        const off = pass === 0 ? 0 : (rng() - 0.5) * (t.sizeStart + t.sizeEnd) * 0.15;
+        ctx.save();
+        ctx.translate(off, (rng() - 0.5) * off);
+        ctx.globalAlpha = ((t.opStart + t.opEnd) / 2) * 0.35;
+        ctx.fill(
+          shapedPenPath(
+            { ...s, id: `${s.id}-${pass}` },
+            { ...t, sizeStart: t.sizeStart * 1.1, sizeEnd: t.sizeEnd * 1.1 },
+            0.7,
+          ),
+        );
+        ctx.restore();
+      }
+      break;
+    }
+    case "oil": {
+      // corpo opaco espesso + passadas deslocadas para relevo (impasto)
+      ctx.globalAlpha = (t.opStart + t.opEnd) / 2;
+      drawTaperedPolyline(ctx, s, t, "round");
+      for (let pass = 0; pass < 2; pass++) {
+        ctx.save();
+        ctx.translate((rng() - 0.5) * 2, (rng() - 0.5) * 2);
+        drawTaperedPolyline(
+          ctx,
+          s,
+          {
+            ...t,
+            sizeStart: t.sizeStart * 0.6,
+            sizeEnd: t.sizeEnd * 0.6,
+            opStart: t.opStart * 0.5,
+            opEnd: t.opEnd * 0.5,
+          },
+          "round",
+        );
+        ctx.restore();
+      }
+      break;
+    }
+    case "charcoal": {
+      stampAlong(ctx, s, t, {
+        spacing: 0.3,
+        jitter: 0.7,
+        radiusScale: 0.6,
+        rng,
+      });
+      break;
+    }
+    case "chalk": {
+      stampAlong(ctx, s, t, {
+        spacing: 0.25,
+        jitter: 1.1,
+        radiusScale: 0.4,
+        rng,
+      });
+      break;
+    }
+  }
+  ctx.restore();
+}
+
 /** Renderiza um traço em um contexto 2D já configurado (globalAlpha/composite). */
 export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeElement) {
   if (stroke.points.length === 0) return;
+  if (stroke.shape) {
+    drawShapedStroke(ctx, stroke);
+    return;
+  }
   ctx.save();
   ctx.globalAlpha = stroke.opacity / 100;
   ctx.globalCompositeOperation =
@@ -218,6 +530,15 @@ export function hitTestStroke(
   y: number,
 ): boolean {
   if (stroke.points.length === 0) return false;
+  if (stroke.shape) {
+    const path = new Path2D();
+    path.moveTo(stroke.points[0]!.x, stroke.points[0]!.y);
+    for (const p of stroke.points.slice(1)) path.lineTo(p.x, p.y);
+    ctx.lineWidth = Math.max(strokeMaxWidth(stroke), 6);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    return ctx.isPointInStroke(path, x, y);
+  }
   if (stroke.brush === "pen" || stroke.brush === "eraser") {
     return ctx.isPointInPath(penPath(stroke), x, y);
   }
@@ -374,7 +695,7 @@ export function computeContentBounds(
   let maxX = Number.NEGATIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
   for (const stroke of strokes) {
-    const pad = stroke.size / 2;
+    const pad = strokeMaxWidth(stroke) / 2;
     for (const p of stroke.points) {
       minX = Math.min(minX, p.x - pad);
       minY = Math.min(minY, p.y - pad);
@@ -452,6 +773,77 @@ export function defaultLayer(order: number, name: string): LayerElement {
     opacity: 100,
     locked: false,
   };
+}
+
+export interface LaserStroke {
+  id: string;
+  points: { x: number; y: number }[];
+  bornAt: number;
+  /** null enquanto o traço ainda está sendo desenhado; timestamp quando soltou. */
+  releasedAt: number | null;
+}
+
+export const LASER_FADE_MS = 900;
+export const LASER_COLOR = "#ff2d55";
+
+/**
+ * Desenha os traços de laser (efêmeros) sobre a cena, no espaço de tela, usando
+ * a mesma transform da câmera. Cada traço some em `LASER_FADE_MS` após soltar.
+ * Retorna true se ainda há algum traço vivo (para manter o loop de animação).
+ */
+export function drawLaser(
+  ctx: CanvasRenderingContext2D,
+  cssWidth: number,
+  cssHeight: number,
+  dpr: number,
+  camera: Camera,
+  lasers: LaserStroke[],
+  now: number,
+): boolean {
+  ctx.save();
+  ctx.setTransform(
+    camera.zoom * dpr,
+    0,
+    0,
+    camera.zoom * dpr,
+    camera.x * dpr,
+    camera.y * dpr,
+  );
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  let anyAlive = false;
+  for (const laser of lasers) {
+    let alpha = 1;
+    if (laser.releasedAt !== null) {
+      const age = now - laser.releasedAt;
+      if (age >= LASER_FADE_MS) continue;
+      alpha = 1 - age / LASER_FADE_MS;
+    }
+    anyAlive = true;
+    if (laser.points.length === 0) continue;
+    const path = new Path2D();
+    path.moveTo(laser.points[0]!.x, laser.points[0]!.y);
+    for (const p of laser.points.slice(1)) path.lineTo(p.x, p.y);
+    // brilho externo suave
+    ctx.globalAlpha = alpha * 0.35;
+    ctx.strokeStyle = LASER_COLOR;
+    ctx.lineWidth = 14 / camera.zoom;
+    ctx.stroke(path);
+    // núcleo
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 4 / camera.zoom;
+    ctx.stroke(path);
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.strokeStyle = LASER_COLOR;
+    ctx.lineWidth = 6 / camera.zoom;
+    ctx.stroke(path);
+  }
+  ctx.restore();
+  // remove backing store leftover: quando não há vivos o chamador redesenha a cena
+  void cssWidth;
+  void cssHeight;
+  return anyAlive;
 }
 
 /** Substitui (ou insere, se ainda não existir) o registro singleton de configuração do canvas. */
