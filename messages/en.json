@@ -314,7 +314,9 @@
       "subject_role_prefix": "Role",
       "subject_user_prefix": "Member",
       "public_permissions": "Public permissions",
-      "public_permissions_hint": "Set what any logged-in user can do in this public notebook."
+      "public_permissions_hint": "Set what any logged-in user can do in this public notebook.",
+      "notebook_permissions": "Notebook permissions",
+      "notebook_permissions_hint": "Adjust role permissions specifically for this notebook."
     }
   },
   "team_sidebar": {

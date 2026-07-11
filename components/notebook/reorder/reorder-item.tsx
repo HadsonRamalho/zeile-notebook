@@ -110,12 +110,7 @@ export function ReorderItem({
     can(`notebook.blocks.${execType}.execute`, { blockType: execType });
   const canDelete =
     !ready ||
-    can(
-      permType
-        ? `notebook.blocks.${permType}.delete`
-        : "notebook.blocks.delete",
-      { blockType: permType ?? undefined },
-    );
+    can("notebook.blocks.delete", { blockType: permType ?? undefined });
   const canEditContent =
     canWrite &&
     (!ready ||

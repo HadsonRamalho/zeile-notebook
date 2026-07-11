@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { getCurrentNotebook } from "@/lib/api/notebook-service";
 import { useNotebookManager } from "./notebook-manager";
+import { useCan } from "./permissions/capabilities";
 
 interface NotebookTitleProps {
   pageId: string;
@@ -13,6 +14,7 @@ interface NotebookTitleProps {
 export function NotebookTitle({ pageId }: NotebookTitleProps) {
   const t = useTranslations("api_errors");
   const { renamePage } = useNotebookManager();
+  const canEditName = useCan()("notebook.edit_name");
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState<string | undefined>(undefined);
   const [originalTitle, setOriginalTitle] = useState<string | undefined>(
@@ -60,6 +62,10 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
 
     await renamePage(pageId, currentTitle);
   };
+
+  if (!canEditName) {
+    return <h1 className="text-3xl font-bold px-1">{title || "..."}</h1>;
+  }
 
   if (isEditing) {
     return (

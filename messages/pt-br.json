@@ -314,7 +314,9 @@
       "subject_role_prefix": "Cargo",
       "subject_user_prefix": "Membro",
       "public_permissions": "Permissões públicas",
-      "public_permissions_hint": "Defina o que qualquer usuário logado pode fazer neste notebook público."
+      "public_permissions_hint": "Defina o que qualquer usuário logado pode fazer neste notebook público.",
+      "notebook_permissions": "Permissões do notebook",
+      "notebook_permissions_hint": "Ajuste as permissões dos cargos especificamente para este notebook."
     }
   },
   "team_sidebar": {

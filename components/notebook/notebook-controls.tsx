@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
-import { getUserNotebookPermissions } from "@/lib/api/notebook-service";
-import type { TeamRole } from "@/lib/types/team-types";
+import { getNotebookMeta, type NotebookMeta } from "@/lib/api/notebook-service";
 import { useNotebook } from "./notebook-context";
 import { ControlActions } from "./notebook-controls-actions";
+import { useCan } from "./permissions/capabilities";
 import { PublicNotebookPermissions } from "./permissions/public-notebook-permissions";
+import { TeamNotebookPermissions } from "./permissions/team-notebook-permissions";
 
 type ControlRules = {
   showPrivacySelector: boolean;
@@ -25,20 +26,18 @@ export function NotebookControls() {
     triggerClone,
     isCloning,
   } = useNotebook();
-  const [permissions, setPermissions] = useState<TeamRole | undefined>(
-    undefined,
-  );
-
-  const loadPermissions = async () => {
-    if (notebook) {
-      const data = await getUserNotebookPermissions(notebook?.id);
-      setPermissions(data);
-    }
-  };
+  const [meta, setMeta] = useState<NotebookMeta | null>(null);
 
   useEffect(() => {
-    loadPermissions();
-  }, [notebook]);
+    if (!notebook?.id) return;
+    let active = true;
+    getNotebookMeta(notebook.id)
+      .then((m) => active && setMeta(m))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [notebook?.id]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -76,8 +75,10 @@ export function NotebookControls() {
     }
   };
 
+  const can = useCan();
+
   const rules: ControlRules = {
-    showPrivacySelector: !!permissions?.can_manage_privacy,
+    showPrivacySelector: can("notebook.manage_privacy"),
     showClone: !!user,
     showShare: true,
     showExport: true,
@@ -94,8 +95,14 @@ export function NotebookControls() {
         onShare={handleShare}
         onExport={() => window.print()}
       />
-      {isPublic && notebook && (
+      {isPublic && notebook && meta && !meta.team_id && (
         <PublicNotebookPermissions notebookId={notebook.id} />
+      )}
+      {notebook && meta?.team_id && can("team.roles.edit_role_permissions") && (
+        <TeamNotebookPermissions
+          notebookId={notebook.id}
+          teamId={meta.team_id}
+        />
       )}
     </div>
   );

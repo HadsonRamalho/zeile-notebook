@@ -25,6 +25,17 @@ export async function getCurrentNotebook(id: string) {
   return api.get<Notebook>(`/notebook/${id}`);
 }
 
+export interface NotebookMeta {
+  id: string;
+  user_id: string | null;
+  team_id: string | null;
+  is_public: boolean;
+}
+
+export async function getNotebookMeta(id: string) {
+  return api.get<NotebookMeta>(`/notebook/${id}`);
+}
+
 export async function getCurrentNotebookWithBlocks(id: string) {
   return api.get<Notebook>(`/notebook/${id}/full`);
 }
