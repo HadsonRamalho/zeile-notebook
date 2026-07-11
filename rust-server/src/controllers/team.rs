@@ -9,7 +9,9 @@ use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
 
 use crate::{
-    controllers::{jwt::extract_claims_from_header, utils::get_conn},
+    controllers::{
+        jwt::extract_claims_from_header, permissions::require_team_permission, utils::get_conn,
+    },
     models::{
         self,
         error::ApiError,
@@ -81,11 +83,7 @@ pub async fn api_create_team_page(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_write {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "notebook.pages.add").await?;
 
     let page_id = Uuid::new_v4();
     let new_page = NewNotebook {
@@ -117,11 +115,7 @@ pub async fn api_get_team_pages(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_read {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "notebook.view").await?;
 
     let pages = models::notebook::get_team_notebooks(conn, &team_id)
         .await
@@ -146,11 +140,7 @@ pub async fn api_update_team(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_manage_team {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "team.edit_name").await?;
 
     let _ = models::team::update_team_data(conn, team_id, &payload)
         .await
@@ -169,11 +159,7 @@ pub async fn api_get_team_roles(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_manage_team {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "team.roles.edit_role_permissions").await?;
 
     let roles = models::team::find_roles_by_team(conn, team_id).await?;
     Ok(Json(roles))
@@ -190,11 +176,7 @@ pub async fn api_create_team_role(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_manage_permissions {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "team.roles.create_role").await?;
 
     let role_request = payload;
     let role = NewTeamRole::from_request(team_id, role_request);
@@ -232,11 +214,7 @@ pub async fn api_update_team_role(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_manage_permissions {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "team.roles.edit_role_name").await?;
 
     match models::team::update_team_role(conn, payload.id, &payload).await {
         Ok(_) => {
@@ -263,11 +241,7 @@ pub async fn api_remove_user_from_team(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_remove_users {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "team.remove_users").await?;
 
     match models::team::remove_user_from_team(conn, team_id, target).await {
         Ok(_) => {
@@ -329,11 +303,7 @@ pub async fn api_delete_team(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
-
-    if !member.1.can_manage_team {
-        return Err(ApiError::InvalidAuthorizationToken);
-    }
+    require_team_permission(conn, user_id, team_id, "team.manage").await?;
 
     match models::team::delete_team(conn, team_id).await {
         Ok(_) => Ok(StatusCode::OK),

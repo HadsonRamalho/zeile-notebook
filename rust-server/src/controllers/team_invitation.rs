@@ -11,7 +11,8 @@ use uuid::Uuid;
 
 use crate::{
     controllers::{
-        email::send_team_invitation_email, jwt::extract_claims_from_header, utils::get_conn,
+        email::send_team_invitation_email, jwt::extract_claims_from_header,
+        permissions::require_team_permission, utils::get_conn,
     },
     models::{
         self,
@@ -33,6 +34,8 @@ pub async fn api_invite_member(
     let mut conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_team_permission(conn, id, team_id, "team.invite_users").await?;
 
     let invited_by = models::user::find_user_by_id(conn, &id).await?;
 
