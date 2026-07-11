@@ -30,6 +30,7 @@ import { RustIcon } from "@/components/icons/rust-icon";
 import { ZigIcon } from "@/components/icons/zig-icon";
 import type { BlockMetadata, BlockType, Language } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useCan } from "../permissions/capabilities";
 
 interface ReorderToolsProps {
   index: number;
@@ -46,6 +47,7 @@ type ToolButtonConfig = {
   icon: React.ReactNode;
   onClick?: () => void;
   targetView?: string;
+  permType?: string;
 };
 
 // Divisor sempre presente entre blocos (e no fim da lista) — antes o gatilho
@@ -55,6 +57,15 @@ type ToolButtonConfig = {
 // sobre outro conteúdo) e abre/fecha por clique/toque em ambos os casos —
 // hover só aumenta a opacidade no desktop, não é requisito funcional.
 export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
+  const can = useCan();
+  const canAddButton = (btn: ToolButtonConfig) => {
+    if (btn.targetView) return true;
+    const key = btn.permType
+      ? `notebook.blocks.${btn.permType}.add`
+      : "notebook.blocks.add";
+    return can(key, { blockType: btn.permType });
+  };
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<string>("main");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,6 +105,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           label: "Texto",
           icon: <Plus size={14} />,
           onClick: () => addBlock(index, "text"),
+          permType: "text",
         },
         {
           label: "Código",
@@ -134,11 +146,13 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           label: "Desenho",
           icon: <Pencil size={14} />,
           onClick: () => addBlock(index, "free_drawing"),
+          permType: "drawing",
         },
         {
           label: "Excalidraw",
           icon: <Waypoints size={14} />,
           onClick: () => addBlock(index, "drawing"),
+          permType: "drawing",
         },
         {
           label: "Database Schema",
@@ -154,16 +168,19 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           label: "Rust",
           icon: <RustIcon size={30} />,
           onClick: () => addBlock(index, "code", "rust"),
+          permType: "rust",
         },
         {
           label: "React/TS",
           icon: <ReactIcon size={24} />,
           onClick: () => addBlock(index, "code", "typescript"),
+          permType: "tsx",
         },
         {
           label: "Python",
           icon: <PythonIcon size={24} />,
           onClick: () => addBlock(index, "code", "python"),
+          permType: "python",
         },
         {
           label: "Mais",
@@ -179,16 +196,19 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           label: "Go",
           icon: <GoIcon size={30} />,
           onClick: () => addBlock(index, "code", "go"),
+          permType: "go",
         },
         {
           label: "C++",
           icon: <CppIcon size={30} />,
           onClick: () => addBlock(index, "code", "cpp"),
+          permType: "cpp",
         },
         {
           label: "Zig",
           icon: <ZigIcon size={24} />,
           onClick: () => addBlock(index, "code", "zig"),
+          permType: "zig",
         },
         {
           label: "Genérico",
@@ -343,7 +363,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
                         : "flex items-center gap-1"
                     }
                   >
-                    {currentMenu.buttons.map((btn) => (
+                    {currentMenu.buttons.filter(canAddButton).map((btn) => (
                       <ToolButton
                         key={btn.label}
                         icon={btn.icon}

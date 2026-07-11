@@ -108,6 +108,21 @@ export function ReorderItem({
     !ready ||
     !execType ||
     can(`notebook.blocks.${execType}.execute`, { blockType: execType });
+  const canDelete =
+    !ready ||
+    can(
+      permType
+        ? `notebook.blocks.${permType}.delete`
+        : "notebook.blocks.delete",
+      { blockType: permType ?? undefined },
+    );
+  const canEditContent =
+    canWrite &&
+    (!ready ||
+      can(
+        permType ? `notebook.blocks.${permType}.edit` : "notebook.blocks.edit",
+        { blockType: permType ?? undefined },
+      ));
 
   if (!canView) return null;
 
@@ -130,7 +145,7 @@ export function ReorderItem({
             size={16}
             className="text-muted-foreground cursor-grab active:cursor-grabbing"
           />
-          {pageBlocks.length > 1 && (
+          {pageBlocks.length > 1 && canDelete && (
             <button
               type="button"
               disabled={pageBlocks.length === 1}
@@ -151,64 +166,66 @@ export function ReorderItem({
             doc={doc}
             blockId={block.id}
             updateDrawingScene={updateDrawingScene}
-            canWrite={canWrite}
+            canWrite={canEditContent}
           />
         ) : block.type === "free_drawing" ? (
           <FreeDrawingCell
             doc={doc}
             blockId={block.id}
             updateDrawingScene={updateDrawingScene}
-            canWrite={canWrite}
+            canWrite={canEditContent}
           />
         ) : block.type === "database_schema" ? (
           <DatabaseSchemaCell
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
-            canWrite={canWrite}
+            canWrite={canEditContent}
           />
         ) : block.type === "latex" ? (
           <LatexCell
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
-            canWrite={canWrite}
+            canWrite={canEditContent}
           />
         ) : block.type === "sql" ? (
           <SqlCell
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
-            canWrite={canWrite}
+            canWrite={canEditContent}
             notebookId={doc?.id ?? "default"}
           />
         ) : block.type === "typst" ? (
           <TypstCell
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
-            canWrite={canWrite}
+            canWrite={canEditContent}
           />
         ) : block.type === "text" ? (
           <TextBlock
             content={block.content}
-            onChange={(val) => canWrite && updateBlock(block.id, val)}
+            onChange={(val) => canEditContent && updateBlock(block.id, val)}
           />
         ) : block.type === "component" ? (
           <ComponentRenderer
             block={block}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
-            updateBlockMetadata={canWrite ? updateBlockMetadata : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
+            updateBlockMetadata={
+              canEditContent ? updateBlockMetadata : () => {}
+            }
           />
         ) : block.language === "typescript" ? (
           <TsxEditor
             pageFiles={{}}
             block={block}
             pageBlocks={pageBlocks}
-            setBlocksAction={canWrite ? setBlocks : () => {}}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            setBlocksAction={canEditContent ? setBlocks : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
           />
         ) : block.language === "python" ? (
           <PythonSandbox
             block={block}
             isDragging={isDragging}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
           />
         ) : block.language === "go" ? (
           <GoEditor
@@ -217,12 +234,12 @@ export function ReorderItem({
             sessionId={sessionId}
             notebookId={notebookId}
             canExecute={canExecute}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
           />
         ) : block.language === "cpp" ? (
           <CppEditor
             block={block}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
             sessionId={sessionId}
             notebookId={notebookId}
             canExecute={canExecute}
@@ -230,7 +247,7 @@ export function ReorderItem({
         ) : block.language === "zig" ? (
           <ZigEditor
             block={block}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
             sessionId={sessionId}
             notebookId={notebookId}
             canExecute={canExecute}
@@ -251,9 +268,9 @@ export function ReorderItem({
                 type="code"
                 language={selectedLanguage}
                 onBlur={(): void => {}}
-                onChange={canWrite ? handleUpdateContent : () => {}}
+                onChange={canEditContent ? handleUpdateContent : () => {}}
                 onLanguageChange={
-                  canWrite
+                  canEditContent
                     ? (newLang) => {
                         updateBlockMetadata(block.id, {
                           type: "generic",
@@ -265,7 +282,7 @@ export function ReorderItem({
                       }
                     : undefined
                 }
-                readOnly={!canWrite}
+                readOnly={!canEditContent}
               />
             );
           })()
@@ -276,7 +293,7 @@ export function ReorderItem({
             sessionId={sessionId}
             notebookId={notebookId}
             canExecute={canExecute}
-            onCodeChange={canWrite ? handleUpdateContent : () => {}}
+            onCodeChange={canEditContent ? handleUpdateContent : () => {}}
           />
         )}
       </div>
