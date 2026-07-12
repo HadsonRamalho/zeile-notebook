@@ -23,6 +23,7 @@ export interface ChallengePublic {
   timeLimitMs: number;
   memLimitKb: number;
   starterCode: Record<string, string> | null;
+  propertySpec: unknown | null;
   teamId: string | null;
   notebookId: string | null;
   blockId: string | null;
@@ -61,9 +62,8 @@ export interface SubmissionResultView {
   ord: number;
 }
 
-export interface ReferenceSolution {
-  solution: string | null;
-  language: Language | null;
+export interface ReferenceSolutions {
+  solutions: Record<string, string>;
 }
 
 export interface SubmissionView {

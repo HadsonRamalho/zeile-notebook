@@ -6,7 +6,7 @@ import type {
   CreateChallengePayload,
   CreateTestCasePayload,
   LeaderboardEntry,
-  ReferenceSolution,
+  ReferenceSolutions,
   SampleRunResponse,
   SubmissionView,
   SubmitPayload,
@@ -58,8 +58,12 @@ export async function setReferenceSolution(
   });
 }
 
-export async function getReferenceSolution(id: string) {
-  return api.get<ReferenceSolution>(`/challenge/${id}/reference`);
+export async function getReferenceSolutions(id: string) {
+  return api.get<ReferenceSolutions>(`/challenge/${id}/reference`);
+}
+
+export async function deleteReference(id: string, language: string) {
+  return api.delete<ReferenceSolutions>(`/challenge/${id}/reference/${language}`);
 }
 
 export async function submitSolution(id: string, payload: SubmitPayload) {

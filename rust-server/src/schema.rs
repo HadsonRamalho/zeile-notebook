@@ -76,6 +76,7 @@ diesel::table! {
         updated_at -> Timestamptz,
         notebook_id -> Nullable<Uuid>,
         block_id -> Nullable<Uuid>,
+        reference_solutions -> Nullable<Jsonb>,
     }
 }
 

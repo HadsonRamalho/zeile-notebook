@@ -5,10 +5,10 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     controllers::challenge::{
-        api_add_test_case, api_create_challenge, api_delete_test_case, api_get_challenge,
-        api_get_challenge_by_id, api_get_reference, api_get_submission, api_leaderboard,
-        api_list_challenges, api_list_my_submissions, api_list_test_cases, api_run_samples,
-        api_set_reference, api_submit, api_update_challenge,
+        api_add_test_case, api_create_challenge, api_delete_reference, api_delete_test_case,
+        api_get_challenge, api_get_challenge_by_id, api_get_reference, api_get_submission,
+        api_leaderboard, api_list_challenges, api_list_my_submissions, api_list_test_cases,
+        api_run_samples, api_set_reference, api_submit, api_update_challenge,
     },
     models::state::AppState,
 };
@@ -28,6 +28,7 @@ pub async fn challenge_routes() -> OpenApiRouter<Arc<AppState>> {
             "/{id}/reference",
             get(api_get_reference).post(api_set_reference),
         )
+        .route("/{id}/reference/{language}", delete(api_delete_reference))
         .route("/{id}/submit", post(api_submit))
         .route("/{id}/run", post(api_run_samples))
         .route("/{id}/submissions", get(api_list_my_submissions))

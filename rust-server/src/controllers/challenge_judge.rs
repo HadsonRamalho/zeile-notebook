@@ -135,20 +135,6 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
     let needs_reference = ch.judge_mode == "reference" || ch.judge_mode == "property";
 
-    if needs_reference && (ch.reference_solution.is_none() || ch.reference_language.is_none()) {
-        let _ = challenge::finalize_submission(
-            &mut conn,
-            submission_id,
-            "error",
-            0,
-            0,
-            0,
-            Some("Desafio sem solução de referência configurada"),
-        )
-        .await;
-        return;
-    }
-
     let stored = match challenge::list_test_cases(&mut conn, ch.id).await {
         Ok(t) => t,
         Err(e) => {
@@ -228,9 +214,20 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     };
 
     let ref_bin = if needs_reference {
-        let ref_lang = ch.reference_language.as_deref().unwrap_or("rust");
-        let ref_sol = ch.reference_solution.as_deref().unwrap_or("");
-        match compile_code(ref_lang, ref_sol, &ref_session).await {
+        let Some((ref_lang, ref_sol)) = challenge::pick_reference(&ch) else {
+            let _ = challenge::finalize_submission(
+                &mut conn,
+                submission_id,
+                "error",
+                0,
+                0,
+                0,
+                Some("Desafio sem solução de referência configurada"),
+            )
+            .await;
+            return;
+        };
+        match compile_code(&ref_lang, &ref_sol, &ref_session).await {
             Ok(path) => Some(path),
             Err(_) => {
                 error!("judge: solução de referência não compila");

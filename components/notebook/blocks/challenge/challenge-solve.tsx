@@ -291,17 +291,32 @@ export function ChallengeSolve({
           readOnly={busy}
         />
 
-        <div className="flex items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" onClick={resetCode} disabled={busy}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetCode}
+            disabled={busy}
+            className="w-full sm:w-auto"
+          >
             <RotateCcw />
             {t("reset_code")}
           </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleRun} disabled={busy}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button
+              variant="outline"
+              onClick={handleRun}
+              disabled={busy}
+              className="w-full sm:w-auto"
+            >
               {running ? <Loader2 className="animate-spin" /> : <Play />}
               {t("run_samples")}
             </Button>
-            <Button onClick={handleSubmit} disabled={busy}>
+            <Button
+              onClick={handleSubmit}
+              disabled={busy}
+              className="w-full sm:w-auto"
+            >
               {submitting ? <Loader2 className="animate-spin" /> : <Send />}
               {t("submit")}
             </Button>

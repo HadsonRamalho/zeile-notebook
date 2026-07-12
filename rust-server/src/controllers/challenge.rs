@@ -237,6 +237,7 @@ pub async fn api_create_challenge(
         visibility: payload.visibility.unwrap_or_else(|| "public".to_string()),
         notebook_id: Some(payload.notebook_id),
         block_id: payload.block_id,
+        reference_solutions: None,
     };
 
     let mut conn = conn_from(&state).await?;
@@ -337,8 +338,7 @@ pub async fn api_set_reference(
     .await?;
 
     let updated =
-        challenge::set_reference_solution(&mut conn, id, &payload.solution, &payload.language)
-            .await?;
+        challenge::upsert_reference(&mut conn, id, &payload.solution, &payload.language).await?;
     Ok(Json(ChallengePublic::from(updated)))
 }
 
@@ -359,8 +359,29 @@ pub async fn api_get_reference(
     )
     .await?;
     Ok(Json(json!({
-        "solution": ch.reference_solution,
-        "language": ch.reference_language,
+        "solutions": challenge::reference_map(&ch),
+    })))
+}
+
+pub async fn api_delete_reference(
+    State(state): State<Arc<AppState>>,
+    Path((id, language)): Path<(Uuid, String)>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    require_notebook(
+        &state,
+        &ch,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
+    let updated = challenge::delete_reference(&mut conn, id, &language).await?;
+    Ok(Json(json!({
+        "solutions": challenge::reference_map(&updated),
     })))
 }
 

@@ -38,8 +38,8 @@ export function LeaderboardTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      <table className="w-full border-collapse text-sm">
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-full min-w-[420px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             <th className="w-12 px-4 py-2.5 font-medium">

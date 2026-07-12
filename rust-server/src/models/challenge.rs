@@ -33,6 +33,7 @@ pub struct Challenge {
     pub updated_at: DateTime<Utc>,
     pub notebook_id: Option<Uuid>,
     pub block_id: Option<Uuid>,
+    pub reference_solutions: Option<Value>,
 }
 
 #[derive(Insertable)]
@@ -57,6 +58,7 @@ pub struct NewChallenge {
     pub visibility: String,
     pub notebook_id: Option<Uuid>,
     pub block_id: Option<Uuid>,
+    pub reference_solutions: Option<Value>,
 }
 
 #[derive(AsChangeset, Default)]
@@ -94,6 +96,8 @@ pub struct ChallengePublic {
     pub mem_limit_kb: i32,
     #[serde(rename = "starterCode")]
     pub starter_code: Option<Value>,
+    #[serde(rename = "propertySpec")]
+    pub property_spec: Option<Value>,
     #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
     #[serde(rename = "notebookId")]
@@ -119,6 +123,7 @@ impl From<Challenge> for ChallengePublic {
             time_limit_ms: c.time_limit_ms,
             mem_limit_kb: c.mem_limit_kb,
             starter_code: c.starter_code,
+            property_spec: c.property_spec,
             team_id: c.team_id,
             notebook_id: c.notebook_id,
             block_id: c.block_id,
@@ -396,14 +401,22 @@ pub async fn update_challenge(
         .map_err(|e| ApiError::Database(e.to_string()))
 }
 
-pub async fn set_reference_solution(
+pub async fn upsert_reference(
     conn: &mut AsyncPgConnection,
     id: Uuid,
     solution: &str,
     language: &str,
 ) -> Result<Challenge, ApiError> {
+    let current = get_challenge_by_id(conn, id).await?;
+    let mut map = match current.reference_solutions {
+        Some(Value::Object(m)) => m,
+        _ => serde_json::Map::new(),
+    };
+    map.insert(language.to_string(), Value::String(solution.to_string()));
+
     diesel::update(challenges::table.find(id))
         .set((
+            challenges::reference_solutions.eq(Some(Value::Object(map))),
             challenges::reference_solution.eq(Some(solution)),
             challenges::reference_language.eq(Some(language)),
             challenges::updated_at.eq(Utc::now()),
@@ -411,6 +424,60 @@ pub async fn set_reference_solution(
         .get_result::<Challenge>(conn)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn delete_reference(
+    conn: &mut AsyncPgConnection,
+    id: Uuid,
+    language: &str,
+) -> Result<Challenge, ApiError> {
+    let current = get_challenge_by_id(conn, id).await?;
+    let mut map = match current.reference_solutions {
+        Some(Value::Object(m)) => m,
+        _ => serde_json::Map::new(),
+    };
+    map.remove(language);
+
+    diesel::update(challenges::table.find(id))
+        .set((
+            challenges::reference_solutions.eq(Some(Value::Object(map))),
+            challenges::updated_at.eq(Utc::now()),
+        ))
+        .get_result::<Challenge>(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub fn reference_map(challenge: &Challenge) -> serde_json::Map<String, Value> {
+    match &challenge.reference_solutions {
+        Some(Value::Object(m)) if !m.is_empty() => m.clone(),
+        _ => {
+            let mut m = serde_json::Map::new();
+            if let (Some(lang), Some(code)) =
+                (&challenge.reference_language, &challenge.reference_solution)
+            {
+                if !code.trim().is_empty() {
+                    m.insert(lang.clone(), Value::String(code.clone()));
+                }
+            }
+            m
+        }
+    }
+}
+
+pub fn pick_reference(challenge: &Challenge) -> Option<(String, String)> {
+    let map = reference_map(challenge);
+    for lang in ["rust", "go", "cpp", "zig"] {
+        if let Some(Value::String(code)) = map.get(lang) {
+            if !code.trim().is_empty() {
+                return Some((lang.to_string(), code.clone()));
+            }
+        }
+    }
+    map.into_iter().find_map(|(lang, v)| match v {
+        Value::String(code) if !code.trim().is_empty() => Some((lang, code)),
+        _ => None,
+    })
 }
 
 pub async fn create_test_case(
