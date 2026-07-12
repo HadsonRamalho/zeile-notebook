@@ -2,7 +2,7 @@
 
 import { Loader2, Pencil, Play, Puzzle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DifficultyBadge } from "@/components/challenges/difficulty-badge";
 import { Button } from "@/components/ui/button";
@@ -39,15 +39,22 @@ export function ChallengeBlock({
   block,
   notebookId,
   canWrite,
+  updateBlock,
   updateBlockMetadata,
 }: {
   block: Block;
   notebookId?: string;
   canWrite: boolean;
+  updateBlock: (id: string, content: string) => void;
   updateBlockMetadata: (id: string, metadata: BlockMetadata) => void;
 }) {
   const t = useTranslations("challenges");
   const challengeId = readChallengeId(block);
+
+  const persistCode = useCallback(
+    (content: string) => updateBlock(block.id, content),
+    [updateBlock, block.id],
+  );
 
   const [detail, setDetail] = useState<ChallengeDetail | null | "error">(null);
   const [user, setUser] = useState<User | null>(null);
@@ -182,6 +189,8 @@ export function ChallengeBlock({
             detail={detail}
             currentUserId={user?.id}
             canReview={canWrite}
+            initialContent={block.content}
+            onPersist={canWrite ? persistCode : undefined}
           />
         )}
       </div>

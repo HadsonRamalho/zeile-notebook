@@ -192,6 +192,7 @@ export function ReorderItem({
             block={block}
             notebookId={notebookId}
             canWrite={canEditContent}
+            updateBlock={updateBlock}
             updateBlockMetadata={updateBlockMetadata}
           />
         ) : block.type === "drawing" ? (

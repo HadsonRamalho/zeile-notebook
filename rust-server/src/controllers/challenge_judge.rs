@@ -261,6 +261,14 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                 let r = run_compiled(ref_path, Some(&case.input), limits).await;
                 if r.verdict != ExecVerdict::Ok {
                     warn!("judge: referência falhou no caso {}", idx);
+                    let detail = truncate(&r.stderr, 400).unwrap_or_default();
+                    let msg = format!(
+                        "Falha ao executar a solução de referência no caso {}. \
+                         Verifique se a especificação de casos gera entradas no formato \
+                         que a referência lê.\n{}",
+                        idx + 1,
+                        detail
+                    );
                     let _ = challenge::finalize_submission(
                         &mut conn,
                         submission_id,
@@ -268,7 +276,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                         0,
                         0,
                         0,
-                        Some("Falha ao executar a solução de referência"),
+                        Some(&msg),
                     )
                     .await;
                     return;

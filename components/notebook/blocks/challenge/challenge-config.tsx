@@ -40,7 +40,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const PROPERTY_SPEC_EXAMPLE = JSON.stringify(
-  { num_cases: 20, seed: 12345, lines: [{ count: 5, min: 0, max: 100 }] },
+  { num_cases: 20, seed: 12345, lines: [{ count: 1, min: -1000, max: 1000 }] },
   null,
   2,
 );

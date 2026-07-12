@@ -52,26 +52,50 @@ type ResultView =
   | { kind: "submission"; data: SubmissionView; showCode?: boolean }
   | null;
 
+function parseDraft(raw?: string): {
+  language?: string;
+  byLang: Record<string, string>;
+} {
+  if (!raw) return { byLang: {} };
+  try {
+    const d = JSON.parse(raw);
+    if (d && typeof d === "object" && d.byLang && typeof d.byLang === "object") {
+      return {
+        language: typeof d.language === "string" ? d.language : undefined,
+        byLang: d.byLang as Record<string, string>,
+      };
+    }
+  } catch {
+    /* conteúdo antigo/livre: ignora */
+  }
+  return { byLang: {} };
+}
+
 export function ChallengeSolve({
   detail,
   currentUserId,
   canReview = false,
+  initialContent,
+  onPersist,
 }: {
   detail: ChallengeDetail;
   currentUserId?: string | null;
   canReview?: boolean;
+  initialContent?: string;
+  onPersist?: (content: string) => void;
 }) {
   const t = useTranslations("challenges");
   const challenge = detail.challenge;
 
+  const draftRef = useRef(parseDraft(initialContent));
+
   const [tab, setTab] = useState<Tab>("statement");
   const [language, setLanguage] = useState<Language>(
-    (challenge.languages[0] ?? "rust") as Language,
+    (draftRef.current.language ?? challenge.languages[0] ?? "rust") as Language,
   );
-  const [codeByLang, setCodeByLang] = useState<Record<string, string>>(() => ({
-    [challenge.languages[0] ?? "rust"]:
-      challenge.starterCode?.[challenge.languages[0] ?? "rust"] ?? "",
-  }));
+  const [codeByLang, setCodeByLang] = useState<Record<string, string>>(
+    () => draftRef.current.byLang,
+  );
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<ResultView>(null);
@@ -103,6 +127,15 @@ export function ChallengeSolve({
   useEffect(() => {
     refreshMeta();
   }, [refreshMeta]);
+
+  const firstPersist = useRef(true);
+  useEffect(() => {
+    if (firstPersist.current) {
+      firstPersist.current = false;
+      return;
+    }
+    onPersist?.(JSON.stringify({ language, byLang: codeByLang }));
+  }, [codeByLang, language, onPersist]);
 
   const handleLanguageChange = useCallback((next: Language) => {
     setLanguage(next);
