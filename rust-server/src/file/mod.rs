@@ -55,10 +55,9 @@ pub async fn run_safe_bin(
     let is_wasm = caminho_binario.ends_with(".wasm");
 
     let cpu_arg = format!("--cpu={}", limits.cpu_secs);
-    let as_arg = format!("--as={}", limits.mem_kb.saturating_mul(1024));
 
     let mut cmd = Command::new("prlimit");
-    cmd.args([cpu_arg.as_str(), as_arg.as_str(), "--"]);
+    cmd.args([cpu_arg.as_str(), "--"]);
 
     cmd.arg("bwrap");
 
