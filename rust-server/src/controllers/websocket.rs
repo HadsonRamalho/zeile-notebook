@@ -635,6 +635,20 @@ fn mentions_name(text: &str, name: &str) -> bool {
     text.to_lowercase().contains(&pattern.to_lowercase())
 }
 
+/// Indica se o usuário tem alguma sessão de presença ativa no notebook.
+pub fn is_user_present(
+    registry: &crate::controllers::sync::PresenceRegistry,
+    notebook_id: Uuid,
+    user_id: Uuid,
+) -> bool {
+    let Some(room) = registry.get(&notebook_id) else {
+        return false;
+    };
+    room.subscribers
+        .iter()
+        .any(|m| m.value().user_id == Some(user_id))
+}
+
 /// Difunde um evento de chat (JSON) para a sala de presença do notebook e dispara
 /// push de menção. Usado pelos endpoints REST de chat para propagar em tempo real.
 pub fn broadcast_chat_and_notify(

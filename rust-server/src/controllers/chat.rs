@@ -10,9 +10,10 @@ use uuid::Uuid;
 use crate::{
     controllers::{
         jwt::extract_claims_from_header,
-        permissions::{TargetCtx, require, require_team_permission},
+        notifications::{NotificationInput, deliver_notification},
+        permissions::{TargetCtx, member_has_capability, require, require_team_permission},
         utils::get_conn,
-        websocket::broadcast_chat_and_notify,
+        websocket::{broadcast_chat_and_notify, is_user_present},
     },
     models::{
         self,
@@ -137,6 +138,44 @@ pub async fn api_send_notebook_message(
         Some(&name),
         Some(user_id),
     );
+
+    // notifica o dono do notebook (fora do caminho da request) se ele não estiver
+    // presente na sala no momento
+    {
+        let state = state.clone();
+        let sender_name = name.clone();
+        let body = content.clone();
+        tokio::spawn(async move {
+            let Ok(mut conn) = get_conn(&state.pool).await else {
+                return;
+            };
+            let Ok(notebook) = models::notebook::find_notebook_by_id(&mut conn, &notebook_id).await
+            else {
+                return;
+            };
+            let Some(owner_id) = notebook.user_id else {
+                return;
+            };
+            if owner_id == user_id
+                || is_user_present(&state.presence_registry, notebook_id, owner_id)
+            {
+                return;
+            }
+            deliver_notification(
+                &state,
+                owner_id,
+                &NotificationInput {
+                    kind: "chat_notebook".to_string(),
+                    title: format!("{} no chat de {}", sender_name, notebook.title),
+                    body,
+                    url: Some(format!("/notebook/{}", notebook_id)),
+                    notebook_id: Some(notebook_id),
+                    team_id: None,
+                },
+            )
+            .await;
+        });
+    }
 
     Ok((StatusCode::CREATED, Json(message)))
 }
