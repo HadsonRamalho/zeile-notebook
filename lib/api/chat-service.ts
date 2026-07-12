@@ -64,6 +64,21 @@ export async function editTeamMessage(
   );
 }
 
+export async function deleteNotebookMessage(
+  notebookId: string,
+  messageId: string,
+) {
+  return api.delete<ChatMessageDTO>(
+    `/notebook/${notebookId}/chat/messages/${messageId}`,
+  );
+}
+
+export async function deleteTeamMessage(teamId: string, messageId: string) {
+  return api.delete<ChatMessageDTO>(
+    `/team/${teamId}/chat/messages/${messageId}`,
+  );
+}
+
 export async function fetchNotebookMessageVersions(
   notebookId: string,
   messageId: string,

@@ -2,6 +2,7 @@ import { getCookie } from "cookies-next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type ChatMessageDTO,
+  deleteNotebookMessage,
   editNotebookMessage,
   fetchNotebookMessages,
   sendNotebookMessage,
@@ -301,6 +302,17 @@ export function usePresence(
     [pageId],
   );
 
+  const deleteMessage = useCallback(
+    (messageId: string) => {
+      deleteNotebookMessage(pageId, messageId)
+        .then((dto) => {
+          if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
+        })
+        .catch(() => {});
+    },
+    [pageId],
+  );
+
   const updateCursor = useCallback(
     (x: number, y: number) => {
       myState.current.cursor = { x, y };
@@ -327,6 +339,7 @@ export function usePresence(
     messages,
     sendChatMessage,
     editMessage,
+    deleteMessage,
     updateCursor,
     updateFocus,
   };

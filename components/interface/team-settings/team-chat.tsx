@@ -6,6 +6,7 @@ import { useAuth } from "@/context/auth-context";
 import { MessageVersions } from "@/components/notebook/collaboration/message-versions";
 import {
   type ChatMessageDTO,
+  deleteTeamMessage,
   editTeamMessage,
   fetchTeamMessages,
   fetchTeamMessageVersions,
@@ -40,6 +41,15 @@ export function TeamChat({ teamId }: { teamId: string }) {
     if (!id || !content) return;
     try {
       const dto = await editTeamMessage(teamId, id, content);
+      if (dto) setMessages((prev) => upsert(prev, dto));
+    } catch {
+      // silencioso
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const dto = await deleteTeamMessage(teamId, id);
       if (dto) setMessages((prev) => upsert(prev, dto));
     } catch {
       // silencioso
@@ -99,6 +109,7 @@ export function TeamChat({ teamId }: { teamId: string }) {
           messages.map((msg) => {
             const isMe = !!user && msg.userId === user.id;
             const isEditing = editingId === msg.id;
+            const isDeleted = !!msg.deletedAt;
             return (
               <div key={msg.id} className="group flex flex-col">
                 <div className="flex items-baseline gap-2">
@@ -106,7 +117,7 @@ export function TeamChat({ teamId }: { teamId: string }) {
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {new Date(msg.createdAt).toLocaleString()}
                   </span>
-                  {msg.isEdited && !isEditing && (
+                  {msg.isEdited && !isEditing && !isDeleted && (
                     <span className="inline-flex items-center gap-1.5 text-[10px] italic text-muted-foreground">
                       (editado)
                       <MessageVersions
@@ -115,20 +126,33 @@ export function TeamChat({ teamId }: { teamId: string }) {
                       />
                     </span>
                   )}
-                  {isMe && !isEditing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingId(msg.id);
-                        setEditValue(msg.content);
-                      }}
-                      className="text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-                    >
-                      editar
-                    </button>
+                  {isMe && !isEditing && !isDeleted && (
+                    <span className="flex items-center gap-2 text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(msg.id);
+                          setEditValue(msg.content);
+                        }}
+                        className="hover:text-foreground"
+                      >
+                        editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(msg.id)}
+                        className="hover:text-foreground"
+                      >
+                        excluir
+                      </button>
+                    </span>
                   )}
                 </div>
-                {isEditing ? (
+                {isDeleted ? (
+                  <p className="text-sm italic text-muted-foreground">
+                    mensagem excluída
+                  </p>
+                ) : isEditing ? (
                   <div className="mt-1 flex flex-col gap-1.5">
                     <input
                       value={editValue}

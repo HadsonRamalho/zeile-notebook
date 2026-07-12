@@ -108,6 +108,7 @@ export default function RustInteractivePage({
     messages,
     sendChatMessage,
     editMessage,
+    deleteMessage,
     updateFocus,
   } = usePresence(pageId, user, refetchCapabilities);
 
@@ -361,6 +362,7 @@ export default function RustInteractivePage({
           messages={messages}
           sendChatMessage={sendChatMessage}
           editMessage={editMessage}
+          deleteMessage={deleteMessage}
           socketUserId={socketUserId}
           collaborators={collaborators}
           currentUser={user}

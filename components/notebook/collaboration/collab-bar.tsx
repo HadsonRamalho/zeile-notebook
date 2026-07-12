@@ -149,6 +149,7 @@ interface CollabBarProps {
   messages: ChatMessage[];
   sendChatMessage: (text: string) => void;
   editMessage: (messageId: string, content: string) => void;
+  deleteMessage: (messageId: string) => void;
   socketUserId: string | null;
   collaborators: Collaborator[];
   currentUser: User | null;
@@ -272,11 +273,16 @@ function ChatPanel({
   messages,
   sendChatMessage,
   editMessage,
+  deleteMessage,
   currentUserId,
   allUsers,
 }: Pick<
   CollabBarProps,
-  "notebookId" | "messages" | "sendChatMessage" | "editMessage"
+  | "notebookId"
+  | "messages"
+  | "sendChatMessage"
+  | "editMessage"
+  | "deleteMessage"
 > & {
   currentUserId: string | null;
   allUsers: PresenceUser[];
@@ -370,6 +376,7 @@ function ChatPanel({
           messages.map((msg) => {
             const isMe = !!currentUserId && msg.userId === currentUserId;
             const isEditing = editingId === msg.id;
+            const isDeleted = !!msg.deletedAt;
             return (
               <div
                 key={msg.id}
@@ -383,17 +390,30 @@ function ChatPanel({
               >
                 <span className="mb-0.5 flex items-center gap-2 text-xs font-bold opacity-80">
                   <span>{msg.name}</span>
-                  {isMe && !isEditing && (
-                    <button
-                      type="button"
-                      onClick={() => startEdit(msg.id, msg.text)}
-                      className="opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
-                    >
-                      editar
-                    </button>
+                  {isMe && !isEditing && !isDeleted && (
+                    <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(msg.id, msg.text)}
+                        className="hover:underline"
+                      >
+                        editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteMessage(msg.id)}
+                        className="hover:underline"
+                      >
+                        excluir
+                      </button>
+                    </span>
                   )}
                 </span>
-                {isEditing ? (
+                {isDeleted ? (
+                  <span className="text-sm italic opacity-70">
+                    mensagem excluída
+                  </span>
+                ) : isEditing ? (
                   <div className="flex flex-col gap-1.5">
                     <input
                       value={editValue}
@@ -612,6 +632,7 @@ export function CollabBar({
   messages,
   sendChatMessage,
   editMessage,
+  deleteMessage,
   socketUserId,
   collaborators,
   currentUser,
@@ -716,6 +737,7 @@ export function CollabBar({
                 messages={messages}
                 sendChatMessage={sendChatMessage}
                 editMessage={editMessage}
+                deleteMessage={deleteMessage}
                 currentUserId={currentUser?.id ?? null}
                 allUsers={allUsers}
               />

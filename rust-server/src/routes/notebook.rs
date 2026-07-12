@@ -6,8 +6,9 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::{
     controllers::{
         chat::{
-            api_edit_notebook_message, api_list_notebook_message_versions,
-            api_list_notebook_messages, api_send_notebook_message,
+            api_delete_notebook_message, api_edit_notebook_message,
+            api_list_notebook_message_versions, api_list_notebook_messages,
+            api_send_notebook_message,
         },
         grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
         notebook::{
@@ -50,7 +51,7 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         )
         .route(
             "/{id}/chat/messages/{message_id}",
-            patch(api_edit_notebook_message),
+            patch(api_edit_notebook_message).delete(api_delete_notebook_message),
         )
         .route(
             "/{id}/chat/messages/{message_id}/versions",

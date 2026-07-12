@@ -81,6 +81,15 @@ pub struct NewChatMessageVersion {
 
 const CHAT_HISTORY_LIMIT: i64 = 500;
 
+/// Esconde o conteúdo de mensagens excluídas antes de sair do backend, para não
+/// vazar o texto original de uma mensagem soft-deletada.
+pub fn mask_deleted(mut message: ChatMessage) -> ChatMessage {
+    if message.deleted_at.is_some() {
+        message.content = String::new();
+    }
+    message
+}
+
 pub async fn create_message(
     conn: &mut AsyncPgConnection,
     new_message: &NewChatMessage,
@@ -116,6 +125,18 @@ pub async fn update_message_content(
         ))
         .get_result::<ChatMessage>(conn)
         .await
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn soft_delete_message(
+    conn: &mut AsyncPgConnection,
+    message_id: Uuid,
+) -> Result<ChatMessage, ApiError> {
+    diesel::update(chat_messages::table.find(message_id))
+        .set(chat_messages::deleted_at.eq(Some(Utc::now())))
+        .get_result::<ChatMessage>(conn)
+        .await
+        .map(mask_deleted)
         .map_err(|e| ApiError::Database(e.to_string()))
 }
 
@@ -160,7 +181,7 @@ pub async fn list_notebook_messages(
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
     rows.reverse();
-    Ok(rows)
+    Ok(rows.into_iter().map(mask_deleted).collect())
 }
 
 pub async fn list_team_messages(
@@ -175,5 +196,5 @@ pub async fn list_team_messages(
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
     rows.reverse();
-    Ok(rows)
+    Ok(rows.into_iter().map(mask_deleted).collect())
 }
