@@ -315,17 +315,33 @@ async function renderBlock(ctx: Ctx, notebook: Notebook, block: Block) {
     case "component": {
       const meta = block.metadata;
       if (meta?.type === "card") {
-        drawRuns(ctx, [{ text: meta.props.title }], {
-          size: 14,
-          forceBold: true,
-          gapAfter: 1.5,
-        });
-        if (meta.props.description) {
+        const title = meta.props.title?.trim();
+        if (title) {
+          drawRuns(ctx, tokenizeInline(title), {
+            size: 14,
+            forceBold: true,
+            gapAfter: 1.5,
+          });
+        }
+        if (meta.props.description?.trim()) {
           drawRuns(ctx, tokenizeInline(meta.props.description));
+        }
+        if (block.content.trim()) {
+          renderMarkdown(ctx, block.content);
         }
         return;
       }
-      renderMarkdown(ctx, block.content);
+      if (meta?.type === "github_repo") {
+        const { owner, repo } = meta.props;
+        drawRuns(
+          ctx,
+          tokenizeInline(
+            `[${owner}/${repo}](https://github.com/${owner}/${repo})`,
+          ),
+        );
+        return;
+      }
+      if (block.content.trim()) renderMarkdown(ctx, block.content);
       return;
     }
     case "drawing":
