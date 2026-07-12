@@ -21,6 +21,7 @@ use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{TargetCtx, require};
 use crate::models::state::AppState;
 use crate::controllers::utils::extract_module_name;
+use crate::file::RunLimits;
 use crate::file::register_log;
 use crate::file::run_safe_bin;
 use crate::file::setup_user_env;
@@ -243,10 +244,10 @@ pub async fn verify_request(
             if out.status.success() {
                 if let Some(path) = exe_path {
                     info!("Caminho do executável traduzido: {}", path);
-                    let (stdout, stderr) = run_safe_bin(&path).await;
+                    let out = run_safe_bin(&path, None, RunLimits::default()).await;
                     return Json(CodeResponse {
-                        stdout,
-                        stderr: formatted_errors + &stderr,
+                        stdout: out.stdout,
+                        stderr: formatted_errors + &out.stderr,
                     });
                 } else {
                     let fallback_name = format!("app_{}.wasm", safe_session);
@@ -254,10 +255,10 @@ pub async fn verify_request(
                         .join("target/wasm32-wasip1/debug")
                         .join(fallback_name);
                     let path_str = fallback_path.to_string_lossy().to_string();
-                    let (stdout, stderr) = run_safe_bin(&path_str).await;
+                    let out = run_safe_bin(&path_str, None, RunLimits::default()).await;
                     return Json(CodeResponse {
-                        stdout,
-                        stderr: formatted_errors + &stderr,
+                        stdout: out.stdout,
+                        stderr: formatted_errors + &out.stderr,
                     });
                 }
             }
@@ -355,8 +356,11 @@ pub async fn verify_go_request(
     match compile_output {
         Ok(out) if out.status.success() => {
             let bin_path_str = bin_path.to_string_lossy().to_string();
-            let (stdout, stderr) = run_safe_bin(&bin_path_str).await;
-            Json(CodeResponse { stdout, stderr })
+            let run = run_safe_bin(&bin_path_str, None, RunLimits::default()).await;
+            Json(CodeResponse {
+                stdout: run.stdout,
+                stderr: run.stderr,
+            })
         }
         Ok(out) => Json(CodeResponse {
             stdout: "".into(),
@@ -454,8 +458,11 @@ pub async fn verify_cpp_request(
         Ok(Ok(out)) => {
             if out.status.success() {
                 let bin_path_str = bin_path.to_string_lossy().to_string();
-                let (stdout, stderr) = run_safe_bin(&bin_path_str).await;
-                Json(CodeResponse { stdout, stderr })
+                let run = run_safe_bin(&bin_path_str, None, RunLimits::default()).await;
+                Json(CodeResponse {
+                    stdout: run.stdout,
+                    stderr: run.stderr,
+                })
             } else {
                 let stderr_txt = String::from_utf8_lossy(&out.stderr).to_string();
                 let killed_by_signal = out.status.code().is_none();
@@ -573,8 +580,11 @@ pub async fn verify_zig_request(
     match compile_output {
         Ok(out) if out.status.success() => {
             let bin_path_str = bin_path.to_string_lossy().to_string();
-            let (stdout, stderr) = run_safe_bin(&bin_path_str).await;
-            Json(CodeResponse { stdout, stderr })
+            let run = run_safe_bin(&bin_path_str, None, RunLimits::default()).await;
+            Json(CodeResponse {
+                stdout: run.stdout,
+                stderr: run.stderr,
+            })
         }
         Ok(out) => Json(CodeResponse {
             stdout: "".into(),

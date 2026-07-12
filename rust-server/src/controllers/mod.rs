@@ -1,4 +1,6 @@
 pub mod admin;
+pub mod challenge;
+pub mod challenge_judge;
 pub mod chat;
 pub mod email;
 pub mod grants;

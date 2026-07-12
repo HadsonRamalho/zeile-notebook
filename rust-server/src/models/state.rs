@@ -1,6 +1,8 @@
 use crate::controllers::sync::{PresenceRegistry, SyncRegistry};
 use axum::extract::FromRef;
 use diesel_async::{AsyncPgConnection, pooled_connection::deadpool::Pool};
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 use web_push::{HyperWebPushClient, PartialVapidSignatureBuilder};
 
 #[derive(Clone)]
@@ -15,6 +17,7 @@ pub struct AppState {
     pub sync_registry: SyncRegistry,
     pub presence_registry: PresenceRegistry,
     pub push: Option<PushState>,
+    pub judge_semaphore: Arc<Semaphore>,
 }
 
 impl FromRef<AppState> for Pool<AsyncPgConnection> {

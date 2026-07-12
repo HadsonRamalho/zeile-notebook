@@ -48,6 +48,82 @@ diesel::table! {
 }
 
 diesel::table! {
+    challenges (id) {
+        id -> Uuid,
+        #[max_length = 255]
+        slug -> Varchar,
+        #[max_length = 255]
+        title -> Varchar,
+        statement_md -> Text,
+        #[max_length = 32]
+        difficulty -> Varchar,
+        tags -> Jsonb,
+        languages -> Jsonb,
+        #[max_length = 16]
+        judge_mode -> Varchar,
+        time_limit_ms -> Int4,
+        mem_limit_kb -> Int4,
+        starter_code -> Nullable<Jsonb>,
+        reference_solution -> Nullable<Text>,
+        #[max_length = 16]
+        reference_language -> Nullable<Varchar>,
+        property_spec -> Nullable<Jsonb>,
+        team_id -> Nullable<Uuid>,
+        created_by -> Nullable<Uuid>,
+        #[max_length = 16]
+        visibility -> Varchar,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    challenge_test_cases (id) {
+        id -> Uuid,
+        challenge_id -> Uuid,
+        input -> Text,
+        expected -> Nullable<Text>,
+        is_hidden -> Bool,
+        weight -> Int4,
+        ord -> Int4,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    challenge_submissions (id) {
+        id -> Uuid,
+        challenge_id -> Uuid,
+        user_id -> Nullable<Uuid>,
+        #[max_length = 16]
+        language -> Varchar,
+        code -> Text,
+        #[max_length = 16]
+        status -> Varchar,
+        score -> Int4,
+        max_score -> Int4,
+        runtime_ms -> Int4,
+        error_message -> Nullable<Text>,
+        created_at -> Timestamptz,
+        judged_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    challenge_submission_results (id) {
+        id -> Uuid,
+        submission_id -> Uuid,
+        test_case_id -> Nullable<Uuid>,
+        #[max_length = 8]
+        verdict -> Varchar,
+        runtime_ms -> Int4,
+        is_hidden -> Bool,
+        stderr_snippet -> Nullable<Text>,
+        ord -> Int4,
+    }
+}
+
+diesel::table! {
     chat_messages (id) {
         id -> Uuid,
         notebook_id -> Nullable<Uuid>,
@@ -232,6 +308,13 @@ diesel::table! {
 }
 
 diesel::joinable!(permission_grants -> teams (scope_team_id));
+diesel::joinable!(challenge_test_cases -> challenges (challenge_id));
+diesel::joinable!(challenge_submissions -> challenges (challenge_id));
+diesel::joinable!(challenge_submissions -> users (user_id));
+diesel::joinable!(challenge_submission_results -> challenge_submissions (submission_id));
+diesel::joinable!(challenge_submission_results -> challenge_test_cases (test_case_id));
+diesel::joinable!(challenges -> teams (team_id));
+diesel::joinable!(challenges -> users (created_by));
 diesel::joinable!(blocks -> notebooks (notebook_id));
 diesel::joinable!(chat_message_versions -> chat_messages (message_id));
 diesel::joinable!(notebooks -> teams (team_id));
@@ -246,6 +329,10 @@ diesel::joinable!(team_roles -> teams (team_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     blocks,
+    challenge_submission_results,
+    challenge_submissions,
+    challenge_test_cases,
+    challenges,
     chat_message_versions,
     chat_messages,
     notebooks,

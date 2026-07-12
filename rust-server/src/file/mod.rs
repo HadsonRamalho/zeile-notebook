@@ -3,21 +3,62 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::time::Instant;
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::{Duration, timeout};
 use tracing::{error, info, warn};
 
-pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
+#[derive(Debug, Clone, Copy)]
+pub struct RunLimits {
+    pub cpu_secs: u64,
+    pub mem_kb: u64,
+    pub wall_ms: u64,
+}
+
+impl Default for RunLimits {
+    fn default() -> Self {
+        Self {
+            cpu_secs: 10,
+            mem_kb: 1_048_576,
+            wall_ms: 5_000,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RunOutcome {
+    pub stdout: String,
+    pub stderr: String,
+    pub timed_out: bool,
+    pub exit_ok: bool,
+    pub wall_ms: u64,
+}
+
+pub async fn run_safe_bin(
+    caminho_binario: &str,
+    stdin: Option<&str>,
+    limits: RunLimits,
+) -> RunOutcome {
     let path_obj = Path::new(caminho_binario);
     if !path_obj.exists() {
         error!("ERRO: Binário não existe: {}", caminho_binario);
-        return ("".into(), "Erro interno: Binário não encontrado.".into());
+        return RunOutcome {
+            stdout: "".into(),
+            stderr: "Erro interno: Binário não encontrado.".into(),
+            timed_out: false,
+            exit_ok: false,
+            wall_ms: 0,
+        };
     }
 
     let is_wasm = caminho_binario.ends_with(".wasm");
 
+    let cpu_arg = format!("--cpu={}", limits.cpu_secs);
+    let as_arg = format!("--as={}", limits.mem_kb.saturating_mul(1024));
+
     let mut cmd = Command::new("prlimit");
-    cmd.args(["--cpu=10", "--"]);
+    cmd.args([cpu_arg.as_str(), as_arg.as_str(), "--"]);
 
     cmd.arg("bwrap");
 
@@ -77,18 +118,49 @@ pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
 
     info!("COMANDO: {:?}", cmd);
 
-    let child = match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
+    let stdin_cfg = if stdin.is_some() {
+        Stdio::piped()
+    } else {
+        Stdio::null()
+    };
+
+    let started = Instant::now();
+
+    let mut child = match cmd
+        .stdin(stdin_cfg)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
         Ok(c) => c,
         Err(e) => {
             error!("ERRO FATAL ao spawnar sandbox: {}", e);
-            return ("".into(), format!("Erro ao iniciar execução: {}", e));
+            return RunOutcome {
+                stdout: "".into(),
+                stderr: format!("Erro ao iniciar execução: {}", e),
+                timed_out: false,
+                exit_ok: false,
+                wall_ms: 0,
+            };
         }
     };
+
+    if let Some(input) = stdin {
+        if let Some(mut sink) = child.stdin.take() {
+            let _ = sink.write_all(input.as_bytes()).await;
+            let _ = sink.flush().await;
+        }
+    }
 
     let pid = child.id().expect("Falha ao obter PID");
     info!("Sandbox iniciado no Grupo de Processos PGID: {}", pid);
 
-    match timeout(Duration::from_secs(5), child.wait_with_output()).await {
+    match timeout(
+        Duration::from_millis(limits.wall_ms),
+        child.wait_with_output(),
+    )
+    .await
+    {
         Ok(Ok(output)) => {
             let _ = std::process::Command::new("kill")
                 .args(["-9", &format!("-{}", pid)])
@@ -107,14 +179,26 @@ pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
                 error!("STDERR CAPTURADO:\n{}", stderr_str);
             }
 
-            (stdout_str, stderr_str)
+            RunOutcome {
+                stdout: stdout_str,
+                stderr: stderr_str,
+                timed_out: false,
+                exit_ok: exit_status.success(),
+                wall_ms: started.elapsed().as_millis() as u64,
+            }
         }
         Ok(Err(e)) => {
             let _ = std::process::Command::new("kill")
                 .args(["-9", &format!("-{}", pid)])
                 .output();
             error!("ERRO de I/O no container: {}", e);
-            ("".into(), format!("Erro interno de sandbox: {}", e))
+            RunOutcome {
+                stdout: "".into(),
+                stderr: format!("Erro interno de sandbox: {}", e),
+                timed_out: false,
+                exit_ok: false,
+                wall_ms: started.elapsed().as_millis() as u64,
+            }
         }
         Err(_) => {
             error!(
@@ -130,7 +214,13 @@ pub async fn run_safe_bin(caminho_binario: &str) -> (String, String) {
                 error!("FALHA CRÍTICA AO MATAR PROCESSOS: {}", e);
             }
 
-            ("".into(), "Erro: Execução interrompida. O código demorou muito para responder (Loop Infinito ou Timeout).".into())
+            RunOutcome {
+                stdout: "".into(),
+                stderr: "Erro: Execução interrompida. O código demorou muito para responder (Loop Infinito ou Timeout).".into(),
+                timed_out: true,
+                exit_ok: false,
+                wall_ms: started.elapsed().as_millis() as u64,
+            }
         }
     }
 }

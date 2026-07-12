@@ -6,6 +6,7 @@ use crate::controllers::utils::auto_delete_files;
 
 pub mod controllers;
 pub mod db_migrations;
+pub mod executor;
 pub mod file;
 pub mod http;
 pub mod models;

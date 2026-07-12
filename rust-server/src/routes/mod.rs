@@ -3,6 +3,7 @@ use crate::controllers::utils::get_database_url_from_env;
 use crate::models::error::ApiError;
 use crate::models::state::AppState;
 use crate::routes::admin::admin_routes;
+use crate::routes::challenge::challenge_routes;
 use crate::routes::notebook::notebook_routes;
 use crate::routes::run_rust::run_rust_routes;
 use crate::routes::team::team_routes;
@@ -28,6 +29,7 @@ use tower_http::services::ServeDir;
 use utoipa_axum::router::OpenApiRouter;
 
 pub mod admin;
+pub mod challenge;
 pub mod docs;
 pub mod notebook;
 pub mod notifications;
@@ -75,11 +77,18 @@ pub async fn init_routes() -> Router {
             AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(db_url, config);
         let pool = Pool::builder(mgr).max_size(50).build().unwrap();
 
+        let judge_concurrency: usize = std::env::var("JUDGE_CONCURRENCY")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .filter(|n| *n > 0)
+            .unwrap_or(2);
+
         let app_state = Arc::new(AppState {
             presence_registry,
             pool,
             sync_registry,
             push: crate::controllers::push::load_push_state(),
+            judge_semaphore: Arc::new(tokio::sync::Semaphore::new(judge_concurrency)),
         });
 
         // checkpoint periódico de notebooks ativos
@@ -119,6 +128,7 @@ pub async fn init_routes() -> Router {
             .nest("/api/user", user_routes().await.into())
             .nest("/api/notebook", notebook_routes().await.into())
             .nest("/api/team", team_routes().await.into())
+            .nest("/api/challenge", challenge_routes().await.into())
             .nest("/api/admin", admin_routes().await.into())
             .nest(
                 "/api/notifications",

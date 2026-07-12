@@ -1,0 +1,417 @@
+use std::sync::Arc;
+
+use axum::{
+    Json,
+    extract::{Path, State},
+};
+use hyper::{HeaderMap, StatusCode};
+use serde::Deserialize;
+use serde_json::{Value, json};
+use uuid::Uuid;
+
+use crate::controllers::challenge_judge::judge_submission;
+use crate::controllers::jwt::extract_claims_from_header;
+use crate::controllers::utils::get_conn;
+use crate::models::challenge::{
+    self, Challenge, ChallengePublic, LeaderboardEntry, NewChallenge, NewSubmission, NewTestCase,
+    SubmissionView, TestCasePublic, UpdateChallenge,
+};
+use crate::models::error::ApiError;
+use crate::models::state::AppState;
+use crate::models::user::UserRole;
+
+#[derive(Deserialize)]
+pub struct CreateChallengeRequest {
+    pub slug: String,
+    pub title: String,
+    #[serde(rename = "statementMd")]
+    pub statement_md: String,
+    pub difficulty: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub languages: Vec<String>,
+    #[serde(rename = "judgeMode")]
+    pub judge_mode: Option<String>,
+    #[serde(rename = "timeLimitMs")]
+    pub time_limit_ms: Option<i32>,
+    #[serde(rename = "memLimitKb")]
+    pub mem_limit_kb: Option<i32>,
+    #[serde(rename = "starterCode")]
+    pub starter_code: Option<Value>,
+    #[serde(rename = "propertySpec")]
+    pub property_spec: Option<Value>,
+    pub visibility: Option<String>,
+    #[serde(rename = "teamId")]
+    pub team_id: Option<Uuid>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateChallengeRequest {
+    pub title: Option<String>,
+    #[serde(rename = "statementMd")]
+    pub statement_md: Option<String>,
+    pub difficulty: Option<String>,
+    #[serde(rename = "judgeMode")]
+    pub judge_mode: Option<String>,
+    #[serde(rename = "timeLimitMs")]
+    pub time_limit_ms: Option<i32>,
+    #[serde(rename = "memLimitKb")]
+    pub mem_limit_kb: Option<i32>,
+    pub tags: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
+    #[serde(rename = "starterCode")]
+    pub starter_code: Option<Value>,
+    #[serde(rename = "propertySpec")]
+    pub property_spec: Option<Value>,
+    pub visibility: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateTestCaseRequest {
+    pub input: String,
+    pub expected: Option<String>,
+    #[serde(rename = "isHidden")]
+    pub is_hidden: Option<bool>,
+    pub weight: Option<i32>,
+    pub ord: Option<i32>,
+}
+
+#[derive(Deserialize)]
+pub struct SetReferenceRequest {
+    pub solution: String,
+    pub language: String,
+}
+
+#[derive(Deserialize)]
+pub struct SubmitRequest {
+    pub language: String,
+    pub code: String,
+}
+
+const VALID_JUDGE_MODES: [&str; 3] = ["io", "reference", "property"];
+
+async fn conn_from(
+    state: &AppState,
+) -> Result<diesel_async::pooled_connection::deadpool::Object<diesel_async::AsyncPgConnection>, ApiError>
+{
+    get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))
+}
+
+fn ensure_owner(challenge: &Challenge, user_id: Uuid, role: UserRole) -> Result<(), ApiError> {
+    if role == UserRole::Admin || challenge.created_by == Some(user_id) {
+        Ok(())
+    } else {
+        Err(ApiError::PermissionDenied(
+            "Você não é o autor deste desafio".to_string(),
+        ))
+    }
+}
+
+pub async fn api_list_challenges(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<ChallengePublic>>, ApiError> {
+    let mut conn = conn_from(&state).await?;
+    let rows = challenge::list_public_challenges(&mut conn).await?;
+    Ok(Json(rows.into_iter().map(ChallengePublic::from).collect()))
+}
+
+pub async fn api_get_challenge(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_slug(&mut conn, &slug).await?;
+    let samples: Vec<TestCasePublic> =
+        challenge::list_public_test_cases(&mut conn, ch.id).await?;
+    let public = ChallengePublic::from(ch);
+    Ok(Json(json!({
+        "challenge": public,
+        "sampleTests": samples,
+    })))
+}
+
+pub async fn api_create_challenge(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateChallengeRequest>,
+) -> Result<(StatusCode, Json<ChallengePublic>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let judge_mode = payload.judge_mode.unwrap_or_else(|| "io".to_string());
+    if !VALID_JUDGE_MODES.contains(&judge_mode.as_str()) {
+        return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
+    }
+    if payload.slug.trim().is_empty() || payload.title.trim().is_empty() {
+        return Err(ApiError::Request("slug e title são obrigatórios".to_string()));
+    }
+    if payload.languages.is_empty() {
+        return Err(ApiError::Request(
+            "Informe ao menos uma linguagem".to_string(),
+        ));
+    }
+
+    let new_challenge = NewChallenge {
+        id: Uuid::new_v4(),
+        slug: payload.slug.trim().to_string(),
+        title: payload.title.trim().to_string(),
+        statement_md: payload.statement_md,
+        difficulty: payload.difficulty.unwrap_or_else(|| "medium".to_string()),
+        tags: json!(payload.tags.unwrap_or_default()),
+        languages: json!(payload.languages),
+        judge_mode,
+        time_limit_ms: payload.time_limit_ms.unwrap_or(5000).clamp(500, 30000),
+        mem_limit_kb: payload.mem_limit_kb.unwrap_or(262144).clamp(4096, 2097152),
+        starter_code: payload.starter_code,
+        reference_solution: None,
+        reference_language: None,
+        property_spec: payload.property_spec,
+        team_id: payload.team_id,
+        created_by: Some(user_id),
+        visibility: payload.visibility.unwrap_or_else(|| "public".to_string()),
+    };
+
+    let mut conn = conn_from(&state).await?;
+    let created = challenge::create_challenge(&mut conn, &new_challenge).await?;
+    Ok((StatusCode::CREATED, Json(ChallengePublic::from(created))))
+}
+
+pub async fn api_update_challenge(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdateChallengeRequest>,
+) -> Result<Json<ChallengePublic>, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    ensure_owner(&existing, claims.id, claims.role)?;
+
+    if let Some(mode) = &payload.judge_mode {
+        if !VALID_JUDGE_MODES.contains(&mode.as_str()) {
+            return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
+        }
+    }
+
+    let changes = UpdateChallenge {
+        title: payload.title,
+        statement_md: payload.statement_md,
+        difficulty: payload.difficulty,
+        judge_mode: payload.judge_mode,
+        time_limit_ms: payload.time_limit_ms.map(|v| v.clamp(500, 30000)),
+        mem_limit_kb: payload.mem_limit_kb.map(|v| v.clamp(4096, 2097152)),
+        tags: payload.tags.map(|t| json!(t)),
+        languages: payload.languages.map(|l| json!(l)),
+        starter_code: payload.starter_code,
+        property_spec: payload.property_spec,
+        visibility: payload.visibility,
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    let updated = challenge::update_challenge(&mut conn, id, &changes).await?;
+    Ok(Json(ChallengePublic::from(updated)))
+}
+
+pub async fn api_add_test_case(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateTestCaseRequest>,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    ensure_owner(&existing, claims.id, claims.role)?;
+
+    let new_case = NewTestCase {
+        id: Uuid::new_v4(),
+        challenge_id: id,
+        input: payload.input,
+        expected: payload.expected,
+        is_hidden: payload.is_hidden.unwrap_or(true),
+        weight: payload.weight.unwrap_or(1).max(0),
+        ord: payload.ord.unwrap_or(0),
+    };
+    let created = challenge::create_test_case(&mut conn, &new_case).await?;
+    Ok((StatusCode::CREATED, Json(json!({ "id": created.id }))))
+}
+
+pub async fn api_set_reference(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<SetReferenceRequest>,
+) -> Result<Json<ChallengePublic>, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    ensure_owner(&existing, claims.id, claims.role)?;
+
+    let updated =
+        challenge::set_reference_solution(&mut conn, id, &payload.solution, &payload.language)
+            .await?;
+    Ok(Json(ChallengePublic::from(updated)))
+}
+
+pub async fn api_submit(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<SubmitRequest>,
+) -> Result<(StatusCode, Json<SubmissionView>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+
+    let allowed_languages: Vec<String> = ch
+        .languages
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    if !allowed_languages.contains(&payload.language) {
+        return Err(ApiError::Request(
+            "Linguagem não permitida para este desafio".to_string(),
+        ));
+    }
+    if payload.code.trim().is_empty() {
+        return Err(ApiError::Request("Código vazio".to_string()));
+    }
+
+    let new_submission = NewSubmission {
+        id: Uuid::new_v4(),
+        challenge_id: id,
+        user_id: Some(user_id),
+        language: payload.language,
+        code: payload.code,
+        status: "queued".to_string(),
+        max_score: 0,
+    };
+    let submission = challenge::create_submission(&mut conn, &new_submission).await?;
+
+    {
+        let state = state.clone();
+        let submission_id = submission.id;
+        tokio::spawn(async move {
+            judge_submission(state, submission_id).await;
+        });
+    }
+
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(SubmissionView {
+            id: submission.id,
+            challenge_id: submission.challenge_id,
+            user_id: submission.user_id,
+            language: submission.language,
+            status: submission.status,
+            score: submission.score,
+            max_score: submission.max_score,
+            runtime_ms: submission.runtime_ms,
+            error_message: submission.error_message,
+            created_at: submission.created_at,
+            judged_at: submission.judged_at,
+            results: Vec::new(),
+        }),
+    ))
+}
+
+pub async fn api_get_submission(
+    State(state): State<Arc<AppState>>,
+    Path(submission_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<Json<SubmissionView>, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let submission = challenge::get_submission(&mut conn, submission_id).await?;
+
+    if submission.user_id != Some(claims.id) && claims.role != UserRole::Admin {
+        return Err(ApiError::PermissionDenied(
+            "Submissão de outro usuário".to_string(),
+        ));
+    }
+
+    let results = challenge::list_submission_results(&mut conn, submission_id)
+        .await?
+        .into_iter()
+        .map(|r| r.into_view())
+        .collect();
+
+    Ok(Json(SubmissionView {
+        id: submission.id,
+        challenge_id: submission.challenge_id,
+        user_id: submission.user_id,
+        language: submission.language,
+        status: submission.status,
+        score: submission.score,
+        max_score: submission.max_score,
+        runtime_ms: submission.runtime_ms,
+        error_message: submission.error_message,
+        created_at: submission.created_at,
+        judged_at: submission.judged_at,
+        results,
+    }))
+}
+
+pub async fn api_list_my_submissions(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<SubmissionView>>, ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+    let mut conn = conn_from(&state).await?;
+    let rows = challenge::list_user_submissions(&mut conn, id, user_id).await?;
+    Ok(Json(
+        rows.into_iter()
+            .map(|s| SubmissionView {
+                id: s.id,
+                challenge_id: s.challenge_id,
+                user_id: s.user_id,
+                language: s.language,
+                status: s.status,
+                score: s.score,
+                max_score: s.max_score,
+                runtime_ms: s.runtime_ms,
+                error_message: s.error_message,
+                created_at: s.created_at,
+                judged_at: s.judged_at,
+                results: Vec::new(),
+            })
+            .collect(),
+    ))
+}
+
+pub async fn api_leaderboard(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Vec<LeaderboardEntry>>, ApiError> {
+    let mut conn = conn_from(&state).await?;
+    let done = challenge::list_done_submissions(&mut conn, id).await?;
+
+    let mut seen: std::collections::HashSet<Uuid> = std::collections::HashSet::new();
+    let mut entries: Vec<LeaderboardEntry> = Vec::new();
+    for s in done {
+        let Some(uid) = s.user_id else {
+            continue;
+        };
+        if !seen.insert(uid) {
+            continue;
+        }
+        let author_name = crate::models::user::find_user_by_id(&mut conn, &uid)
+            .await
+            .map(|u| u.name)
+            .unwrap_or_else(|_| "Usuário".to_string());
+        entries.push(LeaderboardEntry {
+            user_id: uid,
+            author_name,
+            score: s.score,
+            max_score: s.max_score,
+            runtime_ms: s.runtime_ms,
+            created_at: s.created_at,
+        });
+    }
+    Ok(Json(entries))
+}
