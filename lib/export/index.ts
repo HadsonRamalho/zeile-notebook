@@ -55,6 +55,14 @@ async function collectAssets(notebook: Notebook): Promise<{
   return { refs, files };
 }
 
+function notebookToJson(notebook: Notebook): string {
+  const { document_data, ...rest } = notebook as Notebook & {
+    document_data?: unknown;
+  };
+  void document_data;
+  return JSON.stringify(rest, null, 2);
+}
+
 async function zipWith(
   entries: { path: string; data: Blob | string }[],
 ): Promise<Blob> {
@@ -95,14 +103,14 @@ export async function exportNotebook(
       return;
     }
     case "json": {
-      const json = JSON.stringify(notebook, null, 2);
+      const json = notebookToJson(notebook);
       download(new Blob([json], { type: "application/json" }), `${name}.json`);
       return;
     }
     case "json_assets": {
       const { files } = await collectAssets(notebook);
       const entries: { path: string; data: Blob | string }[] = [
-        { path: `${name}.json`, data: JSON.stringify(notebook, null, 2) },
+        { path: `${name}.json`, data: notebookToJson(notebook) },
         ...files.map((f) => ({ path: `assets/${f.name}`, data: f.blob })),
       ];
       download(await zipWith(entries), `${name}.zip`);
