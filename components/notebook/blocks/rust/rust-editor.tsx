@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { RunCode } from "@/lib/api/run-rust";
 import type { Block, RunStatus } from "@/lib/types";
 import { BlockEditor } from "../block-editor";
+import { CodeBlockShell } from "../default/code-block-shell";
 import { EditorConsole } from "../default/editor-console";
 import { EditorHeader } from "../default/editor-header";
 import { RunButton } from "../default/run-button";
@@ -54,8 +55,8 @@ export function RustEditor({
         isDragging ? "pointer-events-none opacity-50" : ""
       }`}
     >
-      <div className="flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden transition-all duration-300">
-        <div className="flex items-center justify-between bg-card px-4 py-2 border-b border-border">
+      <CodeBlockShell
+        header={
           <EditorHeader
             block={block}
             pageBlocks={[]}
@@ -65,15 +66,17 @@ export function RustEditor({
             setShowPreview={() => {}}
             showPreview={false}
           />
-          {canExecute && (
+        }
+        actions={
+          canExecute && (
             <RunButton
               isRunning={isRunning}
               handleRun={handleRun}
               isLoading={false}
             />
-          )}
-        </div>
-
+          )
+        }
+      >
         <div className="relative group bg-card">
           <BlockEditor
             content={block.content}
@@ -89,7 +92,7 @@ export function RustEditor({
         </div>
 
         {!isDragging && <EditorConsole status={status} output={output} />}
-      </div>
+      </CodeBlockShell>
     </div>
   );
 }

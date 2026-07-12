@@ -8,11 +8,13 @@ import {
   SandpackPreview,
   SandpackProvider,
 } from "@codesandbox/sandpack-react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import Script from "next/script";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { RunTsxInSandbox } from "@/lib/api";
 import type { Block, TsMode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { EditorHeader } from "../default/editor-header";
 import { SandpackManager } from "./sandpack-manager";
 
@@ -62,6 +64,7 @@ export function TsxEditor({
 }: TsxEditorProps) {
   const [showPreview, setShowPreview] = useState(true);
   const [showConsole, setShowConsole] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [mode, setMode] = useState<TsMode>("simple");
   const [sandboxUrl, setSandboxUrl] = useState<string | null>(null);
   const [babelReady, setBabelReady] = useState(false);
@@ -120,7 +123,12 @@ export function TsxEditor({
   };
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border bg-card shadow-2xl transition-all duration-300 mb-6 mt-2">
+    <div
+      className={cn(
+        "rounded-xl overflow-hidden border border-border bg-card shadow-2xl transition-all duration-300 mb-6 mt-2",
+        fullscreen && "fixed inset-0 z-fullscreen rounded-none mb-0 mt-0",
+      )}
+    >
       <Script
         src="https://unpkg.com/@babel/standalone/babel.min.js"
         strategy="lazyOnload"
@@ -133,7 +141,7 @@ export function TsxEditor({
         files={editorFiles}
         options={editorOptions}
       >
-        <div className="flex items-center justify-between bg-card px-4 py-2 border-b border-border">
+        <div className="flex items-center justify-between gap-2 bg-card px-4 py-2 border-b border-border">
           <EditorHeader
             block={block}
             pageBlocks={pageBlocks}
@@ -147,6 +155,15 @@ export function TsxEditor({
             showConsole={showConsole}
             setShowConsole={setShowConsole}
           />
+          <button
+            type="button"
+            onClick={() => setFullscreen((v) => !v)}
+            className="rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-sm hover:bg-foreground/[0.06] hover:text-foreground"
+            title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+          >
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
         </div>
 
         <div className="flex flex-col overflow-hidden bg-card">
