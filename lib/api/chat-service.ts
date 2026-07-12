@@ -35,6 +35,28 @@ export async function sendNotebookMessage(
   );
 }
 
+export async function editNotebookMessage(
+  notebookId: string,
+  messageId: string,
+  content: string,
+) {
+  return api.patch<ChatMessageDTO>(
+    `/notebook/${notebookId}/chat/messages/${messageId}`,
+    { content },
+  );
+}
+
+export async function editTeamMessage(
+  teamId: string,
+  messageId: string,
+  content: string,
+) {
+  return api.patch<ChatMessageDTO>(
+    `/team/${teamId}/chat/messages/${messageId}`,
+    { content },
+  );
+}
+
 export async function fetchTeamMessages(teamId: string) {
   return api.get<ChatMessageDTO[]>(`/team/${teamId}/chat/messages`);
 }

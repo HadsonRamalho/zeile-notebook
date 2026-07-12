@@ -16,7 +16,7 @@ use crate::{
     },
     models::{
         self,
-        chat::{ChatMessage, NewChatMessage, SendMessageRequest},
+        chat::{ChatMessage, EditMessageRequest, NewChatMessage, SendMessageRequest},
         error::ApiError,
         state::AppState,
     },
@@ -108,6 +108,85 @@ pub async fn api_send_notebook_message(
     );
 
     Ok((StatusCode::CREATED, Json(message)))
+}
+
+pub async fn api_edit_notebook_message(
+    State(state): State<Arc<AppState>>,
+    Path((notebook_id, message_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+    Json(payload): Json<EditMessageRequest>,
+) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    require(
+        &state.pool,
+        Some(user_id),
+        notebook_id,
+        "chat.messages.send",
+        &TargetCtx::default(),
+    )
+    .await?;
+
+    let content = payload.content.trim().to_string();
+    if content.is_empty() {
+        return Err(ApiError::Request("Mensagem vazia".to_string()));
+    }
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let existing = models::chat::get_message(conn, message_id).await?;
+    if existing.notebook_id != Some(notebook_id) {
+        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+    }
+    if existing.user_id != Some(user_id) {
+        return Err(ApiError::PermissionDenied("chat.messages.edit".to_string()));
+    }
+
+    let updated = models::chat::update_message_content(conn, message_id, &content).await?;
+
+    broadcast_chat_and_notify(
+        &state,
+        notebook_id,
+        message_event(&updated),
+        None,
+        None,
+        None,
+    );
+
+    Ok((StatusCode::OK, Json(updated)))
+}
+
+pub async fn api_edit_team_message(
+    State(state): State<Arc<AppState>>,
+    Path((team_id, message_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+    Json(payload): Json<EditMessageRequest>,
+) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let content = payload.content.trim().to_string();
+    if content.is_empty() {
+        return Err(ApiError::Request("Mensagem vazia".to_string()));
+    }
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_team_permission(conn, user_id, team_id, "chat.messages.send").await?;
+
+    let existing = models::chat::get_message(conn, message_id).await?;
+    if existing.team_id != Some(team_id) {
+        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+    }
+    if existing.user_id != Some(user_id) {
+        return Err(ApiError::PermissionDenied("chat.messages.edit".to_string()));
+    }
+
+    let updated = models::chat::update_message_content(conn, message_id, &content).await?;
+    Ok((StatusCode::OK, Json(updated)))
 }
 
 pub async fn api_list_team_messages(

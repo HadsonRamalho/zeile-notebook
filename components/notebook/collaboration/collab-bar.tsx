@@ -145,6 +145,7 @@ interface CollabBarProps {
   setPreviewDoc: (d: Notebook | null) => void;
   messages: ChatMessage[];
   sendChatMessage: (text: string) => void;
+  editMessage: (messageId: string, content: string) => void;
   socketUserId: string | null;
   collaborators: Collaborator[];
   currentUser: User | null;
@@ -266,16 +267,33 @@ function HistoryTabContent({
 function ChatPanel({
   messages,
   sendChatMessage,
-  socketUserId,
+  editMessage,
+  currentUserId,
   allUsers,
-}: Pick<CollabBarProps, "messages" | "sendChatMessage" | "socketUserId"> & {
+}: Pick<CollabBarProps, "messages" | "sendChatMessage" | "editMessage"> & {
+  currentUserId: string | null;
   allUsers: PresenceUser[];
 }) {
   const [inputValue, setInputValue] = useState("");
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isTouchDevice = useIsTouchDevice();
   const canSend = useCan()("chat.messages.send");
+
+  const startEdit = (id: string, text: string) => {
+    setEditingId(id);
+    setEditValue(text);
+  };
+
+  const submitEdit = () => {
+    if (editingId && editValue.trim()) {
+      editMessage(editingId, editValue.trim());
+    }
+    setEditingId(null);
+    setEditValue("");
+  };
 
   const allNames = useMemo(() => allUsers.map((u) => u.name), [allUsers]);
 
@@ -343,22 +361,75 @@ function ChatPanel({
           </p>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.userId === socketUserId;
+            const isMe = !!currentUserId && msg.userId === currentUserId;
+            const isEditing = editingId === msg.id;
             return (
               <div
                 key={msg.id}
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white",
+                  "group max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white",
                   isMe
                     ? "self-end rounded-tr-none"
                     : "self-start rounded-tl-none",
                 )}
                 style={{ backgroundColor: msg.color }}
               >
-                <span className="mb-0.5 block text-xs font-bold opacity-80">
-                  {msg.name}
+                <span className="mb-0.5 flex items-center gap-2 text-xs font-bold opacity-80">
+                  <span>{msg.name}</span>
+                  {isMe && !isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => startEdit(msg.id, msg.text)}
+                      className="opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
+                    >
+                      editar
+                    </button>
+                  )}
                 </span>
-                <MessageText text={msg.text} names={allNames} />
+                {isEditing ? (
+                  <div className="flex flex-col gap-1.5">
+                    <input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitEdit();
+                        } else if (e.key === "Escape") {
+                          setEditingId(null);
+                        }
+                      }}
+                      // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
+                      autoFocus
+                      className="rounded-md bg-white/20 px-2 py-1 text-sm text-white outline-none placeholder:text-white/60"
+                    />
+                    <div className="flex gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={submitEdit}
+                        className="font-semibold hover:underline"
+                      >
+                        salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="opacity-80 hover:underline"
+                      >
+                        cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <MessageText text={msg.text} names={allNames} />
+                    {msg.isEdited && (
+                      <span className="ml-1 text-[10px] italic opacity-70">
+                        (editado)
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
             );
           })
@@ -526,6 +597,7 @@ export function CollabBar({
   setPreviewDoc,
   messages,
   sendChatMessage,
+  editMessage,
   socketUserId,
   collaborators,
   currentUser,
@@ -563,14 +635,14 @@ export function CollabBar({
     setUnreadCount(
       messages.filter(
         (msg) =>
-          msg.userId !== socketUserId && !seenMessageIds.current.has(msg.id),
+          msg.userId !== currentUser?.id && !seenMessageIds.current.has(msg.id),
       ).length,
     );
-  }, [messages, activeTab, socketUserId]);
+  }, [messages, activeTab, currentUser?.id]);
 
   useEffect(() => {
     for (const msg of messages) {
-      if (msg.userId === socketUserId) continue;
+      if (msg.userId === currentUser?.id) continue;
       if (mentionedMessageIds.current.has(msg.id)) continue;
       mentionedMessageIds.current.add(msg.id);
 
@@ -583,7 +655,7 @@ export function CollabBar({
         setTimeout(() => setPulseUserId(null), 1200);
       }
     }
-  }, [messages, socketUserId, currentUserName]);
+  }, [messages, socketUserId, currentUserName, currentUser?.id]);
 
   const canViewChat = useCan()("chat.view");
 
@@ -628,7 +700,8 @@ export function CollabBar({
               <ChatPanel
                 messages={messages}
                 sendChatMessage={sendChatMessage}
-                socketUserId={socketUserId}
+                editMessage={editMessage}
+                currentUserId={currentUser?.id ?? null}
                 allUsers={allUsers}
               />
             ),

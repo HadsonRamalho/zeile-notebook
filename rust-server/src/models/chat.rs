@@ -55,6 +55,11 @@ pub struct SendMessageRequest {
     pub quoted_message_id: Option<Uuid>,
 }
 
+#[derive(Deserialize)]
+pub struct EditMessageRequest {
+    pub content: String,
+}
+
 const CHAT_HISTORY_LIMIT: i64 = 500;
 
 pub async fn create_message(
@@ -74,6 +79,22 @@ pub async fn get_message(
 ) -> Result<ChatMessage, ApiError> {
     chat_messages::table
         .find(message_id)
+        .get_result::<ChatMessage>(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn update_message_content(
+    conn: &mut AsyncPgConnection,
+    message_id: Uuid,
+    new_content: &str,
+) -> Result<ChatMessage, ApiError> {
+    diesel::update(chat_messages::table.find(message_id))
+        .set((
+            chat_messages::content.eq(new_content),
+            chat_messages::is_edited.eq(true),
+            chat_messages::edited_at.eq(Some(Utc::now())),
+        ))
         .get_result::<ChatMessage>(conn)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))

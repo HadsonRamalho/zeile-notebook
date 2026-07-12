@@ -2,6 +2,7 @@ import { getCookie } from "cookies-next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type ChatMessageDTO,
+  editNotebookMessage,
   fetchNotebookMessages,
   sendNotebookMessage,
 } from "@/lib/api/chat-service";
@@ -287,6 +288,19 @@ export function usePresence(
     [pageId],
   );
 
+  const editMessage = useCallback(
+    (messageId: string, content: string) => {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+      editNotebookMessage(pageId, messageId, trimmed)
+        .then((dto) => {
+          if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
+        })
+        .catch(() => {});
+    },
+    [pageId],
+  );
+
   const updateCursor = useCallback(
     (x: number, y: number) => {
       myState.current.cursor = { x, y };
@@ -312,6 +326,7 @@ export function usePresence(
     collaborators: Array.from(collaborators.values()),
     messages,
     sendChatMessage,
+    editMessage,
     updateCursor,
     updateFocus,
   };

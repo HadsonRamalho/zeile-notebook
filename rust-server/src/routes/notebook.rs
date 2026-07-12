@@ -5,7 +5,9 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     controllers::{
-        chat::{api_list_notebook_messages, api_send_notebook_message},
+        chat::{
+            api_edit_notebook_message, api_list_notebook_messages, api_send_notebook_message,
+        },
         grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
         notebook::{
             api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
@@ -44,6 +46,10 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route(
             "/{id}/chat/messages",
             get(api_list_notebook_messages).post(api_send_notebook_message),
+        )
+        .route(
+            "/{id}/chat/messages/{message_id}",
+            patch(api_edit_notebook_message),
         )
         .route("/search/", get(api_search_notebooks))
         .route("/ws/{notebook_id}", get(websocket_handler))

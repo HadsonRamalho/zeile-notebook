@@ -2,8 +2,10 @@
 
 import { Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/context/auth-context";
 import {
   type ChatMessageDTO,
+  editTeamMessage,
   fetchTeamMessages,
   sendTeamMessage,
 } from "@/lib/api/chat-service";
@@ -20,10 +22,27 @@ function upsert(list: ChatMessageDTO[], msg: ChatMessageDTO): ChatMessageDTO[] {
 }
 
 export function TeamChat({ teamId }: { teamId: string }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const submitEdit = async () => {
+    const content = editValue.trim();
+    const id = editingId;
+    setEditingId(null);
+    setEditValue("");
+    if (!id || !content) return;
+    try {
+      const dto = await editTeamMessage(teamId, id, content);
+      if (dto) setMessages((prev) => upsert(prev, dto));
+    } catch {
+      // silencioso
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -75,19 +94,76 @@ export function TeamChat({ teamId }: { teamId: string }) {
         {messages.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className="flex flex-col">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-semibold">{msg.authorName}</span>
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {new Date(msg.createdAt).toLocaleString()}
-                </span>
+          messages.map((msg) => {
+            const isMe = !!user && msg.userId === user.id;
+            const isEditing = editingId === msg.id;
+            return (
+              <div key={msg.id} className="group flex flex-col">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-semibold">{msg.authorName}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </span>
+                  {msg.isEdited && !isEditing && (
+                    <span className="text-[10px] italic text-muted-foreground">
+                      (editado)
+                    </span>
+                  )}
+                  {isMe && !isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(msg.id);
+                        setEditValue(msg.content);
+                      }}
+                      className="text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                    >
+                      editar
+                    </button>
+                  )}
+                </div>
+                {isEditing ? (
+                  <div className="mt-1 flex flex-col gap-1.5">
+                    <input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitEdit();
+                        } else if (e.key === "Escape") {
+                          setEditingId(null);
+                        }
+                      }}
+                      // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
+                      autoFocus
+                      className="rounded-md border border-border bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={submitEdit}
+                        className="font-semibold hover:text-foreground"
+                      >
+                        salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="hover:text-foreground"
+                      >
+                        cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">
+                    {msg.content}
+                  </p>
+                )}
               </div>
-              <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">
-                {msg.content}
-              </p>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
