@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bell,
   LogOut,
   Settings,
   TableColumnsSplit,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -86,6 +88,7 @@ export function UserNav({ compact = false }: { compact?: boolean } = {}) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <NotificationsMenuItem />
           <DropdownMenuItem asChild>
             <Link href="/profile">
               <UserIcon className="mr-2 h-4 w-4" />
@@ -117,5 +120,22 @@ export function UserNav({ compact = false }: { compact?: boolean } = {}) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function NotificationsMenuItem() {
+  const { unreadCount } = useNotifications();
+  return (
+    <DropdownMenuItem asChild>
+      <Link href="/notifications">
+        <Bell className="mr-2 h-4 w-4" />
+        <span>Notificações</span>
+        {unreadCount > 0 && (
+          <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular-nums">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </Link>
+    </DropdownMenuItem>
   );
 }

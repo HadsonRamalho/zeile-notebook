@@ -75,6 +75,23 @@ diesel::table! {
 }
 
 diesel::table! {
+    notifications (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        #[max_length = 64]
+        kind -> Varchar,
+        #[max_length = 255]
+        title -> Varchar,
+        body -> Text,
+        url -> Nullable<Text>,
+        notebook_id -> Nullable<Uuid>,
+        team_id -> Nullable<Uuid>,
+        read_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     notebooks (id) {
         id -> Uuid,
         user_id -> Nullable<Uuid>,
@@ -217,6 +234,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     chat_message_versions,
     chat_messages,
     notebooks,
+    notifications,
     permission_grants,
     push_subscriptions,
     team_invitations,

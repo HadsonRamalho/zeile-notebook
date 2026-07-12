@@ -5,6 +5,7 @@ pub mod grants;
 pub mod jwt;
 pub mod metrics;
 pub mod notebook;
+pub mod notifications;
 pub mod oauth;
 pub mod permissions;
 pub mod push;

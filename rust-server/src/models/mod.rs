@@ -3,6 +3,7 @@ pub mod chat;
 pub mod error;
 pub mod jwt;
 pub mod notebook;
+pub mod notification;
 pub mod oauth;
 pub mod permission_grant;
 pub mod push_subscription;
