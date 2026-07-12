@@ -51,10 +51,27 @@ export interface ConversationMember {
   avatar?: string | null;
 }
 
+export interface ChatPermissions {
+  reply: boolean;
+  quote: boolean;
+  edit: boolean;
+  delete: boolean;
+  deleteAny: boolean;
+}
+
+const ALL_PERMS: ChatPermissions = {
+  reply: true,
+  quote: true,
+  edit: true,
+  delete: true,
+  deleteAny: true,
+};
+
 interface ChatConversationProps {
   messages: ConversationMessage[];
   currentUserId: string | null;
   canSend: boolean;
+  perms?: ChatPermissions;
   members?: ConversationMember[];
   onSend: (
     text: string,
@@ -148,6 +165,7 @@ export function ChatConversation({
   messages,
   currentUserId,
   canSend,
+  perms = ALL_PERMS,
   members = [],
   onSend,
   onEdit,
@@ -283,6 +301,13 @@ export function ChatConversation({
     const isDeleted = !!msg.deletedAt;
     const quoted = msg.quotedMessageId ? byId.get(msg.quotedMessageId) : null;
 
+    const canReply = !isReply && canSend && perms.reply;
+    const canQuote = canSend && perms.quote;
+    const canEditMsg = isMe && perms.edit;
+    const canDeleteMsg =
+      (isMe && perms.delete) || (!isMe && perms.deleteAny);
+    const hasActions = canReply || canQuote || canEditMsg || canDeleteMsg;
+
     return (
       <div className="group/msg relative flex gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/40">
         <Avatar
@@ -363,9 +388,9 @@ export function ChatConversation({
           )}
         </div>
 
-        {!isEditing && !isDeleted && (
+        {!isEditing && !isDeleted && hasActions && (
           <div className="pointer-events-none absolute top-1 right-1 flex items-center gap-0.5 rounded-lg border border-border/70 bg-popover/85 p-0.5 opacity-0 shadow-sm backdrop-blur-md transition-opacity group-hover/msg:pointer-events-auto group-hover/msg:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
-            {!isReply && canSend && (
+            {canReply && (
               <ActionButton
                 label="Responder"
                 onClick={() => {
@@ -378,7 +403,7 @@ export function ChatConversation({
                 <Reply className="size-3.5" />
               </ActionButton>
             )}
-            {canSend && (
+            {canQuote && (
               <ActionButton
                 label="Citar"
                 onClick={() => {
@@ -390,19 +415,19 @@ export function ChatConversation({
                 <Quote className="size-3.5" />
               </ActionButton>
             )}
-            {isMe && (
-              <>
-                <ActionButton label="Editar" onClick={() => startEdit(msg)}>
-                  <Pencil className="size-3.5" />
-                </ActionButton>
-                <ActionButton
-                  label="Excluir"
-                  destructive
-                  onClick={() => onDelete(msg.id)}
-                >
-                  <Trash2 className="size-3.5" />
-                </ActionButton>
-              </>
+            {canEditMsg && (
+              <ActionButton label="Editar" onClick={() => startEdit(msg)}>
+                <Pencil className="size-3.5" />
+              </ActionButton>
+            )}
+            {canDeleteMsg && (
+              <ActionButton
+                label="Excluir"
+                destructive
+                onClick={() => onDelete(msg.id)}
+              >
+                <Trash2 className="size-3.5" />
+              </ActionButton>
             )}
           </div>
         )}

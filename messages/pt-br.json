@@ -484,8 +484,16 @@
     },
     "chat": {
       "view": "Ver chat",
+      "team": {
+        "access": "Acessar o chat do time"
+      },
       "messages": {
-        "send": "Enviar mensagens no chat"
+        "send": "Enviar mensagens no chat",
+        "reply": "Responder mensagens",
+        "quote": "Citar mensagens",
+        "edit": "Editar mensagens",
+        "delete": "Excluir mensagens",
+        "delete_any": "Excluir mensagens de outros membros"
       }
     }
   }

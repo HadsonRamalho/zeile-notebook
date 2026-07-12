@@ -484,8 +484,16 @@
     },
     "chat": {
       "view": "View chat",
+      "team": {
+        "access": "Access team chat"
+      },
       "messages": {
-        "send": "Send chat messages"
+        "send": "Send chat messages",
+        "reply": "Reply to messages",
+        "quote": "Quote messages",
+        "edit": "Edit messages",
+        "delete": "Delete messages",
+        "delete_any": "Delete other members' messages"
       }
     }
   }

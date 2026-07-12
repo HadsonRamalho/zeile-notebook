@@ -287,6 +287,7 @@ fn default_grant_keys(role: &NewTeamRole) -> Vec<&'static str> {
     }
     if role.can_manage_team {
         keys.push("team.manage");
+        keys.push("chat.messages.delete_any");
     }
     keys
 }

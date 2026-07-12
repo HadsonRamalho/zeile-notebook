@@ -20,6 +20,7 @@ import type { User } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
 import {
   ChatConversation,
+  type ChatPermissions,
   type ConversationMember,
   type ConversationMessage,
 } from "../chat/chat-conversation";
@@ -273,7 +274,18 @@ function ChatPanel({
   currentUserId: string | null;
   allUsers: PresenceUser[];
 }) {
-  const canSend = useCan()("chat.messages.send");
+  const can = useCan();
+  const canSend = can("chat.messages.send");
+  const perms = useMemo<ChatPermissions>(
+    () => ({
+      reply: can("chat.messages.reply"),
+      quote: can("chat.messages.quote"),
+      edit: can("chat.messages.edit"),
+      delete: can("chat.messages.delete"),
+      deleteAny: can("chat.messages.delete_any"),
+    }),
+    [can],
+  );
 
   const conversationMessages = useMemo<ConversationMessage[]>(
     () =>
@@ -303,6 +315,7 @@ function ChatPanel({
         messages={conversationMessages}
         currentUserId={currentUserId}
         canSend={canSend}
+        perms={perms}
         members={members}
         onSend={(text, opts) =>
           sendChatMessage(text, opts?.parentId, opts?.quotedMessageId)

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ChatConversation,
+  type ChatPermissions,
   type ConversationMessage,
 } from "@/components/notebook/chat/chat-conversation";
 import { useAuth } from "@/context/auth-context";
@@ -14,6 +15,15 @@ import {
   fetchTeamMessageVersions,
   sendTeamMessage,
 } from "@/lib/api/chat-service";
+import {
+  getPermissionCatalog,
+  getTeamCapabilities,
+} from "@/lib/api/permissions-service";
+import { buildImpliedIndex, can as evalCan } from "@/lib/permissions/engine";
+import type {
+  CapabilitySnapshot,
+  PermissionCatalog,
+} from "@/lib/types/permission-types";
 
 const POLL_INTERVAL_MS = 8000;
 
@@ -42,6 +52,8 @@ function upsert(list: ChatMessageDTO[], msg: ChatMessageDTO): ChatMessageDTO[] {
 export function TeamChat({ teamId }: { teamId: string }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
+  const [caps, setCaps] = useState<CapabilitySnapshot | null>(null);
+  const [catalog, setCatalog] = useState<PermissionCatalog | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +72,49 @@ export function TeamChat({ teamId }: { teamId: string }) {
     };
   }, [teamId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    getTeamCapabilities(teamId)
+      .then((c) => {
+        if (!cancelled) setCaps(c);
+      })
+      .catch(() => {});
+    getPermissionCatalog()
+      .then((c) => {
+        if (!cancelled) setCatalog(c);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId]);
+
+  const { canSend, perms } = useMemo(() => {
+    if (!caps || !catalog) {
+      const none: ChatPermissions = {
+        reply: false,
+        quote: false,
+        edit: false,
+        delete: false,
+        deleteAny: false,
+      };
+      return { canSend: false, perms: none };
+    }
+    const implied = buildImpliedIndex(catalog);
+    const target = { notebookId: teamId };
+    const check = (key: string) => evalCan(caps, implied, key, target);
+    return {
+      canSend: check("chat.messages.send"),
+      perms: {
+        reply: check("chat.messages.reply"),
+        quote: check("chat.messages.quote"),
+        edit: check("chat.messages.edit"),
+        delete: check("chat.messages.delete"),
+        deleteAny: check("chat.messages.delete_any"),
+      } satisfies ChatPermissions,
+    };
+  }, [caps, catalog, teamId]);
+
   const conversation = useMemo(() => messages.map(toConversation), [messages]);
 
   const apply = (dto: ChatMessageDTO | undefined) => {
@@ -72,7 +127,8 @@ export function TeamChat({ teamId }: { teamId: string }) {
         variant="card"
         messages={conversation}
         currentUserId={user?.id ?? null}
-        canSend
+        canSend={canSend}
+        perms={perms}
         onSend={(text, opts) =>
           void sendTeamMessage(teamId, {
             content: text,

@@ -77,6 +77,27 @@ pub async fn api_send_notebook_message(
     )
     .await?;
 
+    if payload.parent_id.is_some() {
+        require(
+            &state.pool,
+            Some(user_id),
+            notebook_id,
+            "chat.messages.reply",
+            &TargetCtx::default(),
+        )
+        .await?;
+    }
+    if payload.quoted_message_id.is_some() {
+        require(
+            &state.pool,
+            Some(user_id),
+            notebook_id,
+            "chat.messages.quote",
+            &TargetCtx::default(),
+        )
+        .await?;
+    }
+
     let content = payload.content.trim().to_string();
     if content.is_empty() {
         return Err(ApiError::Request("Mensagem vazia".to_string()));
@@ -132,7 +153,7 @@ pub async fn api_edit_notebook_message(
         &state.pool,
         Some(user_id),
         notebook_id,
-        "chat.messages.send",
+        "chat.messages.edit",
         &TargetCtx::default(),
     )
     .await?;
@@ -192,7 +213,7 @@ pub async fn api_edit_team_message(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    require_team_permission(conn, user_id, team_id, "chat.messages.send").await?;
+    require_team_permission(conn, user_id, team_id, "chat.messages.edit").await?;
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.team_id != Some(team_id) {
@@ -220,15 +241,6 @@ pub async fn api_delete_notebook_message(
 ) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
-    require(
-        &state.pool,
-        Some(user_id),
-        notebook_id,
-        "chat.messages.send",
-        &TargetCtx::default(),
-    )
-    .await?;
-
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
@@ -237,9 +249,20 @@ pub async fn api_delete_notebook_message(
     if existing.notebook_id != Some(notebook_id) {
         return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
     }
-    if existing.user_id != Some(user_id) {
-        return Err(ApiError::PermissionDenied("chat.messages.delete".to_string()));
-    }
+
+    let delete_key = if existing.user_id == Some(user_id) {
+        "chat.messages.delete"
+    } else {
+        "chat.messages.delete_any"
+    };
+    require(
+        &state.pool,
+        Some(user_id),
+        notebook_id,
+        delete_key,
+        &TargetCtx::default(),
+    )
+    .await?;
 
     let deleted = models::chat::soft_delete_message(conn, message_id).await?;
 
@@ -266,15 +289,17 @@ pub async fn api_delete_team_message(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    require_team_permission(conn, user_id, team_id, "chat.messages.send").await?;
-
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.team_id != Some(team_id) {
         return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
     }
-    if existing.user_id != Some(user_id) {
-        return Err(ApiError::PermissionDenied("chat.messages.delete".to_string()));
-    }
+
+    let delete_key = if existing.user_id == Some(user_id) {
+        "chat.messages.delete"
+    } else {
+        "chat.messages.delete_any"
+    };
+    require_team_permission(conn, user_id, team_id, delete_key).await?;
 
     let deleted = models::chat::soft_delete_message(conn, message_id).await?;
     Ok((StatusCode::OK, Json(deleted)))
@@ -320,7 +345,7 @@ pub async fn api_list_team_message_versions(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    require_team_permission(conn, user_id, team_id, "chat.view").await?;
+    require_team_permission(conn, user_id, team_id, "chat.team.access").await?;
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.team_id != Some(team_id) {
@@ -342,7 +367,7 @@ pub async fn api_list_team_messages(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    require_team_permission(conn, user_id, team_id, "chat.view").await?;
+    require_team_permission(conn, user_id, team_id, "chat.team.access").await?;
 
     let messages = models::chat::list_team_messages(conn, team_id).await?;
     Ok((StatusCode::OK, Json(messages)))
@@ -366,6 +391,12 @@ pub async fn api_send_team_message(
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
     require_team_permission(conn, user_id, team_id, "chat.messages.send").await?;
+    if payload.parent_id.is_some() {
+        require_team_permission(conn, user_id, team_id, "chat.messages.reply").await?;
+    }
+    if payload.quoted_message_id.is_some() {
+        require_team_permission(conn, user_id, team_id, "chat.messages.quote").await?;
+    }
 
     let name = author_name(conn, user_id).await;
 
