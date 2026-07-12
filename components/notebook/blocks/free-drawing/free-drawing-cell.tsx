@@ -731,7 +731,7 @@ export function FreeDrawingCell({
           opacity: 100,
           pressureSensitive: false,
           points,
-          shape: "pen",
+          geo: geoShape,
           sizeStart: size,
           sizeEnd: size,
           opacityStart: 100,

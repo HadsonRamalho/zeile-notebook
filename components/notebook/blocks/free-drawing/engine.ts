@@ -68,6 +68,7 @@ export interface StrokeElement {
   pressureSensitive: boolean;
   points: StrokePoint[];
   shape?: BrushShape;
+  geo?: GeoShape;
   sizeStart?: number;
   sizeEnd?: number;
   opacityStart?: number;
@@ -524,9 +525,31 @@ export function geoShapePoints(
   }
 }
 
+function drawGeoStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
+  const pts = s.points;
+  if (pts.length < 2) return;
+  ctx.save();
+  ctx.globalAlpha = s.opacity / 100;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.strokeStyle = s.color;
+  ctx.lineWidth = Math.max(0.5, s.size);
+  ctx.lineCap = "round";
+  ctx.lineJoin = s.geo === "ellipse" || s.geo === "arrow" ? "round" : "miter";
+  ctx.miterLimit = 8;
+  ctx.beginPath();
+  ctx.moveTo(pts[0]!.x, pts[0]!.y);
+  for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Renderiza um traço em um contexto 2D já configurado (globalAlpha/composite). */
 export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeElement) {
   if (stroke.points.length === 0) return;
+  if (stroke.geo) {
+    drawGeoStroke(ctx, stroke);
+    return;
+  }
   if (stroke.shape) {
     drawShapedStroke(ctx, stroke);
     return;
@@ -591,7 +614,7 @@ export function hitTestStroke(
   y: number,
 ): boolean {
   if (stroke.points.length === 0) return false;
-  if (stroke.shape) {
+  if (stroke.shape || stroke.geo) {
     const path = new Path2D();
     path.moveTo(stroke.points[0]!.x, stroke.points[0]!.y);
     for (const p of stroke.points.slice(1)) path.lineTo(p.x, p.y);
