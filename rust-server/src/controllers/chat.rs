@@ -91,6 +91,9 @@ pub async fn api_send_notebook_message(
     let parent_id =
         models::chat::resolve_thread_parent(conn, Some(notebook_id), None, payload.parent_id)
             .await?;
+    let quoted_message_id =
+        models::chat::validate_quote(conn, Some(notebook_id), None, payload.quoted_message_id)
+            .await?;
 
     let new_message = NewChatMessage {
         id: Uuid::new_v4(),
@@ -99,7 +102,7 @@ pub async fn api_send_notebook_message(
         author_name: name.clone(),
         content: content.clone(),
         parent_id,
-        quoted_message_id: payload.quoted_message_id,
+        quoted_message_id,
         ..Default::default()
     };
 
@@ -368,6 +371,8 @@ pub async fn api_send_team_message(
 
     let parent_id =
         models::chat::resolve_thread_parent(conn, None, Some(team_id), payload.parent_id).await?;
+    let quoted_message_id =
+        models::chat::validate_quote(conn, None, Some(team_id), payload.quoted_message_id).await?;
 
     let new_message = NewChatMessage {
         id: Uuid::new_v4(),
@@ -376,7 +381,7 @@ pub async fn api_send_team_message(
         author_name: name,
         content,
         parent_id,
-        quoted_message_id: payload.quoted_message_id,
+        quoted_message_id,
         ..Default::default()
     };
 

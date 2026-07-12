@@ -33,7 +33,14 @@ export function TeamChat({ teamId }: { teamId: string }) {
   const [editValue, setEditValue] = useState("");
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [quoting, setQuoting] = useState<ChatMessageDTO | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const messagesById = useMemo(() => {
+    const map = new Map<string, ChatMessageDTO>();
+    for (const m of messages) map.set(m.id, m);
+    return map;
+  }, [messages]);
 
   const topLevel = useMemo(
     () => messages.filter((m) => !m.parentId),
@@ -113,9 +120,13 @@ export function TeamChat({ teamId }: { teamId: string }) {
     if (!content || sending) return;
     setSending(true);
     try {
-      const dto = await sendTeamMessage(teamId, { content });
+      const dto = await sendTeamMessage(teamId, {
+        content,
+        quotedMessageId: quoting?.id ?? null,
+      });
       if (dto) setMessages((prev) => upsert(prev, dto));
       setInput("");
+      setQuoting(null);
     } catch {
       // silencioso: erros de rede/permissão são tratados pelo interceptor
     } finally {
@@ -127,6 +138,9 @@ export function TeamChat({ teamId }: { teamId: string }) {
     const isMe = !!user && msg.userId === user.id;
     const isEditing = editingId === msg.id;
     const isDeleted = !!msg.deletedAt;
+    const quoted = msg.quotedMessageId
+      ? messagesById.get(msg.quotedMessageId)
+      : null;
     return (
       <div className="group flex flex-col">
         <div className="flex items-baseline gap-2">
@@ -143,28 +157,47 @@ export function TeamChat({ teamId }: { teamId: string }) {
               />
             </span>
           )}
-          {isMe && !isEditing && !isDeleted && (
+          {!isEditing && !isDeleted && (
             <span className="flex items-center gap-2 text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 type="button"
-                onClick={() => {
-                  setEditingId(msg.id);
-                  setEditValue(msg.content);
-                }}
+                onClick={() => setQuoting(msg)}
                 className="hover:text-foreground"
               >
-                editar
+                citar
               </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(msg.id)}
-                className="hover:text-foreground"
-              >
-                excluir
-              </button>
+              {isMe && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(msg.id);
+                      setEditValue(msg.content);
+                    }}
+                    className="hover:text-foreground"
+                  >
+                    editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(msg.id)}
+                    className="hover:text-foreground"
+                  >
+                    excluir
+                  </button>
+                </>
+              )}
             </span>
           )}
         </div>
+        {quoted && (
+          <div className="mt-0.5 rounded-md border-border border-l-2 bg-muted/40 px-2 py-1 text-xs">
+            <span className="font-semibold">{quoted.authorName}</span>
+            <p className="line-clamp-2 break-words text-muted-foreground">
+              {quoted.deletedAt ? "mensagem excluída" : quoted.content}
+            </p>
+          </div>
+        )}
         {isDeleted ? (
           <p className="text-sm italic text-muted-foreground">
             mensagem excluída
@@ -275,6 +308,26 @@ export function TeamChat({ teamId }: { teamId: string }) {
           })
         )}
       </div>
+
+      {quoting && (
+        <div className="flex items-start justify-between gap-2 rounded-lg border border-border border-l-2 border-l-primary bg-muted/40 px-3 py-1.5 text-xs">
+          <div className="min-w-0">
+            <span className="font-semibold text-foreground">
+              Citando {quoting.authorName}
+            </span>
+            <p className="line-clamp-1 break-words text-muted-foreground">
+              {quoting.deletedAt ? "mensagem excluída" : quoting.content}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setQuoting(null)}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            cancelar
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSend} className="flex items-center gap-2">
         <input

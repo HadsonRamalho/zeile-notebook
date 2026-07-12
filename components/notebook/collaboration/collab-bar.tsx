@@ -147,7 +147,11 @@ interface CollabBarProps {
   setPreviewDoc: (d: Notebook | null) => void;
   notebookId: string;
   messages: ChatMessage[];
-  sendChatMessage: (text: string, parentId?: string | null) => void;
+  sendChatMessage: (
+    text: string,
+    parentId?: string | null,
+    quotedMessageId?: string | null,
+  ) => void;
   editMessage: (messageId: string, content: string) => void;
   deleteMessage: (messageId: string) => void;
   socketUserId: string | null;
@@ -293,9 +297,16 @@ function ChatPanel({
   const [editValue, setEditValue] = useState("");
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [quoting, setQuoting] = useState<ChatMessage | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isTouchDevice = useIsTouchDevice();
   const canSend = useCan()("chat.messages.send");
+
+  const messagesById = useMemo(() => {
+    const map = new Map<string, ChatMessage>();
+    for (const m of messages) map.set(m.id, m);
+    return map;
+  }, [messages]);
 
   const topLevel = useMemo(
     () => messages.filter((m) => !m.parentId),
@@ -363,8 +374,9 @@ function ChatPanel({
     e.preventDefault();
     if (mentionMatches.length > 0) return;
     if (inputValue.trim()) {
-      sendChatMessage(inputValue.trim());
+      sendChatMessage(inputValue.trim(), null, quoting?.id ?? null);
       setInputValue("");
+      setQuoting(null);
     }
   };
 
@@ -388,6 +400,9 @@ function ChatPanel({
     const isMe = !!currentUserId && msg.userId === currentUserId;
     const isEditing = editingId === msg.id;
     const isDeleted = !!msg.deletedAt;
+    const quoted = msg.quotedMessageId
+      ? messagesById.get(msg.quotedMessageId)
+      : null;
     return (
       <div
         className={cn(
@@ -398,25 +413,46 @@ function ChatPanel({
       >
         <span className="mb-0.5 flex items-center gap-2 text-xs font-bold opacity-80">
           <span>{msg.name}</span>
-          {isMe && !isEditing && !isDeleted && (
+          {!isEditing && !isDeleted && (
             <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-              <button
-                type="button"
-                onClick={() => startEdit(msg.id, msg.text)}
-                className="hover:underline"
-              >
-                editar
-              </button>
-              <button
-                type="button"
-                onClick={() => deleteMessage(msg.id)}
-                className="hover:underline"
-              >
-                excluir
-              </button>
+              {canSend && (
+                <button
+                  type="button"
+                  onClick={() => setQuoting(msg)}
+                  className="hover:underline"
+                >
+                  citar
+                </button>
+              )}
+              {isMe && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(msg.id, msg.text)}
+                    className="hover:underline"
+                  >
+                    editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteMessage(msg.id)}
+                    className="hover:underline"
+                  >
+                    excluir
+                  </button>
+                </>
+              )}
             </span>
           )}
         </span>
+        {quoted && (
+          <div className="mb-1 rounded-md border-white/50 border-l-2 bg-white/10 px-2 py-1 text-xs opacity-90">
+            <span className="font-semibold">{quoted.name}</span>
+            <p className="line-clamp-2 break-words">
+              {quoted.deletedAt ? "mensagem excluída" : quoted.text}
+            </p>
+          </div>
+        )}
         {isDeleted ? (
           <span className="text-sm italic opacity-70">mensagem excluída</span>
         ) : isEditing ? (
@@ -564,6 +600,25 @@ function ChatPanel({
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="relative">
+          {quoting && (
+            <div className="mb-1 flex items-start justify-between gap-2 rounded-lg border border-border border-l-2 border-l-primary bg-muted/40 px-3 py-1.5 text-xs">
+              <div className="min-w-0">
+                <span className="font-semibold text-foreground">
+                  Citando {quoting.name}
+                </span>
+                <p className="line-clamp-1 break-words text-muted-foreground">
+                  {quoting.deletedAt ? "mensagem excluída" : quoting.text}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuoting(null)}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                cancelar
+              </button>
+            </div>
+          )}
           {mentionMatches.length > 0 && (
             <div className="absolute bottom-full mb-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
               {mentionMatches.map((user, index) => (

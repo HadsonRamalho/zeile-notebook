@@ -119,6 +119,23 @@ pub async fn resolve_thread_parent(
     Ok(Some(parent.parent_id.unwrap_or(parent.id)))
 }
 
+/// Valida que a mensagem citada existe e pertence ao mesmo chat.
+pub async fn validate_quote(
+    conn: &mut AsyncPgConnection,
+    notebook_id: Option<Uuid>,
+    team_id: Option<Uuid>,
+    quoted_message_id: Option<Uuid>,
+) -> Result<Option<Uuid>, ApiError> {
+    let Some(qid) = quoted_message_id else {
+        return Ok(None);
+    };
+    let quoted = get_message(conn, qid).await?;
+    if quoted.notebook_id != notebook_id || quoted.team_id != team_id {
+        return Err(ApiError::Request("Mensagem citada inválida".to_string()));
+    }
+    Ok(Some(qid))
+}
+
 pub async fn get_message(
     conn: &mut AsyncPgConnection,
     message_id: Uuid,
