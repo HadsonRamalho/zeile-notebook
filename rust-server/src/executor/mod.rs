@@ -52,6 +52,21 @@ pub fn sanitize_session(session: &str) -> String {
     session.replace(|c: char| !c.is_alphanumeric(), "_")
 }
 
+pub async fn compile_code(language: &str, code: &str, session: &str) -> Result<String, String> {
+    let safe_session = sanitize_session(session);
+    match language {
+        "rust" => compile_rust(code, &safe_session).await,
+        "go" => compile_go(code, &safe_session).await,
+        "cpp" => compile_cpp(code, &safe_session).await,
+        "zig" => compile_zig(code, &safe_session).await,
+        other => Err(format!("Linguagem não suportada: {}", other)),
+    }
+}
+
+pub async fn run_compiled(bin_path: &str, stdin: Option<&str>, limits: RunLimits) -> ExecResult {
+    ExecResult::from_run(run_safe_bin(bin_path, stdin, limits).await)
+}
+
 pub async fn execute_code(
     language: &str,
     code: &str,
@@ -59,34 +74,23 @@ pub async fn execute_code(
     session: &str,
     limits: RunLimits,
 ) -> ExecResult {
-    let safe_session = sanitize_session(session);
-    match language {
-        "rust" => exec_rust(code, stdin, &safe_session, limits).await,
-        "go" => exec_go(code, stdin, &safe_session, limits).await,
-        "cpp" => exec_cpp(code, stdin, &safe_session, limits).await,
-        "zig" => exec_zig(code, stdin, &safe_session, limits).await,
-        other => ExecResult::compile_error(format!("Linguagem não suportada: {}", other)),
+    match compile_code(language, code, session).await {
+        Ok(bin_path) => run_compiled(&bin_path, stdin, limits).await,
+        Err(msg) => ExecResult::compile_error(msg),
     }
 }
 
-async fn exec_rust(
-    code: &str,
-    stdin: Option<&str>,
-    safe_session: &str,
-    limits: RunLimits,
-) -> ExecResult {
-    if let Err(msg) = verify_code(code) {
-        return ExecResult::compile_error(msg);
-    }
+async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> {
+    verify_code(code)?;
 
     let project_path = setup_user_env(safe_session).await;
     let src_path = project_path.join("src");
     let file_path = src_path.join("main.rs");
 
     let safe_code = format!("#![forbid(unsafe_code)]\n{}", code);
-    if let Err(e) = tokio::fs::write(&file_path, &safe_code).await {
-        return ExecResult::compile_error(format!("Erro ao salvar arquivo: {}", e));
-    }
+    tokio::fs::write(&file_path, &safe_code)
+        .await
+        .map_err(|e| format!("Erro ao salvar arquivo: {}", e))?;
 
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let abs_project_path = std::fs::canonicalize(&project_path)
@@ -120,10 +124,10 @@ async fn exec_rust(
         .arg("--offline")
         .arg("-q");
 
-    let compile_output = match build_cmd.output().await {
-        Ok(out) => out,
-        Err(e) => return ExecResult::compile_error(format!("Erro ao invocar cargo: {}", e)),
-    };
+    let compile_output = build_cmd
+        .output()
+        .await
+        .map_err(|e| format!("Erro ao invocar cargo: {}", e))?;
 
     let stdout_str = String::from_utf8_lossy(&compile_output.stdout);
     let mut formatted_errors = String::new();
@@ -156,7 +160,7 @@ async fn exec_rust(
         } else {
             String::from_utf8_lossy(&compile_output.stderr).to_string()
         };
-        return ExecResult::compile_error(format!("Erro de Compilação:\n{}", final_stderr));
+        return Err(format!("Erro de Compilação:\n{}", final_stderr));
     }
 
     let path = exe_path.unwrap_or_else(|| {
@@ -167,19 +171,12 @@ async fn exec_rust(
             .to_string()
     });
 
-    info!("Executando submissão Rust: {}", path);
-    ExecResult::from_run(run_safe_bin(&path, stdin, limits).await)
+    info!("Submissão Rust compilada: {}", path);
+    Ok(path)
 }
 
-async fn exec_go(
-    code: &str,
-    stdin: Option<&str>,
-    safe_session: &str,
-    limits: RunLimits,
-) -> ExecResult {
-    if let Err(msg) = verify_go_code(code) {
-        return ExecResult::compile_error(msg);
-    }
+async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
+    verify_go_code(code)?;
 
     let bin_name = format!("app_{}", safe_session);
     let user_dir = format!("files/go/{}", safe_session);
@@ -188,9 +185,9 @@ async fn exec_go(
     let file_path = Path::new(&user_dir).join("main.go");
     let bin_path = Path::new(&user_dir).join(&bin_name);
 
-    if let Err(e) = tokio::fs::write(&file_path, code).await {
-        return ExecResult::compile_error(e.to_string());
-    }
+    tokio::fs::write(&file_path, code)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let go_path = std::env::var("GO_PATH").unwrap_or_else(|_| "go".to_string());
     let compile_output = Command::new(go_path)
@@ -203,27 +200,17 @@ async fn exec_go(
         .await;
 
     match compile_output {
-        Ok(out) if out.status.success() => {
-            let bin_path_str = bin_path.to_string_lossy().to_string();
-            ExecResult::from_run(run_safe_bin(&bin_path_str, stdin, limits).await)
-        }
-        Ok(out) => ExecResult::compile_error(format!(
+        Ok(out) if out.status.success() => Ok(bin_path.to_string_lossy().to_string()),
+        Ok(out) => Err(format!(
             "Erro de Compilação Go:\n{}",
             String::from_utf8_lossy(&out.stderr)
         )),
-        Err(e) => ExecResult::compile_error(format!("Falha ao invocar compilador Go: {}", e)),
+        Err(e) => Err(format!("Falha ao invocar compilador Go: {}", e)),
     }
 }
 
-async fn exec_cpp(
-    code: &str,
-    stdin: Option<&str>,
-    safe_session: &str,
-    limits: RunLimits,
-) -> ExecResult {
-    if let Err(msg) = verify_cpp_code(code) {
-        return ExecResult::compile_error(msg);
-    }
+async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
+    verify_cpp_code(code)?;
 
     let bin_name = format!("app_{}", safe_session);
     let user_dir = format!("files/cpp/{}", safe_session);
@@ -232,9 +219,9 @@ async fn exec_cpp(
     let file_path = Path::new(&user_dir).join("main.cpp");
     let bin_path = Path::new(&user_dir).join(&bin_name);
 
-    if let Err(e) = tokio::fs::write(&file_path, code).await {
-        return ExecResult::compile_error(e.to_string());
-    }
+    tokio::fs::write(&file_path, code)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
     let compile_output = Command::new("prlimit")
@@ -252,27 +239,17 @@ async fn exec_cpp(
         .await;
 
     match compile_output {
-        Ok(out) if out.status.success() => {
-            let bin_path_str = bin_path.to_string_lossy().to_string();
-            ExecResult::from_run(run_safe_bin(&bin_path_str, stdin, limits).await)
-        }
-        Ok(out) => ExecResult::compile_error(format!(
+        Ok(out) if out.status.success() => Ok(bin_path.to_string_lossy().to_string()),
+        Ok(out) => Err(format!(
             "Erro de Compilação C++:\n{}",
             String::from_utf8_lossy(&out.stderr)
         )),
-        Err(e) => ExecResult::compile_error(format!("Falha ao invocar compilador C++: {}", e)),
+        Err(e) => Err(format!("Falha ao invocar compilador C++: {}", e)),
     }
 }
 
-async fn exec_zig(
-    code: &str,
-    stdin: Option<&str>,
-    safe_session: &str,
-    limits: RunLimits,
-) -> ExecResult {
-    if let Err(msg) = verify_zig_code(code) {
-        return ExecResult::compile_error(msg);
-    }
+async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
+    verify_zig_code(code)?;
 
     let bin_name = format!("app_{}", safe_session);
     let user_dir = format!("files/zig/{}", safe_session);
@@ -281,9 +258,9 @@ async fn exec_zig(
     let file_path = Path::new(&user_dir).join("main.zig");
     let bin_path = Path::new(&user_dir).join(&bin_name);
 
-    if let Err(e) = tokio::fs::write(&file_path, code).await {
-        return ExecResult::compile_error(e.to_string());
-    }
+    tokio::fs::write(&file_path, code)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let zig_path = std::env::var("ZIG_PATH").unwrap_or_else(|_| "zig".to_string());
     let compile_output = Command::new(zig_path)
@@ -298,14 +275,11 @@ async fn exec_zig(
         .await;
 
     match compile_output {
-        Ok(out) if out.status.success() => {
-            let bin_path_str = bin_path.to_string_lossy().to_string();
-            ExecResult::from_run(run_safe_bin(&bin_path_str, stdin, limits).await)
-        }
-        Ok(out) => ExecResult::compile_error(format!(
+        Ok(out) if out.status.success() => Ok(bin_path.to_string_lossy().to_string()),
+        Ok(out) => Err(format!(
             "Erro de Compilação Zig:\n{}",
             String::from_utf8_lossy(&out.stderr)
         )),
-        Err(e) => ExecResult::compile_error(format!("Falha ao invocar compilador Zig: {}", e)),
+        Err(e) => Err(format!("Falha ao invocar compilador Zig: {}", e)),
     }
 }

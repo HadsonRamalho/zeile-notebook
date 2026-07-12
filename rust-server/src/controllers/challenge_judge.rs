@@ -5,7 +5,7 @@ use serde_json::Value;
 use tracing::{error, warn};
 use uuid::Uuid;
 
-use crate::executor::{ExecVerdict, execute_code};
+use crate::executor::{ExecVerdict, compile_code, run_compiled};
 use crate::file::RunLimits;
 use crate::models::challenge::{self, NewSubmissionResult};
 use crate::models::state::AppState;
@@ -210,20 +210,58 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let user_session = format!("judge_sub_{}", submission.id);
     let mut ref_cache: HashMap<String, String> = HashMap::new();
 
+    let user_bin = match compile_code(&submission.language, &submission.code, &user_session).await {
+        Ok(path) => path,
+        Err(msg) => {
+            let _ = challenge::finalize_submission(
+                &mut conn,
+                submission_id,
+                "compile_error",
+                0,
+                0,
+                0,
+                truncate(&msg, STDERR_SNIPPET_LIMIT).as_deref(),
+            )
+            .await;
+            return;
+        }
+    };
+
+    let ref_bin = if needs_reference {
+        let ref_lang = ch.reference_language.as_deref().unwrap_or("rust");
+        let ref_sol = ch.reference_solution.as_deref().unwrap_or("");
+        match compile_code(ref_lang, ref_sol, &ref_session).await {
+            Ok(path) => Some(path),
+            Err(_) => {
+                error!("judge: solução de referência não compila");
+                let _ = challenge::finalize_submission(
+                    &mut conn,
+                    submission_id,
+                    "error",
+                    0,
+                    0,
+                    0,
+                    Some("Solução de referência não compila"),
+                )
+                .await;
+                return;
+            }
+        }
+    } else {
+        None
+    };
+
     let mut results: Vec<NewSubmissionResult> = Vec::new();
     let mut score = 0i32;
     let mut max_score = 0i32;
     let mut total_runtime = 0u64;
 
     for (idx, case) in cases.iter().enumerate() {
-        let expected: Option<String> = if needs_reference {
+        let expected: Option<String> = if let Some(ref_path) = &ref_bin {
             if let Some(cached) = ref_cache.get(&case.input) {
                 Some(cached.clone())
             } else {
-                let ref_lang = ch.reference_language.as_deref().unwrap_or("rust");
-                let ref_sol = ch.reference_solution.as_deref().unwrap_or("");
-                let r =
-                    execute_code(ref_lang, ref_sol, Some(&case.input), &ref_session, limits).await;
+                let r = run_compiled(ref_path, Some(&case.input), limits).await;
                 if r.verdict != ExecVerdict::Ok {
                     warn!("judge: referência falhou no caso {}", idx);
                     let _ = challenge::finalize_submission(
@@ -246,30 +284,9 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             case.expected.as_ref().map(|e| normalize(e))
         };
 
-        let run = execute_code(
-            &submission.language,
-            &submission.code,
-            Some(&case.input),
-            &user_session,
-            limits,
-        )
-        .await;
+        let run = run_compiled(&user_bin, Some(&case.input), limits).await;
 
         total_runtime += run.wall_ms;
-
-        if run.verdict == ExecVerdict::CompileError && idx == 0 {
-            let _ = challenge::finalize_submission(
-                &mut conn,
-                submission_id,
-                "compile_error",
-                0,
-                0,
-                run.wall_ms as i32,
-                truncate(&run.stderr, STDERR_SNIPPET_LIMIT).as_deref(),
-            )
-            .await;
-            return;
-        }
 
         let verdict = match run.verdict {
             ExecVerdict::CompileError => "CE",
