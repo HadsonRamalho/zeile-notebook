@@ -85,7 +85,6 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Realça @menções conhecidas com a cor de destaque única do produto. */
 function MessageBody({ text, names }: { text: string; names: string[] }) {
   const parts = useMemo(() => {
     const unique = Array.from(new Set(names.filter(Boolean))).sort(
@@ -196,7 +195,6 @@ export function ChatConversation({
     return Array.from(set);
   }, [members, messages]);
 
-  // rola ao fim quando chegam mensagens novas
   // biome-ignore lint/correctness/useExhaustiveDependencies: reage à contagem
   useEffect(() => {
     const el = viewportRef.current;
@@ -419,9 +417,6 @@ export function ChatConversation({
       <div
         className={cn(
           "flex w-full flex-col gap-2",
-          // no modo flutuante a altura é limitada e a LISTA rola (flex-1),
-          // mantendo o compositor sempre fixo no rodapé — mesmo com o chip de
-          // resposta/citação, que antes empurrava o input para fora do painel.
           isFloating && "h-[60vh] max-h-[calc(100dvh-8rem)] min-h-0",
         )}
       >

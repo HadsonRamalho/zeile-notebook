@@ -11,7 +11,6 @@ import type { ChatMessageVersionDTO } from "@/lib/api/chat-service";
 
 interface MessageVersionsProps {
   load: () => Promise<ChatMessageVersionDTO[] | undefined>;
-  /** Gatilho customizado; se ausente, usa um botão de ícone discreto. */
   trigger?: ReactNode;
 }
 
