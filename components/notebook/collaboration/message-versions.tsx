@@ -37,7 +37,7 @@ export function MessageVersions({ load, triggerClassName }: MessageVersionsProps
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="max-h-64 w-72 overflow-y-auto text-foreground"
+        className="z-[210] max-h-64 w-72 overflow-y-auto text-foreground"
       >
         <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           Versões anteriores
