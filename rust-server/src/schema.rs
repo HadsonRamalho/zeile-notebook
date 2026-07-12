@@ -74,6 +74,8 @@ diesel::table! {
         visibility -> Varchar,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        notebook_id -> Nullable<Uuid>,
+        block_id -> Nullable<Uuid>,
     }
 }
 
@@ -315,6 +317,7 @@ diesel::joinable!(challenge_submission_results -> challenge_submissions (submiss
 diesel::joinable!(challenge_submission_results -> challenge_test_cases (test_case_id));
 diesel::joinable!(challenges -> teams (team_id));
 diesel::joinable!(challenges -> users (created_by));
+diesel::joinable!(challenges -> notebooks (notebook_id));
 diesel::joinable!(blocks -> notebooks (notebook_id));
 diesel::joinable!(chat_message_versions -> chat_messages (message_id));
 diesel::joinable!(notebooks -> teams (team_id));

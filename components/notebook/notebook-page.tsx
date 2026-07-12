@@ -505,6 +505,7 @@ function getBlockTitle(
   if (type === "latex") return "LaTeX";
   if (type === "sql") return "SQL";
   if (type === "typst") return "Typst";
+  if (type === "challenge") return "Desafio";
   if (type !== "code") return "Bloco de Texto";
 
   const titles: Record<string, string> = {

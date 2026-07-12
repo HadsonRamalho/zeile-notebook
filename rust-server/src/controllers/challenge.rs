@@ -11,11 +11,12 @@ use uuid::Uuid;
 
 use crate::controllers::challenge_judge::{judge_submission, limits_for, normalize};
 use crate::controllers::jwt::extract_claims_from_header;
+use crate::controllers::permissions::{TargetCtx, require};
 use crate::controllers::utils::get_conn;
 use crate::executor::{ExecVerdict, compile_code, run_compiled};
 use crate::models::challenge::{
     self, Challenge, ChallengePublic, LeaderboardEntry, NewChallenge, NewSubmission, NewTestCase,
-    SubmissionView, TestCasePublic, UpdateChallenge,
+    SubmissionView, TestCaseAuthoringView, TestCasePublic, UpdateChallenge,
 };
 use crate::models::error::ApiError;
 use crate::models::state::AppState;
@@ -23,6 +24,10 @@ use crate::models::user::UserRole;
 
 #[derive(Deserialize)]
 pub struct CreateChallengeRequest {
+    #[serde(rename = "notebookId")]
+    pub notebook_id: Uuid,
+    #[serde(rename = "blockId")]
+    pub block_id: Option<Uuid>,
     pub slug: String,
     pub title: String,
     #[serde(rename = "statementMd")]
@@ -115,14 +120,22 @@ async fn conn_from(
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))
 }
 
-fn ensure_owner(challenge: &Challenge, user_id: Uuid, role: UserRole) -> Result<(), ApiError> {
-    if role == UserRole::Admin || challenge.created_by == Some(user_id) {
-        Ok(())
-    } else {
-        Err(ApiError::PermissionDenied(
-            "Você não é o autor deste desafio".to_string(),
-        ))
-    }
+fn challenge_notebook(challenge: &Challenge) -> Result<Uuid, ApiError> {
+    challenge
+        .notebook_id
+        .ok_or_else(|| ApiError::Request("Desafio sem notebook vinculado".to_string()))
+}
+
+async fn require_notebook(
+    state: &AppState,
+    challenge: &Challenge,
+    user_id: Option<Uuid>,
+    key: &str,
+    target: &TargetCtx,
+) -> Result<(), ApiError> {
+    let notebook_id = challenge_notebook(challenge)?;
+    require(&state.pool, user_id, notebook_id, key, target).await?;
+    Ok(())
 }
 
 pub async fn api_list_challenges(
@@ -133,19 +146,46 @@ pub async fn api_list_challenges(
     Ok(Json(rows.into_iter().map(ChallengePublic::from).collect()))
 }
 
-pub async fn api_get_challenge(
-    State(state): State<Arc<AppState>>,
-    Path(slug): Path<String>,
+async fn challenge_detail(
+    state: &AppState,
+    headers: &HeaderMap,
+    ch: Challenge,
 ) -> Result<Json<Value>, ApiError> {
-    let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_slug(&mut conn, &slug).await?;
-    let samples: Vec<TestCasePublic> =
-        challenge::list_public_test_cases(&mut conn, ch.id).await?;
+    let user_id = extract_claims_from_header(headers)
+        .await
+        .ok()
+        .map(|c| c.1.id);
+    require_notebook(state, &ch, user_id, "notebook.view", &TargetCtx::default()).await?;
+
+    let mut conn = conn_from(state).await?;
+    let samples: Vec<TestCasePublic> = challenge::list_public_test_cases(&mut conn, ch.id).await?;
     let public = ChallengePublic::from(ch);
     Ok(Json(json!({
         "challenge": public,
         "sampleTests": samples,
     })))
+}
+
+pub async fn api_get_challenge(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_slug(&mut conn, &slug).await?;
+    drop(conn);
+    challenge_detail(&state, &headers, ch).await
+}
+
+pub async fn api_get_challenge_by_id(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    drop(conn);
+    challenge_detail(&state, &headers, ch).await
 }
 
 pub async fn api_create_challenge(
@@ -154,6 +194,15 @@ pub async fn api_create_challenge(
     Json(payload): Json<CreateChallengeRequest>,
 ) -> Result<(StatusCode, Json<ChallengePublic>), ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    require(
+        &state.pool,
+        Some(user_id),
+        payload.notebook_id,
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
 
     let judge_mode = payload.judge_mode.unwrap_or_else(|| "io".to_string());
     if !VALID_JUDGE_MODES.contains(&judge_mode.as_str()) {
@@ -186,6 +235,8 @@ pub async fn api_create_challenge(
         team_id: payload.team_id,
         created_by: Some(user_id),
         visibility: payload.visibility.unwrap_or_else(|| "public".to_string()),
+        notebook_id: Some(payload.notebook_id),
+        block_id: payload.block_id,
     };
 
     let mut conn = conn_from(&state).await?;
@@ -202,7 +253,14 @@ pub async fn api_update_challenge(
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
-    ensure_owner(&existing, claims.id, claims.role)?;
+    require_notebook(
+        &state,
+        &existing,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
 
     if let Some(mode) = &payload.judge_mode {
         if !VALID_JUDGE_MODES.contains(&mode.as_str()) {
@@ -238,7 +296,14 @@ pub async fn api_add_test_case(
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
-    ensure_owner(&existing, claims.id, claims.role)?;
+    require_notebook(
+        &state,
+        &existing,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
 
     let new_case = NewTestCase {
         id: Uuid::new_v4(),
@@ -262,12 +327,63 @@ pub async fn api_set_reference(
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
-    ensure_owner(&existing, claims.id, claims.role)?;
+    require_notebook(
+        &state,
+        &existing,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
 
     let updated =
         challenge::set_reference_solution(&mut conn, id, &payload.solution, &payload.language)
             .await?;
     Ok(Json(ChallengePublic::from(updated)))
+}
+
+pub async fn api_list_test_cases(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<TestCaseAuthoringView>>, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    require_notebook(
+        &state,
+        &existing,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
+
+    let cases = challenge::list_test_cases(&mut conn, id).await?;
+    Ok(Json(
+        cases.into_iter().map(TestCaseAuthoringView::from).collect(),
+    ))
+}
+
+pub async fn api_delete_test_case(
+    State(state): State<Arc<AppState>>,
+    Path((id, case_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+) -> Result<StatusCode, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    require_notebook(
+        &state,
+        &existing,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
+
+    challenge::delete_test_case(&mut conn, id, case_id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn api_submit(
@@ -297,6 +413,18 @@ pub async fn api_submit(
     if payload.code.trim().is_empty() {
         return Err(ApiError::Request("Código vazio".to_string()));
     }
+
+    require_notebook(
+        &state,
+        &ch,
+        Some(user_id),
+        &format!("notebook.blocks.{}.execute", payload.language),
+        &TargetCtx {
+            block_id: ch.block_id,
+            block_type: Some(payload.language.clone()),
+        },
+    )
+    .await?;
 
     let new_submission = NewSubmission {
         id: Uuid::new_v4(),
@@ -339,8 +467,10 @@ pub async fn api_submit(
 pub async fn api_run_samples(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
     Json(payload): Json<SubmitRequest>,
 ) -> Result<Json<RunSamplesResponse>, ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
     let mut conn = conn_from(&state).await?;
     let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
 
@@ -361,6 +491,18 @@ pub async fn api_run_samples(
     if payload.code.trim().is_empty() {
         return Err(ApiError::Request("Código vazio".to_string()));
     }
+
+    require_notebook(
+        &state,
+        &ch,
+        Some(user_id),
+        &format!("notebook.blocks.{}.execute", payload.language),
+        &TargetCtx {
+            block_id: ch.block_id,
+            block_type: Some(payload.language.clone()),
+        },
+    )
+    .await?;
 
     let samples = challenge::list_public_test_cases(&mut conn, id).await?;
     let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
@@ -480,8 +622,15 @@ pub async fn api_list_my_submissions(
 pub async fn api_leaderboard(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<LeaderboardEntry>>, ApiError> {
+    let user_id = extract_claims_from_header(&headers)
+        .await
+        .ok()
+        .map(|c| c.1.id);
     let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    require_notebook(&state, &ch, user_id, "notebook.view", &TargetCtx::default()).await?;
     let done = challenge::list_done_submissions(&mut conn, id).await?;
 
     let mut seen: std::collections::HashSet<Uuid> = std::collections::HashSet::new();

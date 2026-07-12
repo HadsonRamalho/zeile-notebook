@@ -24,8 +24,19 @@ export interface ChallengePublic {
   memLimitKb: number;
   starterCode: Record<string, string> | null;
   teamId: string | null;
+  notebookId: string | null;
+  blockId: string | null;
   visibility: string;
   createdAt: string;
+}
+
+export interface AuthoringTestCase {
+  id: string;
+  input: string;
+  expected: string | null;
+  isHidden: boolean;
+  weight: number;
+  ord: number;
 }
 
 export interface TestCasePublic {
@@ -88,6 +99,8 @@ export interface LeaderboardEntry {
 }
 
 export interface CreateChallengePayload {
+  notebookId: string;
+  blockId?: string;
   slug: string;
   title: string;
   statementMd: string;

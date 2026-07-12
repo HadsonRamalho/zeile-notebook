@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Puzzle, Search } from "lucide-react";
+import { Puzzle, Search } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
@@ -121,14 +121,6 @@ export default function ChallengesPage() {
           </p>
           <BackButton />
         </div>
-
-        <Link
-          href="/challenges/new"
-          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <Plus className="size-4" />
-          {t("new_button")}
-        </Link>
       </div>
 
       {(hasAny || hasActiveCriteria) && (
@@ -202,20 +194,18 @@ export default function ChallengesPage() {
               ? t("no_results_description")
               : t("empty_description")}
           </p>
-          {!hasActiveCriteria && (
-            <Link
-              href="/challenges/new"
-              className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              <Plus className="size-4" />
-              {t("new_button")}
-            </Link>
-          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((challenge) => (
-            <Link key={challenge.id} href={`/challenges/${challenge.slug}`}>
+            <Link
+              key={challenge.id}
+              href={
+                challenge.notebookId
+                  ? `/notebook/${challenge.notebookId}`
+                  : "/challenges"
+              }
+            >
               <Card className="group flex h-full flex-col justify-between transition-colors hover:border-primary/50 hover:bg-primary/5">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">

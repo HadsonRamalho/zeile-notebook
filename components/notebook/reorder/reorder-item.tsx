@@ -10,6 +10,7 @@ import type {
   Language,
   Notebook,
 } from "@/lib/types";
+import { ChallengeBlock } from "../blocks/challenge/challenge-block";
 import { ComponentRenderer } from "../blocks/components/components";
 import { CppEditor } from "../blocks/cpp/cpp-editor";
 import { DatabaseSchemaCell } from "../blocks/database-schema/database-schema-cell";
@@ -186,7 +187,14 @@ export function ReorderItem({
       )}
 
       <div className="flex-1 min-w-0">
-        {block.type === "drawing" ? (
+        {block.type === "challenge" ? (
+          <ChallengeBlock
+            block={block}
+            notebookId={notebookId}
+            canWrite={canEditContent}
+            updateBlockMetadata={updateBlockMetadata}
+          />
+        ) : block.type === "drawing" ? (
           <DrawingCell
             doc={doc}
             blockId={block.id}

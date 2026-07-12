@@ -1,6 +1,6 @@
 use crate::models::error::ApiError;
 use crate::schema::{
-    challenge_submission_results, challenge_submissions, challenge_test_cases, challenges,
+    challenge_submission_results, challenge_submissions, challenge_test_cases, challenges, notebooks,
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -31,6 +31,8 @@ pub struct Challenge {
     pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub notebook_id: Option<Uuid>,
+    pub block_id: Option<Uuid>,
 }
 
 #[derive(Insertable)]
@@ -53,6 +55,8 @@ pub struct NewChallenge {
     pub team_id: Option<Uuid>,
     pub created_by: Option<Uuid>,
     pub visibility: String,
+    pub notebook_id: Option<Uuid>,
+    pub block_id: Option<Uuid>,
 }
 
 #[derive(AsChangeset, Default)]
@@ -92,6 +96,10 @@ pub struct ChallengePublic {
     pub starter_code: Option<Value>,
     #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
+    #[serde(rename = "notebookId")]
+    pub notebook_id: Option<Uuid>,
+    #[serde(rename = "blockId")]
+    pub block_id: Option<Uuid>,
     pub visibility: String,
     #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
@@ -112,6 +120,8 @@ impl From<Challenge> for ChallengePublic {
             mem_limit_kb: c.mem_limit_kb,
             starter_code: c.starter_code,
             team_id: c.team_id,
+            notebook_id: c.notebook_id,
+            block_id: c.block_id,
             visibility: c.visibility,
             created_at: c.created_at,
         }
@@ -150,6 +160,30 @@ pub struct TestCasePublic {
     pub expected: Option<String>,
     pub weight: i32,
     pub ord: i32,
+}
+
+#[derive(Serialize)]
+pub struct TestCaseAuthoringView {
+    pub id: Uuid,
+    pub input: String,
+    pub expected: Option<String>,
+    #[serde(rename = "isHidden")]
+    pub is_hidden: bool,
+    pub weight: i32,
+    pub ord: i32,
+}
+
+impl From<TestCase> for TestCaseAuthoringView {
+    fn from(t: TestCase) -> Self {
+        TestCaseAuthoringView {
+            id: t.id,
+            input: t.input,
+            expected: t.expected,
+            is_hidden: t.is_hidden,
+            weight: t.weight,
+            ord: t.ord,
+        }
+    }
 }
 
 #[derive(Queryable, Selectable, Identifiable, Debug, Clone)]
@@ -318,8 +352,10 @@ pub async fn list_public_challenges(
     conn: &mut AsyncPgConnection,
 ) -> Result<Vec<Challenge>, ApiError> {
     challenges::table
-        .filter(challenges::visibility.eq("public"))
+        .inner_join(notebooks::table)
+        .filter(notebooks::is_public.eq(true))
         .order(challenges::created_at.desc())
+        .select(Challenge::as_select())
         .load::<Challenge>(conn)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))
@@ -398,6 +434,22 @@ pub async fn list_public_test_cases(
             ord: t.ord,
         })
         .collect())
+}
+
+pub async fn delete_test_case(
+    conn: &mut AsyncPgConnection,
+    challenge_id: Uuid,
+    case_id: Uuid,
+) -> Result<(), ApiError> {
+    diesel::delete(
+        challenge_test_cases::table
+            .filter(challenge_test_cases::id.eq(case_id))
+            .filter(challenge_test_cases::challenge_id.eq(challenge_id)),
+    )
+    .execute(conn)
+    .await
+    .map(|_| ())
+    .map_err(|e| ApiError::Database(e.to_string()))
 }
 
 pub async fn create_submission(

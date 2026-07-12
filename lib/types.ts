@@ -10,7 +10,8 @@ export type BlockType =
   | "database_schema"
   | "latex"
   | "sql"
-  | "typst";
+  | "typst"
+  | "challenge";
 
 export type DrawingElement = {
   id: string;
@@ -66,11 +67,19 @@ export interface BannerMetadata {
   variant: BannerVariant;
 }
 
+export interface ChallengeMetadata {
+  type: "challenge";
+  props: {
+    challengeId?: string;
+  };
+}
+
 export type BlockMetadata =
   | CardMetadata
   | CalloutMetadata
   | GithubRepoMetadata
   | BannerMetadata
+  | ChallengeMetadata
   | { type: "generic"; props?: Record<string, any> };
 
 export interface Block {

@@ -1,5 +1,6 @@
 import { api } from "./base";
 import type {
+  AuthoringTestCase,
   ChallengeDetail,
   ChallengePublic,
   CreateChallengePayload,
@@ -16,6 +17,18 @@ export async function listChallenges() {
 
 export async function getChallenge(slug: string) {
   return api.get<ChallengeDetail>(`/challenge/slug/${slug}`);
+}
+
+export async function getChallengeById(id: string) {
+  return api.get<ChallengeDetail>(`/challenge/${id}`);
+}
+
+export async function listTestCases(id: string) {
+  return api.get<AuthoringTestCase[]>(`/challenge/${id}/test-cases`);
+}
+
+export async function deleteTestCase(id: string, caseId: string) {
+  return api.delete<void>(`/challenge/${id}/test-cases/${caseId}`);
 }
 
 export async function createChallenge(payload: CreateChallengePayload) {
