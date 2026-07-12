@@ -456,5 +456,52 @@ pub async fn api_send_team_message(
     };
 
     let message = models::chat::create_message(conn, &new_message).await?;
+
+    // notifica os membros do time com acesso ao chat (menos o autor), em background
+    {
+        let state = state.clone();
+        let sender_name = message.author_name.clone();
+        let body = message.content.clone();
+        tokio::spawn(async move {
+            let Ok(mut conn) = get_conn(&state.pool).await else {
+                return;
+            };
+            let members =
+                match crate::models::team::find_team_members_with_roles(&mut conn, team_id).await {
+                    Ok(m) => m,
+                    Err(_) => return,
+                };
+            for (member, _role) in members {
+                if member.user_id == user_id {
+                    continue;
+                }
+                let allowed = member_has_capability(
+                    &mut conn,
+                    team_id,
+                    member.user_id,
+                    "chat.team.access",
+                )
+                .await
+                .unwrap_or(false);
+                if !allowed {
+                    continue;
+                }
+                deliver_notification(
+                    &state,
+                    member.user_id,
+                    &NotificationInput {
+                        kind: "chat_team".to_string(),
+                        title: format!("{} no chat do time", sender_name),
+                        body: body.clone(),
+                        url: Some(format!("/teams/{}/settings", team_id)),
+                        notebook_id: None,
+                        team_id: Some(team_id),
+                    },
+                )
+                .await;
+            }
+        });
+    }
+
     Ok((StatusCode::CREATED, Json(message)))
 }
