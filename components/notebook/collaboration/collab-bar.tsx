@@ -147,7 +147,7 @@ interface CollabBarProps {
   setPreviewDoc: (d: Notebook | null) => void;
   notebookId: string;
   messages: ChatMessage[];
-  sendChatMessage: (text: string) => void;
+  sendChatMessage: (text: string, parentId?: string | null) => void;
   editMessage: (messageId: string, content: string) => void;
   deleteMessage: (messageId: string) => void;
   socketUserId: string | null;
@@ -291,9 +291,33 @@ function ChatPanel({
   const [mentionIndex, setMentionIndex] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [activeThread, setActiveThread] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isTouchDevice = useIsTouchDevice();
   const canSend = useCan()("chat.messages.send");
+
+  const topLevel = useMemo(
+    () => messages.filter((m) => !m.parentId),
+    [messages],
+  );
+  const repliesByParent = useMemo(() => {
+    const map = new Map<string, ChatMessage[]>();
+    for (const m of messages) {
+      if (!m.parentId) continue;
+      const list = map.get(m.parentId) ?? [];
+      list.push(m);
+      map.set(m.parentId, list);
+    }
+    return map;
+  }, [messages]);
+
+  const submitReply = (parentId: string) => {
+    if (replyText.trim()) {
+      sendChatMessage(replyText.trim(), parentId);
+      setReplyText("");
+    }
+  };
 
   const startEdit = (id: string, text: string) => {
     setEditingId(id);
@@ -360,108 +384,174 @@ function ChatPanel({
     }
   };
 
+  const renderBubble = (msg: ChatMessage) => {
+    const isMe = !!currentUserId && msg.userId === currentUserId;
+    const isEditing = editingId === msg.id;
+    const isDeleted = !!msg.deletedAt;
+    return (
+      <div
+        className={cn(
+          "group max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white",
+          isMe ? "rounded-tr-none" : "rounded-tl-none",
+        )}
+        style={{ backgroundColor: msg.color }}
+      >
+        <span className="mb-0.5 flex items-center gap-2 text-xs font-bold opacity-80">
+          <span>{msg.name}</span>
+          {isMe && !isEditing && !isDeleted && (
+            <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={() => startEdit(msg.id, msg.text)}
+                className="hover:underline"
+              >
+                editar
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMessage(msg.id)}
+                className="hover:underline"
+              >
+                excluir
+              </button>
+            </span>
+          )}
+        </span>
+        {isDeleted ? (
+          <span className="text-sm italic opacity-70">mensagem excluída</span>
+        ) : isEditing ? (
+          <div className="flex flex-col gap-1.5">
+            <input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitEdit();
+                } else if (e.key === "Escape") {
+                  setEditingId(null);
+                }
+              }}
+              // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
+              autoFocus
+              className="rounded-md bg-white/20 px-2 py-1 text-sm text-white outline-none placeholder:text-white/60"
+            />
+            <div className="flex gap-2 text-xs">
+              <button
+                type="button"
+                onClick={submitEdit}
+                className="font-semibold hover:underline"
+              >
+                salvar
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingId(null)}
+                className="opacity-80 hover:underline"
+              >
+                cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <MessageText text={msg.text} names={allNames} />
+            {msg.isEdited && (
+              <span className="ml-1 inline-flex items-center gap-1.5 text-[10px] italic opacity-70">
+                (editado)
+                <MessageVersions
+                  load={() => fetchNotebookMessageVersions(notebookId, msg.id)}
+                  triggerClassName="not-italic underline hover:opacity-100"
+                />
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex w-[min(36rem,90vw)] flex-col gap-2 p-1">
       <div
         className={cn(
           "flex h-[33vh] flex-col gap-2 overflow-y-auto",
-          messages.length === 0 && "items-center justify-center",
+          topLevel.length === 0 && "items-center justify-center",
         )}
       >
-        {messages.length === 0 ? (
+        {topLevel.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground">
             Nenhuma mensagem ainda.
           </p>
         ) : (
-          messages.map((msg) => {
+          topLevel.map((msg) => {
             const isMe = !!currentUserId && msg.userId === currentUserId;
-            const isEditing = editingId === msg.id;
-            const isDeleted = !!msg.deletedAt;
+            const replies = repliesByParent.get(msg.id) ?? [];
+            const isOpen = activeThread === msg.id;
             return (
               <div
                 key={msg.id}
                 className={cn(
-                  "group max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white",
-                  isMe
-                    ? "self-end rounded-tr-none"
-                    : "self-start rounded-tl-none",
+                  "flex flex-col gap-1",
+                  isMe ? "items-end" : "items-start",
                 )}
-                style={{ backgroundColor: msg.color }}
               >
-                <span className="mb-0.5 flex items-center gap-2 text-xs font-bold opacity-80">
-                  <span>{msg.name}</span>
-                  {isMe && !isEditing && !isDeleted && (
-                    <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(msg.id, msg.text)}
-                        className="hover:underline"
-                      >
-                        editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteMessage(msg.id)}
-                        className="hover:underline"
-                      >
-                        excluir
-                      </button>
-                    </span>
+                {renderBubble(msg)}
+                <div className="flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
+                  {replies.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveThread(isOpen ? null : msg.id)}
+                      className="hover:text-foreground"
+                    >
+                      {replies.length}{" "}
+                      {replies.length > 1 ? "respostas" : "resposta"}
+                    </button>
                   )}
-                </span>
-                {isDeleted ? (
-                  <span className="text-sm italic opacity-70">
-                    mensagem excluída
-                  </span>
-                ) : isEditing ? (
-                  <div className="flex flex-col gap-1.5">
-                    <input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          submitEdit();
-                        } else if (e.key === "Escape") {
-                          setEditingId(null);
-                        }
-                      }}
-                      // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
-                      autoFocus
-                      className="rounded-md bg-white/20 px-2 py-1 text-sm text-white outline-none placeholder:text-white/60"
-                    />
-                    <div className="flex gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={submitEdit}
-                        className="font-semibold hover:underline"
-                      >
-                        salvar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(null)}
-                        className="opacity-80 hover:underline"
-                      >
-                        cancelar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <MessageText text={msg.text} names={allNames} />
-                    {msg.isEdited && (
-                      <span className="ml-1 inline-flex items-center gap-1.5 text-[10px] italic opacity-70">
-                        (editado)
-                        <MessageVersions
-                          load={() =>
-                            fetchNotebookMessageVersions(notebookId, msg.id)
+                  {canSend && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveThread(isOpen ? null : msg.id)}
+                      className="hover:text-foreground"
+                    >
+                      responder
+                    </button>
+                  )}
+                </div>
+                {isOpen && (
+                  <div className="flex w-full flex-col gap-2 border-l-2 border-border pl-3">
+                    {replies.map((reply) => {
+                      const replyIsMe =
+                        !!currentUserId && reply.userId === currentUserId;
+                      return (
+                        <div
+                          key={reply.id}
+                          className={cn(
+                            "flex",
+                            replyIsMe ? "justify-end" : "justify-start",
+                          )}
+                        >
+                          {renderBubble(reply)}
+                        </div>
+                      );
+                    })}
+                    {canSend && (
+                      <input
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            submitReply(msg.id);
+                          } else if (e.key === "Escape") {
+                            setActiveThread(null);
                           }
-                          triggerClassName="not-italic underline hover:opacity-100"
-                        />
-                      </span>
+                        }}
+                        placeholder="Responder na thread..."
+                        className="h-9 w-full rounded-full border border-border bg-card px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
+                      />
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             );

@@ -275,12 +275,12 @@ export function usePresence(
   }, [pageId]);
 
   const sendChatMessage = useCallback(
-    (text: string) => {
+    (text: string, parentId?: string | null) => {
       const trimmed = text.trim();
       if (!trimmed) return;
       // persiste via REST; o servidor difunde o evento chat_message de volta
       // (inclusive para esta aba), e o upsert por id evita duplicar
-      sendNotebookMessage(pageId, { content: trimmed })
+      sendNotebookMessage(pageId, { content: trimmed, parentId: parentId ?? null })
         .then((dto) => {
           if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
         })

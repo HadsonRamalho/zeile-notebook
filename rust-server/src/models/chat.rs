@@ -101,6 +101,24 @@ pub async fn create_message(
         .map_err(|e| ApiError::Database(e.to_string()))
 }
 
+/// Resolve o pai de uma resposta: valida escopo e reparenta para a raiz da
+/// thread (modelo Slack de um nível — resposta de resposta vira resposta da raiz).
+pub async fn resolve_thread_parent(
+    conn: &mut AsyncPgConnection,
+    notebook_id: Option<Uuid>,
+    team_id: Option<Uuid>,
+    parent_id: Option<Uuid>,
+) -> Result<Option<Uuid>, ApiError> {
+    let Some(pid) = parent_id else {
+        return Ok(None);
+    };
+    let parent = get_message(conn, pid).await?;
+    if parent.notebook_id != notebook_id || parent.team_id != team_id {
+        return Err(ApiError::Request("Mensagem pai inválida".to_string()));
+    }
+    Ok(Some(parent.parent_id.unwrap_or(parent.id)))
+}
+
 pub async fn get_message(
     conn: &mut AsyncPgConnection,
     message_id: Uuid,
