@@ -41,3 +41,29 @@ export async function fetchAdminNotebooks(
   );
   return response;
 }
+
+export type AdminSearchKind = "users" | "teams" | "notebooks";
+
+export interface AdminSearchResult {
+  id: string;
+  label: string;
+  sublabel: string | null;
+}
+
+export async function adminSearch(kind: AdminSearchKind, q: string) {
+  return api.get<AdminSearchResult[]>(
+    `/admin/search?kind=${kind}&q=${encodeURIComponent(q)}`,
+  );
+}
+
+export interface AdminNotifyPayload {
+  targetKind: "user" | "team" | "notebook";
+  targetId: string;
+  title: string;
+  body: string;
+  url?: string;
+}
+
+export async function adminNotify(payload: AdminNotifyPayload) {
+  return api.post<void>("/admin/notify", payload);
+}

@@ -1,6 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::{
-    ExpressionMethods, QueryDsl,
+    BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl,
     dsl::sql,
     sql_types::{BigInt, Text},
 };
@@ -77,6 +77,88 @@ pub struct AdminNotebookView {
     pub created_at: DateTime<Utc>,
     #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Serialize)]
+pub struct AdminSearchResult {
+    pub id: Uuid,
+    pub label: String,
+    pub sublabel: Option<String>,
+}
+
+pub async fn search_users(
+    conn: &mut AsyncPgConnection,
+    query: &str,
+) -> Result<Vec<AdminSearchResult>, ApiError> {
+    use crate::schema::users::dsl::*;
+    let pattern = format!("%{}%", query);
+    users
+        .filter(name.ilike(&pattern).or(email.ilike(&pattern)))
+        .select((id, name, email))
+        .order(name.asc())
+        .limit(20)
+        .load::<(Uuid, String, String)>(conn)
+        .await
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(uid, uname, uemail)| AdminSearchResult {
+                    id: uid,
+                    label: uname,
+                    sublabel: Some(uemail),
+                })
+                .collect()
+        })
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn search_teams(
+    conn: &mut AsyncPgConnection,
+    query: &str,
+) -> Result<Vec<AdminSearchResult>, ApiError> {
+    use crate::schema::teams::dsl::*;
+    let pattern = format!("%{}%", query);
+    teams
+        .filter(name.ilike(&pattern))
+        .select((id, name, description))
+        .order(name.asc())
+        .limit(20)
+        .load::<(Uuid, String, Option<String>)>(conn)
+        .await
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(tid, tname, tdesc)| AdminSearchResult {
+                    id: tid,
+                    label: tname,
+                    sublabel: tdesc,
+                })
+                .collect()
+        })
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn search_notebooks(
+    conn: &mut AsyncPgConnection,
+    query: &str,
+) -> Result<Vec<AdminSearchResult>, ApiError> {
+    use crate::schema::notebooks::dsl::*;
+    let pattern = format!("%{}%", query);
+    notebooks
+        .filter(title.ilike(&pattern))
+        .select((id, title))
+        .order(updated_at.desc())
+        .limit(20)
+        .load::<(Uuid, String)>(conn)
+        .await
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(nid, ntitle)| AdminSearchResult {
+                    id: nid,
+                    label: ntitle,
+                    sublabel: None,
+                })
+                .collect()
+        })
+        .map_err(|e| ApiError::Database(e.to_string()))
 }
 
 pub async fn get_detailed_system_stats(

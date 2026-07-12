@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Book, Shield, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AdminNotify } from "@/components/interface/admin/admin-notify";
 import { BackButton } from "@/components/interface/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,11 +133,12 @@ export default function AdminDashboardPage() {
 
         <Tabs defaultValue="overview" className="w-full relative flex flex-col">
           <div className="flex w-full justify-start mb-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-100">
+            <TabsList className="grid w-full grid-cols-5 lg:w-125">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="teams">Times</TabsTrigger>
               <TabsTrigger value="notebooks">Cadernos</TabsTrigger>
+              <TabsTrigger value="notify">Notificar</TabsTrigger>
             </TabsList>
           </div>
 
@@ -462,6 +464,10 @@ export default function AdminDashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="notify">
+              <AdminNotify />
             </TabsContent>
           </div>
         </Tabs>
