@@ -30,6 +30,7 @@ export function NotebookControls() {
   const {
     handleToggleVisibility,
     notebook,
+    liveNotebook,
     isPublic,
     triggerClone,
     isCloning,
@@ -93,12 +94,21 @@ export function NotebookControls() {
     can(EXPORT_PERMISSION[f.format]),
   ).map((f) => ({ format: f.format, label: t(f.labelKey) }));
 
+  const exportBase = notebook ?? liveNotebook;
+  const exportSource = exportBase
+    ? {
+        ...exportBase,
+        title: liveNotebook?.title || notebook?.title || exportBase.title,
+        blocks: liveNotebook?.blocks ?? notebook?.blocks ?? [],
+      }
+    : null;
+
   const handleExport = async (format: ExportFormat) => {
-    if (!notebook || isExporting) return;
+    if (!exportSource || isExporting) return;
     setIsExporting(true);
     const toastId = toast.loading(t("exporting"));
     try {
-      await exportNotebook(notebook, format);
+      await exportNotebook(exportSource, format);
       toast.success(t("export_done"), { id: toastId });
     } catch {
       toast.error(t("export_error"), { id: toastId });

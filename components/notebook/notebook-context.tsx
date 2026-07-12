@@ -9,10 +9,7 @@ import {
   useState,
 } from "react";
 import { handleApiError } from "@/lib/api/handle-api-error";
-import {
-  getCurrentNotebook,
-  getCurrentNotebookWithBlocks,
-} from "@/lib/api/notebook-service";
+import { getCurrentNotebookWithBlocks } from "@/lib/api/notebook-service";
 import type { Notebook } from "@/lib/types";
 import { useNotebookManager } from "./notebook-manager";
 
@@ -29,6 +26,8 @@ interface NotebookContextType {
   addBlockSignal: number;
   notebook: Notebook | null;
   setNotebook: (n: Notebook) => void;
+  liveNotebook: Notebook | null;
+  setLiveNotebook: (n: Notebook | null) => void;
   isPublic: boolean;
   handleToggleVisibility: (v: boolean) => void;
   setIsCloning: (c: boolean) => void;
@@ -54,6 +53,7 @@ export function NotebookProvider({
   const [isDragging, setIsDragging] = useState(false);
   const [addBlockSignal, setAddBlockSignal] = useState(0);
   const [notebook, setNotebook] = useState<Notebook | null>(null);
+  const [liveNotebook, setLiveNotebook] = useState<Notebook | null>(null);
   const [isPublic, setVisibility] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
   const { clone, updateVisibility } = useNotebookManager();
@@ -110,6 +110,8 @@ export function NotebookProvider({
         triggerClone,
         notebook,
         setNotebook,
+        liveNotebook,
+        setLiveNotebook,
         isDragging,
         setIsDragging,
         hasSaved,

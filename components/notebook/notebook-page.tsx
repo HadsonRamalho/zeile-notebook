@@ -36,7 +36,6 @@ import type {
   Language,
   Notebook,
 } from "@/lib/types";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ScrollProgress } from "../ui/scroll-progress";
 import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
@@ -61,7 +60,7 @@ export default function RustInteractivePage({
   header,
 }: RustInteractivePageProps) {
   const { user } = useAuth();
-  const { isDragging, setIsDragging, notebook } = useNotebook();
+  const { isDragging, setIsDragging, setLiveNotebook } = useNotebook();
   const tokenX = getCookie("auth_token");
   const token = tokenX?.toString() || "";
   const sessionId = useRef(crypto.randomUUID()).current;
@@ -96,6 +95,11 @@ export default function RustInteractivePage({
     reorderBlocks,
     buildAutomergeHistory,
   } = useAutomergeSync(pageId, token);
+
+  useEffect(() => {
+    if (doc) setLiveNotebook(doc);
+  }, [doc, setLiveNotebook]);
+  useEffect(() => () => setLiveNotebook(null), [setLiveNotebook]);
 
   const {
     socketUserId,
@@ -178,7 +182,7 @@ export default function RustInteractivePage({
   };
 
   const blocks = useMemo(() => {
-    if (!displayDoc || !displayDoc.blocks) return [];
+    if (!displayDoc?.blocks) return [];
     const data = JSON.parse(JSON.stringify(displayDoc.blocks));
     return data as Block[];
   }, [displayDoc]);
