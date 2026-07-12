@@ -199,7 +199,15 @@
     "saving": "Salvando...",
     "saved": "Salvo!",
     "share": "Compartilhar",
-    "pdf": "Imprimir / Exportar PDF"
+    "export": "Exportar",
+    "export_markdown": "Markdown (.md)",
+    "export_markdown_assets": "Markdown + imagens (.zip)",
+    "export_pdf": "PDF",
+    "export_json": "JSON (.json)",
+    "export_json_assets": "JSON + imagens (.zip)",
+    "exporting": "Exportando...",
+    "export_done": "Exportação concluída!",
+    "export_error": "Falha ao exportar"
   },
   "sidebar": {
     "my_notebook": "Meu Caderno",
@@ -452,7 +460,15 @@
         },
         "reorder": "Reordenar blocos"
       },
-      "manage_public": "Gerenciar permissões públicas"
+      "manage_public": "Gerenciar permissões públicas",
+      "export": {
+        "all": "Exportar (todos os formatos)",
+        "markdown": "Exportar como Markdown",
+        "markdown_assets": "Exportar como Markdown + imagens",
+        "pdf": "Exportar como PDF",
+        "json": "Exportar como JSON",
+        "json_assets": "Exportar como JSON + imagens"
+      }
     },
     "team": {
       "manage": "Gerenciar time",

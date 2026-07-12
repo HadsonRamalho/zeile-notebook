@@ -199,7 +199,15 @@
     "saving": "Saving...",
     "saved": "Saved!",
     "share": "Share",
-    "pdf": "Print / Export PDF"
+    "export": "Export",
+    "export_markdown": "Markdown (.md)",
+    "export_markdown_assets": "Markdown + images (.zip)",
+    "export_pdf": "PDF",
+    "export_json": "JSON (.json)",
+    "export_json_assets": "JSON + images (.zip)",
+    "exporting": "Exporting...",
+    "export_done": "Export complete!",
+    "export_error": "Export failed"
   },
   "sidebar": {
     "my_notebook": "My Notebook",
@@ -452,7 +460,15 @@
         },
         "reorder": "Reorder blocks"
       },
-      "manage_public": "Manage public permissions"
+      "manage_public": "Manage public permissions",
+      "export": {
+        "all": "Export (all formats)",
+        "markdown": "Export as Markdown",
+        "markdown_assets": "Export as Markdown + images",
+        "pdf": "Export as PDF",
+        "json": "Export as JSON",
+        "json_assets": "Export as JSON + images"
+      }
     },
     "team": {
       "manage": "Manage team",
