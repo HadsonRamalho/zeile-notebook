@@ -87,6 +87,17 @@ pub async fn init_routes() -> Router {
             app_state.pool.clone(),
         ));
 
+        {
+            let pool = app_state.pool.clone();
+            tokio::spawn(async move {
+                match crate::models::notebook::backfill_search_text(&pool).await {
+                    Ok(n) if n > 0 => tracing::info!("search_text backfill: {n} notebooks"),
+                    Ok(_) => {}
+                    Err(e) => tracing::warn!("search_text backfill falhou: {e}"),
+                }
+            });
+        }
+
         // backplane multi-nó: escuta NOTIFY de mudança de capabilities de outros nós
         tokio::spawn(crate::controllers::permissions::caps_listen_loop(
             db_url_listen,

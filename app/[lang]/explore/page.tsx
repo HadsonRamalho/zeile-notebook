@@ -61,28 +61,23 @@ export default function PublicNotebooksPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const loadNotebooks = async () => {
-    const fetchedNotebooks = await fetchPublicNotebooks();
-    setNotebooks(fetchedNotebooks);
-  };
-
   useEffect(() => {
-    loadNotebooks();
-  }, []);
+    const handle = setTimeout(() => {
+      fetchPublicNotebooks(query).then(setNotebooks);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [query]);
 
   const filtered = useMemo(() => {
     return notebooks.filter((notebook) => {
       const isTeam = !!notebook.team_id;
       if (filter === "personal" && isTeam) return false;
       if (filter === "team" && !isTeam) return false;
-      if (!query.trim()) return true;
-      const q = query.trim().toLowerCase();
-      return (
-        notebook.title.toLowerCase().includes(q) ||
-        notebook.owner_name.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [notebooks, filter, query]);
+  }, [notebooks, filter]);
+
+  const hasActiveCriteria = query.trim() !== "" || filter !== "all";
 
   return (
     <div className="relative mx-auto w-full max-w-300 space-y-8 p-4 pt-10 md:p-8">
@@ -99,7 +94,7 @@ export default function PublicNotebooksPage() {
         </div>
       </div>
 
-      {notebooks.length > 0 && (
+      {(notebooks.length > 0 || hasActiveCriteria) && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -128,13 +123,13 @@ export default function PublicNotebooksPage() {
         </div>
       )}
 
-      {notebooks.length > 0 && (
+      {filtered.length > 0 && (
         <p className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
           {t("count", { count: filtered.length })}
         </p>
       )}
 
-      {notebooks.length === 0 ? (
+      {filtered.length === 0 && !hasActiveCriteria ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-20 text-center">
           <Search className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
           <h3 className="text-xl font-semibold">{t("empty_state_title")}</h3>

@@ -31,7 +31,7 @@ use crate::{
         permissions::{CapabilitySet, TargetCtx, capabilities_cached},
     },
     models::{
-        notebook::{checkpoint_notebook_data, load_notebook_data},
+        notebook::{checkpoint_notebook_data, extract_search_text, load_notebook_data},
         state::AppState,
     },
 };
@@ -61,13 +61,14 @@ pub async fn checkpoint_loop(registry: SyncRegistry, pool: Pool<AsyncPgConnectio
             if !nb.dirty_since_save.swap(false, Ordering::AcqRel) {
                 continue;
             }
-            let data = {
+            let (data, search_text) = {
                 let mut inner = nb.inner.lock().await;
-                inner.doc.save()
+                let data = inner.doc.save();
+                (data, extract_search_text(&inner.doc))
             };
             match pool.get().await {
                 Ok(mut conn) => {
-                    checkpoint_notebook_data(&mut conn, id, data).await;
+                    checkpoint_notebook_data(&mut conn, id, data, search_text).await;
                     METRICS.notebook_saves_total.inc();
                 }
                 Err(_) => {
@@ -210,13 +211,14 @@ async fn handle_socket(
         let mut inner = notebook.inner.lock().await;
         inner.peer_states.remove(&session_id);
         if notebook.peers.is_empty() {
-            Some(inner.doc.save())
+            let data = inner.doc.save();
+            Some((data, extract_search_text(&inner.doc)))
         } else {
             None
         }
     };
 
-    if let Some(data) = data_to_save {
+    if let Some((data, search_text)) = data_to_save {
         if registry
             .remove_if(&notebook_id, |_, nb| nb.peers.is_empty())
             .is_some()
@@ -226,7 +228,7 @@ async fn handle_socket(
         let pool_clone = pool.clone();
         tokio::spawn(async move {
             if let Ok(mut conn) = pool_clone.get().await {
-                checkpoint_notebook_data(&mut conn, notebook_id, data).await;
+                checkpoint_notebook_data(&mut conn, notebook_id, data, search_text).await;
                 METRICS.notebook_saves_total.inc();
             }
         });
@@ -897,12 +899,13 @@ async fn handle_combined_socket(
         let mut inner = notebook.inner.lock().await;
         inner.peer_states.remove(&session_id);
         if notebook.peers.is_empty() {
-            Some(inner.doc.save())
+            let data = inner.doc.save();
+            Some((data, extract_search_text(&inner.doc)))
         } else {
             None
         }
     };
-    if let Some(data) = data_to_save {
+    if let Some((data, search_text)) = data_to_save {
         if state
             .sync_registry
             .remove_if(&notebook_id, |_, nb| nb.peers.is_empty())
@@ -913,7 +916,7 @@ async fn handle_combined_socket(
         let pool_clone = state.pool.clone();
         tokio::spawn(async move {
             if let Ok(mut conn) = pool_clone.get().await {
-                checkpoint_notebook_data(&mut conn, notebook_id, data).await;
+                checkpoint_notebook_data(&mut conn, notebook_id, data, search_text).await;
                 METRICS.notebook_saves_total.inc();
             }
         });

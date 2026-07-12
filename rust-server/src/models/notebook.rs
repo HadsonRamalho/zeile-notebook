@@ -1,8 +1,9 @@
 use crate::{models::error::ApiError, schema::blocks::dsl as blocks_dsl};
+use automerge::{AutoCommit, ObjType, ReadDoc, ROOT, ScalarValue, Value as AmValue};
 use chrono::{DateTime, Utc};
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    OptionalExtension, PgTextExpressionMethods, QueryDsl, Selectable,
+    OptionalExtension, PgTextExpressionMethods, QueryDsl, Selectable, SelectableHelper,
     prelude::{Associations, Identifiable, Insertable, Queryable},
 };
 use diesel_async::{
@@ -184,6 +185,12 @@ pub struct SearchQuery {
     pub q: String,
 }
 
+#[derive(Deserialize, Default)]
+pub struct PublicSearchQuery {
+    #[serde(default)]
+    pub q: Option<String>,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct SearchResult {
     pub id: Uuid,
@@ -246,6 +253,7 @@ pub async fn find_notebook_by_id(
     use crate::schema::notebooks::dsl::*;
     match notebooks
         .filter(id.eq(param_id))
+        .select(Notebook::as_select())
         .get_result::<Notebook>(conn)
         .await
     {
@@ -309,6 +317,7 @@ pub async fn get_all_notebooks(
     match notebooks
         .filter(user_id.eq(param_id))
         .order(updated_at.desc())
+        .select(Notebook::as_select())
         .load::<Notebook>(conn)
         .await
     {
@@ -381,6 +390,7 @@ pub async fn get_notebook_with_blocks(
 ) -> Result<NotebookResponse, String> {
     let notebook: Notebook = match notebooks::table
         .find(param_id)
+        .select(Notebook::as_select())
         .first::<Notebook>(conn)
         .await
     {
@@ -437,6 +447,7 @@ pub async fn clone_notebook(
 
     let target_notebook: Notebook = match notebooks
         .filter(id.eq(target_notebook_id))
+        .select(Notebook::as_select())
         .get_result(conn)
         .await
     {
@@ -554,6 +565,7 @@ pub async fn save_notebook_data(
 
     let notebook: Notebook = notebooks
         .filter(id.eq(notebook_id_param))
+        .select(Notebook::as_select())
         .get_result(conn)
         .await
         .unwrap();
@@ -586,12 +598,50 @@ pub async fn save_notebook_data(
         .ok();
 }
 
-/// persiste o estado autoritativo do doc sem checagem de permissão (a escrita já foi
-/// autorizada por mutação); usado pelo checkpoint periódico
+pub fn extract_search_text(doc: &AutoCommit) -> String {
+    let blocks_id = match doc.get(ROOT, "blocks") {
+        Ok(Some((AmValue::Object(ObjType::List), obj))) => obj,
+        _ => return String::new(),
+    };
+
+    let mut out = String::new();
+    let len = doc.length(&blocks_id);
+    for i in 0..len {
+        let block_id = match doc.get(&blocks_id, i) {
+            Ok(Some((AmValue::Object(ObjType::Map), obj))) => obj,
+            _ => continue,
+        };
+
+        for key in ["title", "content"] {
+            match doc.get(&block_id, key) {
+                Ok(Some((AmValue::Object(ObjType::Text), text_id))) => {
+                    if let Ok(t) = doc.text(&text_id)
+                        && !t.is_empty()
+                    {
+                        out.push_str(&t);
+                        out.push('\n');
+                    }
+                }
+                Ok(Some((AmValue::Scalar(s), _))) => {
+                    if let ScalarValue::Str(txt) = s.as_ref()
+                        && !txt.is_empty()
+                    {
+                        out.push_str(txt);
+                        out.push('\n');
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    out
+}
+
 pub async fn checkpoint_notebook_data(
     conn: &mut AsyncPgConnection,
     notebook_id_param: Uuid,
     data: Vec<u8>,
+    search_text_param: String,
 ) {
     use crate::schema::notebooks::dsl::*;
 
@@ -599,11 +649,49 @@ pub async fn checkpoint_notebook_data(
         .filter(id.eq(notebook_id_param))
         .set((
             document_data.eq(data),
+            search_text.eq(search_text_param),
             updated_at.eq(chrono::Utc::now().naive_utc()),
         ))
         .execute(conn)
         .await
         .ok();
+}
+
+pub async fn backfill_search_text(
+    pool: &Pool<AsyncPgConnection>,
+) -> Result<usize, String> {
+    use crate::schema::notebooks::dsl::*;
+
+    let mut conn = pool.get().await.map_err(|e| e.to_string())?;
+
+    let rows: Vec<(Uuid, Option<Vec<u8>>)> = notebooks
+        .filter(search_text.eq("").and(document_data.is_not_null()))
+        .select((id, document_data))
+        .load(&mut conn)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut updated = 0usize;
+    for (nb_id, data) in rows {
+        let Some(bytes) = data else { continue };
+        let Ok(doc) = AutoCommit::load(&bytes) else {
+            continue;
+        };
+        let text = extract_search_text(&doc);
+        if text.is_empty() {
+            continue;
+        }
+        if diesel::update(notebooks.filter(id.eq(nb_id)))
+            .set(search_text.eq(text))
+            .execute(&mut conn)
+            .await
+            .is_ok()
+        {
+            updated += 1;
+        }
+    }
+
+    Ok(updated)
 }
 
 pub async fn check_permission(
@@ -622,6 +710,7 @@ pub async fn check_permission(
 
     let notebook = match notebooks::table
         .filter(notebooks::id.eq(notebook_id))
+        .select(Notebook::as_select())
         .first::<Notebook>(&mut conn)
         .await
         .optional()
@@ -670,6 +759,7 @@ pub async fn get_team_notebooks(
     match notebooks
         .filter(team_id.eq(param_id))
         .order(updated_at.desc())
+        .select(Notebook::as_select())
         .load::<Notebook>(conn)
         .await
     {
@@ -680,14 +770,27 @@ pub async fn get_team_notebooks(
 
 pub async fn get_public_notebooks(
     conn: &mut AsyncPgConnection,
+    q: Option<&str>,
 ) -> Result<Vec<PublicNotebookResponse>, ApiError> {
     use crate::schema::teams;
     use crate::schema::users;
 
-    let raw_results = match notebooks::table
+    let mut query = notebooks::table
         .left_join(users::table.on(notebooks::user_id.eq(users::id.nullable())))
         .left_join(teams::table.on(notebooks::team_id.eq(teams::id.nullable())))
         .filter(notebooks::is_public.eq(true))
+        .into_boxed();
+
+    if let Some(term) = q {
+        let pattern = format!("%{}%", term);
+        query = query.filter(
+            notebooks::title
+                .ilike(pattern.clone())
+                .or(notebooks::search_text.ilike(pattern)),
+        );
+    }
+
+    let raw_results = match query
         .order(notebooks::updated_at.desc())
         .select((
             notebooks::id,

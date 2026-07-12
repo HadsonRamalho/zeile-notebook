@@ -58,6 +58,7 @@ diesel::table! {
         is_public -> Bool,
         document_data -> Nullable<Bytea>,
         team_id -> Nullable<Uuid>,
+        search_text -> Text,
     }
 }
 

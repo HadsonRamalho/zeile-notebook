@@ -65,6 +65,10 @@ export async function getUserNotebookPermissions(id: string) {
   return await api.get<TeamRole>(`/notebook/${id}/permissions`);
 }
 
-export async function fetchPublicNotebooks() {
-  return await api.get<PublicNotebookResponse[]>("/notebook/all/public");
+export async function fetchPublicNotebooks(query?: string) {
+  const q = query?.trim();
+  const path = q
+    ? `/notebook/all/public?q=${encodeURIComponent(q)}`
+    : "/notebook/all/public";
+  return await api.get<PublicNotebookResponse[]>(path);
 }
