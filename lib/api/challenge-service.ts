@@ -5,6 +5,7 @@ import type {
   CreateChallengePayload,
   CreateTestCasePayload,
   LeaderboardEntry,
+  SampleRunResponse,
   SubmissionView,
   SubmitPayload,
 } from "@/lib/types/challenge-types";
@@ -45,6 +46,10 @@ export async function setReferenceSolution(
 
 export async function submitSolution(id: string, payload: SubmitPayload) {
   return api.post<SubmissionView>(`/challenge/${id}/submit`, payload);
+}
+
+export async function runSamples(id: string, payload: SubmitPayload) {
+  return api.post<SampleRunResponse>(`/challenge/${id}/run`, payload);
 }
 
 export async function getSubmission(submissionId: string) {

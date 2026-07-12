@@ -9,9 +9,10 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-use crate::controllers::challenge_judge::judge_submission;
+use crate::controllers::challenge_judge::{judge_submission, limits_for, normalize};
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::utils::get_conn;
+use crate::executor::{ExecVerdict, compile_code, run_compiled};
 use crate::models::challenge::{
     self, Challenge, ChallengePublic, LeaderboardEntry, NewChallenge, NewSubmission, NewTestCase,
     SubmissionView, TestCasePublic, UpdateChallenge,
@@ -85,6 +86,22 @@ pub struct SetReferenceRequest {
 pub struct SubmitRequest {
     pub language: String,
     pub code: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct SampleResultView {
+    pub input: String,
+    pub expected: Option<String>,
+    pub stdout: String,
+    pub stderr: Option<String>,
+    pub verdict: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct RunSamplesResponse {
+    #[serde(rename = "compileError")]
+    pub compile_error: Option<String>,
+    pub results: Vec<SampleResultView>,
 }
 
 const VALID_JUDGE_MODES: [&str; 3] = ["io", "reference", "property"];
@@ -317,6 +334,82 @@ pub async fn api_submit(
             results: Vec::new(),
         }),
     ))
+}
+
+pub async fn api_run_samples(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<SubmitRequest>,
+) -> Result<Json<RunSamplesResponse>, ApiError> {
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+
+    let allowed_languages: Vec<String> = ch
+        .languages
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    if !allowed_languages.contains(&payload.language) {
+        return Err(ApiError::Request(
+            "Linguagem não permitida para este desafio".to_string(),
+        ));
+    }
+    if payload.code.trim().is_empty() {
+        return Err(ApiError::Request("Código vazio".to_string()));
+    }
+
+    let samples = challenge::list_public_test_cases(&mut conn, id).await?;
+    let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
+    let session = format!("run_{}", Uuid::new_v4());
+
+    let _permit = state.judge_semaphore.clone().acquire_owned().await;
+
+    let bin = match compile_code(&payload.language, &payload.code, &session).await {
+        Ok(b) => b,
+        Err(msg) => {
+            let trimmed: String = msg.chars().take(2000).collect();
+            return Ok(Json(RunSamplesResponse {
+                compile_error: Some(trimmed),
+                results: Vec::new(),
+            }));
+        }
+    };
+
+    let mut results = Vec::new();
+    for case in samples {
+        let run = run_compiled(&bin, Some(&case.input), limits).await;
+        let verdict = match run.verdict {
+            ExecVerdict::CompileError => "CE",
+            ExecVerdict::Timeout => "TLE",
+            ExecVerdict::RuntimeError => "RE",
+            ExecVerdict::Ok => match &case.expected {
+                Some(exp) if normalize(&run.stdout) == normalize(exp) => "AC",
+                Some(_) => "WA",
+                None => "SKIP",
+            },
+        };
+        let stderr = if run.stderr.trim().is_empty() {
+            None
+        } else {
+            Some(run.stderr.chars().take(2000).collect())
+        };
+        results.push(SampleResultView {
+            input: case.input,
+            expected: case.expected,
+            stdout: run.stdout.chars().take(4000).collect(),
+            stderr,
+            verdict: verdict.to_string(),
+        });
+    }
+
+    Ok(Json(RunSamplesResponse {
+        compile_error: None,
+        results,
+    }))
 }
 
 pub async fn api_get_submission(

@@ -12,7 +12,7 @@ use crate::models::state::AppState;
 
 const STDERR_SNIPPET_LIMIT: usize = 500;
 
-fn normalize(s: &str) -> String {
+pub fn normalize(s: &str) -> String {
     s.replace("\r\n", "\n")
         .lines()
         .map(|l| l.trim_end())
@@ -30,7 +30,7 @@ fn truncate(s: &str, limit: usize) -> Option<String> {
     Some(trimmed)
 }
 
-fn limits_for(time_limit_ms: i32, mem_limit_kb: i32) -> RunLimits {
+pub fn limits_for(time_limit_ms: i32, mem_limit_kb: i32) -> RunLimits {
     let wall_ms = time_limit_ms.max(500) as u64;
     RunLimits {
         cpu_secs: (wall_ms / 1000).max(1) + 2,

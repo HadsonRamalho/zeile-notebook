@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { BookSearch, Code, Lock, Sparkles, Users } from "lucide-react";
+import { BookSearch, Code, Lock, Puzzle, Sparkles, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -46,6 +46,14 @@ export default function HomePage() {
               >
                 <BookSearch className="mr-2 h-4 w-4" />
                 {t("nav.explore")}
+              </Link>
+
+              <Link
+                href="/challenges"
+                className="flex h-14 items-center justify-center rounded-full border bg-background px-8 text-sm font-bold shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground w-full"
+              >
+                <Puzzle className="mr-2 h-4 w-4" />
+                {t("nav.challenges")}
               </Link>
             </div>
           </div>

@@ -65,6 +65,19 @@ export interface SubmissionView {
   results: SubmissionResultView[];
 }
 
+export interface SampleRunResult {
+  input: string;
+  expected: string | null;
+  stdout: string;
+  stderr: string | null;
+  verdict: Verdict;
+}
+
+export interface SampleRunResponse {
+  compileError: string | null;
+  results: SampleRunResult[];
+}
+
 export interface LeaderboardEntry {
   userId: string;
   authorName: string;
