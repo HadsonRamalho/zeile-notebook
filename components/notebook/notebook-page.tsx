@@ -410,6 +410,7 @@ export default function RustInteractivePage({
                   <div
                     tabIndex={0}
                     data-block-index={index}
+                    data-block-id={block.id}
                     onKeyDown={(e) => handleBlockKeyDown(e, index)}
                     onFocus={() => updateFocus(block.id)}
                     onBlur={() => updateFocus(null)}

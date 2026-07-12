@@ -1,13 +1,6 @@
-import {
-  Copy,
-  Globe,
-  KeyRound,
-  Lock,
-  Printer,
-  Share2,
-  Users,
-} from "lucide-react";
+import { Copy, Globe, KeyRound, Lock, Share2, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { Loader } from "@/components/motion/loader";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import {
@@ -32,7 +25,7 @@ interface ControlActionsProps {
   onToggleVisibility: (isPublic: boolean) => void;
   onClone: () => void;
   onShare: () => void;
-  onExport: () => void;
+  exportMenu: ReactNode;
   onManagePublic: () => void;
   onManageTeamPerms: () => void;
 }
@@ -80,7 +73,7 @@ export function ControlActions({
   onToggleVisibility,
   onClone,
   onShare,
-  onExport,
+  exportMenu,
   onManagePublic,
   onManageTeamPerms,
 }: ControlActionsProps) {
@@ -140,13 +133,7 @@ export function ControlActions({
         />
       )}
 
-      {rules.showExport && (
-        <DockAction
-          icon={<Printer className="size-4" />}
-          label={t("pdf")}
-          onClick={onExport}
-        />
-      )}
+      {rules.showExport && exportMenu}
 
       {rules.showTeamPerms && (
         <DockAction

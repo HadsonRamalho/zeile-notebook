@@ -1,14 +1,29 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
 import { getNotebookMeta, type NotebookMeta } from "@/lib/api/notebook-service";
+import {
+  EXPORT_PERMISSION,
+  type ExportFormat,
+  exportNotebook,
+} from "@/lib/export";
+import { ExportMenu, type ExportOption } from "./export-menu";
 import { useNotebook } from "./notebook-context";
 import { ControlActions, type ControlRules } from "./notebook-controls-actions";
 import { useCan } from "./permissions/capabilities";
 import { PublicNotebookPermissions } from "./permissions/public-notebook-permissions";
 import { TeamNotebookPermissions } from "./permissions/team-notebook-permissions";
+
+const EXPORT_FORMATS: { format: ExportFormat; labelKey: string }[] = [
+  { format: "markdown", labelKey: "export_markdown" },
+  { format: "markdown_assets", labelKey: "export_markdown_assets" },
+  { format: "pdf", labelKey: "export_pdf" },
+  { format: "json", labelKey: "export_json" },
+  { format: "json_assets", labelKey: "export_json_assets" },
+];
 
 export function NotebookControls() {
   const { user } = useAuth();
@@ -22,6 +37,8 @@ export function NotebookControls() {
   const [meta, setMeta] = useState<NotebookMeta | null>(null);
   const [publicPermsOpen, setPublicPermsOpen] = useState(false);
   const [teamPermsOpen, setTeamPermsOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const t = useTranslations("notebook_controls");
 
   useEffect(() => {
     if (!notebook?.id) return;
@@ -72,11 +89,29 @@ export function NotebookControls() {
 
   const can = useCan();
 
+  const exportOptions: ExportOption[] = EXPORT_FORMATS.filter((f) =>
+    can(EXPORT_PERMISSION[f.format]),
+  ).map((f) => ({ format: f.format, label: t(f.labelKey) }));
+
+  const handleExport = async (format: ExportFormat) => {
+    if (!notebook || isExporting) return;
+    setIsExporting(true);
+    const toastId = toast.loading(t("exporting"));
+    try {
+      await exportNotebook(notebook, format);
+      toast.success(t("export_done"), { id: toastId });
+    } catch {
+      toast.error(t("export_error"), { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const rules: ControlRules = {
     showPrivacySelector: can("notebook.manage_privacy"),
     showClone: !!user,
     showShare: true,
-    showExport: true,
+    showExport: exportOptions.length > 0,
     showPublicPerms: isPublic && can("notebook.manage_public"),
     showTeamPerms: !!meta?.team_id && can("team.roles.edit_role_permissions"),
   };
@@ -90,7 +125,14 @@ export function NotebookControls() {
         onToggleVisibility={handleToggleVisibility}
         onClone={triggerClone}
         onShare={handleShare}
-        onExport={() => window.print()}
+        exportMenu={
+          <ExportMenu
+            options={exportOptions}
+            busy={isExporting}
+            triggerLabel={t("export")}
+            onExport={handleExport}
+          />
+        }
         onManagePublic={() => setPublicPermsOpen(true)}
         onManageTeamPerms={() => setTeamPermsOpen(true)}
       />
