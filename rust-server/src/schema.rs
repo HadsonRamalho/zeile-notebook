@@ -75,6 +75,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    notification_preferences (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        #[max_length = 16]
+        scope_kind -> Varchar,
+        scope_id -> Nullable<Uuid>,
+        push_enabled -> Bool,
+        inapp_enabled -> Bool,
+        chat_enabled -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     notifications (id) {
         id -> Uuid,
         user_id -> Uuid,
@@ -234,6 +249,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     chat_message_versions,
     chat_messages,
     notebooks,
+    notification_preferences,
     notifications,
     permission_grants,
     push_subscriptions,

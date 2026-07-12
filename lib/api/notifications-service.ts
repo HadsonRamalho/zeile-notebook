@@ -33,3 +33,34 @@ export async function markAllNotificationsRead() {
 export async function deleteNotification(id: string) {
   return api.delete<void>(`/notifications/${id}`);
 }
+
+export interface NotificationPreferenceDTO {
+  id: string;
+  userId: string;
+  scopeKind: "global" | "notebook" | "team";
+  scopeId: string | null;
+  pushEnabled: boolean;
+  inappEnabled: boolean;
+  chatEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavePreferencePayload {
+  scopeKind: "global" | "notebook" | "team";
+  scopeId?: string | null;
+  pushEnabled: boolean;
+  inappEnabled: boolean;
+  chatEnabled: boolean;
+}
+
+export async function fetchNotificationPreferences() {
+  return api.get<NotificationPreferenceDTO[]>("/notifications/preferences");
+}
+
+export async function saveNotificationPreference(payload: SavePreferencePayload) {
+  return api.put<NotificationPreferenceDTO>(
+    "/notifications/preferences",
+    payload,
+  );
+}

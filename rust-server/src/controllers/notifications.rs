@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, State},
 };
 use hyper::{HeaderMap, StatusCode};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -15,6 +15,9 @@ use crate::{
         notification::{
             self, NewNotification, Notification, create_notification, list_for_user,
             mark_all_read, mark_read, unread_count,
+        },
+        notification_preference::{
+            NotificationPreference, list_for_user as list_prefs, upsert_preference,
         },
         state::AppState,
     },
@@ -38,18 +41,44 @@ pub async fn deliver_notification(
     user_id: Uuid,
     input: &NotificationInput,
 ) {
+    let (scope_kind, scope_id) = if let Some(nb) = input.notebook_id {
+        ("notebook", Some(nb))
+    } else if let Some(team) = input.team_id {
+        ("team", Some(team))
+    } else {
+        ("global", None)
+    };
+
+    let is_chat = input.kind.starts_with("chat");
+
     if let Ok(mut conn) = get_conn(&state.pool).await {
-        let row = NewNotification {
-            id: Uuid::new_v4(),
-            user_id,
-            kind: input.kind.clone(),
-            title: input.title.clone(),
-            body: input.body.clone(),
-            url: input.url.clone(),
-            notebook_id: input.notebook_id,
-            team_id: input.team_id,
-        };
-        let _ = create_notification(&mut conn, &row).await;
+        let prefs = crate::models::notification_preference::resolve(
+            &mut conn, user_id, scope_kind, scope_id,
+        )
+        .await;
+
+        // o toggle de chat só barra notificações de chat
+        if is_chat && !prefs.chat {
+            return;
+        }
+
+        if prefs.inapp {
+            let row = NewNotification {
+                id: Uuid::new_v4(),
+                user_id,
+                kind: input.kind.clone(),
+                title: input.title.clone(),
+                body: input.body.clone(),
+                url: input.url.clone(),
+                notebook_id: input.notebook_id,
+                team_id: input.team_id,
+            };
+            let _ = create_notification(&mut conn, &row).await;
+        }
+
+        if !prefs.push {
+            return;
+        }
     }
 
     let url = input.url.as_deref().unwrap_or("/");
@@ -140,4 +169,66 @@ pub async fn api_delete_notification(
 
     notification::delete_notification(conn, user_id, notification_id).await?;
     Ok(StatusCode::OK)
+}
+
+pub async fn api_list_preferences(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Vec<NotificationPreference>>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let prefs = list_prefs(conn, user_id).await?;
+    Ok((StatusCode::OK, Json(prefs)))
+}
+
+#[derive(Deserialize)]
+pub struct UpsertPreferenceRequest {
+    #[serde(rename = "scopeKind")]
+    pub scope_kind: String,
+    #[serde(rename = "scopeId")]
+    pub scope_id: Option<Uuid>,
+    #[serde(rename = "pushEnabled")]
+    pub push_enabled: bool,
+    #[serde(rename = "inappEnabled")]
+    pub inapp_enabled: bool,
+    #[serde(rename = "chatEnabled")]
+    pub chat_enabled: bool,
+}
+
+pub async fn api_upsert_preference(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<UpsertPreferenceRequest>,
+) -> Result<(StatusCode, Json<NotificationPreference>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    if !matches!(payload.scope_kind.as_str(), "global" | "notebook" | "team") {
+        return Err(ApiError::Request("Escopo inválido".to_string()));
+    }
+    let scope_id = if payload.scope_kind == "global" {
+        None
+    } else {
+        payload.scope_id
+    };
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let pref = upsert_preference(
+        conn,
+        user_id,
+        &payload.scope_kind,
+        scope_id,
+        payload.push_enabled,
+        payload.inapp_enabled,
+        payload.chat_enabled,
+    )
+    .await?;
+
+    Ok((StatusCode::OK, Json(pref)))
 }

@@ -1,8 +1,17 @@
 "use client";
 
-import { Bell, CheckCheck, Megaphone, MessagesSquare, Trash2 } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  Megaphone,
+  MessagesSquare,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { BackButton } from "@/components/interface/back-button";
+import { NotificationPreferences } from "@/components/interface/notifications/notification-preferences";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 import type { NotificationDTO } from "@/lib/api/notifications-service";
@@ -28,6 +37,7 @@ function timeAgo(iso: string) {
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const [showPrefs, setShowPrefs] = useState(false);
   const { items, unreadCount, loading, markRead, markAllRead, remove } =
     useNotifications();
 
@@ -51,13 +61,27 @@ export default function NotificationsPage() {
           </h1>
           <BackButton />
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAllRead}>
-            <CheckCheck className="size-4" />
-            Marcar todas como lidas
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAllRead}>
+              <CheckCheck className="size-4" />
+              Marcar todas como lidas
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-pressed={showPrefs}
+            aria-label="Preferências de notificação"
+            onClick={() => setShowPrefs((v) => !v)}
+            className={cn(showPrefs && "bg-accent text-foreground")}
+          >
+            <Settings2 className="size-4" />
           </Button>
-        )}
+        </div>
       </div>
+
+      {showPrefs && <NotificationPreferences />}
 
       {loading ? (
         <div className="space-y-2" aria-hidden>
