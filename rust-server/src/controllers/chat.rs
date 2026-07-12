@@ -16,7 +16,10 @@ use crate::{
     },
     models::{
         self,
-        chat::{ChatMessage, EditMessageRequest, NewChatMessage, SendMessageRequest},
+        chat::{
+            ChatMessage, ChatMessageVersion, EditMessageRequest, NewChatMessage,
+            SendMessageRequest,
+        },
         error::ApiError,
         state::AppState,
     },
@@ -143,7 +146,11 @@ pub async fn api_edit_notebook_message(
     if existing.user_id != Some(user_id) {
         return Err(ApiError::PermissionDenied("chat.messages.edit".to_string()));
     }
+    if existing.content == content {
+        return Ok((StatusCode::OK, Json(existing)));
+    }
 
+    models::chat::create_message_version(conn, message_id, &existing.content).await?;
     let updated = models::chat::update_message_content(conn, message_id, &content).await?;
 
     broadcast_chat_and_notify(
@@ -184,9 +191,64 @@ pub async fn api_edit_team_message(
     if existing.user_id != Some(user_id) {
         return Err(ApiError::PermissionDenied("chat.messages.edit".to_string()));
     }
+    if existing.content == content {
+        return Ok((StatusCode::OK, Json(existing)));
+    }
 
+    models::chat::create_message_version(conn, message_id, &existing.content).await?;
     let updated = models::chat::update_message_content(conn, message_id, &content).await?;
     Ok((StatusCode::OK, Json(updated)))
+}
+
+pub async fn api_list_notebook_message_versions(
+    State(state): State<Arc<AppState>>,
+    Path((notebook_id, message_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Vec<ChatMessageVersion>>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await.ok().map(|c| c.1.id);
+
+    require(
+        &state.pool,
+        user_id,
+        notebook_id,
+        "chat.view",
+        &TargetCtx::default(),
+    )
+    .await?;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let existing = models::chat::get_message(conn, message_id).await?;
+    if existing.notebook_id != Some(notebook_id) {
+        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+    }
+
+    let versions = models::chat::list_message_versions(conn, message_id).await?;
+    Ok((StatusCode::OK, Json(versions)))
+}
+
+pub async fn api_list_team_message_versions(
+    State(state): State<Arc<AppState>>,
+    Path((team_id, message_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Vec<ChatMessageVersion>>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    require_team_permission(conn, user_id, team_id, "chat.view").await?;
+
+    let existing = models::chat::get_message(conn, message_id).await?;
+    if existing.team_id != Some(team_id) {
+        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+    }
+
+    let versions = models::chat::list_message_versions(conn, message_id).await?;
+    Ok((StatusCode::OK, Json(versions)))
 }
 
 pub async fn api_list_team_messages(

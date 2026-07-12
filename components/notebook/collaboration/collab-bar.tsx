@@ -13,11 +13,13 @@ import { Button } from "@/components/ui/button";
 import type { AutomergeHistoryEntry } from "@/hooks/use-automerge-sync";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
 import type { ChatMessage, Collaborator } from "@/hooks/use-presence";
+import { fetchNotebookMessageVersions } from "@/lib/api/chat-service";
 import { updateAppBadge } from "@/lib/appBadge";
 import type { Notebook } from "@/lib/types";
 import type { User } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
 import { useCan } from "../permissions/capabilities";
+import { MessageVersions } from "./message-versions";
 
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
@@ -143,6 +145,7 @@ interface CollabBarProps {
   onLoadMoreAutomergeHistory: () => void;
   previewDoc: Notebook | null;
   setPreviewDoc: (d: Notebook | null) => void;
+  notebookId: string;
   messages: ChatMessage[];
   sendChatMessage: (text: string) => void;
   editMessage: (messageId: string, content: string) => void;
@@ -265,12 +268,16 @@ function HistoryTabContent({
 }
 
 function ChatPanel({
+  notebookId,
   messages,
   sendChatMessage,
   editMessage,
   currentUserId,
   allUsers,
-}: Pick<CollabBarProps, "messages" | "sendChatMessage" | "editMessage"> & {
+}: Pick<
+  CollabBarProps,
+  "notebookId" | "messages" | "sendChatMessage" | "editMessage"
+> & {
   currentUserId: string | null;
   allUsers: PresenceUser[];
 }) {
@@ -424,8 +431,14 @@ function ChatPanel({
                   <>
                     <MessageText text={msg.text} names={allNames} />
                     {msg.isEdited && (
-                      <span className="ml-1 text-[10px] italic opacity-70">
+                      <span className="ml-1 inline-flex items-center gap-1.5 text-[10px] italic opacity-70">
                         (editado)
+                        <MessageVersions
+                          load={() =>
+                            fetchNotebookMessageVersions(notebookId, msg.id)
+                          }
+                          triggerClassName="not-italic underline hover:opacity-100"
+                        />
                       </span>
                     )}
                   </>
@@ -595,6 +608,7 @@ export function CollabBar({
   onLoadMoreAutomergeHistory,
   previewDoc,
   setPreviewDoc,
+  notebookId,
   messages,
   sendChatMessage,
   editMessage,
@@ -698,6 +712,7 @@ export function CollabBar({
             ),
             content: (
               <ChatPanel
+                notebookId={notebookId}
                 messages={messages}
                 sendChatMessage={sendChatMessage}
                 editMessage={editMessage}

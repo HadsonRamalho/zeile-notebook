@@ -15,6 +15,13 @@ export interface ChatMessageDTO {
   createdAt: string;
 }
 
+export interface ChatMessageVersionDTO {
+  id: string;
+  messageId: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface SendMessagePayload {
   content: string;
   parentId?: string | null;
@@ -54,6 +61,24 @@ export async function editTeamMessage(
   return api.patch<ChatMessageDTO>(
     `/team/${teamId}/chat/messages/${messageId}`,
     { content },
+  );
+}
+
+export async function fetchNotebookMessageVersions(
+  notebookId: string,
+  messageId: string,
+) {
+  return api.get<ChatMessageVersionDTO[]>(
+    `/notebook/${notebookId}/chat/messages/${messageId}/versions`,
+  );
+}
+
+export async function fetchTeamMessageVersions(
+  teamId: string,
+  messageId: string,
+) {
+  return api.get<ChatMessageVersionDTO[]>(
+    `/team/${teamId}/chat/messages/${messageId}/versions`,
   );
 }
 

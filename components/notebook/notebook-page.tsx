@@ -357,6 +357,7 @@ export default function RustInteractivePage({
           onLoadMoreAutomergeHistory={handleLoadMoreAutomergeHistory}
           previewDoc={previewDoc}
           setPreviewDoc={setPreviewDoc}
+          notebookId={pageId}
           messages={messages}
           sendChatMessage={sendChatMessage}
           editMessage={editMessage}

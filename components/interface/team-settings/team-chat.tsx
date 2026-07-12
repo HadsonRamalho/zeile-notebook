@@ -3,10 +3,12 @@
 import { Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { MessageVersions } from "@/components/notebook/collaboration/message-versions";
 import {
   type ChatMessageDTO,
   editTeamMessage,
   fetchTeamMessages,
+  fetchTeamMessageVersions,
   sendTeamMessage,
 } from "@/lib/api/chat-service";
 import { cn } from "@/lib/utils";
@@ -105,8 +107,12 @@ export function TeamChat({ teamId }: { teamId: string }) {
                     {new Date(msg.createdAt).toLocaleString()}
                   </span>
                   {msg.isEdited && !isEditing && (
-                    <span className="text-[10px] italic text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] italic text-muted-foreground">
                       (editado)
+                      <MessageVersions
+                        load={() => fetchTeamMessageVersions(teamId, msg.id)}
+                        triggerClassName="not-italic underline hover:text-foreground"
+                      />
                     </span>
                   )}
                   {isMe && !isEditing && (

@@ -1,5 +1,5 @@
 use crate::models::error::ApiError;
-use crate::schema::chat_messages;
+use crate::schema::{chat_message_versions, chat_messages};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
@@ -60,6 +60,25 @@ pub struct EditMessageRequest {
     pub content: String,
 }
 
+#[derive(Queryable, Selectable, Serialize, Debug)]
+#[diesel(table_name = crate::schema::chat_message_versions)]
+pub struct ChatMessageVersion {
+    pub id: Uuid,
+    #[serde(rename = "messageId")]
+    pub message_id: Uuid,
+    pub content: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = chat_message_versions)]
+pub struct NewChatMessageVersion {
+    pub id: Uuid,
+    pub message_id: Uuid,
+    pub content: String,
+}
+
 const CHAT_HISTORY_LIMIT: i64 = 500;
 
 pub async fn create_message(
@@ -96,6 +115,35 @@ pub async fn update_message_content(
             chat_messages::edited_at.eq(Some(Utc::now())),
         ))
         .get_result::<ChatMessage>(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn create_message_version(
+    conn: &mut AsyncPgConnection,
+    message_id: Uuid,
+    content: &str,
+) -> Result<(), ApiError> {
+    diesel::insert_into(chat_message_versions::table)
+        .values(NewChatMessageVersion {
+            id: Uuid::new_v4(),
+            message_id,
+            content: content.to_string(),
+        })
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn list_message_versions(
+    conn: &mut AsyncPgConnection,
+    message_id: Uuid,
+) -> Result<Vec<ChatMessageVersion>, ApiError> {
+    chat_message_versions::table
+        .filter(chat_message_versions::message_id.eq(message_id))
+        .order(chat_message_versions::created_at.asc())
+        .load::<ChatMessageVersion>(conn)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))
 }
