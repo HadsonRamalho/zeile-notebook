@@ -562,7 +562,7 @@ function ActionButton({
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent className="z-[210]">{label}</TooltipContent>
     </Tooltip>
   );
 }
@@ -693,7 +693,7 @@ function Composer({
                 <SendHorizontal className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="flex items-center gap-1.5">
+            <TooltipContent className="z-[210] flex items-center gap-1.5">
               Enviar
               <kbd className="inline-flex items-center gap-0.5 rounded bg-background/20 px-1 font-mono text-[9px]">
                 <CornerDownLeft className="size-2.5" />
