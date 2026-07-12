@@ -96,7 +96,14 @@ export function PermissionRow({
 }) {
   const tp = useTranslations("perm");
   const tr = useTranslations("team_settings.team_role");
-  const label = tp.has(perm.key) ? tp(perm.key) : perm.key;
+  const labelKey = perm.label.startsWith("perm.")
+    ? perm.label.slice("perm.".length)
+    : perm.label;
+  const label = tp.has(labelKey)
+    ? tp(labelKey)
+    : tp.has(perm.key)
+      ? tp(perm.key)
+      : perm.key;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-card px-4 py-3">
