@@ -412,12 +412,25 @@ export function ChatConversation({
     );
   };
 
-  const listHeight = variant === "floating" ? "h-[46vh]" : "h-[52vh]";
+  const isFloating = variant === "floating";
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex w-full flex-col gap-2">
-        <ScrollArea className={cn("w-full rounded-lg", listHeight)}>
+      <div
+        className={cn(
+          "flex w-full flex-col gap-2",
+          // no modo flutuante a altura é limitada e a LISTA rola (flex-1),
+          // mantendo o compositor sempre fixo no rodapé — mesmo com o chip de
+          // resposta/citação, que antes empurrava o input para fora do painel.
+          isFloating && "h-[60vh] max-h-[calc(100dvh-8rem)] min-h-0",
+        )}
+      >
+        <ScrollArea
+          className={cn(
+            "w-full rounded-lg",
+            isFloating ? "min-h-0 flex-1" : "h-[52vh]",
+          )}
+        >
           <ScrollViewport ref={viewportRef} className="px-0.5 py-1">
             {topLevel.length === 0 ? (
               <div className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 px-6 text-center">
@@ -508,27 +521,29 @@ export function ChatConversation({
           </ScrollViewport>
         </ScrollArea>
 
-        {canSend ? (
-          <Composer
-            draft={draft}
-            setDraft={setDraft}
-            inputRef={inputRef}
-            onKeyDown={composerKeyDown}
-            onSubmit={submit}
-            reduceMotion={!!reduceMotion}
-            mentionMatches={mentionMatches}
-            mentionIndex={mentionIndex}
-            applyMention={applyMention}
-            replyTo={replyTo}
-            quoting={quoting}
-            clearReply={() => setReplyTo(null)}
-            clearQuote={() => setQuoting(null)}
-          />
-        ) : (
-          <p className="rounded-lg border border-border/70 bg-muted/40 px-4 py-2.5 text-center text-xs text-muted-foreground">
-            Você não pode enviar mensagens neste chat.
-          </p>
-        )}
+        <div className="shrink-0">
+          {canSend ? (
+            <Composer
+              draft={draft}
+              setDraft={setDraft}
+              inputRef={inputRef}
+              onKeyDown={composerKeyDown}
+              onSubmit={submit}
+              reduceMotion={!!reduceMotion}
+              mentionMatches={mentionMatches}
+              mentionIndex={mentionIndex}
+              applyMention={applyMention}
+              replyTo={replyTo}
+              quoting={quoting}
+              clearReply={() => setReplyTo(null)}
+              clearQuote={() => setQuoting(null)}
+            />
+          ) : (
+            <p className="rounded-lg border border-border/70 bg-muted/40 px-4 py-2.5 text-center text-xs text-muted-foreground">
+              Você não pode enviar mensagens neste chat.
+            </p>
+          )}
+        </div>
       </div>
     </TooltipProvider>
   );
