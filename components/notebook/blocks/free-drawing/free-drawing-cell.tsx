@@ -1487,7 +1487,9 @@ function ColorPicker({
 }
 
 // Tamanho da ferramenta ativa (pincel ou borracha), com slider e input numérico
-// para escolher um valor exato.
+// para escolher um valor exato. No desktop fica inline no topo; no mobile vira um
+// botão compacto que abre o slider para baixo, evitando conflito com a paleta e o
+// seletor de cor centralizado.
 function BrushSizePopover({
   label,
   size,
@@ -1497,37 +1499,71 @@ function BrushSizePopover({
   size: number;
   onSize: (s: number) => void;
 }) {
-  return (
-    <div className="absolute top-3 left-16 z-10 flex items-center gap-2 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur">
-      <span className="max-w-[84px] truncate font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-        {label}
-      </span>
-      <div className="h-5 w-px bg-border" />
-      <div className="flex w-44 items-center gap-2">
-        <Slider
-          className={cn("flex-1", COMPACT_SLIDER)}
-          min={1}
-          max={120}
-          value={[size]}
-          onValueChange={(v) =>
-            onSize(Math.round(Array.isArray(v) ? v[0]! : v))
-          }
-        />
-        <input
-          type="number"
-          min={1}
-          max={120}
-          value={size}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (Number.isNaN(n)) return;
-            onSize(Math.min(120, Math.max(1, Math.round(n))));
-          }}
-          aria-label="Tamanho em pixels"
-          className="w-12 rounded border border-border bg-background px-1 py-0.5 text-center font-mono text-[10px] tabular-nums outline-none"
-        />
-      </div>
+  const [open, setOpen] = useState(false);
+  const dot = Math.min(14, Math.max(3, Math.round(size / 6)));
+  const controls = (
+    <div className="flex w-44 items-center gap-2 max-md:w-full">
+      <Slider
+        className={cn("flex-1", COMPACT_SLIDER)}
+        min={1}
+        max={120}
+        value={[size]}
+        onValueChange={(v) => onSize(Math.round(Array.isArray(v) ? v[0]! : v))}
+      />
+      <input
+        type="number"
+        min={1}
+        max={120}
+        value={size}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          if (Number.isNaN(n)) return;
+          onSize(Math.min(120, Math.max(1, Math.round(n))));
+        }}
+        aria-label="Tamanho em pixels"
+        className="w-12 rounded border border-border bg-background px-1 py-0.5 text-center font-mono text-[10px] tabular-nums outline-none"
+      />
     </div>
+  );
+  return (
+    <>
+      <div className="absolute top-3 left-16 z-10 hidden items-center gap-2 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur md:flex">
+        <span className="max-w-[84px] truncate font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+          {label}
+        </span>
+        <div className="h-5 w-px bg-border" />
+        {controls}
+      </div>
+
+      <div className="absolute top-3 left-16 z-10 md:hidden">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={`Tamanho — ${label} (${size}px)`}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border border-border bg-card/85 px-2.5 py-1.5 shadow-lg backdrop-blur",
+            open && "bg-foreground/[0.1]",
+          )}
+        >
+          <span
+            className="rounded-full bg-foreground/80"
+            style={{ width: dot, height: dot }}
+          />
+          <span className="font-mono text-[10px] text-foreground/80 tabular-nums">
+            {size}
+          </span>
+        </button>
+        {open && (
+          <div className="absolute top-full left-0 mt-1 w-56 max-w-[78vw] rounded-xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur">
+            <span className="mb-2 block truncate font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+              {label}
+            </span>
+            {controls}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
