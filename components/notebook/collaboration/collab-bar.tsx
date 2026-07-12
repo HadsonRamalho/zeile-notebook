@@ -18,8 +18,12 @@ import { updateAppBadge } from "@/lib/appBadge";
 import type { Notebook } from "@/lib/types";
 import type { User } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
+import {
+  ChatConversation,
+  type ConversationMember,
+  type ConversationMessage,
+} from "../chat/chat-conversation";
 import { useCan } from "../permissions/capabilities";
-import { MessageVersions } from "./message-versions";
 
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
@@ -110,28 +114,6 @@ function splitMentions(text: string, names: string[]) {
     parts.push({ mention: false, value: text.slice(lastIndex) });
   }
   return parts;
-}
-
-function MessageText({ text, names }: { text: string; names: string[] }) {
-  const parts = useMemo(() => splitMentions(text, names), [text, names]);
-  return (
-    <span className="wrap-break-word">
-      {parts.map((part, index) =>
-        part.mention ? (
-          <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: partes derivadas do texto não têm identidade estável
-            key={index}
-            className="rounded bg-white/20 px-1 font-semibold"
-          >
-            {part.value}
-          </span>
-        ) : (
-          // biome-ignore lint/suspicious/noArrayIndexKey: partes derivadas do texto não têm identidade estável
-          <span key={index}>{part.value}</span>
-        ),
-      )}
-    </span>
-  );
 }
 
 interface CollabBarProps {
@@ -291,376 +273,45 @@ function ChatPanel({
   currentUserId: string | null;
   allUsers: PresenceUser[];
 }) {
-  const [inputValue, setInputValue] = useState("");
-  const [mentionIndex, setMentionIndex] = useState(0);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [activeThread, setActiveThread] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [quoting, setQuoting] = useState<ChatMessage | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const isTouchDevice = useIsTouchDevice();
   const canSend = useCan()("chat.messages.send");
 
-  const messagesById = useMemo(() => {
-    const map = new Map<string, ChatMessage>();
-    for (const m of messages) map.set(m.id, m);
-    return map;
-  }, [messages]);
-
-  const topLevel = useMemo(
-    () => messages.filter((m) => !m.parentId),
+  const conversationMessages = useMemo<ConversationMessage[]>(
+    () =>
+      messages.map((m) => ({
+        id: m.id,
+        userId: m.userId || null,
+        name: m.name,
+        text: m.text,
+        createdAt: m.createdAt,
+        isEdited: m.isEdited,
+        deletedAt: m.deletedAt,
+        parentId: m.parentId,
+        quotedMessageId: m.quotedMessageId,
+      })),
     [messages],
   );
-  const repliesByParent = useMemo(() => {
-    const map = new Map<string, ChatMessage[]>();
-    for (const m of messages) {
-      if (!m.parentId) continue;
-      const list = map.get(m.parentId) ?? [];
-      list.push(m);
-      map.set(m.parentId, list);
-    }
-    return map;
-  }, [messages]);
 
-  const submitReply = (parentId: string) => {
-    if (replyText.trim()) {
-      sendChatMessage(replyText.trim(), parentId);
-      setReplyText("");
-    }
-  };
-
-  const startEdit = (id: string, text: string) => {
-    setEditingId(id);
-    setEditValue(text);
-  };
-
-  const submitEdit = () => {
-    if (editingId && editValue.trim()) {
-      editMessage(editingId, editValue.trim());
-    }
-    setEditingId(null);
-    setEditValue("");
-  };
-
-  const allNames = useMemo(() => allUsers.map((u) => u.name), [allUsers]);
-
-  useEffect(() => {
-    if (isTouchDevice) return;
-    const id = setTimeout(() => inputRef.current?.focus(), 60);
-    return () => clearTimeout(id);
-  }, [isTouchDevice]);
-
-  const mentionQuery = /@([^\s@]*)$/.exec(inputValue)?.[1] ?? null;
-  const mentionMatches =
-    mentionQuery === null
-      ? []
-      : allUsers.filter((u) =>
-          u.name.toLowerCase().includes(mentionQuery.toLowerCase()),
-        );
-
-  useEffect(() => {
-    setMentionIndex(0);
-  }, [mentionQuery]);
-
-  const applyMention = (user: PresenceUser) => {
-    setInputValue((current) =>
-      current.replace(/@([^\s@]*)$/, `@${user.name} `),
-    );
-    inputRef.current?.focus();
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (mentionMatches.length > 0) return;
-    if (inputValue.trim()) {
-      sendChatMessage(inputValue.trim(), null, quoting?.id ?? null);
-      setInputValue("");
-      setQuoting(null);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (mentionMatches.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setMentionIndex((i) => Math.min(mentionMatches.length - 1, i + 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setMentionIndex((i) => Math.max(0, i - 1));
-    } else if (e.key === "Enter" || e.key === "Tab") {
-      e.preventDefault();
-      applyMention(mentionMatches[mentionIndex]);
-    } else if (e.key === "Escape") {
-      setInputValue((current) => current.replace(/@([^\s@]*)$/, ""));
-    }
-  };
-
-  const renderBubble = (msg: ChatMessage) => {
-    const isMe = !!currentUserId && msg.userId === currentUserId;
-    const isEditing = editingId === msg.id;
-    const isDeleted = !!msg.deletedAt;
-    const quoted = msg.quotedMessageId
-      ? messagesById.get(msg.quotedMessageId)
-      : null;
-    return (
-      <div
-        className={cn(
-          "group max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white",
-          isMe ? "rounded-tr-none" : "rounded-tl-none",
-        )}
-        style={{ backgroundColor: msg.color }}
-      >
-        <span className="mb-0.5 flex items-center gap-2 text-xs font-bold opacity-80">
-          <span>{msg.name}</span>
-          {!isEditing && !isDeleted && (
-            <span className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-              {canSend && (
-                <button
-                  type="button"
-                  onClick={() => setQuoting(msg)}
-                  className="hover:underline"
-                >
-                  citar
-                </button>
-              )}
-              {isMe && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => startEdit(msg.id, msg.text)}
-                    className="hover:underline"
-                  >
-                    editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteMessage(msg.id)}
-                    className="hover:underline"
-                  >
-                    excluir
-                  </button>
-                </>
-              )}
-            </span>
-          )}
-        </span>
-        {quoted && (
-          <div className="mb-1 rounded-md border-white/50 border-l-2 bg-white/10 px-2 py-1 text-xs opacity-90">
-            <span className="font-semibold">{quoted.name}</span>
-            <p className="line-clamp-2 break-words">
-              {quoted.deletedAt ? "mensagem excluída" : quoted.text}
-            </p>
-          </div>
-        )}
-        {isDeleted ? (
-          <span className="text-sm italic opacity-70">mensagem excluída</span>
-        ) : isEditing ? (
-          <div className="flex flex-col gap-1.5">
-            <input
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  submitEdit();
-                } else if (e.key === "Escape") {
-                  setEditingId(null);
-                }
-              }}
-              // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
-              autoFocus
-              className="rounded-md bg-white/20 px-2 py-1 text-sm text-white outline-none placeholder:text-white/60"
-            />
-            <div className="flex gap-2 text-xs">
-              <button
-                type="button"
-                onClick={submitEdit}
-                className="font-semibold hover:underline"
-              >
-                salvar
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingId(null)}
-                className="opacity-80 hover:underline"
-              >
-                cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <MessageText text={msg.text} names={allNames} />
-            {msg.isEdited && (
-              <span className="ml-1 inline-flex items-center gap-1.5 text-[10px] italic opacity-70">
-                (editado)
-                <MessageVersions
-                  load={() => fetchNotebookMessageVersions(notebookId, msg.id)}
-                  triggerClassName="not-italic underline hover:opacity-100"
-                />
-              </span>
-            )}
-          </>
-        )}
-      </div>
-    );
-  };
+  const members = useMemo<ConversationMember[]>(
+    () => allUsers.map((u) => ({ id: u.id, name: u.name, avatar: u.avatar })),
+    [allUsers],
+  );
 
   return (
-    <div className="flex w-[min(36rem,90vw)] flex-col gap-2 p-1">
-      <div
-        className={cn(
-          "flex h-[33vh] flex-col gap-2 overflow-y-auto",
-          topLevel.length === 0 && "items-center justify-center",
-        )}
-      >
-        {topLevel.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">
-            Nenhuma mensagem ainda.
-          </p>
-        ) : (
-          topLevel.map((msg) => {
-            const isMe = !!currentUserId && msg.userId === currentUserId;
-            const replies = repliesByParent.get(msg.id) ?? [];
-            const isOpen = activeThread === msg.id;
-            return (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex flex-col gap-1",
-                  isMe ? "items-end" : "items-start",
-                )}
-              >
-                {renderBubble(msg)}
-                <div className="flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
-                  {replies.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveThread(isOpen ? null : msg.id)}
-                      className="hover:text-foreground"
-                    >
-                      {replies.length}{" "}
-                      {replies.length > 1 ? "respostas" : "resposta"}
-                    </button>
-                  )}
-                  {canSend && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveThread(isOpen ? null : msg.id)}
-                      className="hover:text-foreground"
-                    >
-                      responder
-                    </button>
-                  )}
-                </div>
-                {isOpen && (
-                  <div className="flex w-full flex-col gap-2 border-l-2 border-border pl-3">
-                    {replies.map((reply) => {
-                      const replyIsMe =
-                        !!currentUserId && reply.userId === currentUserId;
-                      return (
-                        <div
-                          key={reply.id}
-                          className={cn(
-                            "flex",
-                            replyIsMe ? "justify-end" : "justify-start",
-                          )}
-                        >
-                          {renderBubble(reply)}
-                        </div>
-                      );
-                    })}
-                    {canSend && (
-                      <input
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            submitReply(msg.id);
-                          } else if (e.key === "Escape") {
-                            setActiveThread(null);
-                          }
-                        }}
-                        placeholder="Responder na thread..."
-                        className="h-9 w-full rounded-full border border-border bg-card px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-      {!canSend ? (
-        <p className="rounded-full border border-border bg-muted/40 px-4 py-2.5 text-center text-xs text-muted-foreground">
-          Você não pode enviar mensagens neste chat.
-        </p>
-      ) : (
-        <form onSubmit={handleSubmit} className="relative">
-          {quoting && (
-            <div className="mb-1 flex items-start justify-between gap-2 rounded-lg border border-border border-l-2 border-l-primary bg-muted/40 px-3 py-1.5 text-xs">
-              <div className="min-w-0">
-                <span className="font-semibold text-foreground">
-                  Citando {quoting.name}
-                </span>
-                <p className="line-clamp-1 break-words text-muted-foreground">
-                  {quoting.deletedAt ? "mensagem excluída" : quoting.text}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQuoting(null)}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-              >
-                cancelar
-              </button>
-            </div>
-          )}
-          {mentionMatches.length > 0 && (
-            <div className="absolute bottom-full mb-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
-              {mentionMatches.map((user, index) => (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => applyMention(user)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-                    index === mentionIndex
-                      ? "bg-primary/10 text-primary"
-                      : "text-foreground hover:bg-accent",
-                  )}
-                >
-                  <Avatar size="sm" className="size-5">
-                    {user.avatar ? (
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                    ) : null}
-                    <AvatarFallback
-                      style={{ backgroundColor: user.color }}
-                      className="text-[8px] font-medium text-white"
-                    >
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {user.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <input
-            ref={inputRef}
-            type="text"
-            enterKeyHint="send"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite uma mensagem... use @ para mencionar"
-            className="h-10 w-full rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
-          />
-        </form>
-      )}
+    <div className="w-[min(36rem,90vw)] p-1">
+      <ChatConversation
+        variant="floating"
+        messages={conversationMessages}
+        currentUserId={currentUserId}
+        canSend={canSend}
+        members={members}
+        onSend={(text, opts) =>
+          sendChatMessage(text, opts?.parentId, opts?.quotedMessageId)
+        }
+        onEdit={editMessage}
+        onDelete={deleteMessage}
+        loadVersions={(id) => fetchNotebookMessageVersions(notebookId, id)}
+        emptyHint="Converse com quem está neste notebook em tempo real."
+      />
     </div>
   );
 }

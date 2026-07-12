@@ -1,9 +1,11 @@
 "use client";
 
-import { Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChatConversation,
+  type ConversationMessage,
+} from "@/components/notebook/chat/chat-conversation";
 import { useAuth } from "@/context/auth-context";
-import { MessageVersions } from "@/components/notebook/collaboration/message-versions";
 import {
   type ChatMessageDTO,
   deleteTeamMessage,
@@ -12,9 +14,22 @@ import {
   fetchTeamMessageVersions,
   sendTeamMessage,
 } from "@/lib/api/chat-service";
-import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 8000;
+
+function toConversation(dto: ChatMessageDTO): ConversationMessage {
+  return {
+    id: dto.id,
+    userId: dto.userId,
+    name: dto.authorName,
+    text: dto.content,
+    createdAt: dto.createdAt,
+    isEdited: dto.isEdited,
+    deletedAt: dto.deletedAt,
+    parentId: dto.parentId,
+    quotedMessageId: dto.quotedMessageId,
+  };
+}
 
 function upsert(list: ChatMessageDTO[], msg: ChatMessageDTO): ChatMessageDTO[] {
   const index = list.findIndex((m) => m.id === msg.id);
@@ -27,70 +42,6 @@ function upsert(list: ChatMessageDTO[], msg: ChatMessageDTO): ChatMessageDTO[] {
 export function TeamChat({ teamId }: { teamId: string }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [activeThread, setActiveThread] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [quoting, setQuoting] = useState<ChatMessageDTO | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const messagesById = useMemo(() => {
-    const map = new Map<string, ChatMessageDTO>();
-    for (const m of messages) map.set(m.id, m);
-    return map;
-  }, [messages]);
-
-  const topLevel = useMemo(
-    () => messages.filter((m) => !m.parentId),
-    [messages],
-  );
-  const repliesByParent = useMemo(() => {
-    const map = new Map<string, ChatMessageDTO[]>();
-    for (const m of messages) {
-      if (!m.parentId) continue;
-      const list = map.get(m.parentId) ?? [];
-      list.push(m);
-      map.set(m.parentId, list);
-    }
-    return map;
-  }, [messages]);
-
-  const submitReply = async (parentId: string) => {
-    const content = replyText.trim();
-    if (!content) return;
-    setReplyText("");
-    try {
-      const dto = await sendTeamMessage(teamId, { content, parentId });
-      if (dto) setMessages((prev) => upsert(prev, dto));
-    } catch {
-      // silencioso
-    }
-  };
-
-  const submitEdit = async () => {
-    const content = editValue.trim();
-    const id = editingId;
-    setEditingId(null);
-    setEditValue("");
-    if (!id || !content) return;
-    try {
-      const dto = await editTeamMessage(teamId, id, content);
-      if (dto) setMessages((prev) => upsert(prev, dto));
-    } catch {
-      // silencioso
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const dto = await deleteTeamMessage(teamId, id);
-      if (dto) setMessages((prev) => upsert(prev, dto));
-    } catch {
-      // silencioso
-    }
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -109,242 +60,41 @@ export function TeamChat({ teamId }: { teamId: string }) {
     };
   }, [teamId]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: rola ao fim quando chegam mensagens
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages.length]);
+  const conversation = useMemo(() => messages.map(toConversation), [messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const content = input.trim();
-    if (!content || sending) return;
-    setSending(true);
-    try {
-      const dto = await sendTeamMessage(teamId, {
-        content,
-        quotedMessageId: quoting?.id ?? null,
-      });
-      if (dto) setMessages((prev) => upsert(prev, dto));
-      setInput("");
-      setQuoting(null);
-    } catch {
-      // silencioso: erros de rede/permissão são tratados pelo interceptor
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const renderMessage = (msg: ChatMessageDTO) => {
-    const isMe = !!user && msg.userId === user.id;
-    const isEditing = editingId === msg.id;
-    const isDeleted = !!msg.deletedAt;
-    const quoted = msg.quotedMessageId
-      ? messagesById.get(msg.quotedMessageId)
-      : null;
-    return (
-      <div className="group flex flex-col">
-        <div className="flex items-baseline gap-2">
-          <span className="text-sm font-semibold">{msg.authorName}</span>
-          <span className="font-mono text-[10px] text-muted-foreground">
-            {new Date(msg.createdAt).toLocaleString()}
-          </span>
-          {msg.isEdited && !isEditing && !isDeleted && (
-            <span className="inline-flex items-center gap-1.5 text-[10px] italic text-muted-foreground">
-              (editado)
-              <MessageVersions
-                load={() => fetchTeamMessageVersions(teamId, msg.id)}
-                triggerClassName="not-italic underline hover:text-foreground"
-              />
-            </span>
-          )}
-          {!isEditing && !isDeleted && (
-            <span className="flex items-center gap-2 text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-              <button
-                type="button"
-                onClick={() => setQuoting(msg)}
-                className="hover:text-foreground"
-              >
-                citar
-              </button>
-              {isMe && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(msg.id);
-                      setEditValue(msg.content);
-                    }}
-                    className="hover:text-foreground"
-                  >
-                    editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(msg.id)}
-                    className="hover:text-foreground"
-                  >
-                    excluir
-                  </button>
-                </>
-              )}
-            </span>
-          )}
-        </div>
-        {quoted && (
-          <div className="mt-0.5 rounded-md border-border border-l-2 bg-muted/40 px-2 py-1 text-xs">
-            <span className="font-semibold">{quoted.authorName}</span>
-            <p className="line-clamp-2 break-words text-muted-foreground">
-              {quoted.deletedAt ? "mensagem excluída" : quoted.content}
-            </p>
-          </div>
-        )}
-        {isDeleted ? (
-          <p className="text-sm italic text-muted-foreground">
-            mensagem excluída
-          </p>
-        ) : isEditing ? (
-          <div className="mt-1 flex flex-col gap-1.5">
-            <input
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  submitEdit();
-                } else if (e.key === "Escape") {
-                  setEditingId(null);
-                }
-              }}
-              // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
-              autoFocus
-              className="rounded-md border border-border bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary"
-            />
-            <div className="flex gap-2 text-xs text-muted-foreground">
-              <button
-                type="button"
-                onClick={submitEdit}
-                className="font-semibold hover:text-foreground"
-              >
-                salvar
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingId(null)}
-                className="hover:text-foreground"
-              >
-                cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">
-            {msg.content}
-          </p>
-        )}
-      </div>
-    );
+  const apply = (dto: ChatMessageDTO | undefined) => {
+    if (dto) setMessages((prev) => upsert(prev, dto));
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
-      <div
-        ref={scrollRef}
-        className={cn(
-          "flex h-[50vh] flex-col gap-3 overflow-y-auto",
-          topLevel.length === 0 && "items-center justify-center",
-        )}
-      >
-        {topLevel.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>
-        ) : (
-          topLevel.map((msg) => {
-            const replies = repliesByParent.get(msg.id) ?? [];
-            const isOpen = activeThread === msg.id;
-            return (
-              <div key={msg.id} className="flex flex-col gap-1">
-                {renderMessage(msg)}
-                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                  {replies.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveThread(isOpen ? null : msg.id)}
-                      className="hover:text-foreground"
-                    >
-                      {replies.length}{" "}
-                      {replies.length > 1 ? "respostas" : "resposta"}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setActiveThread(isOpen ? null : msg.id)}
-                    className="hover:text-foreground"
-                  >
-                    responder
-                  </button>
-                </div>
-                {isOpen && (
-                  <div className="flex flex-col gap-3 border-l-2 border-border pl-3">
-                    {replies.map((reply) => (
-                      <div key={reply.id}>{renderMessage(reply)}</div>
-                    ))}
-                    <input
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          submitReply(msg.id);
-                        } else if (e.key === "Escape") {
-                          setActiveThread(null);
-                        }
-                      }}
-                      placeholder="Responder na thread..."
-                      className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                )}
-              </div>
-            );
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <ChatConversation
+        variant="card"
+        messages={conversation}
+        currentUserId={user?.id ?? null}
+        canSend
+        onSend={(text, opts) =>
+          void sendTeamMessage(teamId, {
+            content: text,
+            parentId: opts?.parentId ?? null,
+            quotedMessageId: opts?.quotedMessageId ?? null,
           })
-        )}
-      </div>
-
-      {quoting && (
-        <div className="flex items-start justify-between gap-2 rounded-lg border border-border border-l-2 border-l-primary bg-muted/40 px-3 py-1.5 text-xs">
-          <div className="min-w-0">
-            <span className="font-semibold text-foreground">
-              Citando {quoting.authorName}
-            </span>
-            <p className="line-clamp-1 break-words text-muted-foreground">
-              {quoting.deletedAt ? "mensagem excluída" : quoting.content}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setQuoting(null)}
-            className="shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            cancelar
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleSend} className="flex items-center gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Escreva uma mensagem..."
-          className="h-10 flex-1 rounded-full border border-border bg-background px-4 text-sm outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button
-          type="submit"
-          disabled={sending || !input.trim()}
-          className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-50"
-          aria-label="Enviar mensagem"
-        >
-          <Send size={16} />
-        </button>
-      </form>
+            .then(apply)
+            .catch(() => {})
+        }
+        onEdit={(id, text) =>
+          void editTeamMessage(teamId, id, text)
+            .then(apply)
+            .catch(() => {})
+        }
+        onDelete={(id) =>
+          void deleteTeamMessage(teamId, id)
+            .then(apply)
+            .catch(() => {})
+        }
+        loadVersions={(id) => fetchTeamMessageVersions(teamId, id)}
+        emptyHint="Converse com o time — as mensagens ficam salvas."
+      />
     </div>
   );
 }
