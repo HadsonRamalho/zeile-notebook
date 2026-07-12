@@ -14,7 +14,8 @@ use crate::{
 
 pub async fn challenge_routes() -> OpenApiRouter<Arc<AppState>> {
     let routes = OpenApiRouter::<Arc<AppState>>::new()
-        .route("/", get(api_list_challenges).post(api_create_challenge))
+        .route("/list", get(api_list_challenges))
+        .route("/create", post(api_create_challenge))
         .route("/slug/{slug}", get(api_get_challenge))
         .route("/{id}", put(api_update_challenge))
         .route("/{id}/test-cases", post(api_add_test_case))

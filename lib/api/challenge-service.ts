@@ -11,7 +11,7 @@ import type {
 } from "@/lib/types/challenge-types";
 
 export async function listChallenges() {
-  return api.get<ChallengePublic[]>("/challenge/");
+  return api.get<ChallengePublic[]>("/challenge/list");
 }
 
 export async function getChallenge(slug: string) {
@@ -19,7 +19,7 @@ export async function getChallenge(slug: string) {
 }
 
 export async function createChallenge(payload: CreateChallengePayload) {
-  return api.post<ChallengePublic>("/challenge/", payload);
+  return api.post<ChallengePublic>("/challenge/create", payload);
 }
 
 export async function updateChallenge(
