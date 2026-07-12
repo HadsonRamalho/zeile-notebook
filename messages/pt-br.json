@@ -238,7 +238,8 @@
       "description": "Gerencie configurações, membros e permissões do time.",
       "general_tab": "Geral",
       "member_tab": "Membros",
-      "role_tab": "Cargos"
+      "role_tab": "Cargos",
+      "chat_tab": "Chat"
     },
     "team_data": {
       "team_updated": "Configurações do time atualizadas com sucesso.",

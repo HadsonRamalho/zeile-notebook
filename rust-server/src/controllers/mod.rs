@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod chat;
 pub mod email;
 pub mod grants;
 pub mod jwt;

@@ -48,6 +48,33 @@ diesel::table! {
 }
 
 diesel::table! {
+    chat_messages (id) {
+        id -> Uuid,
+        notebook_id -> Nullable<Uuid>,
+        team_id -> Nullable<Uuid>,
+        user_id -> Nullable<Uuid>,
+        #[max_length = 255]
+        author_name -> Varchar,
+        content -> Text,
+        parent_id -> Nullable<Uuid>,
+        quoted_message_id -> Nullable<Uuid>,
+        is_edited -> Bool,
+        edited_at -> Nullable<Timestamptz>,
+        deleted_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    chat_message_versions (id) {
+        id -> Uuid,
+        message_id -> Uuid,
+        content -> Text,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     notebooks (id) {
         id -> Uuid,
         user_id -> Nullable<Uuid>,
@@ -174,6 +201,7 @@ diesel::table! {
 
 diesel::joinable!(permission_grants -> teams (scope_team_id));
 diesel::joinable!(blocks -> notebooks (notebook_id));
+diesel::joinable!(chat_message_versions -> chat_messages (message_id));
 diesel::joinable!(notebooks -> teams (team_id));
 diesel::joinable!(notebooks -> users (user_id));
 diesel::joinable!(push_subscriptions -> users (user_id));
@@ -186,6 +214,8 @@ diesel::joinable!(team_roles -> teams (team_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     blocks,
+    chat_message_versions,
+    chat_messages,
     notebooks,
     permission_grants,
     push_subscriptions,

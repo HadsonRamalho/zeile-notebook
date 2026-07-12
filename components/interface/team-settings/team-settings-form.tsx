@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Settings, Shield, Users } from "lucide-react";
+import { Home, MessageSquare, Settings, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -31,6 +31,7 @@ import type {
   TeamMemberWithUserData,
   TeamRole,
 } from "@/lib/types/team-types";
+import { TeamChat } from "./team-chat";
 import { TeamData } from "./team-data";
 import { TeamMembers } from "./team-members";
 import { TeamPermissions } from "./team-permissions";
@@ -42,9 +43,9 @@ interface TeamSettingsFormProps {
 export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   const t = useTranslations("team_settings.team_form");
 
-  const [activeTab, setActiveTab] = useState<"general" | "members" | "roles">(
-    "general",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "general" | "members" | "roles" | "chat"
+  >("general");
 
   const [team, setTeam] = useState<Team | null>(null);
   const [roles, setRoles] = useState<TeamRole[]>([]);
@@ -206,6 +207,14 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
               {t("role_tab")}
             </TabsTrigger>
           )}
+          <TabsTrigger
+            value="chat"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
+            <MessageSquare size={16} />
+            {t("chat_tab")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="w-full">
@@ -241,6 +250,10 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
             />
           </TabsContent>
         )}
+
+        <TabsContent value="chat" className="w-full">
+          <TeamChat teamId={teamId} />
+        </TabsContent>
       </Tabs>
     </div>
   );

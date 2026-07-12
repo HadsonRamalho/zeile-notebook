@@ -238,7 +238,8 @@
       "description": "Manage team settings, members, and permissions.",
       "general_tab": "General",
       "member_tab": "Members",
-      "role_tab": "Roles"
+      "role_tab": "Roles",
+      "chat_tab": "Chat"
     },
     "team_data": {
       "team_updated": "Team settings updated successfully.",

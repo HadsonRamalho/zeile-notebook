@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod chat;
 pub mod error;
 pub mod jwt;
 pub mod notebook;

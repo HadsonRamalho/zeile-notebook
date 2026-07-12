@@ -5,6 +5,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     controllers::{
+        chat::{api_list_team_messages, api_send_team_message},
         grants::{api_create_team_grant, api_delete_team_grant, api_list_team_grants},
         permissions::api_get_team_capabilities,
         team::{
@@ -20,6 +21,10 @@ use crate::{
 
 pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
     let routes = OpenApiRouter::new()
+        .route(
+            "/{id}/chat/messages",
+            get(api_list_team_messages).post(api_send_team_message),
+        )
         .route("/{id}/notebooks", post(api_create_team_page))
         .route("/{id}/notebooks", get(api_get_team_pages))
         .route("/{id}/roles", get(api_get_team_roles))

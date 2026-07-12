@@ -1,6 +1,11 @@
 import { getCookie } from "cookies-next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  type ChatMessageDTO,
+  fetchNotebookMessages,
+  sendNotebookMessage,
+} from "@/lib/api/chat-service";
+import {
   type NotebookSocketHandle,
   subscribeNotebookSocket,
 } from "@/lib/notebook-socket";
@@ -22,9 +27,14 @@ export type ChatMessage = {
   name: string;
   text: string;
   color: string;
+  createdAt: string;
+  isEdited: boolean;
+  editedAt: string | null;
+  deletedAt: string | null;
+  parentId: string | null;
+  quotedMessageId: string | null;
 };
 
-const CHAT_MESSAGE_LIFETIME_MS = 12000;
 const PRESENCE_HEARTBEAT_MS = 4000;
 const PRESENCE_STALE_MS = 12000;
 const PRESENCE_PRUNE_INTERVAL_MS = 3000;
@@ -38,6 +48,31 @@ const stringToColor = (str: string) => {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   return `hsl(${hash % 360}, 60%, 40%)`;
+};
+
+export const mapChatMessage = (dto: ChatMessageDTO): ChatMessage => ({
+  id: dto.id,
+  userId: dto.userId ?? "",
+  name: dto.authorName,
+  text: dto.content,
+  color: stringToColor(dto.authorName || dto.userId || ""),
+  createdAt: dto.createdAt,
+  isEdited: dto.isEdited,
+  editedAt: dto.editedAt,
+  deletedAt: dto.deletedAt,
+  parentId: dto.parentId,
+  quotedMessageId: dto.quotedMessageId,
+});
+
+const upsertMessage = (
+  list: ChatMessage[],
+  msg: ChatMessage,
+): ChatMessage[] => {
+  const index = list.findIndex((m) => m.id === msg.id);
+  if (index === -1) return [...list, msg];
+  const next = [...list];
+  next[index] = msg;
+  return next;
 };
 
 export function usePresence(
@@ -147,20 +182,8 @@ export function usePresence(
           return;
         }
 
-        if (data.type === "chat") {
-          const newMsg: ChatMessage = {
-            id: data.msgId,
-            userId: data.userId,
-            name: data.name || "Visitante",
-            text: data.text,
-            color: stringToColor(data.name || data.userId),
-          };
-
-          setMessages((prev) => [...prev, newMsg]);
-
-          setTimeout(() => {
-            setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
-          }, CHAT_MESSAGE_LIFETIME_MS);
+        if (data.type === "chat_message" && data.message) {
+          setMessages((prev) => upsertMessage(prev, mapChatMessage(data.message)));
           return;
         }
 
@@ -235,38 +258,33 @@ export function usePresence(
     };
   }, [pageId, broadcastPresence, broadcastPresenceWithId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchNotebookMessages(pageId)
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) {
+          setMessages(data.map(mapChatMessage));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pageId]);
+
   const sendChatMessage = useCallback(
     (text: string) => {
-      const myId = socketUserIdRef.current;
-      if (!text.trim() || !myId) return;
-
-      const msgId = crypto.randomUUID();
-      const newMsg: ChatMessage = {
-        id: msgId,
-        userId: myId,
-        name: currentUser?.name || "Visitante",
-        text,
-        color: stringToColor(currentUser?.name || myId),
-      };
-
-      setMessages((prev) => [...prev, newMsg]);
-      setTimeout(() => {
-        setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
-      }, CHAT_MESSAGE_LIFETIME_MS);
-
-      if (handleRef.current?.isOpen()) {
-        handleRef.current.sendText(
-          JSON.stringify({
-            type: "chat",
-            msgId,
-            userId: myId,
-            name: currentUser?.name || "Visitante",
-            text,
-          }),
-        );
-      }
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      // persiste via REST; o servidor difunde o evento chat_message de volta
+      // (inclusive para esta aba), e o upsert por id evita duplicar
+      sendNotebookMessage(pageId, { content: trimmed })
+        .then((dto) => {
+          if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
+        })
+        .catch(() => {});
     },
-    [currentUser],
+    [pageId],
   );
 
   const updateCursor = useCallback(

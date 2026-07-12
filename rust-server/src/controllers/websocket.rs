@@ -635,6 +635,52 @@ fn mentions_name(text: &str, name: &str) -> bool {
     text.to_lowercase().contains(&pattern.to_lowercase())
 }
 
+/// Difunde um evento de chat (JSON) para a sala de presença do notebook e dispara
+/// push de menção. Usado pelos endpoints REST de chat para propagar em tempo real.
+pub fn broadcast_chat_and_notify(
+    state: &Arc<AppState>,
+    notebook_id: Uuid,
+    payload: String,
+    content: Option<&str>,
+    sender_name: Option<&str>,
+    sender_user_id: Option<Uuid>,
+) {
+    let Some(room) = state.presence_registry.get(&notebook_id) else {
+        return;
+    };
+    for m in room.subscribers.iter() {
+        if !m.value().can_view_chat {
+            continue;
+        }
+        let _ = m.value().tx.try_send(payload.clone());
+
+        if let (Some(content), Some(sender_name)) = (content, sender_name) {
+            let mentioned_name = m.value().name.lock().unwrap().clone();
+            if let (Some(uid), Some(name)) = (m.value().user_id, mentioned_name) {
+                if Some(uid) == sender_user_id {
+                    continue;
+                }
+                if mentions_name(content, &name) {
+                    let state_for_push = state.clone();
+                    let title = format!("{} mencionou você no chat", sender_name);
+                    let body = content.to_string();
+                    let url = format!("/notebook/{}", notebook_id);
+                    tokio::spawn(async move {
+                        crate::controllers::push::send_push_to_user(
+                            &state_for_push,
+                            uid,
+                            &title,
+                            &body,
+                            &url,
+                        )
+                        .await;
+                    });
+                }
+            }
+        }
+    }
+}
+
 // socket combinado: sync (binário) + presença (texto) numa conexão, uma checagem de
 // permissão por cliente. os handlers separados acima seguem como fallback.
 
