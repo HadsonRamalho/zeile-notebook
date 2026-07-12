@@ -114,8 +114,6 @@ pub async fn upsert_preference(
     }
 }
 
-/// Resolve as preferências efetivas: a preferência do escopo específico (notebook
-/// ou time) vence; senão a global; senão o padrão (tudo habilitado).
 pub async fn resolve(
     conn: &mut AsyncPgConnection,
     param_user_id: Uuid,

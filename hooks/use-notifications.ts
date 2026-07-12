@@ -16,18 +16,16 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    try {
-      const data = await fetchNotifications();
-      if (data) {
-        setItems(data.items);
-        setUnreadCount(data.unreadCount);
-      }
-    } catch {
-      // silencioso
-    } finally {
-      setLoading(false);
-    }
+  const refresh = useCallback(() => {
+    return fetchNotifications()
+      .then((data) => {
+        if (data) {
+          setItems(data.items);
+          setUnreadCount(data.unreadCount);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {

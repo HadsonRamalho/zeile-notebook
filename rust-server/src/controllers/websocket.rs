@@ -635,7 +635,6 @@ fn mentions_name(text: &str, name: &str) -> bool {
     text.to_lowercase().contains(&pattern.to_lowercase())
 }
 
-/// Indica se o usuário tem alguma sessão de presença ativa no notebook.
 pub fn is_user_present(
     registry: &crate::controllers::sync::PresenceRegistry,
     notebook_id: Uuid,

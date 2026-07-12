@@ -139,8 +139,6 @@ pub async fn api_send_notebook_message(
         Some(user_id),
     );
 
-    // notifica o dono do notebook (fora do caminho da request) se ele não estiver
-    // presente na sala no momento
     {
         let state = state.clone();
         let sender_name = name.clone();
@@ -457,7 +455,6 @@ pub async fn api_send_team_message(
 
     let message = models::chat::create_message(conn, &new_message).await?;
 
-    // notifica os membros do time com acesso ao chat (menos o autor), em background
     {
         let state = state.clone();
         let sender_name = message.author_name.clone();

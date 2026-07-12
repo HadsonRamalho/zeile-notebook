@@ -33,9 +33,6 @@ pub struct NotificationInput {
     pub team_id: Option<Uuid>,
 }
 
-/// Entrega uma notificação a um usuário: grava a notificação interna e dispara o
-/// push. Deve ser chamada dentro de uma task de fundo (nunca no caminho da
-/// request) — os envios de push são sequenciais por assinatura.
 pub async fn deliver_notification(
     state: &Arc<AppState>,
     user_id: Uuid,
@@ -57,7 +54,6 @@ pub async fn deliver_notification(
         )
         .await;
 
-        // o toggle de chat só barra notificações de chat
         if is_chat && !prefs.chat {
             return;
         }
@@ -85,8 +81,6 @@ pub async fn deliver_notification(
     send_push_to_user(state, user_id, &input.title, &input.body, url).await;
 }
 
-/// Faz o fan-out de uma notificação para vários usuários numa task de fundo,
-/// para não bloquear a request que a originou.
 pub fn spawn_deliver(state: Arc<AppState>, user_ids: Vec<Uuid>, input: NotificationInput) {
     if user_ids.is_empty() {
         return;
