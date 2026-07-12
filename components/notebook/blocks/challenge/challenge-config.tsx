@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   addTestCase,
   deleteTestCase,
+  getReferenceSolution,
   listTestCases,
   setReferenceSolution,
   updateChallenge,
@@ -113,6 +114,15 @@ export function ChallengeConfig({
   useEffect(() => {
     refreshCases();
   }, [refreshCases]);
+
+  useEffect(() => {
+    getReferenceSolution(challenge.id)
+      .then((ref) => {
+        if (ref.solution) setRefCode(ref.solution);
+        if (ref.language) setRefLanguage(ref.language);
+      })
+      .catch(() => {});
+  }, [challenge.id]);
 
   const toggleLanguage = (lang: Language) => {
     setLanguages((prev) =>

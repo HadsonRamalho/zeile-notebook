@@ -342,6 +342,28 @@ pub async fn api_set_reference(
     Ok(Json(ChallengePublic::from(updated)))
 }
 
+pub async fn api_get_reference(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let claims = extract_claims_from_header(&headers).await?.1;
+    let mut conn = conn_from(&state).await?;
+    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    require_notebook(
+        &state,
+        &ch,
+        Some(claims.id),
+        "notebook.edit",
+        &TargetCtx::default(),
+    )
+    .await?;
+    Ok(Json(json!({
+        "solution": ch.reference_solution,
+        "language": ch.reference_language,
+    })))
+}
+
 pub async fn api_list_test_cases(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -445,23 +467,7 @@ pub async fn api_submit(
         });
     }
 
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(SubmissionView {
-            id: submission.id,
-            challenge_id: submission.challenge_id,
-            user_id: submission.user_id,
-            language: submission.language,
-            status: submission.status,
-            score: submission.score,
-            max_score: submission.max_score,
-            runtime_ms: submission.runtime_ms,
-            error_message: submission.error_message,
-            created_at: submission.created_at,
-            judged_at: submission.judged_at,
-            results: Vec::new(),
-        }),
-    ))
+    Ok((StatusCode::ACCEPTED, Json(submission.into_view(Vec::new()))))
 }
 
 pub async fn api_run_samples(
@@ -563,10 +569,17 @@ pub async fn api_get_submission(
     let mut conn = conn_from(&state).await?;
     let submission = challenge::get_submission(&mut conn, submission_id).await?;
 
-    if submission.user_id != Some(claims.id) && claims.role != UserRole::Admin {
-        return Err(ApiError::PermissionDenied(
-            "Submissão de outro usuário".to_string(),
-        ));
+    let is_owner = submission.user_id == Some(claims.id);
+    if !is_owner && claims.role != UserRole::Admin {
+        let ch = challenge::get_challenge_by_id(&mut conn, submission.challenge_id).await?;
+        require_notebook(
+            &state,
+            &ch,
+            Some(claims.id),
+            "notebook.edit",
+            &TargetCtx::default(),
+        )
+        .await?;
     }
 
     let results = challenge::list_submission_results(&mut conn, submission_id)
@@ -575,20 +588,7 @@ pub async fn api_get_submission(
         .map(|r| r.into_view())
         .collect();
 
-    Ok(Json(SubmissionView {
-        id: submission.id,
-        challenge_id: submission.challenge_id,
-        user_id: submission.user_id,
-        language: submission.language,
-        status: submission.status,
-        score: submission.score,
-        max_score: submission.max_score,
-        runtime_ms: submission.runtime_ms,
-        error_message: submission.error_message,
-        created_at: submission.created_at,
-        judged_at: submission.judged_at,
-        results,
-    }))
+    Ok(Json(submission.into_view(results)))
 }
 
 pub async fn api_list_my_submissions(
@@ -600,22 +600,7 @@ pub async fn api_list_my_submissions(
     let mut conn = conn_from(&state).await?;
     let rows = challenge::list_user_submissions(&mut conn, id, user_id).await?;
     Ok(Json(
-        rows.into_iter()
-            .map(|s| SubmissionView {
-                id: s.id,
-                challenge_id: s.challenge_id,
-                user_id: s.user_id,
-                language: s.language,
-                status: s.status,
-                score: s.score,
-                max_score: s.max_score,
-                runtime_ms: s.runtime_ms,
-                error_message: s.error_message,
-                created_at: s.created_at,
-                judged_at: s.judged_at,
-                results: Vec::new(),
-            })
-            .collect(),
+        rows.into_iter().map(|s| s.into_view(Vec::new())).collect(),
     ))
 }
 
@@ -647,6 +632,7 @@ pub async fn api_leaderboard(
             .map(|u| u.name)
             .unwrap_or_else(|_| "Usuário".to_string());
         entries.push(LeaderboardEntry {
+            submission_id: s.id,
             user_id: uid,
             author_name,
             score: s.score,

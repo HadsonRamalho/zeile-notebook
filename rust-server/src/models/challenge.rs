@@ -223,6 +223,7 @@ pub struct SubmissionView {
     #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
     pub language: String,
+    pub code: String,
     pub status: String,
     pub score: i32,
     #[serde(rename = "maxScore")]
@@ -236,6 +237,26 @@ pub struct SubmissionView {
     #[serde(rename = "judgedAt")]
     pub judged_at: Option<DateTime<Utc>>,
     pub results: Vec<SubmissionResultView>,
+}
+
+impl Submission {
+    pub fn into_view(self, results: Vec<SubmissionResultView>) -> SubmissionView {
+        SubmissionView {
+            id: self.id,
+            challenge_id: self.challenge_id,
+            user_id: self.user_id,
+            language: self.language,
+            code: self.code,
+            status: self.status,
+            score: self.score,
+            max_score: self.max_score,
+            runtime_ms: self.runtime_ms,
+            error_message: self.error_message,
+            created_at: self.created_at,
+            judged_at: self.judged_at,
+            results,
+        }
+    }
 }
 
 #[derive(Queryable, Selectable, Debug, Clone)]
@@ -302,6 +323,8 @@ impl SubmissionResult {
 
 #[derive(Serialize)]
 pub struct LeaderboardEntry {
+    #[serde(rename = "submissionId")]
+    pub submission_id: Uuid,
     #[serde(rename = "userId")]
     pub user_id: Uuid,
     #[serde(rename = "authorName")]

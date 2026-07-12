@@ -500,7 +500,7 @@
   },
   "challenges": {
     "title": "Desafios",
-    "description": "Resolva problemas de código com julgamento instantâneo e isolado.",
+    "description": "Resolva problemas de código com avaliação instantânea e isolada.",
     "nav_label": "Desafios",
     "search_placeholder": "Buscar desafios…",
     "count": "{count, plural, one {# desafio} other {# desafios}}",
@@ -534,7 +534,7 @@
     "limits": "{time} ms · {mem} MB",
     "run_samples": "Rodar exemplos",
     "submit": "Submeter",
-    "judging": "Julgando…",
+    "judging": "Avaliando…",
     "queued": "Na fila…",
     "reset_code": "Restaurar",
     "login_required": "Entre para submeter sua solução.",
@@ -548,7 +548,7 @@
     "status": {
       "queued": "Na fila",
       "running": "Executando",
-      "done": "Julgado",
+      "done": "Avaliado",
       "compile_error": "Erro de compilação",
       "error": "Erro"
     },
@@ -573,7 +573,7 @@
     "leaderboard_time": "Tempo",
     "authoring": {
       "title": "Novo desafio",
-      "description": "Defina o problema, seus casos de teste e como ele é julgado.",
+      "description": "Defina o problema, seus casos de teste e como ele é avaliado.",
       "back": "Voltar aos desafios",
       "not_logged_title": "Entre para criar desafios",
       "not_logged_description": "Você precisa de uma conta para criar e publicar desafios.",
@@ -587,10 +587,10 @@
       "field_statement_placeholder": "Descreva o problema, o formato de entrada e o de saída…",
       "field_difficulty": "Dificuldade",
       "field_languages": "Linguagens permitidas",
-      "field_judge_mode": "Modo de julgamento",
+      "field_judge_mode": "Modo de avaliação",
       "field_time_limit": "Limite de tempo (ms)",
       "field_mem_limit": "Limite de memória (MB)",
-      "create": "Criar desafio",
+      "create": "Salvar desafio",
       "creating": "Criando…",
       "created": "Desafio criado — agora adicione os casos de teste.",
       "tests_intro": "Adicione ao menos um caso de teste. Casos ocultos nunca são enviados a quem resolve.",

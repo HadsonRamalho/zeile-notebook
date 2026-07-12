@@ -61,11 +61,17 @@ export interface SubmissionResultView {
   ord: number;
 }
 
+export interface ReferenceSolution {
+  solution: string | null;
+  language: Language | null;
+}
+
 export interface SubmissionView {
   id: string;
   challengeId: string;
   userId: string | null;
   language: Language;
+  code: string;
   status: SubmissionStatus;
   score: number;
   maxScore: number;
@@ -90,6 +96,7 @@ export interface SampleRunResponse {
 }
 
 export interface LeaderboardEntry {
+  submissionId: string;
   userId: string;
   authorName: string;
   score: number;

@@ -590,7 +590,7 @@
       "field_judge_mode": "Judge mode",
       "field_time_limit": "Time limit (ms)",
       "field_mem_limit": "Memory limit (MB)",
-      "create": "Create challenge",
+      "create": "Save challenge",
       "creating": "Creating…",
       "created": "Challenge created — now add its test cases.",
       "tests_intro": "Add at least one test case. Hidden cases are never sent to solvers.",

@@ -178,7 +178,11 @@ export function ChallengeBlock({
             onUpdated={(c) => setDetail({ ...detail, challenge: c })}
           />
         ) : (
-          <ChallengeSolve detail={detail} currentUserId={user?.id} />
+          <ChallengeSolve
+            detail={detail}
+            currentUserId={user?.id}
+            canReview={canWrite}
+          />
         )}
       </div>
     </Shell>

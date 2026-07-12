@@ -6,6 +6,7 @@ import type {
   CreateChallengePayload,
   CreateTestCasePayload,
   LeaderboardEntry,
+  ReferenceSolution,
   SampleRunResponse,
   SubmissionView,
   SubmitPayload,
@@ -55,6 +56,10 @@ export async function setReferenceSolution(
     solution,
     language,
   });
+}
+
+export async function getReferenceSolution(id: string) {
+  return api.get<ReferenceSolution>(`/challenge/${id}/reference`);
 }
 
 export async function submitSolution(id: string, payload: SubmitPayload) {

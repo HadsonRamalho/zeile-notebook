@@ -1,6 +1,16 @@
 "use client";
 
-import { Clock, Cpu, Loader2, Play, RotateCcw, Send } from "lucide-react";
+import {
+  Clock,
+  Cpu,
+  FileText,
+  ListChecks,
+  Loader2,
+  Play,
+  RotateCcw,
+  Send,
+  Trophy,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -9,6 +19,12 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/challenges/leaderboard-table";
 import { SolveEditor } from "@/components/challenges/solve-editor";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/motion/tabs";
 import { SubmissionResults } from "@/components/challenges/submission-results";
 import { VerdictBadge } from "@/components/challenges/verdict-badge";
 import { Button } from "@/components/ui/button";
@@ -33,15 +49,17 @@ import { cn } from "@/lib/utils";
 type Tab = "statement" | "submissions" | "leaderboard";
 type ResultView =
   | { kind: "samples"; data: SampleRunResult[]; compileError: string | null }
-  | { kind: "submission"; data: SubmissionView }
+  | { kind: "submission"; data: SubmissionView; showCode?: boolean }
   | null;
 
 export function ChallengeSolve({
   detail,
   currentUserId,
+  canReview = false,
 }: {
   detail: ChallengeDetail;
   currentUserId?: string | null;
+  canReview?: boolean;
 }) {
   const t = useTranslations("challenges");
   const challenge = detail.challenge;
@@ -137,13 +155,17 @@ export function ChallengeSolve({
     }
   }, [busy, currentUserId, challenge.id, language, code, refreshMeta, t]);
 
-  const openSubmission = useCallback(async (id: string) => {
-    try {
-      setResult({ kind: "submission", data: await getSubmission(id) });
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const openSubmission = useCallback(
+    async (id: string) => {
+      try {
+        const data = await getSubmission(id);
+        setResult({ kind: "submission", data, showCode: true });
+      } catch {
+        toast.error(t("login_required"));
+      }
+    },
+    [t],
+  );
 
   return (
     <div className="space-y-4">
@@ -158,32 +180,27 @@ export function ChallengeSolve({
         </span>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-border">
-        {(
-          [
-            ["statement", t("tab_statement")],
-            ["submissions", t("tab_submissions")],
-            ["leaderboard", t("tab_leaderboard")],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-              tab === key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        variant="underline"
+        value={tab}
+        onValueChange={(v) => setTab(v as Tab)}
+      >
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="statement" className="gap-1.5">
+            <FileText className="size-4" />
+            {t("tab_statement")}
+          </TabsTrigger>
+          <TabsTrigger value="submissions" className="gap-1.5">
+            <ListChecks className="size-4" />
+            {t("tab_submissions")}
+          </TabsTrigger>
+          <TabsTrigger value="leaderboard" className="gap-1.5">
+            <Trophy className="size-4" />
+            {t("tab_leaderboard")}
+          </TabsTrigger>
+        </TabsList>
 
-      {tab === "statement" && (
-        <div className="space-y-4">
+        <TabsContent value="statement" className="space-y-4">
           <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none">
             <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
               {challenge.statementMd}
@@ -213,49 +230,56 @@ export function ChallengeSolve({
               ))}
             </div>
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {tab === "submissions" &&
-        (submissions === null ? (
-          <div className="h-24 animate-pulse rounded-xl bg-muted" />
-        ) : submissions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-            {t("no_submissions_description")}
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {submissions.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => openSubmission(s.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    {languageLabel(s.language)} ·{" "}
-                    {new Date(s.createdAt).toLocaleString()}
-                  </span>
-                  <span className="text-sm font-medium">
-                    {t(`status.${s.status}`)}
-                    {s.status === "done" && (
-                      <span className="ml-2 font-mono text-muted-foreground">
-                        {s.score}/{s.maxScore}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ))}
+        <TabsContent value="submissions">
+          {submissions === null ? (
+            <div className="h-24 animate-pulse rounded-xl bg-muted" />
+          ) : submissions.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+              {t("no_submissions_description")}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {submissions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => openSubmission(s.id)}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {languageLabel(s.language)} ·{" "}
+                      {new Date(s.createdAt).toLocaleString()}
+                    </span>
+                    <span className="text-sm font-medium">
+                      {t(`status.${s.status}`)}
+                      {s.status === "done" && (
+                        <span className="ml-2 font-mono text-muted-foreground">
+                          {s.score}/{s.maxScore}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TabsContent>
 
-      {tab === "leaderboard" &&
-        (leaderboard === null ? (
-          <div className="h-24 animate-pulse rounded-xl bg-muted" />
-        ) : (
-          <LeaderboardTable entries={leaderboard} currentUserId={currentUserId} />
-        ))}
+        <TabsContent value="leaderboard">
+          {leaderboard === null ? (
+            <div className="h-24 animate-pulse rounded-xl bg-muted" />
+          ) : (
+            <LeaderboardTable
+              entries={leaderboard}
+              currentUserId={currentUserId}
+              canReview={canReview}
+              onSelect={openSubmission}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
 
       <div className="space-y-3">
         <SolveEditor
@@ -296,7 +320,21 @@ export function ChallengeSolve({
               {t("result_title")}
             </h4>
             {result.kind === "submission" ? (
-              <SubmissionResults submission={result.data} />
+              <div className="space-y-4">
+                {result.showCode && result.data.code && (
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {languageLabel(result.data.language)}
+                      </span>
+                    </div>
+                    <pre className="max-h-72 overflow-auto p-3 font-mono text-xs text-foreground">
+                      {result.data.code}
+                    </pre>
+                  </div>
+                )}
+                <SubmissionResults submission={result.data} />
+              </div>
             ) : (
               <SampleRunPanel
                 results={result.data}

@@ -13,9 +13,13 @@ function displayName(name: string) {
 export function LeaderboardTable({
   entries,
   currentUserId,
+  canReview = false,
+  onSelect,
 }: {
   entries: LeaderboardEntry[];
   currentUserId?: string | null;
+  canReview?: boolean;
+  onSelect?: (submissionId: string) => void;
 }) {
   const t = useTranslations("challenges");
 
@@ -53,12 +57,17 @@ export function LeaderboardTable({
         <tbody>
           {entries.map((entry, index) => {
             const isMe = currentUserId != null && entry.userId === currentUserId;
+            const reviewable = !!onSelect && (canReview || isMe);
             return (
               <tr
                 key={entry.userId}
+                onClick={
+                  reviewable ? () => onSelect(entry.submissionId) : undefined
+                }
                 className={cn(
                   "border-b border-border last:border-0 transition-colors",
                   isMe ? "bg-primary/5" : "hover:bg-muted/40",
+                  reviewable && "cursor-pointer",
                 )}
               >
                 <td className="px-4 py-3">
