@@ -243,6 +243,7 @@ export function FreeDrawingCell({
 
   const lastSyncedSig = useRef<string>(sceneSignature(elements));
   const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localDirty = useRef(false);
   const undoStack = useRef<FreeDrawingElement[][]>([]);
   const redoStack = useRef<FreeDrawingElement[][]>([]);
 
@@ -306,6 +307,7 @@ export function FreeDrawingCell({
   // Reconcilia mudanças remotas (outros peers) na cena, com a mesma
   // detecção de eco por assinatura de conteúdo usada no bloco de Excalidraw.
   useEffect(() => {
+    if (localDirty.current || pendingStroke.current) return;
     const remote = readSceneElements(
       doc,
       blockId,
@@ -339,9 +341,11 @@ export function FreeDrawingCell({
       const sig = sceneSignature(next as unknown as DrawingElement[]);
       if (sig === lastSyncedSig.current) return;
       lastSyncedSig.current = sig;
+      localDirty.current = true;
       if (commitTimer.current) clearTimeout(commitTimer.current);
       commitTimer.current = setTimeout(() => {
         updateDrawingScene(blockId, next as unknown as DrawingElement[]);
+        localDirty.current = false;
       }, 250);
     },
     [blockId, updateDrawingScene],
