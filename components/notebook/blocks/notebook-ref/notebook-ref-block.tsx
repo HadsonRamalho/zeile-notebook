@@ -18,7 +18,9 @@ import {
 import {
   getCurrentNotebook,
   getMyNotebooks,
+  getNotebookMeta,
 } from "@/lib/api/notebook-service";
+import { fetchTeamPages } from "@/lib/api/teams-service";
 import type { Block, BlockMetadata, Notebook } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +28,20 @@ function readRefId(block: Block): string | undefined {
   const meta = block.metadata;
   if (meta && meta.type === "notebook_ref") return meta.props.notebookId;
   return undefined;
+}
+
+// Escopa a listagem ao contexto do notebook atual: notebooks do mesmo time
+// quando o notebook pertence a um time, ou os notebooks pessoais caso contrário.
+async function loadScopedNotebooks(
+  currentNotebookId?: string,
+): Promise<Notebook[]> {
+  if (currentNotebookId) {
+    const meta = await getNotebookMeta(currentNotebookId).catch(() => null);
+    if (meta?.team_id) {
+      return (await fetchTeamPages(meta.team_id)) ?? [];
+    }
+  }
+  return (await getMyNotebooks()) ?? [];
 }
 
 function NotebookPicker({
@@ -44,7 +60,7 @@ function NotebookPicker({
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next && notebooks === null) {
-      getMyNotebooks()
+      loadScopedNotebooks(currentNotebookId)
         .then((n) => setNotebooks(n ?? []))
         .catch(() => setNotebooks([]));
     }
@@ -78,7 +94,9 @@ function NotebookPicker({
             </div>
           ) : filtered.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              {query.trim() ? "Nenhum notebook." : "Você não tem notebooks."}
+              {query.trim()
+                ? "Nenhum notebook."
+                : "Nenhum notebook disponível."}
             </p>
           ) : (
             filtered.map((n) => (
