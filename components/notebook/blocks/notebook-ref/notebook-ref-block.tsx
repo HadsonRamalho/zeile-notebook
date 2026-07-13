@@ -30,8 +30,6 @@ function readRefId(block: Block): string | undefined {
   return undefined;
 }
 
-// Escopa a listagem ao contexto do notebook atual: notebooks do mesmo time
-// quando o notebook pertence a um time, ou os notebooks pessoais caso contrário.
 async function loadScopedNotebooks(
   currentNotebookId?: string,
 ): Promise<Notebook[]> {
