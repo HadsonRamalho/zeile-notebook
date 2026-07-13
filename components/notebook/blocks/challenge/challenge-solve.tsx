@@ -65,9 +65,7 @@ function parseDraft(raw?: string): {
         byLang: d.byLang as Record<string, string>,
       };
     }
-  } catch {
-    /* conteúdo antigo/livre: ignora */
-  }
+  } catch {}
   return { byLang: {} };
 }
 
