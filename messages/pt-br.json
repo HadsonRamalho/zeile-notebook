@@ -460,6 +460,41 @@
           "add": "Adicionar blocos de texto",
           "edit": "Editar blocos de texto"
         },
+        "latex": {
+          "view": "Ver blocos LaTeX",
+          "add": "Adicionar blocos LaTeX",
+          "edit": "Editar blocos LaTeX"
+        },
+        "sql": {
+          "view": "Ver blocos SQL",
+          "add": "Adicionar blocos SQL",
+          "edit": "Editar blocos SQL"
+        },
+        "typst": {
+          "view": "Ver blocos Typst",
+          "add": "Adicionar blocos Typst",
+          "edit": "Editar blocos Typst"
+        },
+        "database_schema": {
+          "view": "Ver blocos de diagrama",
+          "add": "Adicionar blocos de diagrama",
+          "edit": "Editar blocos de diagrama"
+        },
+        "challenge": {
+          "view": "Ver blocos de desafio",
+          "add": "Adicionar blocos de desafio",
+          "edit": "Editar blocos de desafio"
+        },
+        "component": {
+          "view": "Ver blocos de interface",
+          "add": "Adicionar blocos de interface",
+          "edit": "Editar blocos de interface"
+        },
+        "notebook_ref": {
+          "view": "Ver blocos de referência",
+          "add": "Adicionar blocos de referência",
+          "edit": "Editar blocos de referência"
+        },
         "reorder": "Reordenar blocos"
       },
       "manage_public": "Gerenciar permissões públicas",

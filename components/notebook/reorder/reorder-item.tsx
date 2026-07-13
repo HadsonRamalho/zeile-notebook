@@ -58,7 +58,17 @@ const KNOWN_BLOCK_TYPES = new Set([
   "drawing",
   "text",
 ]);
-const EXEC_LANGS = ["rust", "go", "cpp", "zig"];
+const EXEC_LANGS = ["rust", "go", "python", "cpp", "zig", "tsx"];
+
+const DIRECT_PERM_TYPES = new Set([
+  "latex",
+  "sql",
+  "typst",
+  "database_schema",
+  "challenge",
+  "component",
+  "notebook_ref",
+]);
 
 function blockPermType(block: Block): string | null {
   if (block.type === "code") {
@@ -68,6 +78,7 @@ function blockPermType(block: Block): string | null {
   if (block.type === "text") return "text";
   if (block.type === "drawing" || block.type === "free_drawing")
     return "drawing";
+  if (DIRECT_PERM_TYPES.has(block.type)) return block.type;
   return null;
 }
 

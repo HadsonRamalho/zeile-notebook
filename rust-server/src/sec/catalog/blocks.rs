@@ -1,7 +1,21 @@
 use super::{Permission, Tier, TargetKind, ViewSensitivity};
 
 const BLOCK_TYPES: &[&str] = &[
-    "rust", "go", "python", "cpp", "zig", "tsx", "drawing", "text",
+    "rust",
+    "go",
+    "python",
+    "cpp",
+    "zig",
+    "tsx",
+    "drawing",
+    "text",
+    "latex",
+    "sql",
+    "typst",
+    "database_schema",
+    "challenge",
+    "component",
+    "notebook_ref",
 ];
 
 const EXECUTABLE: &[&str] = &["rust", "go", "python", "cpp", "zig", "tsx"];
