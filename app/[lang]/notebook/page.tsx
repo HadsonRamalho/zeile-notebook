@@ -1,12 +1,24 @@
 "use client";
 
-import { FileText, NotebookPen, Plus, Users } from "lucide-react";
-import Link from "next/link";
+import { NotebookPen, Plus, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { FolderedNotebooks } from "@/components/notebook/folders/foldered-notebooks";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
 import { Button } from "@/components/ui/button";
+import {
+  createFolder,
+  createTeamFolder,
+  deleteFolder,
+  deleteTeamFolder,
+  type Folder,
+  fetchFolders,
+  fetchTeamFolders,
+  moveNotebookToFolder,
+  renameFolder,
+  renameTeamFolder,
+} from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
 import type { Team, TeamRole } from "@/lib/types/team-types";
 
@@ -43,32 +55,41 @@ function EmptyState() {
   );
 }
 
-function NotebookCard({ id, title }: { id: string; title: string }) {
-  return (
-    <Link
-      href={`/notebook/${id}`}
-      className="group flex flex-col gap-2 rounded-lg border bg-card p-4 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-    >
-      <FileText className="size-4 text-muted-foreground group-hover:text-accent-foreground" />
-      <span className="truncate font-medium">{title || "Sem título"}</span>
-    </Link>
-  );
-}
-
 export default function NotebookHomePage() {
   const t = useTranslations("sidebar");
-  const { pages, createPage } = useNotebookManager();
+  const { pages, createPage, refreshPages } = useNotebookManager();
   const { teamPages, refreshTeamPages } = useTeamNotebookManager();
   const [teams, setTeams] = useState<[Team, TeamRole][]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [teamFolders, setTeamFolders] = useState<Record<string, Folder[]>>({});
+
+  const refreshFolders = useCallback(() => {
+    fetchFolders()
+      .then((f) => setFolders(f ?? []))
+      .catch(() => {});
+  }, []);
+
+  const refreshTeamFolders = useCallback((teamId: string) => {
+    fetchTeamFolders(teamId)
+      .then((f) => setTeamFolders((prev) => ({ ...prev, [teamId]: f ?? [] })))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshFolders();
+  }, [refreshFolders]);
 
   useEffect(() => {
     fetchUserTeams()
       .then((data) => {
         setTeams(data);
-        for (const [team] of data) refreshTeamPages(team.id);
+        for (const [team] of data) {
+          refreshTeamPages(team.id);
+          refreshTeamFolders(team.id);
+        }
       })
       .catch(() => setTeams([]));
-  }, [refreshTeamPages]);
+  }, [refreshTeamPages, refreshTeamFolders]);
 
   if (pages.length === 0 && teams.length === 0) {
     return (
@@ -93,14 +114,33 @@ export default function NotebookHomePage() {
             {t("new_page")}
           </Button>
         </div>
-        {pages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("empty_notebook_desc")}</p>
+        {pages.length === 0 && folders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t("empty_notebook_desc")}
+          </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {pages.map((page) => (
-              <NotebookCard key={page.id} id={page.id} title={page.title} />
-            ))}
-          </div>
+          <FolderedNotebooks
+            notebooks={pages}
+            folders={folders}
+            canManage
+            onCreateFolder={async (name) => {
+              await createFolder(name);
+              refreshFolders();
+            }}
+            onRenameFolder={async (id, name) => {
+              await renameFolder(id, name);
+              refreshFolders();
+            }}
+            onDeleteFolder={async (id) => {
+              await deleteFolder(id);
+              refreshFolders();
+              refreshPages();
+            }}
+            onMoveNotebook={async (id, folderId) => {
+              await moveNotebookToFolder(id, folderId);
+              refreshPages();
+            }}
+          />
         )}
       </section>
 
@@ -112,8 +152,25 @@ export default function NotebookHomePage() {
           </h2>
 
           <div className="flex flex-col gap-8">
-            {teams.map(([team]) => {
+            {teams.map(([team, role]) => {
               const pagesOfTeam = teamPages[team.id] ?? [];
+              const foldersOfTeam = teamFolders[team.id] ?? [];
+              const canManage = role.can_write;
+              if (pagesOfTeam.length === 0 && foldersOfTeam.length === 0) {
+                return (
+                  <div key={team.id} className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-mono text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+                        {team.name}
+                      </h3>
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Este time ainda não tem cadernos.
+                    </p>
+                  </div>
+                );
+              }
               return (
                 <div key={team.id} className="flex flex-col gap-3">
                   <div className="flex items-center gap-3">
@@ -122,17 +179,28 @@ export default function NotebookHomePage() {
                     </h3>
                     <span className="h-px flex-1 bg-border" />
                   </div>
-                  {pagesOfTeam.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Este time ainda não tem cadernos.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                      {pagesOfTeam.map((page) => (
-                        <NotebookCard key={page.id} id={page.id} title={page.title} />
-                      ))}
-                    </div>
-                  )}
+                  <FolderedNotebooks
+                    notebooks={pagesOfTeam}
+                    folders={foldersOfTeam}
+                    canManage={canManage}
+                    onCreateFolder={async (name) => {
+                      await createTeamFolder(team.id, name);
+                      refreshTeamFolders(team.id);
+                    }}
+                    onRenameFolder={async (id, name) => {
+                      await renameTeamFolder(team.id, id, name);
+                      refreshTeamFolders(team.id);
+                    }}
+                    onDeleteFolder={async (id) => {
+                      await deleteTeamFolder(team.id, id);
+                      refreshTeamFolders(team.id);
+                      refreshTeamPages(team.id);
+                    }}
+                    onMoveNotebook={async (id, folderId) => {
+                      await moveNotebookToFolder(id, folderId);
+                      refreshTeamPages(team.id);
+                    }}
+                  />
                 </div>
               );
             })}
