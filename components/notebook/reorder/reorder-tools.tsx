@@ -15,6 +15,7 @@ import {
   Plus,
   Puzzle,
   ScrollText,
+  Shapes,
   Sigma,
   TableProperties,
   Terminal,
@@ -114,10 +115,20 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           targetView: "languages",
         },
         {
-          label: "UI",
+          label: "Interface",
           icon: <Loader size={14} />,
           targetView: "ui",
         },
+        {
+          label: "Outros",
+          icon: <Shapes size={14} />,
+          targetView: "outros",
+        },
+      ],
+    },
+    outros: {
+      parent: "main",
+      buttons: [
         {
           label: "Diagramas",
           icon: <Waypoints size={14} />,
@@ -146,7 +157,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
       ],
     },
     diagrams: {
-      parent: "main",
+      parent: "outros",
       buttons: [
         {
           label: "Desenho",
