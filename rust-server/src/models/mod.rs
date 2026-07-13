@@ -2,6 +2,7 @@ pub mod admin;
 pub mod challenge;
 pub mod chat;
 pub mod error;
+pub mod folder;
 pub mod jwt;
 pub mod notebook;
 pub mod notification;

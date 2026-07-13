@@ -3,6 +3,7 @@ pub mod challenge;
 pub mod challenge_judge;
 pub mod chat;
 pub mod email;
+pub mod folder;
 pub mod grants;
 pub mod jwt;
 pub mod metrics;

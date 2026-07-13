@@ -10,6 +10,10 @@ use crate::{
             api_list_notebook_message_versions, api_list_notebook_messages,
             api_send_notebook_message,
         },
+        folder::{
+            api_create_folder, api_delete_folder, api_list_folders,
+            api_move_notebook_to_folder, api_rename_folder,
+        },
         grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
         notebook::{
             api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
@@ -28,6 +32,12 @@ use crate::{
 pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
     let routes = OpenApiRouter::<Arc<AppState>>::new()
         .route("/create", post(api_create_notebook))
+        .route("/folders", get(api_list_folders).post(api_create_folder))
+        .route(
+            "/folders/{folder_id}",
+            patch(api_rename_folder).delete(api_delete_folder),
+        )
+        .route("/{id}/folder", patch(api_move_notebook_to_folder))
         .route("/{id}/title", patch(api_rename_notebook))
         .route("/{id}", delete(api_delete_notebook))
         .route("/{id}", get(api_get_single_notebook))

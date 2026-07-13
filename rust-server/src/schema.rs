@@ -186,6 +186,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    folders (id) {
+        id -> Uuid,
+        #[max_length = 255]
+        name -> Varchar,
+        user_id -> Nullable<Uuid>,
+        team_id -> Nullable<Uuid>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     notebooks (id) {
         id -> Uuid,
         user_id -> Nullable<Uuid>,
@@ -197,6 +209,7 @@ diesel::table! {
         document_data -> Nullable<Bytea>,
         team_id -> Nullable<Uuid>,
         search_text -> Text,
+        folder_id -> Nullable<Uuid>,
     }
 }
 
@@ -339,6 +352,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     challenges,
     chat_message_versions,
     chat_messages,
+    folders,
     notebooks,
     notification_preferences,
     notifications,

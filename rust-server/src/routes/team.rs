@@ -9,6 +9,10 @@ use crate::{
             api_delete_team_message, api_edit_team_message, api_list_team_message_versions,
             api_list_team_messages, api_send_team_message,
         },
+        folder::{
+            api_create_team_folder, api_delete_team_folder, api_list_team_folders,
+            api_rename_team_folder,
+        },
         grants::{api_create_team_grant, api_delete_team_grant, api_list_team_grants},
         permissions::api_get_team_capabilities,
         team::{
@@ -35,6 +39,14 @@ pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
         .route(
             "/{id}/chat/messages/{message_id}/versions",
             get(api_list_team_message_versions),
+        )
+        .route(
+            "/{id}/folders",
+            get(api_list_team_folders).post(api_create_team_folder),
+        )
+        .route(
+            "/{id}/folders/{folder_id}",
+            patch(api_rename_team_folder).delete(api_delete_team_folder),
         )
         .route("/{id}/notebooks", post(api_create_team_page))
         .route("/{id}/notebooks", get(api_get_team_pages))

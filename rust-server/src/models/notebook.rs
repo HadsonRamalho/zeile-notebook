@@ -95,6 +95,8 @@ pub struct Notebook {
     pub is_public: bool,
     pub document_data: Option<Vec<u8>>,
     pub team_id: Option<Uuid>,
+    #[serde(rename = "folderId")]
+    pub folder_id: Option<Uuid>,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations, Serialize, Debug, Insertable)]
