@@ -11,7 +11,8 @@ export type BlockType =
   | "latex"
   | "sql"
   | "typst"
-  | "challenge";
+  | "challenge"
+  | "notebook_ref";
 
 export type DrawingElement = {
   id: string;
@@ -74,12 +75,20 @@ export interface ChallengeMetadata {
   };
 }
 
+export interface NotebookRefMetadata {
+  type: "notebook_ref";
+  props: {
+    notebookId?: string;
+  };
+}
+
 export type BlockMetadata =
   | CardMetadata
   | CalloutMetadata
   | GithubRepoMetadata
   | BannerMetadata
   | ChallengeMetadata
+  | NotebookRefMetadata
   | { type: "generic"; props?: Record<string, any> };
 
 export interface Block {

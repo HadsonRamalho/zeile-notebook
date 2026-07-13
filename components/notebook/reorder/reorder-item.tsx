@@ -19,6 +19,7 @@ import { FreeDrawingCell } from "../blocks/free-drawing/free-drawing-cell";
 import { GenericBlockEditor } from "../blocks/generic/generic-code-block";
 import { GoEditor } from "../blocks/go/go-editor";
 import { LatexCell } from "../blocks/latex/latex-cell";
+import { NotebookReferenceBlock } from "../blocks/notebook-ref/notebook-ref-block";
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
 import { SqlCell } from "../blocks/sql/sql-cell";
@@ -193,6 +194,13 @@ export function ReorderItem({
             notebookId={notebookId}
             canWrite={canEditContent}
             updateBlock={updateBlock}
+            updateBlockMetadata={updateBlockMetadata}
+          />
+        ) : block.type === "notebook_ref" ? (
+          <NotebookReferenceBlock
+            block={block}
+            notebookId={notebookId}
+            canWrite={canEditContent}
             updateBlockMetadata={updateBlockMetadata}
           />
         ) : block.type === "drawing" ? (
