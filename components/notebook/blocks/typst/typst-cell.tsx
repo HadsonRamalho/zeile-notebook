@@ -1,14 +1,12 @@
 "use client";
 
 import { Download, FileImage, Maximize2, Minimize2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import {
-  getTypst,
-  getTypstSourcesVersion,
-  subscribeTypstSources,
-} from "@/lib/typstStore";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Block, BlockMetadata } from "@/lib/types";
+import { getTypst, subscribeTypstSources } from "@/lib/typstStore";
 import { cn } from "@/lib/utils";
 import { BlockEditor } from "../block-editor";
+import { TypstTemplateControls } from "./typst-template-controls";
 
 export const defaultTypstContent =
   "= Documento Typst\n\nEste é um documento *Typst* renderizado direto no navegador.";
@@ -17,6 +15,10 @@ interface TypstCellProps {
   content: string;
   onChange: (content: string) => void;
   canWrite: boolean;
+  block?: Block;
+  notebookId?: string;
+  pageBlocks?: Block[];
+  updateBlockMetadata?: (id: string, metadata: BlockMetadata) => void;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -28,41 +30,45 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
+export function TypstCell({
+  content,
+  onChange,
+  canWrite,
+  block,
+  notebookId,
+  pageBlocks,
+  updateBlockMetadata,
+}: TypstCellProps) {
   const [fullscreen, setFullscreen] = useState(false);
   const [svgHtml, setSvgHtml] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [sourcesVersion, setSourcesVersion] = useState(
-    getTypstSourcesVersion(),
-  );
 
-  useEffect(
-    () =>
-      subscribeTypstSources(() => setSourcesVersion(getTypstSourcesVersion())),
-    [],
-  );
+  const renderPreview = useCallback(async () => {
+    try {
+      const typst = await getTypst();
+      const html = await typst.svg({ mainContent: content });
+      setSvgHtml(html);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao renderizar Typst");
+    }
+  }, [content]);
 
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(async () => {
-      try {
-        const typst = await getTypst();
-        const html = await typst.svg({ mainContent: content });
-        setSvgHtml(html);
-        setError(null);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Erro ao renderizar Typst",
-        );
-      }
-    }, 400);
+    debounceTimer.current = setTimeout(renderPreview, 400);
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [content, sourcesVersion]);
+  }, [renderPreview]);
+
+  useEffect(
+    () => subscribeTypstSources(() => renderPreview()),
+    [renderPreview],
+  );
 
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
@@ -121,6 +127,14 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
           fullscreen ? "z-overlay-controls" : "z-10",
         )}
       >
+        {canWrite && block && updateBlockMetadata && (
+          <TypstTemplateControls
+            block={block}
+            notebookId={notebookId}
+            pageBlocks={pageBlocks ?? []}
+            updateBlockMetadata={updateBlockMetadata}
+          />
+        )}
         <button
           type="button"
           onClick={handleExportPdf}

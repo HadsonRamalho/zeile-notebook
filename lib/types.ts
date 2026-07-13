@@ -91,6 +91,14 @@ export interface TemplateRefMetadata {
   };
 }
 
+export interface TypstTemplateMetadata {
+  type: "typst_template";
+  props: {
+    templateId: string;
+    name: string;
+  };
+}
+
 export type BlockMetadata =
   | CardMetadata
   | CalloutMetadata
@@ -99,6 +107,7 @@ export type BlockMetadata =
   | ChallengeMetadata
   | NotebookRefMetadata
   | TemplateRefMetadata
+  | TypstTemplateMetadata
   | { type: "generic"; props?: Record<string, any> };
 
 export interface Block {

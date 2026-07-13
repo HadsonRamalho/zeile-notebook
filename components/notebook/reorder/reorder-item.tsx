@@ -260,6 +260,10 @@ export function ReorderItem({
             content={block.content}
             onChange={(val) => updateBlock(block.id, val)}
             canWrite={canEditContent}
+            block={block}
+            notebookId={notebookId}
+            pageBlocks={pageBlocks}
+            updateBlockMetadata={updateBlockMetadata}
           />
         ) : block.type === "text" ? (
           <TextBlock
