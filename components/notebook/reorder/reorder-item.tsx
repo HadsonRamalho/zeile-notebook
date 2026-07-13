@@ -23,6 +23,7 @@ import { NotebookReferenceBlock } from "../blocks/notebook-ref/notebook-ref-bloc
 import PythonSandbox from "../blocks/python/python-editor";
 import { RustEditor } from "../blocks/rust/rust-editor";
 import { SqlCell } from "../blocks/sql/sql-cell";
+import { TemplateReferenceBlock } from "../blocks/template-ref/template-ref-block";
 import { TextBlock } from "../blocks/text/text-block";
 import { TsxEditor } from "../blocks/tsx/tsx-editor";
 import { TypstCell } from "../blocks/typst/typst-cell";
@@ -68,6 +69,7 @@ const DIRECT_PERM_TYPES = new Set([
   "challenge",
   "component",
   "notebook_ref",
+  "template_ref",
 ]);
 
 function blockPermType(block: Block): string | null {
@@ -211,6 +213,12 @@ export function ReorderItem({
           <NotebookReferenceBlock
             block={block}
             notebookId={notebookId}
+            canWrite={canEditContent}
+            updateBlockMetadata={updateBlockMetadata}
+          />
+        ) : block.type === "template_ref" ? (
+          <TemplateReferenceBlock
+            block={block}
             canWrite={canEditContent}
             updateBlockMetadata={updateBlockMetadata}
           />

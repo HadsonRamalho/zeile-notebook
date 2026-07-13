@@ -15,6 +15,7 @@ pub mod push;
 pub mod sync;
 pub mod team;
 pub mod team_invitation;
+pub mod template;
 pub mod user;
 pub mod utils;
 pub mod websocket;

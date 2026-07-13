@@ -1,10 +1,8 @@
 export interface TypstSnippet {
   svg: (o: { mainContent: string }) => Promise<string>;
   pdf: (o: { mainContent: string }) => Promise<Uint8Array | undefined>;
-  canvas: (
-    container: HTMLElement,
-    o: { mainContent: string },
-  ) => Promise<void>;
+  canvas: (container: HTMLElement, o: { mainContent: string }) => Promise<void>;
+  addSource: (path: string, content: string) => void;
   setCompilerInitOptions: (options: { getModule: () => string }) => void;
   setRendererInitOptions: (options: { getModule: () => string }) => void;
 }
@@ -19,10 +17,9 @@ const TYPST_RENDERER_WASM_URL = `https://cdn.jsdelivr.net/npm/@myriaddreamin/typ
 
 // import() dinâmico via Function evita que o bundler tente resolver a URL do
 // CDN em tempo de build — o pacote só é buscado quando um bloco Typst existe.
-const dynamicImport = new Function(
-  "specifier",
-  "return import(specifier)",
-) as (specifier: string) => Promise<{ $typst: TypstSnippet }>;
+const dynamicImport = new Function("specifier", "return import(specifier)") as (
+  specifier: string,
+) => Promise<{ $typst: TypstSnippet }>;
 
 let typstPromise: Promise<TypstSnippet> | null = null;
 
@@ -44,4 +41,48 @@ export async function getTypst(): Promise<TypstSnippet> {
   }
 
   return typstPromise;
+}
+
+type SourceMap = Record<string, string>;
+
+const registeredNamespaces = new Map<string, SourceMap>();
+const sourceListeners = new Set<() => void>();
+let sourcesVersion = 0;
+
+export function typstSourcePath(name: string): string {
+  const slug =
+    name
+      .trim()
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "src";
+  const withExt = slug.endsWith(".typ") ? slug : `${slug}.typ`;
+  return `/templates/${withExt}`;
+}
+
+export async function registerTypstSources(
+  namespace: string,
+  sources: SourceMap,
+): Promise<string[]> {
+  const typst = await getTypst();
+  const resolved: SourceMap = {};
+  for (const [name, content] of Object.entries(sources)) {
+    const path = typstSourcePath(name);
+    typst.addSource(path, content);
+    resolved[path] = content;
+  }
+  registeredNamespaces.set(namespace, resolved);
+  sourcesVersion += 1;
+  for (const listener of sourceListeners) listener();
+  return Object.keys(resolved);
+}
+
+export function subscribeTypstSources(callback: () => void): () => void {
+  sourceListeners.add(callback);
+  return () => {
+    sourceListeners.delete(callback);
+  };
+}
+
+export function getTypstSourcesVersion(): number {
+  return sourcesVersion;
 }

@@ -2,7 +2,11 @@
 
 import { Download, FileImage, Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getTypst } from "@/lib/typstStore";
+import {
+  getTypst,
+  getTypstSourcesVersion,
+  subscribeTypstSources,
+} from "@/lib/typstStore";
 import { cn } from "@/lib/utils";
 import { BlockEditor } from "../block-editor";
 
@@ -31,6 +35,15 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sourcesVersion, setSourcesVersion] = useState(
+    getTypstSourcesVersion(),
+  );
+
+  useEffect(
+    () =>
+      subscribeTypstSources(() => setSourcesVersion(getTypstSourcesVersion())),
+    [],
+  );
 
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -49,7 +62,7 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [content]);
+  }, [content, sourcesVersion]);
 
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
@@ -63,9 +76,7 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
         );
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Erro ao exportar PDF",
-      );
+      setError(err instanceof Error ? err.message : "Erro ao exportar PDF");
     } finally {
       setIsExportingPdf(false);
     }
@@ -90,9 +101,7 @@ export function TypstCell({ content, onChange, canWrite }: TypstCellProps) {
         });
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Erro ao exportar PNG",
-      );
+      setError(err instanceof Error ? err.message : "Erro ao exportar PNG");
     } finally {
       document.body.removeChild(container);
       setIsExportingPng(false);

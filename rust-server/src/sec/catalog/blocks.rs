@@ -16,6 +16,7 @@ const BLOCK_TYPES: &[&str] = &[
     "challenge",
     "component",
     "notebook_ref",
+    "template_ref",
 ];
 
 const EXECUTABLE: &[&str] = &["rust", "go", "python", "cpp", "zig", "tsx"];

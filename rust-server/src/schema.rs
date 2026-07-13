@@ -264,6 +264,34 @@ diesel::table! {
 }
 
 diesel::table! {
+    templates (id) {
+        id -> Uuid,
+        #[max_length = 32]
+        kind -> Varchar,
+        #[max_length = 255]
+        name -> Varchar,
+        user_id -> Nullable<Uuid>,
+        team_id -> Nullable<Uuid>,
+        source_notebook_id -> Nullable<Uuid>,
+        is_public -> Bool,
+        latest_version -> Int4,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    template_versions (id) {
+        id -> Uuid,
+        template_id -> Uuid,
+        version -> Int4,
+        named_sources -> Jsonb,
+        note -> Nullable<Text>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     teams (id) {
         id -> Uuid,
         name -> Varchar,
@@ -343,6 +371,7 @@ diesel::joinable!(team_members -> team_roles (role_id));
 diesel::joinable!(team_members -> teams (team_id));
 diesel::joinable!(team_members -> users (user_id));
 diesel::joinable!(team_roles -> teams (team_id));
+diesel::joinable!(template_versions -> templates (template_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     blocks,
@@ -362,5 +391,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     team_members,
     team_roles,
     teams,
+    template_versions,
+    templates,
     users,
 );

@@ -1,5 +1,5 @@
-import type { CalloutContainerProps } from "@/components/mdx/callout";
 import type { BannerVariant } from "@/components/banner";
+import type { CalloutContainerProps } from "@/components/mdx/callout";
 
 export type BlockType =
   | "text"
@@ -12,7 +12,8 @@ export type BlockType =
   | "sql"
   | "typst"
   | "challenge"
-  | "notebook_ref";
+  | "notebook_ref"
+  | "template_ref";
 
 export type DrawingElement = {
   id: string;
@@ -82,6 +83,14 @@ export interface NotebookRefMetadata {
   };
 }
 
+export interface TemplateRefMetadata {
+  type: "template_ref";
+  props: {
+    templateId?: string;
+    version?: number;
+  };
+}
+
 export type BlockMetadata =
   | CardMetadata
   | CalloutMetadata
@@ -89,6 +98,7 @@ export type BlockMetadata =
   | BannerMetadata
   | ChallengeMetadata
   | NotebookRefMetadata
+  | TemplateRefMetadata
   | { type: "generic"; props?: Record<string, any> };
 
 export interface Block {

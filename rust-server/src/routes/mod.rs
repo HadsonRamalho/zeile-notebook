@@ -36,6 +36,7 @@ pub mod notifications;
 pub mod permissions;
 pub mod run_rust;
 pub mod team;
+pub mod template;
 pub mod user;
 
 pub async fn print_protected_route()
@@ -128,6 +129,10 @@ pub async fn init_routes() -> Router {
             .nest("/api/user", user_routes().await.into())
             .nest("/api/notebook", notebook_routes().await.into())
             .nest("/api/team", team_routes().await.into())
+            .nest(
+                "/api/template",
+                crate::routes::template::template_routes().await.into(),
+            )
             .nest("/api/challenge", challenge_routes().await.into())
             .nest("/api/admin", admin_routes().await.into())
             .nest(
