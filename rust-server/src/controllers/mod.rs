@@ -4,6 +4,7 @@ pub mod challenge;
 pub mod challenge_judge;
 pub mod chat;
 pub mod comments;
+pub mod snapshots;
 pub mod email;
 pub mod folder;
 pub mod grants;

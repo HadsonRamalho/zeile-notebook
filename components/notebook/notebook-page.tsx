@@ -33,6 +33,7 @@ import { useCapabilities } from "@/hooks/use-capabilities";
 import { usePresence } from "@/hooks/use-presence";
 import { recordEditActivity } from "@/lib/api/activity-service";
 import { useBlockAnchor } from "@/lib/notebook-anchor";
+import { subscribeNotebookSocket } from "@/lib/notebook-socket";
 import { consumePendingImport } from "@/lib/pendingImport";
 import type {
   Block,
@@ -56,6 +57,7 @@ import { LiveCursors } from "./collaboration/live-cursors";
 import { BlockComments } from "./comments/block-comments";
 import { CommentsProvider } from "./comments/comments-context";
 import { HistoryDiffView } from "./history/history-diff-view";
+import { SnapshotsPanel } from "./history/snapshots-panel";
 import { useNotebook } from "./notebook-context";
 import { CapabilitiesProvider } from "./permissions/capabilities";
 import { PresentationMode } from "./presentation/presentation-mode";
@@ -276,6 +278,20 @@ export default function RustInteractivePage({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [followingId]);
+
+  useEffect(() => {
+    const handle = subscribeNotebookSocket(pageId, token, {
+      onText: (raw) => {
+        try {
+          const data = JSON.parse(raw);
+          if (data.type === "notebook_restored") {
+            window.location.reload();
+          }
+        } catch {}
+      },
+    });
+    return () => handle.unsubscribe();
+  }, [pageId, token]);
 
   const hasAppliedPendingImport = useRef(false);
 
@@ -514,6 +530,9 @@ export default function RustInteractivePage({
                 onStop={() => setFollowingId(null)}
               />
               <ActivityFeed notebookId={pageId} />
+              {userPermissions.can_write && (
+                <SnapshotsPanel notebookId={pageId} />
+              )}
             </div>
           )}
 

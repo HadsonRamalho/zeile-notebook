@@ -7,6 +7,7 @@ pub mod error;
 pub mod folder;
 pub mod jwt;
 pub mod notebook;
+pub mod notebook_snapshot;
 pub mod notification;
 pub mod notification_preference;
 pub mod oauth;

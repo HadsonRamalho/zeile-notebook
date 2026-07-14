@@ -28,6 +28,10 @@ use crate::{
         },
         permissions::api_get_notebook_capabilities,
         push::{api_subscribe_push, api_unsubscribe_push},
+        snapshots::{
+            api_create_snapshot, api_delete_snapshot, api_list_snapshots,
+            api_restore_snapshot,
+        },
         user::api_get_user_notebook_permissions,
         websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
     },
@@ -90,6 +94,18 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route(
             "/{id}/activity",
             get(api_list_activity).post(api_record_edit),
+        )
+        .route(
+            "/{id}/snapshots",
+            get(api_list_snapshots).post(api_create_snapshot),
+        )
+        .route(
+            "/{id}/snapshots/{snapshot_id}/restore",
+            post(api_restore_snapshot),
+        )
+        .route(
+            "/{id}/snapshots/{snapshot_id}",
+            delete(api_delete_snapshot),
         )
         .route("/search/", get(api_search_notebooks))
         .route("/search/ranked/", get(api_search_notebooks_ranked))

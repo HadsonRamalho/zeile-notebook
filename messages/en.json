@@ -730,5 +730,15 @@
     "kind_comment": "commented",
     "kind_snapshot": "created a version",
     "kind_publish": "published the notebook"
+  },
+  "snapshots": {
+    "title": "Versions",
+    "label_placeholder": "Version name…",
+    "save": "Save",
+    "empty": "No versions saved yet.",
+    "restore": "Restore",
+    "confirm_restore": "Confirm",
+    "delete": "Delete version",
+    "auto": "Automatic"
   }
 }

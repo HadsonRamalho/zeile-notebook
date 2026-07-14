@@ -730,5 +730,15 @@
     "kind_comment": "comentou",
     "kind_snapshot": "criou uma versão",
     "kind_publish": "publicou o caderno"
+  },
+  "snapshots": {
+    "title": "Versões",
+    "label_placeholder": "Nome da versão…",
+    "save": "Salvar",
+    "empty": "Nenhuma versão salva ainda.",
+    "restore": "Restaurar",
+    "confirm_restore": "Confirmar",
+    "delete": "Excluir versão",
+    "auto": "Automática"
   }
 }

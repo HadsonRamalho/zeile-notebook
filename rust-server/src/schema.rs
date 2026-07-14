@@ -216,6 +216,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    notebook_snapshots (id) {
+        id -> Uuid,
+        notebook_id -> Uuid,
+        #[max_length = 120]
+        label -> Varchar,
+        note -> Nullable<Text>,
+        document_data -> Bytea,
+        #[max_length = 16]
+        kind -> Varchar,
+        created_by -> Nullable<Uuid>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::Tsvector;
 
@@ -427,6 +442,8 @@ diesel::joinable!(folders -> teams (team_id));
 diesel::joinable!(folders -> users (user_id));
 diesel::joinable!(notebook_activity -> notebooks (notebook_id));
 diesel::joinable!(notebook_activity -> users (actor_id));
+diesel::joinable!(notebook_snapshots -> notebooks (notebook_id));
+diesel::joinable!(notebook_snapshots -> users (created_by));
 diesel::joinable!(notebooks -> folders (folder_id));
 diesel::joinable!(notebooks -> teams (team_id));
 diesel::joinable!(notebooks -> users (user_id));
@@ -459,6 +476,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     comments,
     folders,
     notebook_activity,
+    notebook_snapshots,
     notebooks,
     notification_preferences,
     notifications,

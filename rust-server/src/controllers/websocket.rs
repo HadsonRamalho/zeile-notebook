@@ -657,6 +657,31 @@ pub fn broadcast_comment_event(state: &Arc<AppState>, notebook_id: Uuid, payload
     }
 }
 
+pub async fn restore_notebook_doc(state: &Arc<AppState>, notebook_id: Uuid, bytes: Vec<u8>) {
+    let search_text = automerge::AutoCommit::load(&bytes)
+        .map(|doc| extract_search_text(&doc))
+        .unwrap_or_default();
+
+    if let Ok(mut conn) = state.pool.get().await {
+        checkpoint_notebook_data(&mut conn, notebook_id, bytes.clone(), search_text).await;
+    }
+
+    if let Some(active) = state.sync_registry.get(&notebook_id)
+        && let Ok(new_doc) = automerge::AutoCommit::load(&bytes)
+    {
+        let mut inner = active.inner.lock().await;
+        inner.doc = new_doc;
+        inner.peer_states.clear();
+        active.dirty_since_save.store(false, Ordering::Release);
+    }
+
+    broadcast_comment_event(
+        state,
+        notebook_id,
+        serde_json::json!({ "type": "notebook_restored" }).to_string(),
+    );
+}
+
 /// Difunde um evento de chat (JSON) para a sala de presença do notebook e dispara
 /// push de menção. Usado pelos endpoints REST de chat para propagar em tempo real.
 pub fn broadcast_chat_and_notify(
