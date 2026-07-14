@@ -651,5 +651,26 @@
       "next": "Next",
       "error_generic": "Something went wrong. Please try again."
     }
+  },
+  "empty_states": {
+    "notebook_title": "This notebook is empty",
+    "notebook_desc": "Start by adding a block. Write in Markdown or run native code right on the page.",
+    "notebook_readonly_desc": "There are no blocks in this notebook yet.",
+    "add_text_block": "Add text block",
+    "add_code_block": "Add code block",
+    "run_hint": "Tip: run a block with ⌘/Ctrl + Enter"
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "subtitle": "Set up your first notebook in three steps.",
+    "step_create_title": "Create your first notebook",
+    "step_create_desc": "A space to write, draw and run code.",
+    "step_run_title": "Add and run a block",
+    "step_run_desc": "Write Rust, Python, SQL and more — run with ⌘/Ctrl + Enter.",
+    "step_explore_title": "Explore what's possible",
+    "step_explore_desc": "Browse public community notebooks for inspiration.",
+    "action_create": "Create notebook",
+    "action_explore": "Explore",
+    "dismiss": "Dismiss"
   }
 }

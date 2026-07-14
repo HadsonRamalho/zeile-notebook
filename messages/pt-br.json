@@ -651,5 +651,26 @@
       "next": "Próximo",
       "error_generic": "Algo deu errado. Tente novamente."
     }
+  },
+  "empty_states": {
+    "notebook_title": "Este caderno está vazio",
+    "notebook_desc": "Comece adicionando um bloco. Escreva em Markdown ou rode código nativo direto na página.",
+    "notebook_readonly_desc": "Ainda não há blocos neste caderno.",
+    "add_text_block": "Adicionar bloco de texto",
+    "add_code_block": "Adicionar bloco de código",
+    "run_hint": "Dica: rode um bloco com ⌘/Ctrl + Enter"
+  },
+  "onboarding": {
+    "title": "Primeiros passos",
+    "subtitle": "Monte seu primeiro caderno em três passos.",
+    "step_create_title": "Crie seu primeiro caderno",
+    "step_create_desc": "Um espaço para escrever, desenhar e executar código.",
+    "step_run_title": "Adicione e rode um bloco",
+    "step_run_desc": "Escreva Rust, Python, SQL e mais — execute com ⌘/Ctrl + Enter.",
+    "step_explore_title": "Explore o que dá pra fazer",
+    "step_explore_desc": "Veja cadernos públicos da comunidade para se inspirar.",
+    "action_create": "Criar caderno",
+    "action_explore": "Explorar",
+    "dismiss": "Dispensar"
   }
 }

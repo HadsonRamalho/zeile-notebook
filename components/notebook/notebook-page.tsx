@@ -6,12 +6,14 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Code2,
   Eye,
+  FileText,
   GitCompareArrows,
-  Plus,
   RotateCw,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Fragment,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -38,6 +40,7 @@ import type {
   Notebook,
 } from "@/lib/types";
 import { Button } from "../ui/button";
+import { EmptyState } from "../ui/empty-state";
 import { ScrollProgress } from "../ui/scroll-progress";
 import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
 import { defaultLatexContent } from "./blocks/latex/latex-cell";
@@ -60,6 +63,7 @@ export default function RustInteractivePage({
   pageId = "default",
   header,
 }: RustInteractivePageProps) {
+  const tEmpty = useTranslations("empty_states");
   const { user } = useAuth();
   const { isDragging, setIsDragging, setLiveNotebook } = useNotebook();
   const tokenX = getCookie("auth_token");
@@ -246,9 +250,7 @@ export default function RustInteractivePage({
   const focusBlockAt = useCallback((index: number) => {
     const root = blocksRootRef.current;
     if (!root || index < 0) return;
-    root
-      .querySelector<HTMLElement>(`[data-block-index="${index}"]`)
-      ?.focus();
+    root.querySelector<HTMLElement>(`[data-block-index="${index}"]`)?.focus();
   }, []);
 
   const handleBlockKeyDown = useCallback(
@@ -277,12 +279,16 @@ export default function RustInteractivePage({
         focusBlockAt(index - 1);
       } else if (e.key === "Enter") {
         e.preventDefault();
-        const trigger = wrapper.querySelector<HTMLElement>("[data-edit-trigger]");
+        const trigger = wrapper.querySelector<HTMLElement>(
+          "[data-edit-trigger]",
+        );
         if (trigger) {
           trigger.click();
         } else {
           wrapper
-            .querySelector<HTMLElement>('.cm-content, textarea, [contenteditable="true"]')
+            .querySelector<HTMLElement>(
+              '.cm-content, textarea, [contenteditable="true"]',
+            )
             ?.focus();
         }
       }
@@ -330,17 +336,37 @@ export default function RustInteractivePage({
 
   if (blocks.length === 0) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center text-muted-foreground space-y-4">
-        <h2>Esta página está vazia.</h2>
-        {userPermissions.can_write && (
-          <Button
-            onClick={() => handleAddBlock(-1, "text")}
-            className="px-4 py-2 bg-fd-primary text-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Primeiro Bloco
-          </Button>
-        )}
+      <div className="flex h-screen w-full flex-col items-center justify-center px-6">
+        <EmptyState
+          icon={<FileText className="size-5" />}
+          title={tEmpty("notebook_title")}
+          description={
+            userPermissions.can_write
+              ? tEmpty("notebook_desc")
+              : tEmpty("notebook_readonly_desc")
+          }
+          hint={userPermissions.can_write ? tEmpty("run_hint") : undefined}
+        >
+          {userPermissions.can_write && (
+            <>
+              <Button
+                onClick={() => handleAddBlock(-1, "text")}
+                className="gap-2"
+              >
+                <FileText className="size-4" />
+                {tEmpty("add_text_block")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleAddBlock(-1, "code", "rust")}
+                className="gap-2"
+              >
+                <Code2 className="size-4" />
+                {tEmpty("add_code_block")}
+              </Button>
+            </>
+          )}
+        </EmptyState>
       </div>
     );
   }

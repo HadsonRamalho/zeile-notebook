@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { FolderedNotebooks } from "@/components/notebook/folders/foldered-notebooks";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
+import { OnboardingChecklist } from "@/components/notebook/onboarding-checklist";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
 import { Button } from "@/components/ui/button";
 import {
@@ -96,8 +97,12 @@ export default function NotebookHomePage() {
 
   if (pages.length === 0 && teams.length === 0) {
     return (
-      <div className="relative flex flex-1">
+      <div className="relative flex flex-1 flex-col gap-8 py-8">
         <AmbientGlow />
+        <OnboardingChecklist
+          hasNotebooks={pages.length > 0}
+          onCreateNotebook={() => createPage()}
+        />
         <EmptyState />
       </div>
     );
@@ -106,6 +111,10 @@ export default function NotebookHomePage() {
   return (
     <div className="relative flex flex-1 flex-col gap-12 py-4">
       <AmbientGlow />
+      <OnboardingChecklist
+        hasNotebooks={pages.length > 0}
+        onCreateNotebook={() => createPage()}
+      />
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
