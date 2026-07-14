@@ -10,6 +10,7 @@ import type {
 } from "@/lib/types";
 import { useCapabilitiesContext } from "../permissions/capabilities";
 import { ChallengeBlock } from "./challenge/challenge-block";
+import { ChartCell } from "./chart/chart-cell";
 import { ComponentRenderer } from "./components/components";
 import { CppEditor } from "./cpp/cpp-editor";
 import { DatabaseSchemaCell } from "./database-schema/database-schema-cell";
@@ -167,6 +168,14 @@ export function BlockContent({
           canWrite={canEditContent}
           updateBlockMetadata={updateBlockMetadata}
         />
+      ) : block.type === "chart" ? (
+        <ChartCell
+          block={block}
+          pageBlocks={pageBlocks}
+          canWrite={canEditContent}
+          updateBlock={updateBlock}
+          updateBlockMetadata={updateBlockMetadata}
+        />
       ) : block.type === "drawing" ? (
         <DrawingCell
           doc={doc}
@@ -199,6 +208,7 @@ export function BlockContent({
           onChange={(val) => updateBlock(block.id, val)}
           canWrite={canEditContent}
           notebookId={doc?.id ?? "default"}
+          blockId={block.id}
         />
       ) : block.type === "typst" ? (
         <TypstCell

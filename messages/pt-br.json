@@ -681,5 +681,18 @@
     "overview": "Visão geral",
     "fullscreen": "Tela cheia",
     "untitled_block": "Bloco sem título"
+  },
+  "chart": {
+    "type_bar": "Barras",
+    "type_line": "Linha",
+    "type_area": "Área",
+    "configure": "Configurar gráfico",
+    "source": "Fonte",
+    "source_inline": "Dados inline (JSON)",
+    "axis_x": "Eixo X",
+    "series": "Séries",
+    "inline_placeholder": "Cole um array JSON de objetos",
+    "empty_cell": "Rode a célula fonte para ver o gráfico.",
+    "empty_inline": "Cole dados JSON na configuração para ver o gráfico."
   }
 }

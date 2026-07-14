@@ -13,7 +13,8 @@ export type BlockType =
   | "typst"
   | "challenge"
   | "notebook_ref"
-  | "template_ref";
+  | "template_ref"
+  | "chart";
 
 export type DrawingElement = {
   id: string;
@@ -99,6 +100,19 @@ export interface TypstTemplateMetadata {
   };
 }
 
+export type ChartType = "bar" | "line" | "area";
+
+export interface ChartMetadata {
+  type: "chart";
+  props: {
+    chartType: ChartType;
+    sourceKind: "inline" | "cell";
+    sourceBlockId?: string;
+    x?: string;
+    y?: string[];
+  };
+}
+
 export type BlockMetadata =
   | CardMetadata
   | CalloutMetadata
@@ -108,6 +122,7 @@ export type BlockMetadata =
   | NotebookRefMetadata
   | TemplateRefMetadata
   | TypstTemplateMetadata
+  | ChartMetadata
   | { type: "generic"; props?: Record<string, any> };
 
 export interface Block {

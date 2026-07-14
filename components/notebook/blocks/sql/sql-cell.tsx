@@ -9,6 +9,11 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
 import { useLocalStorage } from "@/hooks/use-local-storate";
+import {
+  type CellValue,
+  clearCellResult,
+  publishCellResult,
+} from "@/lib/cellResultsStore";
 import { getNotebookDatabase } from "@/lib/sqlDbStore";
 import { RunButton } from "../default/run-button";
 
@@ -25,6 +30,7 @@ interface SqlCellProps {
   onChange: (content: string) => void;
   canWrite: boolean;
   notebookId: string;
+  blockId?: string;
 }
 
 export function SqlCell({
@@ -32,6 +38,7 @@ export function SqlCell({
   onChange,
   canWrite,
   notebookId,
+  blockId,
 }: SqlCellProps) {
   const { resolvedTheme } = useTheme();
   const isTouchDevice = useIsTouchDevice();
@@ -76,13 +83,25 @@ export function SqlCell({
       const db = await getNotebookDatabase(notebookId);
       const execResults = db.exec(localContentRef.current);
       setResults(execResults);
+      if (blockId) {
+        const first = execResults[0];
+        if (first) {
+          publishCellResult(blockId, {
+            columns: first.columns,
+            rows: first.values as CellValue[][],
+          });
+        } else {
+          clearCellResult(blockId);
+        }
+      }
     } catch (err) {
       setResults(null);
       setError(err instanceof Error ? err.message : "Erro ao executar SQL");
+      if (blockId) clearCellResult(blockId);
     } finally {
       setIsRunning(false);
     }
-  }, [notebookId]);
+  }, [notebookId, blockId]);
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl">

@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
+  BarChart3,
   Box,
   ChevronLeft,
   Cpu,
@@ -147,6 +148,11 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           icon: <TableProperties size={14} />,
           onClick: () => addBlock(index, "sql"),
           permType: "sql",
+        },
+        {
+          label: "Gráfico",
+          icon: <BarChart3 size={14} />,
+          onClick: () => addBlock(index, "chart"),
         },
         {
           label: "Typst",

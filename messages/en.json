@@ -681,5 +681,18 @@
     "overview": "Overview",
     "fullscreen": "Fullscreen",
     "untitled_block": "Untitled block"
+  },
+  "chart": {
+    "type_bar": "Bars",
+    "type_line": "Line",
+    "type_area": "Area",
+    "configure": "Configure chart",
+    "source": "Source",
+    "source_inline": "Inline data (JSON)",
+    "axis_x": "X axis",
+    "series": "Series",
+    "inline_placeholder": "Paste a JSON array of objects",
+    "empty_cell": "Run the source cell to see the chart.",
+    "empty_inline": "Paste JSON data in the settings to see the chart."
   }
 }

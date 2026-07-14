@@ -1,5 +1,10 @@
 "use client";
 import { useCallback, useState } from "react";
+import {
+  clearCellResult,
+  parseInlineTable,
+  publishCellResult,
+} from "@/lib/cellResultsStore";
 import type { Block, RunStatus } from "@/lib/types";
 import { BlockEditor } from "../block-editor";
 import { CodeBlockShell } from "../default/code-block-shell";
@@ -30,9 +35,20 @@ export default function PythonSandbox({
     if (res.error) {
       setOutput(`Erro: ${res.error}`);
       setStatus("error");
+      clearCellResult(block.id);
     } else {
-      setOutput(res.output || res.result);
+      const text = res.output || res.result;
+      setOutput(text);
       setStatus("success");
+      const table = parseInlineTable(text);
+      if (table) {
+        publishCellResult(block.id, {
+          columns: table.columns,
+          rows: table.rows,
+        });
+      } else {
+        clearCellResult(block.id);
+      }
     }
     setIsRunning(false);
   }

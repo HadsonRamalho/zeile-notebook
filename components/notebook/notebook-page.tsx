@@ -43,6 +43,7 @@ import type {
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { ScrollProgress } from "../ui/scroll-progress";
+import { defaultChartContent } from "./blocks/chart/chart-cell";
 import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
 import { defaultLatexContent } from "./blocks/latex/latex-cell";
 import { defaultSqlContent } from "./blocks/sql/sql-cell";
@@ -240,7 +241,9 @@ export default function RustInteractivePage({
                 ? defaultSqlContent
                 : type === "typst"
                   ? defaultTypstContent
-                  : "";
+                  : type === "chart"
+                    ? defaultChartContent
+                    : "";
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
@@ -564,6 +567,7 @@ function getBlockTitle(
   if (type === "sql") return "SQL";
   if (type === "typst") return "Typst";
   if (type === "challenge") return "Desafio";
+  if (type === "chart") return "Gráfico";
   if (type !== "code") return "Bloco de Texto";
 
   const titles: Record<string, string> = {
