@@ -135,6 +135,33 @@ pub async fn api_rename_notebook(
     }
 }
 
+pub async fn api_update_notebook_tags(
+    State(state): State<Arc<AppState>>,
+    Path(notebook_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<models::notebook::UpdateTagsRequest>,
+) -> Result<StatusCode, ApiError> {
+    let id = extract_claims_from_header(&headers).await?.1.id;
+
+    crate::controllers::permissions::require(
+        &state.pool,
+        Some(id),
+        notebook_id,
+        "notebook.tags.edit",
+        &crate::controllers::permissions::TargetCtx::default(),
+    )
+    .await?;
+
+    let tags = models::notebook::normalize_tags(&payload.tags)?;
+
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    models::notebook::set_notebook_tags(conn, notebook_id, &tags).await?;
+    Ok(StatusCode::OK)
+}
+
 pub async fn api_update_notebook_visibility(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

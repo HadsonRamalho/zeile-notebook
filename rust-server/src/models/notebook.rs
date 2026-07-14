@@ -97,6 +97,7 @@ pub struct Notebook {
     pub team_id: Option<Uuid>,
     #[serde(rename = "folderId")]
     pub folder_id: Option<Uuid>,
+    pub tags: Value,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations, Serialize, Debug, Insertable)]
@@ -156,6 +157,11 @@ pub struct NewBlock {
 #[derive(Deserialize)]
 pub struct UpdateNotebookTitle {
     pub title: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateTagsRequest {
+    pub tags: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -750,6 +756,50 @@ pub async fn check_permission(
     }
 
     Ok(NotebookPermission::Viewer)
+}
+
+pub const MAX_TAGS: usize = 6;
+pub const MAX_TAG_LEN: usize = 32;
+
+pub fn normalize_tags(raw: &[String]) -> Result<Vec<String>, ApiError> {
+    let mut out: Vec<String> = Vec::new();
+    for tag in raw {
+        let trimmed = tag.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.chars().count() > MAX_TAG_LEN {
+            return Err(ApiError::Request(format!(
+                "Tag excede {MAX_TAG_LEN} caracteres"
+            )));
+        }
+        if !out.iter().any(|t| t.eq_ignore_ascii_case(trimmed)) {
+            out.push(trimmed.to_string());
+        }
+    }
+    if out.len() > MAX_TAGS {
+        return Err(ApiError::Request(format!(
+            "Máximo de {MAX_TAGS} tags por item"
+        )));
+    }
+    Ok(out)
+}
+
+pub async fn set_notebook_tags(
+    conn: &mut AsyncPgConnection,
+    notebook_id: Uuid,
+    new_tags: &[String],
+) -> Result<(), ApiError> {
+    let value = serde_json::to_value(new_tags).unwrap_or_else(|_| Value::Array(vec![]));
+    diesel::update(notebooks::table.find(notebook_id))
+        .set((
+            notebooks::tags.eq(value),
+            notebooks::updated_at.eq(Utc::now()),
+        ))
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| ApiError::Database(e.to_string()))
 }
 
 pub async fn get_team_notebooks(

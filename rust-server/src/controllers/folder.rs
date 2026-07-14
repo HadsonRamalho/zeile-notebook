@@ -21,8 +21,6 @@ use crate::{
     },
 };
 
-// ---- Pastas pessoais ----
-
 pub async fn api_list_folders(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -83,6 +81,25 @@ pub async fn api_rename_folder(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+pub async fn api_update_folder_tags(
+    State(state): State<Arc<AppState>>,
+    Path(folder_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<models::notebook::UpdateTagsRequest>,
+) -> Result<(StatusCode, Json<Folder>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+    let tags = models::notebook::normalize_tags(&payload.tags)?;
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+    let folder = models::folder::get_folder(conn, folder_id).await?;
+    if folder.user_id != Some(user_id) {
+        return Err(ApiError::PermissionDenied("folder.manage".to_string()));
+    }
+    let updated = models::folder::set_folder_tags(conn, folder_id, &tags).await?;
+    Ok((StatusCode::OK, Json(updated)))
+}
+
 pub async fn api_delete_folder(
     State(state): State<Arc<AppState>>,
     Path(folder_id): Path<Uuid>,
@@ -99,8 +116,6 @@ pub async fn api_delete_folder(
     models::folder::delete_folder(conn, folder_id).await?;
     Ok(StatusCode::OK)
 }
-
-// ---- Mover notebook (pessoal ou time) ----
 
 pub async fn api_move_notebook_to_folder(
     State(state): State<Arc<AppState>>,
@@ -139,8 +154,6 @@ pub async fn api_move_notebook_to_folder(
     models::folder::set_notebook_folder(conn, notebook_id, payload.folder_id).await?;
     Ok(StatusCode::OK)
 }
-
-// ---- Pastas de time ----
 
 pub async fn api_list_team_folders(
     State(state): State<Arc<AppState>>,
@@ -204,6 +217,26 @@ pub async fn api_rename_team_folder(
         return Err(ApiError::Request("Pasta não pertence a este time".to_string()));
     }
     let updated = models::folder::rename_folder(conn, folder_id, &name).await?;
+    Ok((StatusCode::OK, Json(updated)))
+}
+
+pub async fn api_update_team_folder_tags(
+    State(state): State<Arc<AppState>>,
+    Path((team_id, folder_id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+    Json(payload): Json<models::notebook::UpdateTagsRequest>,
+) -> Result<(StatusCode, Json<Folder>), ApiError> {
+    let user_id = extract_claims_from_header(&headers).await?.1.id;
+    let tags = models::notebook::normalize_tags(&payload.tags)?;
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+    require_team_permission(conn, user_id, team_id, "notebook.pages.add").await?;
+    let folder = models::folder::get_folder(conn, folder_id).await?;
+    if folder.team_id != Some(team_id) {
+        return Err(ApiError::Request("Pasta não pertence a este time".to_string()));
+    }
+    let updated = models::folder::set_folder_tags(conn, folder_id, &tags).await?;
     Ok((StatusCode::OK, Json(updated)))
 }
 

@@ -7,9 +7,11 @@ export interface Folder {
   teamId: string | null;
   createdAt: string;
   updatedAt: string;
+  tags: string[];
 }
 
-// ---- pessoais ----
+export const MAX_TAGS = 6;
+export const MAX_TAG_LEN = 32;
 
 export async function fetchFolders() {
   return api.get<Folder[]>("/notebook/folders");
@@ -34,7 +36,13 @@ export async function moveNotebookToFolder(
   return api.patch<void>(`/notebook/${notebookId}/folder`, { folderId });
 }
 
-// ---- de time ----
+export async function setNotebookTags(notebookId: string, tags: string[]) {
+  return api.patch<void>(`/notebook/${notebookId}/tags`, { tags });
+}
+
+export async function setFolderTags(folderId: string, tags: string[]) {
+  return api.patch<Folder>(`/notebook/folders/${folderId}/tags`, { tags });
+}
 
 export async function fetchTeamFolders(teamId: string) {
   return api.get<Folder[]>(`/team/${teamId}/folders`);
@@ -54,4 +62,12 @@ export async function renameTeamFolder(
 
 export async function deleteTeamFolder(teamId: string, folderId: string) {
   return api.delete<void>(`/team/${teamId}/folders/${folderId}`);
+}
+
+export async function setTeamFolderTags(
+  teamId: string,
+  folderId: string,
+  tags: string[],
+) {
+  return api.patch<Folder>(`/team/${teamId}/folders/${folderId}/tags`, { tags });
 }

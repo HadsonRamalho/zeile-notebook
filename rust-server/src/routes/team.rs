@@ -11,7 +11,7 @@ use crate::{
         },
         folder::{
             api_create_team_folder, api_delete_team_folder, api_list_team_folders,
-            api_rename_team_folder,
+            api_rename_team_folder, api_update_team_folder_tags,
         },
         grants::{api_create_team_grant, api_delete_team_grant, api_list_team_grants},
         permissions::api_get_team_capabilities,
@@ -47,6 +47,10 @@ pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
         .route(
             "/{id}/folders/{folder_id}",
             patch(api_rename_team_folder).delete(api_delete_team_folder),
+        )
+        .route(
+            "/{id}/folders/{folder_id}/tags",
+            patch(api_update_team_folder_tags),
         )
         .route("/{id}/notebooks", post(api_create_team_page))
         .route("/{id}/notebooks", get(api_get_team_pages))

@@ -19,6 +19,7 @@ pub struct Folder {
     pub created_at: DateTime<Utc>,
     #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
+    pub tags: serde_json::Value,
 }
 
 #[derive(Insertable)]
@@ -110,6 +111,20 @@ pub async fn delete_folder(
         .execute(conn)
         .await
         .map(|_| ())
+        .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+pub async fn set_folder_tags(
+    conn: &mut AsyncPgConnection,
+    folder_id: Uuid,
+    new_tags: &[String],
+) -> Result<Folder, ApiError> {
+    let value =
+        serde_json::to_value(new_tags).unwrap_or_else(|_| serde_json::Value::Array(vec![]));
+    diesel::update(folders::table.find(folder_id))
+        .set((folders::tags.eq(value), folders::updated_at.eq(Utc::now())))
+        .get_result::<Folder>(conn)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))
 }
 

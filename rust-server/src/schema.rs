@@ -194,6 +194,7 @@ diesel::table! {
         team_id -> Nullable<Uuid>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        tags -> Jsonb,
     }
 }
 
@@ -210,6 +211,7 @@ diesel::table! {
         team_id -> Nullable<Uuid>,
         search_text -> Text,
         folder_id -> Nullable<Uuid>,
+        tags -> Jsonb,
     }
 }
 

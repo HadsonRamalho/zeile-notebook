@@ -3,6 +3,7 @@
 import {
   ChevronDown,
   FileText,
+  FolderClosed,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,6 +23,11 @@ import { CreateTeamDialog } from "@/components/notebook/create-team-dialog";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
 import { useThemeToggle } from "@/components/ui/skiper-ui/skiper26";
+import {
+  type Folder,
+  fetchFolders,
+  fetchTeamFolders,
+} from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
 import { cn } from "@/lib/cn";
 import type { NotebookMeta } from "@/lib/types";
@@ -185,12 +191,79 @@ function PageRow({
   );
 }
 
+function FolderSubgroup({
+  folder,
+  pages,
+  icon,
+  collapsed,
+  onToggle,
+  pathname,
+  onNavigate,
+  teamId,
+  deleteTeamPage,
+  onDeleteTeamPage,
+}: {
+  folder: Folder;
+  pages: NotebookMeta[];
+  icon: React.ReactNode;
+  collapsed: boolean;
+  onToggle: () => void;
+  pathname: string;
+  onNavigate?: () => void;
+  teamId?: string;
+  deleteTeamPage?: (teamId: string, pageId: string) => Promise<void>;
+  onDeleteTeamPage?: (teamId: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className="flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-accent-foreground"
+      >
+        <ChevronDown
+          size={12}
+          className={cn(
+            "shrink-0 transition-transform",
+            collapsed && "-rotate-90",
+          )}
+        />
+        <FolderClosed size={14} className="shrink-0 text-primary" />
+        <span className="truncate">{folder.name}</span>
+        <span className="ml-auto font-mono text-[10px] tabular-nums opacity-70">
+          {pages.length}
+        </span>
+      </button>
+      {!collapsed && (
+        <div className="flex flex-col gap-1 border-l border-sidebar-border pl-2 ml-3">
+          {pages.map((page) => (
+            <PageRow
+              key={page.id}
+              page={page}
+              icon={icon}
+              active={pathname === `/notebook/${page.id}`}
+              expanded
+              teamId={teamId}
+              deleteTeamPage={deleteTeamPage}
+              onDeleteTeamPage={onDeleteTeamPage}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NotebookRail() {
   const pathname = usePathname();
   const { pages, createPage } = useNotebookManager();
   const { teamPages, createTeamPage, deleteTeamPage, refreshTeamPages } =
     useTeamNotebookManager();
   const [teams, setTeams] = useState<[Team, TeamRole][]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [teamFolders, setTeamFolders] = useState<Record<string, Folder[]>>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -228,10 +301,23 @@ export function NotebookRail() {
   };
 
   useEffect(() => {
+    fetchFolders()
+      .then((f) => setFolders(f ?? []))
+      .catch(() => setFolders([]));
+  }, []);
+
+  useEffect(() => {
     fetchUserTeams()
       .then((data) => {
         setTeams(data);
-        for (const [team] of data) refreshTeamPages(team.id);
+        for (const [team] of data) {
+          refreshTeamPages(team.id);
+          fetchTeamFolders(team.id)
+            .then((f) =>
+              setTeamFolders((prev) => ({ ...prev, [team.id]: f ?? [] })),
+            )
+            .catch(() => {});
+        }
       })
       .catch(() => setTeams([]));
   }, [refreshTeamPages]);
@@ -328,17 +414,60 @@ export function NotebookRail() {
             <span className="truncate">Meus cadernos</span>
           </button>
         )}
-        {(!isExpanded || !collapsedGroups.has(MY_NOTEBOOKS_GROUP)) &&
+        {!isExpanded &&
           pages.map((page) => (
             <PageRow
               key={page.id}
               page={page}
               icon={<FileText size={17} className="shrink-0" />}
               active={pathname === `/notebook/${page.id}`}
-              expanded={isExpanded}
+              expanded={false}
               onNavigate={onNavigate}
             />
           ))}
+
+        {isExpanded &&
+          !collapsedGroups.has(MY_NOTEBOOKS_GROUP) &&
+          (() => {
+            const ungrouped = pages.filter(
+              (p) => !p.folderId || !folders.some((f) => f.id === p.folderId),
+            );
+            const withPages = folders
+              .map((f) => ({
+                folder: f,
+                items: pages.filter((p) => p.folderId === f.id),
+              }))
+              .filter((g) => g.items.length > 0);
+            return (
+              <>
+                {ungrouped.map((page) => (
+                  <PageRow
+                    key={page.id}
+                    page={page}
+                    icon={<FileText size={17} className="shrink-0" />}
+                    active={pathname === `/notebook/${page.id}`}
+                    expanded
+                    onNavigate={onNavigate}
+                  />
+                ))}
+                {withPages.map(({ folder, items }) => {
+                  const key = `folder:${folder.id}`;
+                  return (
+                    <FolderSubgroup
+                      key={folder.id}
+                      folder={folder}
+                      pages={items}
+                      icon={<FileText size={16} className="shrink-0" />}
+                      collapsed={collapsedGroups.has(key)}
+                      onToggle={() => toggleGroup(key)}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                    />
+                  );
+                })}
+              </>
+            );
+          })()}
 
         {teams.map(([team]) => {
           const pagesOfTeam = teamPages[team.id] ?? [];
@@ -389,19 +518,55 @@ export function NotebookRail() {
                   Sem cadernos
                 </span>
               ) : (
-                pagesOfTeam.map((page) => (
-                  <PageRow
-                    key={page.id}
-                    page={page}
-                    icon={<Users size={17} className="shrink-0" />}
-                    active={pathname === `/notebook/${page.id}`}
-                    expanded
-                    teamId={team.id}
-                    deleteTeamPage={deleteTeamPage}
-                    onDeleteTeamPage={refreshTeamPages}
-                    onNavigate={onNavigate}
-                  />
-                ))
+                (() => {
+                  const teamFolderList = teamFolders[team.id] ?? [];
+                  const ungrouped = pagesOfTeam.filter(
+                    (p) =>
+                      !p.folderId ||
+                      !teamFolderList.some((f) => f.id === p.folderId),
+                  );
+                  const withPages = teamFolderList
+                    .map((f) => ({
+                      folder: f,
+                      items: pagesOfTeam.filter((p) => p.folderId === f.id),
+                    }))
+                    .filter((g) => g.items.length > 0);
+                  return (
+                    <>
+                      {ungrouped.map((page) => (
+                        <PageRow
+                          key={page.id}
+                          page={page}
+                          icon={<Users size={17} className="shrink-0" />}
+                          active={pathname === `/notebook/${page.id}`}
+                          expanded
+                          teamId={team.id}
+                          deleteTeamPage={deleteTeamPage}
+                          onDeleteTeamPage={refreshTeamPages}
+                          onNavigate={onNavigate}
+                        />
+                      ))}
+                      {withPages.map(({ folder, items }) => {
+                        const fKey = `team-folder:${team.id}:${folder.id}`;
+                        return (
+                          <FolderSubgroup
+                            key={folder.id}
+                            folder={folder}
+                            pages={items}
+                            icon={<Users size={16} className="shrink-0" />}
+                            collapsed={collapsedGroups.has(fKey)}
+                            onToggle={() => toggleGroup(fKey)}
+                            pathname={pathname}
+                            teamId={team.id}
+                            deleteTeamPage={deleteTeamPage}
+                            onDeleteTeamPage={refreshTeamPages}
+                            onNavigate={onNavigate}
+                          />
+                        );
+                      })}
+                    </>
+                  );
+                })()
               )}
             </div>
           );

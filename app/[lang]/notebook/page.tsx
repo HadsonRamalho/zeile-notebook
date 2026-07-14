@@ -18,6 +18,9 @@ import {
   moveNotebookToFolder,
   renameFolder,
   renameTeamFolder,
+  setFolderTags,
+  setNotebookTags,
+  setTeamFolderTags,
 } from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
 import type { Team, TeamRole } from "@/lib/types/team-types";
@@ -140,6 +143,14 @@ export default function NotebookHomePage() {
               await moveNotebookToFolder(id, folderId);
               refreshPages();
             }}
+            onSetNotebookTags={async (id, tags) => {
+              await setNotebookTags(id, tags);
+              refreshPages();
+            }}
+            onSetFolderTags={async (id, tags) => {
+              await setFolderTags(id, tags);
+              refreshFolders();
+            }}
           />
         )}
       </section>
@@ -199,6 +210,14 @@ export default function NotebookHomePage() {
                     onMoveNotebook={async (id, folderId) => {
                       await moveNotebookToFolder(id, folderId);
                       refreshTeamPages(team.id);
+                    }}
+                    onSetNotebookTags={async (id, tags) => {
+                      await setNotebookTags(id, tags);
+                      refreshTeamPages(team.id);
+                    }}
+                    onSetFolderTags={async (id, tags) => {
+                      await setTeamFolderTags(team.id, id, tags);
+                      refreshTeamFolders(team.id);
                     }}
                   />
                 </div>

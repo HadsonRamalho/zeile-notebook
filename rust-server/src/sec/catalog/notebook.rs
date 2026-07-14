@@ -36,6 +36,14 @@ pub fn permissions() -> Vec<Permission> {
             view: ,
         ),
         perm!(
+            key: "notebook.tags.edit",
+            tier: Granular,
+            targets: [Notebook],
+            label: "perm.notebook.tags.edit",
+            implied_by: ["notebook.edit"],
+            view: ,
+        ),
+        perm!(
             key: "notebook.manage_privacy",
             tier: Granular,
             targets: [Notebook],

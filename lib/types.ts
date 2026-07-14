@@ -125,6 +125,7 @@ export interface NotebookMeta {
   title: string;
   createdAt: number;
   folderId?: string | null;
+  tags?: string[];
 }
 
 export interface Notebook extends NotebookMeta {

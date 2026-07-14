@@ -12,14 +12,14 @@ use crate::{
         },
         folder::{
             api_create_folder, api_delete_folder, api_list_folders,
-            api_move_notebook_to_folder, api_rename_folder,
+            api_move_notebook_to_folder, api_rename_folder, api_update_folder_tags,
         },
         grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
         notebook::{
             api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
             api_get_public_notebooks, api_get_single_notebook, api_get_single_notebook_with_blocks,
             api_rename_notebook, api_save_notebook_content, api_search_notebooks,
-            api_update_notebook_visibility,
+            api_update_notebook_tags, api_update_notebook_visibility,
         },
         permissions::api_get_notebook_capabilities,
         push::{api_subscribe_push, api_unsubscribe_push},
@@ -37,7 +37,9 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
             "/folders/{folder_id}",
             patch(api_rename_folder).delete(api_delete_folder),
         )
+        .route("/folders/{folder_id}/tags", patch(api_update_folder_tags))
         .route("/{id}/folder", patch(api_move_notebook_to_folder))
+        .route("/{id}/tags", patch(api_update_notebook_tags))
         .route("/{id}/title", patch(api_rename_notebook))
         .route("/{id}", delete(api_delete_notebook))
         .route("/{id}", get(api_get_single_notebook))
