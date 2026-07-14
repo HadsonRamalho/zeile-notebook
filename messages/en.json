@@ -531,6 +531,11 @@
         "delete": "Delete messages",
         "delete_any": "Delete other members' messages"
       }
+    },
+    "comment": {
+      "view": "View comments",
+      "create": "Create comments",
+      "resolve": "Resolve comments"
     }
   },
   "challenges": {
@@ -694,5 +699,20 @@
     "inline_placeholder": "Paste a JSON array of objects",
     "empty_cell": "Run the source cell to see the chart.",
     "empty_inline": "Paste JSON data in the settings to see the chart."
+  },
+  "comments": {
+    "comments": "Comments",
+    "open": "Open",
+    "resolved": "Resolved",
+    "resolve": "Resolve thread",
+    "reopen": "Reopen thread",
+    "delete": "Delete comment",
+    "deleted": "Comment deleted",
+    "reply_placeholder": "Reply…",
+    "new_placeholder": "Write a comment… use @ to mention",
+    "mention_hint": "@ to mention",
+    "send": "Send",
+    "comment": "Comment",
+    "empty": "No comments on this block yet."
   }
 }

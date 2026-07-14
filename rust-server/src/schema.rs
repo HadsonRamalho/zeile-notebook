@@ -160,6 +160,34 @@ diesel::table! {
 }
 
 diesel::table! {
+    comment_threads (id) {
+        id -> Uuid,
+        notebook_id -> Uuid,
+        block_id -> Text,
+        anchor_offset -> Nullable<Int4>,
+        #[max_length = 16]
+        status -> Varchar,
+        created_by -> Nullable<Uuid>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    comments (id) {
+        id -> Uuid,
+        thread_id -> Uuid,
+        author_id -> Nullable<Uuid>,
+        #[max_length = 255]
+        author_name -> Varchar,
+        body -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        deleted_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     folders (id) {
         id -> Uuid,
         #[max_length = 255]
@@ -376,6 +404,10 @@ diesel::joinable!(chat_message_versions -> chat_messages (message_id));
 diesel::joinable!(chat_messages -> notebooks (notebook_id));
 diesel::joinable!(chat_messages -> teams (team_id));
 diesel::joinable!(chat_messages -> users (user_id));
+diesel::joinable!(comment_threads -> notebooks (notebook_id));
+diesel::joinable!(comment_threads -> users (created_by));
+diesel::joinable!(comments -> comment_threads (thread_id));
+diesel::joinable!(comments -> users (author_id));
 diesel::joinable!(folders -> teams (team_id));
 diesel::joinable!(folders -> users (user_id));
 diesel::joinable!(notebooks -> folders (folder_id));
@@ -406,6 +438,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     challenges,
     chat_message_versions,
     chat_messages,
+    comment_threads,
+    comments,
     folders,
     notebooks,
     notification_preferences,

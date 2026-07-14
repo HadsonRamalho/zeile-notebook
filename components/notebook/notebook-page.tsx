@@ -50,6 +50,8 @@ import { defaultSqlContent } from "./blocks/sql/sql-cell";
 import { defaultTypstContent } from "./blocks/typst/typst-cell";
 import { CollabBar } from "./collaboration/collab-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
+import { BlockComments } from "./comments/block-comments";
+import { CommentsProvider } from "./comments/comments-context";
 import { HistoryDiffView } from "./history/history-diff-view";
 import { useNotebook } from "./notebook-context";
 import { CapabilitiesProvider } from "./permissions/capabilities";
@@ -380,162 +382,180 @@ export default function RustInteractivePage({
 
   return (
     <CapabilitiesProvider value={capabilities}>
-      <div
-        onPointerMove={handlePointerMove}
-        className="min-h-screen flex flex-col w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
+      <CommentsProvider
+        notebookId={pageId}
+        token={token}
+        canComment={!!userPermissions.can_write}
+        currentUserId={user?.id}
       >
-        <CollabBar
-          canWriteHistory={userPermissions.can_write}
-          automergeHistory={automergeHistory}
-          automergeHistoryVisibleCount={automergeHistoryVisibleCount}
-          isLoadingAutomergeHistory={isLoadingAutomergeHistory}
-          automergeHistoryProgress={automergeHistoryProgress}
-          onLoadAutomergeHistory={handleLoadAutomergeHistory}
-          onLoadMoreAutomergeHistory={handleLoadMoreAutomergeHistory}
-          previewDoc={previewDoc}
-          setPreviewDoc={setPreviewDoc}
-          notebookId={pageId}
-          messages={messages}
-          sendChatMessage={sendChatMessage}
-          editMessage={editMessage}
-          deleteMessage={deleteMessage}
-          socketUserId={socketUserId}
-          collaborators={collaborators}
-          currentUser={user}
-          activeTab={activeCollabTab}
-          onActiveTabChange={setActiveCollabTab}
-        />
-        <LiveCursors collaborators={collaborators} />
-        <ScrollProgress />
-
-        {!previewDoc && (
-          <button
-            type="button"
-            onClick={() => setPresenting(true)}
-            title={tPresent("present")}
-            className="fixed bottom-6 right-6 z-floating flex items-center gap-2 rounded-full border border-border bg-card/85 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg backdrop-blur-md transition-colors hover:text-primary print:hidden"
-          >
-            <Presentation className="size-4" />
-            {tPresent("present")}
-          </button>
-        )}
-
-        {presenting && (
-          <PresentationMode
-            blocks={blocks}
-            doc={displayDoc}
-            sessionId={sessionId}
+        <div
+          onPointerMove={handlePointerMove}
+          className="min-h-screen flex flex-col w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
+        >
+          <CollabBar
+            canWriteHistory={userPermissions.can_write}
+            automergeHistory={automergeHistory}
+            automergeHistoryVisibleCount={automergeHistoryVisibleCount}
+            isLoadingAutomergeHistory={isLoadingAutomergeHistory}
+            automergeHistoryProgress={automergeHistoryProgress}
+            onLoadAutomergeHistory={handleLoadAutomergeHistory}
+            onLoadMoreAutomergeHistory={handleLoadMoreAutomergeHistory}
+            previewDoc={previewDoc}
+            setPreviewDoc={setPreviewDoc}
             notebookId={pageId}
-            updateBlock={updateBlockContent}
-            updateBlockMetadata={updateBlockMetadataSync}
-            updateDrawingScene={updateDrawingScene}
-            onClose={() => setPresenting(false)}
+            messages={messages}
+            sendChatMessage={sendChatMessage}
+            editMessage={editMessage}
+            deleteMessage={deleteMessage}
+            socketUserId={socketUserId}
+            collaborators={collaborators}
+            currentUser={user}
+            activeTab={activeCollabTab}
+            onActiveTabChange={setActiveCollabTab}
           />
-        )}
+          <LiveCursors collaborators={collaborators} />
+          <ScrollProgress />
 
-        {!isConnected && <Refreshing />}
+          {!previewDoc && (
+            <button
+              type="button"
+              onClick={() => setPresenting(true)}
+              title={tPresent("present")}
+              className="fixed bottom-6 right-6 z-floating flex items-center gap-2 rounded-full border border-border bg-card/85 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg backdrop-blur-md transition-colors hover:text-primary print:hidden"
+            >
+              <Presentation className="size-4" />
+              {tPresent("present")}
+            </button>
+          )}
 
-        {previewDoc && (
-          <PreviewDialog
-            handleCancelPreview={handleCancelPreview}
-            handleConfirmRestore={handleConfirmRestore}
-            onOlder={handlePreviewOlder}
-            onNewer={handlePreviewNewer}
-            hasOlder={hasOlderPreview}
-            hasNewer={hasNewerPreview}
-            canCompare={!!diffFromDoc}
-            onCompare={() => setShowHistoryDiff(true)}
-          />
-        )}
+          {presenting && (
+            <PresentationMode
+              blocks={blocks}
+              doc={displayDoc}
+              sessionId={sessionId}
+              notebookId={pageId}
+              updateBlock={updateBlockContent}
+              updateBlockMetadata={updateBlockMetadataSync}
+              updateDrawingScene={updateDrawingScene}
+              onClose={() => setPresenting(false)}
+            />
+          )}
 
-        {showHistoryDiff && previewDoc && diffFromDoc && (
-          <HistoryDiffView
-            fromDoc={diffFromDoc}
-            toDoc={previewDoc}
-            onClose={() => setShowHistoryDiff(false)}
-          />
-        )}
+          {!isConnected && <Refreshing />}
 
-        <div ref={blocksRootRef} className="flex flex-1 min-w-0 flex-col">
-          {header}
-          <Reorder.Group
-            axis="y"
-            values={blocks}
-            onReorder={reorderBlocks}
-            className="w-full"
-          >
-            {blocks.map((block, index) => {
-              const focusedUsers = collaborators.filter(
-                (c) => c.focusedBlockId === block.id,
-              );
-              const borderColor =
-                focusedUsers.length > 0 ? focusedUsers[0].color : "transparent";
+          {previewDoc && (
+            <PreviewDialog
+              handleCancelPreview={handleCancelPreview}
+              handleConfirmRestore={handleConfirmRestore}
+              onOlder={handlePreviewOlder}
+              onNewer={handlePreviewNewer}
+              hasOlder={hasOlderPreview}
+              hasNewer={hasNewerPreview}
+              canCompare={!!diffFromDoc}
+              onCompare={() => setShowHistoryDiff(true)}
+            />
+          )}
 
-              return (
-                <Fragment key={block.id}>
-                  {userPermissions?.can_write && (
-                    <ReorderTools index={index - 1} addBlock={handleAddBlock} />
-                  )}
+          {showHistoryDiff && previewDoc && diffFromDoc && (
+            <HistoryDiffView
+              fromDoc={diffFromDoc}
+              toDoc={previewDoc}
+              onClose={() => setShowHistoryDiff(false)}
+            />
+          )}
 
-                  <div
-                    tabIndex={0}
-                    data-block-index={index}
-                    data-block-id={block.id}
-                    onKeyDown={(e) => handleBlockKeyDown(e, index)}
-                    onFocus={() => updateFocus(block.id)}
-                    onBlur={() => updateFocus(null)}
-                    className="relative overflow-visible rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    style={{
-                      boxShadow:
-                        focusedUsers.length > 0
-                          ? `0 0 0 2px ${borderColor}`
-                          : "none",
-                    }}
-                  >
-                    {focusedUsers.length > 0 && (
-                      <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
-                        {focusedUsers.map((user) => (
-                          <div
-                            key={user.id}
-                            className="size-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold"
-                            style={{ backgroundColor: user.color }}
-                            title={`${user.name} está editando`}
-                          >
-                            {user.name.charAt(0)}
-                          </div>
-                        ))}
-                      </div>
+          <div ref={blocksRootRef} className="flex flex-1 min-w-0 flex-col">
+            {header}
+            <Reorder.Group
+              axis="y"
+              values={blocks}
+              onReorder={reorderBlocks}
+              className="w-full"
+            >
+              {blocks.map((block, index) => {
+                const focusedUsers = collaborators.filter(
+                  (c) => c.focusedBlockId === block.id,
+                );
+                const borderColor =
+                  focusedUsers.length > 0
+                    ? focusedUsers[0].color
+                    : "transparent";
+
+                return (
+                  <Fragment key={block.id}>
+                    {userPermissions?.can_write && (
+                      <ReorderTools
+                        index={index - 1}
+                        addBlock={handleAddBlock}
+                      />
                     )}
 
-                    <ReorderItem
-                      block={block}
-                      isDragging={isDragging}
-                      pageBlocks={blocks}
-                      pageFiles={{}}
-                      setBlocks={() => {}}
-                      setIsDragging={setIsDragging}
-                      removeBlock={handleDeleteBlock}
-                      moveBlock={handleMoveBlock}
-                      updateBlock={updateBlockContent}
-                      updateBlockMetadata={updateBlockMetadataSync}
-                      updateDrawingScene={updateDrawingScene}
-                      doc={doc}
-                      sessionId={sessionId}
-                      notebookId={pageId}
-                      canWrite={!previewDoc && !!userPermissions?.can_write}
-                    />
-                  </div>
+                    <div
+                      tabIndex={0}
+                      data-block-index={index}
+                      data-block-id={block.id}
+                      onKeyDown={(e) => handleBlockKeyDown(e, index)}
+                      onFocus={() => updateFocus(block.id)}
+                      onBlur={() => updateFocus(null)}
+                      className="group/block relative overflow-visible rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      style={{
+                        boxShadow:
+                          focusedUsers.length > 0
+                            ? `0 0 0 2px ${borderColor}`
+                            : "none",
+                      }}
+                    >
+                      {!previewDoc && (
+                        <div className="absolute -right-1 top-1 z-10 print:hidden">
+                          <BlockComments blockId={block.id} />
+                        </div>
+                      )}
 
-                  {userPermissions?.can_write &&
-                    index === blocks.length - 1 && (
-                      <ReorderTools index={index} addBlock={handleAddBlock} />
-                    )}
-                </Fragment>
-              );
-            })}
-          </Reorder.Group>
+                      {focusedUsers.length > 0 && (
+                        <div className="absolute -top-3 right-4 flex -space-x-2 z-10">
+                          {focusedUsers.map((user) => (
+                            <div
+                              key={user.id}
+                              className="size-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold"
+                              style={{ backgroundColor: user.color }}
+                              title={`${user.name} está editando`}
+                            >
+                              {user.name.charAt(0)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <ReorderItem
+                        block={block}
+                        isDragging={isDragging}
+                        pageBlocks={blocks}
+                        pageFiles={{}}
+                        setBlocks={() => {}}
+                        setIsDragging={setIsDragging}
+                        removeBlock={handleDeleteBlock}
+                        moveBlock={handleMoveBlock}
+                        updateBlock={updateBlockContent}
+                        updateBlockMetadata={updateBlockMetadataSync}
+                        updateDrawingScene={updateDrawingScene}
+                        doc={doc}
+                        sessionId={sessionId}
+                        notebookId={pageId}
+                        canWrite={!previewDoc && !!userPermissions?.can_write}
+                      />
+                    </div>
+
+                    {userPermissions?.can_write &&
+                      index === blocks.length - 1 && (
+                        <ReorderTools index={index} addBlock={handleAddBlock} />
+                      )}
+                  </Fragment>
+                );
+              })}
+            </Reorder.Group>
+          </div>
         </div>
-      </div>
+      </CommentsProvider>
     </CapabilitiesProvider>
   );
 }

@@ -648,6 +648,15 @@ pub fn is_user_present(
         .any(|m| m.value().user_id == Some(user_id))
 }
 
+pub fn broadcast_comment_event(state: &Arc<AppState>, notebook_id: Uuid, payload: String) {
+    let Some(room) = state.presence_registry.get(&notebook_id) else {
+        return;
+    };
+    for m in room.subscribers.iter() {
+        let _ = m.value().tx.try_send(payload.clone());
+    }
+}
+
 /// Difunde um evento de chat (JSON) para a sala de presença do notebook e dispara
 /// push de menção. Usado pelos endpoints REST de chat para propagar em tempo real.
 pub fn broadcast_chat_and_notify(

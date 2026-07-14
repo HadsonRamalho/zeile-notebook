@@ -2,6 +2,7 @@ pub mod admin;
 pub mod challenge;
 pub mod challenge_judge;
 pub mod chat;
+pub mod comments;
 pub mod email;
 pub mod folder;
 pub mod grants;

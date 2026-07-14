@@ -10,6 +10,10 @@ use crate::{
             api_list_notebook_message_versions, api_list_notebook_messages,
             api_send_notebook_message,
         },
+        comments::{
+            api_create_thread, api_delete_comment, api_list_comments, api_reply,
+            api_update_thread,
+        },
         folder::{
             api_create_folder, api_delete_folder, api_list_folders,
             api_move_notebook_to_folder, api_rename_folder, api_update_folder_tags,
@@ -69,6 +73,19 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
             "/{id}/chat/messages/{message_id}/versions",
             get(api_list_notebook_message_versions),
         )
+        .route(
+            "/{id}/comments",
+            get(api_list_comments).post(api_create_thread),
+        )
+        .route(
+            "/{id}/comments/threads/{thread_id}/replies",
+            post(api_reply),
+        )
+        .route(
+            "/{id}/comments/threads/{thread_id}",
+            patch(api_update_thread),
+        )
+        .route("/{id}/comments/{comment_id}", delete(api_delete_comment))
         .route("/search/", get(api_search_notebooks))
         .route("/search/ranked/", get(api_search_notebooks_ranked))
         .route("/ws/{notebook_id}", get(websocket_handler))

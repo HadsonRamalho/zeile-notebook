@@ -531,6 +531,11 @@
         "delete": "Excluir mensagens",
         "delete_any": "Excluir mensagens de outros membros"
       }
+    },
+    "comment": {
+      "view": "Ver comentários",
+      "create": "Criar comentários",
+      "resolve": "Resolver comentários"
     }
   },
   "challenges": {
@@ -694,5 +699,20 @@
     "inline_placeholder": "Cole um array JSON de objetos",
     "empty_cell": "Rode a célula fonte para ver o gráfico.",
     "empty_inline": "Cole dados JSON na configuração para ver o gráfico."
+  },
+  "comments": {
+    "comments": "Comentários",
+    "open": "Aberto",
+    "resolved": "Resolvido",
+    "resolve": "Resolver thread",
+    "reopen": "Reabrir thread",
+    "delete": "Excluir comentário",
+    "deleted": "Comentário excluído",
+    "reply_placeholder": "Responder…",
+    "new_placeholder": "Escreva um comentário… use @ para mencionar",
+    "mention_hint": "@ para mencionar",
+    "send": "Enviar",
+    "comment": "Comentar",
+    "empty": "Nenhum comentário neste bloco ainda."
   }
 }

@@ -1,5 +1,6 @@
 pub mod blocks;
 pub mod chat;
+pub mod comment;
 pub mod notebook;
 pub mod team;
 
@@ -83,6 +84,7 @@ impl Catalog {
         permissions.extend(blocks::permissions());
         permissions.extend(team::permissions());
         permissions.extend(chat::permissions());
+        permissions.extend(comment::permissions());
 
         let mut index = HashMap::new();
         for (i, perm) in permissions.iter().enumerate() {
