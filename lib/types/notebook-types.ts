@@ -8,6 +8,15 @@ export interface PublicNotebookResponse {
   updated_at: string;
 }
 
+export interface PublicNotebookDoc {
+  id: string;
+  title: string;
+  ownerName: string | null;
+  updatedAt: string;
+  publicSlug: string | null;
+  documentData: number[] | null;
+}
+
 export interface RankedSearchItem {
   kind: "notebook" | "block";
   notebook_id: string;

@@ -141,11 +141,13 @@ export interface NotebookMeta {
   createdAt: number;
   folderId?: string | null;
   tags?: string[];
+  publicSlug?: string | null;
 }
 
 export interface Notebook extends NotebookMeta {
   userId: string;
   blocks: Block[];
   isPublic: boolean;
+  publicSlug?: string | null;
   updatedAt: number;
 }

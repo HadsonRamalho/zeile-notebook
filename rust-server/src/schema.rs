@@ -248,6 +248,8 @@ diesel::table! {
         folder_id -> Nullable<Uuid>,
         tags -> Jsonb,
         search_tsv -> Nullable<Tsvector>,
+        #[max_length = 80]
+        public_slug -> Nullable<Varchar>,
     }
 }
 

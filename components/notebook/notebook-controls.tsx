@@ -53,7 +53,10 @@ export function NotebookControls() {
   }, [notebook?.id]);
 
   const handleShare = async () => {
-    const url = window.location.href;
+    const url =
+      isPublic && meta?.publicSlug
+        ? `${window.location.origin}/p/${meta.publicSlug}`
+        : window.location.href;
     const title = document.title || "Zeile Notebook";
     const text = "Confira este caderno colaborativo no Zeile!";
 

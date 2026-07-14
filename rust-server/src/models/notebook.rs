@@ -99,6 +99,8 @@ pub struct Notebook {
     #[serde(rename = "folderId")]
     pub folder_id: Option<Uuid>,
     pub tags: Value,
+    #[serde(rename = "publicSlug")]
+    pub public_slug: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations, Serialize, Debug, Insertable)]
@@ -360,14 +362,141 @@ pub async fn update_notebook_visibility(
 ) -> Result<(), String> {
     use crate::schema::notebooks::dsl::*;
 
-    match diesel::update(notebooks.filter(id.eq(param_id)))
+    let notebook_title: String = notebooks
+        .filter(id.eq(param_id))
+        .select(title)
+        .first::<String>(conn)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    diesel::update(notebooks.filter(id.eq(param_id)))
         .set((is_public.eq(is_visible), updated_at.eq(Utc::now())))
         .execute(conn)
         .await
-    {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
+        .map_err(|e| e.to_string())?;
+
+    if is_visible {
+        ensure_public_slug(conn, param_id, &notebook_title)
+            .await
+            .map_err(|e| e.to_string())?;
     }
+
+    Ok(())
+}
+
+pub fn slugify(input: &str) -> String {
+    let mut out = String::new();
+    let mut prev_dash = false;
+    for ch in input.chars().flat_map(char::to_lowercase) {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+            prev_dash = false;
+        } else if !out.is_empty() && !prev_dash {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+    let trimmed = out.trim_matches('-');
+    let base: String = trimmed.chars().take(60).collect();
+    if base.is_empty() {
+        "caderno".to_string()
+    } else {
+        base
+    }
+}
+
+pub async fn ensure_public_slug(
+    conn: &mut AsyncPgConnection,
+    notebook_id: Uuid,
+    title_param: &str,
+) -> Result<String, ApiError> {
+    use crate::schema::notebooks::dsl::*;
+
+    let current: Option<String> = notebooks
+        .filter(id.eq(notebook_id))
+        .select(public_slug)
+        .first::<Option<String>>(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    if let Some(slug) = current {
+        return Ok(slug);
+    }
+
+    let base = slugify(title_param);
+    for _ in 0..5 {
+        let suffix = Uuid::new_v4().simple().to_string();
+        let candidate = format!("{}-{}", base, &suffix[..6]);
+        let count: i64 = notebooks
+            .filter(public_slug.eq(&candidate))
+            .count()
+            .get_result(conn)
+            .await
+            .map_err(|e| ApiError::Database(e.to_string()))?;
+        if count == 0 {
+            diesel::update(notebooks.filter(id.eq(notebook_id)))
+                .set(public_slug.eq(&candidate))
+                .execute(conn)
+                .await
+                .map_err(|e| ApiError::Database(e.to_string()))?;
+            return Ok(candidate);
+        }
+    }
+
+    Err(ApiError::Database("slug indisponível".to_string()))
+}
+
+#[derive(Serialize)]
+pub struct PublicNotebookDoc {
+    pub id: Uuid,
+    pub title: String,
+    #[serde(rename = "ownerName")]
+    pub owner_name: Option<String>,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: DateTime<Utc>,
+    #[serde(rename = "publicSlug")]
+    pub public_slug: Option<String>,
+    #[serde(rename = "documentData")]
+    pub document_data: Option<Vec<u8>>,
+}
+
+pub async fn get_public_notebook_by_slug(
+    conn: &mut AsyncPgConnection,
+    slug: &str,
+) -> Result<PublicNotebookDoc, ApiError> {
+    use crate::schema::users;
+
+    let row = notebooks::table
+        .left_join(users::table.on(notebooks::user_id.eq(users::id.nullable())))
+        .filter(notebooks::public_slug.eq(slug))
+        .filter(notebooks::is_public.eq(true))
+        .select((
+            notebooks::id,
+            notebooks::title,
+            users::name.nullable(),
+            notebooks::updated_at,
+            notebooks::public_slug,
+            notebooks::document_data,
+        ))
+        .first::<(
+            Uuid,
+            String,
+            Option<String>,
+            DateTime<Utc>,
+            Option<String>,
+            Option<Vec<u8>>,
+        )>(conn)
+        .await
+        .map_err(|_| ApiError::Request("Caderno público não encontrado".to_string()))?;
+
+    Ok(PublicNotebookDoc {
+        id: row.0,
+        title: row.1,
+        owner_name: row.2,
+        updated_at: row.3,
+        public_slug: row.4,
+        document_data: row.5,
+    })
 }
 
 pub async fn get_all_notebooks(

@@ -23,8 +23,9 @@ use crate::{
         notebook::{
             api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
             api_get_public_notebooks, api_get_single_notebook, api_get_single_notebook_with_blocks,
-            api_rename_notebook, api_save_notebook_content, api_search_notebooks,
-            api_search_notebooks_ranked, api_update_notebook_tags, api_update_notebook_visibility,
+            api_get_public_notebook_by_slug, api_rename_notebook, api_save_notebook_content,
+            api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
+            api_update_notebook_visibility,
         },
         permissions::api_get_notebook_capabilities,
         push::{api_subscribe_push, api_unsubscribe_push},
@@ -115,6 +116,7 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/ws/combined/{notebook_id}", get(websocket_combined_handler))
         .route("/all", get(api_get_notebooks))
         .route("/all/public", get(api_get_public_notebooks))
+        .route("/public/{slug}", get(api_get_public_notebook_by_slug))
         .route(
             "/push/subscribe",
             post(api_subscribe_push).delete(api_unsubscribe_push),

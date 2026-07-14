@@ -1,5 +1,6 @@
 import type { Block, Notebook } from "../types";
 import type {
+  PublicNotebookDoc,
   PublicNotebookResponse,
   RankedSearchItem,
 } from "../types/notebook-types";
@@ -9,6 +10,10 @@ import { api } from "./base";
 export async function searchNotebooksRanked(query: string, limit = 16) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
   return api.get<RankedSearchItem[]>(`/notebook/search/ranked/?${params}`);
+}
+
+export async function getPublicNotebookBySlug(slug: string) {
+  return api.get<PublicNotebookDoc>(`/notebook/public/${slug}`);
 }
 
 export async function createNotebook() {
@@ -38,6 +43,7 @@ export interface NotebookMeta {
   user_id: string | null;
   team_id: string | null;
   is_public: boolean;
+  publicSlug?: string | null;
 }
 
 export async function getNotebookMeta(id: string) {

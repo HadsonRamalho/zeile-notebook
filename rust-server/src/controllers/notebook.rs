@@ -13,10 +13,11 @@ use crate::{
         self,
         error::ApiError,
         notebook::{
-            NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookResponse,
-            PublicSearchQuery, RankedSearchItem, RankedSearchQuery, SearchQuery, SearchResult,
-            SyncNotebookRequest, UpdateNotebookTitle, UpdateNotebookVisibility, delete_notebook,
-            get_public_notebooks, update_notebook_title,
+            NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookDoc,
+            PublicNotebookResponse, PublicSearchQuery, RankedSearchItem, RankedSearchQuery,
+            SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
+            UpdateNotebookVisibility, delete_notebook, get_public_notebooks,
+            update_notebook_title,
         },
         state::AppState,
     },
@@ -405,6 +406,20 @@ pub async fn api_search_notebooks_ranked(
     let results = models::notebook::search_notebooks_ranked(&mut conn, id, term, limit).await?;
 
     Ok((StatusCode::OK, Json(results)))
+}
+
+pub async fn api_get_public_notebook_by_slug(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+) -> Result<(StatusCode, Json<PublicNotebookDoc>), ApiError> {
+    let mut conn = state
+        .pool
+        .get()
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
+
+    let doc = models::notebook::get_public_notebook_by_slug(&mut conn, &slug).await?;
+    Ok((StatusCode::OK, Json(doc)))
 }
 
 pub async fn api_get_public_notebooks(
