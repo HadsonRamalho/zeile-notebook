@@ -10,12 +10,8 @@ pub mod sql_types {
     pub struct BlockTypeEnum;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "language_enum"))]
-    pub struct LanguageEnum;
-
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "user_role"))]
-    pub struct UserRole;
+    #[diesel(postgres_type(name = "grant_effect"))]
+    pub struct GrantEffect;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "grant_subject_kind"))]
@@ -26,14 +22,23 @@ pub mod sql_types {
     pub struct GrantTargetKind;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "grant_effect"))]
-    pub struct GrantEffect;
+    #[diesel(postgres_type(name = "language_enum"))]
+    pub struct LanguageEnum;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "tsvector", schema = "pg_catalog"))]
+    pub struct Tsvector;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "user_role"))]
+    pub struct UserRole;
 }
 
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::BlockTypeEnum;
     use super::sql_types::LanguageEnum;
+    use super::sql_types::Tsvector;
 
     blocks (id) {
         id -> Uuid,
@@ -44,6 +49,53 @@ diesel::table! {
         content -> Text,
         metadata -> Nullable<Jsonb>,
         position -> Int4,
+        search_tsv -> Nullable<Tsvector>,
+    }
+}
+
+diesel::table! {
+    challenge_submission_results (id) {
+        id -> Uuid,
+        submission_id -> Uuid,
+        test_case_id -> Nullable<Uuid>,
+        #[max_length = 8]
+        verdict -> Varchar,
+        runtime_ms -> Int4,
+        is_hidden -> Bool,
+        stderr_snippet -> Nullable<Text>,
+        ord -> Int4,
+    }
+}
+
+diesel::table! {
+    challenge_submissions (id) {
+        id -> Uuid,
+        challenge_id -> Uuid,
+        user_id -> Nullable<Uuid>,
+        #[max_length = 16]
+        language -> Varchar,
+        code -> Text,
+        #[max_length = 16]
+        status -> Varchar,
+        score -> Int4,
+        max_score -> Int4,
+        runtime_ms -> Int4,
+        error_message -> Nullable<Text>,
+        created_at -> Timestamptz,
+        judged_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    challenge_test_cases (id) {
+        id -> Uuid,
+        challenge_id -> Uuid,
+        input -> Text,
+        expected -> Nullable<Text>,
+        is_hidden -> Bool,
+        weight -> Int4,
+        ord -> Int4,
+        created_at -> Timestamptz,
     }
 }
 
@@ -81,48 +133,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    challenge_test_cases (id) {
+    chat_message_versions (id) {
         id -> Uuid,
-        challenge_id -> Uuid,
-        input -> Text,
-        expected -> Nullable<Text>,
-        is_hidden -> Bool,
-        weight -> Int4,
-        ord -> Int4,
+        message_id -> Uuid,
+        content -> Text,
         created_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
-    challenge_submissions (id) {
-        id -> Uuid,
-        challenge_id -> Uuid,
-        user_id -> Nullable<Uuid>,
-        #[max_length = 16]
-        language -> Varchar,
-        code -> Text,
-        #[max_length = 16]
-        status -> Varchar,
-        score -> Int4,
-        max_score -> Int4,
-        runtime_ms -> Int4,
-        error_message -> Nullable<Text>,
-        created_at -> Timestamptz,
-        judged_at -> Nullable<Timestamptz>,
-    }
-}
-
-diesel::table! {
-    challenge_submission_results (id) {
-        id -> Uuid,
-        submission_id -> Uuid,
-        test_case_id -> Nullable<Uuid>,
-        #[max_length = 8]
-        verdict -> Varchar,
-        runtime_ms -> Int4,
-        is_hidden -> Bool,
-        stderr_snippet -> Nullable<Text>,
-        ord -> Int4,
     }
 }
 
@@ -145,11 +160,36 @@ diesel::table! {
 }
 
 diesel::table! {
-    chat_message_versions (id) {
+    folders (id) {
         id -> Uuid,
-        message_id -> Uuid,
-        content -> Text,
+        #[max_length = 255]
+        name -> Varchar,
+        user_id -> Nullable<Uuid>,
+        team_id -> Nullable<Uuid>,
         created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        tags -> Jsonb,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Tsvector;
+
+    notebooks (id) {
+        id -> Uuid,
+        user_id -> Nullable<Uuid>,
+        #[max_length = 255]
+        title -> Varchar,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        is_public -> Bool,
+        document_data -> Nullable<Bytea>,
+        team_id -> Nullable<Uuid>,
+        search_text -> Text,
+        folder_id -> Nullable<Uuid>,
+        tags -> Jsonb,
+        search_tsv -> Nullable<Tsvector>,
     }
 }
 
@@ -186,32 +226,23 @@ diesel::table! {
 }
 
 diesel::table! {
-    folders (id) {
-        id -> Uuid,
-        #[max_length = 255]
-        name -> Varchar,
-        user_id -> Nullable<Uuid>,
-        team_id -> Nullable<Uuid>,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
-        tags -> Jsonb,
-    }
-}
+    use diesel::sql_types::*;
+    use super::sql_types::GrantSubjectKind;
+    use super::sql_types::GrantTargetKind;
+    use super::sql_types::GrantEffect;
 
-diesel::table! {
-    notebooks (id) {
+    permission_grants (id) {
         id -> Uuid,
-        user_id -> Nullable<Uuid>,
-        #[max_length = 255]
-        title -> Varchar,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
-        is_public -> Bool,
-        document_data -> Nullable<Bytea>,
-        team_id -> Nullable<Uuid>,
-        search_text -> Text,
-        folder_id -> Nullable<Uuid>,
-        tags -> Jsonb,
+        subject_kind -> GrantSubjectKind,
+        subject_id -> Nullable<Uuid>,
+        subject_principal -> Nullable<Varchar>,
+        scope_team_id -> Nullable<Uuid>,
+        permission_key -> Varchar,
+        target_kind -> GrantTargetKind,
+        target_id -> Nullable<Uuid>,
+        target_value -> Nullable<Varchar>,
+        effect -> GrantEffect,
+        created_at -> Timestamp,
     }
 }
 
@@ -266,19 +297,13 @@ diesel::table! {
 }
 
 diesel::table! {
-    templates (id) {
+    teams (id) {
         id -> Uuid,
-        #[max_length = 32]
-        kind -> Varchar,
-        #[max_length = 255]
         name -> Varchar,
-        user_id -> Nullable<Uuid>,
-        team_id -> Nullable<Uuid>,
-        source_notebook_id -> Nullable<Uuid>,
-        is_public -> Bool,
-        latest_version -> Int4,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
+        description -> Nullable<Text>,
+        image_url -> Nullable<Varchar>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
@@ -294,13 +319,19 @@ diesel::table! {
 }
 
 diesel::table! {
-    teams (id) {
+    templates (id) {
         id -> Uuid,
+        #[max_length = 32]
+        kind -> Varchar,
+        #[max_length = 255]
         name -> Varchar,
-        description -> Nullable<Text>,
-        image_url -> Nullable<Varchar>,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        user_id -> Nullable<Uuid>,
+        team_id -> Nullable<Uuid>,
+        source_notebook_id -> Nullable<Uuid>,
+        is_public -> Bool,
+        latest_version -> Int4,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -332,40 +363,29 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::GrantSubjectKind;
-    use super::sql_types::GrantTargetKind;
-    use super::sql_types::GrantEffect;
-
-    permission_grants (id) {
-        id -> Uuid,
-        subject_kind -> GrantSubjectKind,
-        subject_id -> Nullable<Uuid>,
-        subject_principal -> Nullable<Varchar>,
-        scope_team_id -> Nullable<Uuid>,
-        permission_key -> Varchar,
-        target_kind -> GrantTargetKind,
-        target_id -> Nullable<Uuid>,
-        target_value -> Nullable<Varchar>,
-        effect -> GrantEffect,
-        created_at -> Timestamp,
-    }
-}
-
-diesel::joinable!(permission_grants -> teams (scope_team_id));
-diesel::joinable!(challenge_test_cases -> challenges (challenge_id));
-diesel::joinable!(challenge_submissions -> challenges (challenge_id));
-diesel::joinable!(challenge_submissions -> users (user_id));
+diesel::joinable!(blocks -> notebooks (notebook_id));
 diesel::joinable!(challenge_submission_results -> challenge_submissions (submission_id));
 diesel::joinable!(challenge_submission_results -> challenge_test_cases (test_case_id));
+diesel::joinable!(challenge_submissions -> challenges (challenge_id));
+diesel::joinable!(challenge_submissions -> users (user_id));
+diesel::joinable!(challenge_test_cases -> challenges (challenge_id));
+diesel::joinable!(challenges -> notebooks (notebook_id));
 diesel::joinable!(challenges -> teams (team_id));
 diesel::joinable!(challenges -> users (created_by));
-diesel::joinable!(challenges -> notebooks (notebook_id));
-diesel::joinable!(blocks -> notebooks (notebook_id));
 diesel::joinable!(chat_message_versions -> chat_messages (message_id));
+diesel::joinable!(chat_messages -> notebooks (notebook_id));
+diesel::joinable!(chat_messages -> teams (team_id));
+diesel::joinable!(chat_messages -> users (user_id));
+diesel::joinable!(folders -> teams (team_id));
+diesel::joinable!(folders -> users (user_id));
+diesel::joinable!(notebooks -> folders (folder_id));
 diesel::joinable!(notebooks -> teams (team_id));
 diesel::joinable!(notebooks -> users (user_id));
+diesel::joinable!(notification_preferences -> users (user_id));
+diesel::joinable!(notifications -> notebooks (notebook_id));
+diesel::joinable!(notifications -> teams (team_id));
+diesel::joinable!(notifications -> users (user_id));
+diesel::joinable!(permission_grants -> teams (scope_team_id));
 diesel::joinable!(push_subscriptions -> users (user_id));
 diesel::joinable!(team_invitations -> team_roles (role_id));
 diesel::joinable!(team_invitations -> teams (team_id));
@@ -374,6 +394,9 @@ diesel::joinable!(team_members -> teams (team_id));
 diesel::joinable!(team_members -> users (user_id));
 diesel::joinable!(team_roles -> teams (team_id));
 diesel::joinable!(template_versions -> templates (template_id));
+diesel::joinable!(templates -> notebooks (source_notebook_id));
+diesel::joinable!(templates -> teams (team_id));
+diesel::joinable!(templates -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     blocks,

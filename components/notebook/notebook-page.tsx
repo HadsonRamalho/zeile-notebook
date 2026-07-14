@@ -28,6 +28,7 @@ import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
 import { useCapabilities } from "@/hooks/use-capabilities";
 import { usePresence } from "@/hooks/use-presence";
+import { useBlockAnchor } from "@/lib/notebook-anchor";
 import { consumePendingImport } from "@/lib/pendingImport";
 import type {
   Block,
@@ -188,6 +189,8 @@ export default function RustInteractivePage({
     const data = JSON.parse(JSON.stringify(displayDoc.blocks));
     return data as Block[];
   }, [displayDoc]);
+
+  useBlockAnchor(blocks.length > 0);
 
   const hasAppliedPendingImport = useRef(false);
 

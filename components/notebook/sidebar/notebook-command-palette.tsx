@@ -1,6 +1,5 @@
 "use client";
 
-import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   Compass,
   Download,
@@ -10,25 +9,56 @@ import {
   Search,
   Settings,
   Sun,
+  TextSearch,
   User,
   Users,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useTheme } from "next-themes";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DeletePageDialog } from "@/components/delete-page-dialog";
-import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
+import {
+  Dialog,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
-import { cn } from "@/lib/utils";
+import { searchNotebooksRanked } from "@/lib/api/notebook-service";
+import { buildNotebookHref } from "@/lib/notebook-anchor";
 import type { NotebookMeta } from "@/lib/types";
+import type { RankedSearchItem } from "@/lib/types/notebook-types";
 import type { Team, TeamRole } from "@/lib/types/team-types";
+import { cn } from "@/lib/utils";
+
+const HL_START = "‹";
+const HL_END = "›";
+
+function renderSnippet(snippet: string): React.ReactNode[] {
+  const regex = new RegExp(`${HL_START}(.+?)${HL_END}`, "g");
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let match = regex.exec(snippet);
+  while (match !== null) {
+    if (match.index > last) nodes.push(snippet.slice(last, match.index));
+    nodes.push(
+      <mark
+        key={`hl-${key++}`}
+        className="rounded-sm bg-primary/20 px-0.5 text-primary"
+      >
+        {match[1]}
+      </mark>,
+    );
+    last = match.index + match[0].length;
+    match = regex.exec(snippet);
+  }
+  if (last < snippet.length) nodes.push(snippet.slice(last));
+  return nodes;
+}
 
 interface NotebookCommandPaletteProps {
   open: boolean;
@@ -56,14 +86,41 @@ export function NotebookCommandPalette({
   const { canInstall, promptInstall } = useInstallPrompt();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [blockResults, setBlockResults] = useState<RankedSearchItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       setActiveIndex(0);
+      setBlockResults([]);
     }
   }, [open]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setBlockResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      try {
+        const results = await searchNotebooksRanked(term);
+        if (!cancelled) {
+          setBlockResults(results.filter((r) => r.kind === "block"));
+        }
+      } catch {
+        if (!cancelled) setBlockResults([]);
+      }
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [query]);
 
   const matches = (title: string) =>
     title.toLowerCase().includes(query.trim().toLowerCase());
@@ -86,81 +143,84 @@ export function NotebookCommandPalette({
     [teams, teamPages, query],
   );
 
-  const globalActions: (FlatItem & { label: string; icon: React.ReactNode })[] = [
-    {
-      key: "action-new-page",
-      label: "Criar novo caderno",
-      icon: <Plus className="size-4 shrink-0" />,
-      onSelect: () => {
-        createPage();
-        onOpenChange(false);
+  const globalActions: (FlatItem & { label: string; icon: React.ReactNode })[] =
+    [
+      {
+        key: "action-new-page",
+        label: "Criar novo caderno",
+        icon: <Plus className="size-4 shrink-0" />,
+        onSelect: () => {
+          createPage();
+          onOpenChange(false);
+        },
       },
-    },
-    {
-      key: "action-new-team",
-      label: "Criar novo time",
-      icon: <Users className="size-4 shrink-0" />,
-      onSelect: () => {
-        onRequestCreateTeam();
-        onOpenChange(false);
+      {
+        key: "action-new-team",
+        label: "Criar novo time",
+        icon: <Users className="size-4 shrink-0" />,
+        onSelect: () => {
+          onRequestCreateTeam();
+          onOpenChange(false);
+        },
       },
-    },
-    {
-      key: "action-explore",
-      label: "Explorar cadernos públicos",
-      icon: <Compass className="size-4 shrink-0" />,
-      onSelect: () => {
-        router.push("/explore");
-        onOpenChange(false);
+      {
+        key: "action-explore",
+        label: "Explorar cadernos públicos",
+        icon: <Compass className="size-4 shrink-0" />,
+        onSelect: () => {
+          router.push("/explore");
+          onOpenChange(false);
+        },
       },
-    },
-    {
-      key: "action-profile",
-      label: "Ir para o perfil",
-      icon: <User className="size-4 shrink-0" />,
-      onSelect: () => {
-        router.push("/profile");
-        onOpenChange(false);
+      {
+        key: "action-profile",
+        label: "Ir para o perfil",
+        icon: <User className="size-4 shrink-0" />,
+        onSelect: () => {
+          router.push("/profile");
+          onOpenChange(false);
+        },
       },
-    },
-    {
-      key: "action-settings",
-      label: "Ir para as configurações",
-      icon: <Settings className="size-4 shrink-0" />,
-      onSelect: () => {
-        router.push("/settings");
-        onOpenChange(false);
+      {
+        key: "action-settings",
+        label: "Ir para as configurações",
+        icon: <Settings className="size-4 shrink-0" />,
+        onSelect: () => {
+          router.push("/settings");
+          onOpenChange(false);
+        },
       },
-    },
-    {
-      key: "action-toggle-theme",
-      label:
-        resolvedTheme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro",
-      icon:
-        resolvedTheme === "dark" ? (
-          <Sun className="size-4 shrink-0" />
-        ) : (
-          <Moon className="size-4 shrink-0" />
-        ),
-      onSelect: () => {
-        setTheme(resolvedTheme === "dark" ? "light" : "dark");
-        onOpenChange(false);
+      {
+        key: "action-toggle-theme",
+        label:
+          resolvedTheme === "dark"
+            ? "Mudar para tema claro"
+            : "Mudar para tema escuro",
+        icon:
+          resolvedTheme === "dark" ? (
+            <Sun className="size-4 shrink-0" />
+          ) : (
+            <Moon className="size-4 shrink-0" />
+          ),
+        onSelect: () => {
+          setTheme(resolvedTheme === "dark" ? "light" : "dark");
+          onOpenChange(false);
+        },
       },
-    },
-    ...(canInstall
-      ? [
-          {
-            key: "action-install-app",
-            label: "Instalar o Zeile Notebook",
-            icon: <Download className="size-4 shrink-0" />,
-            onSelect: () => {
-              promptInstall();
-              onOpenChange(false);
+      ...(canInstall
+        ? [
+            {
+              key: "action-install-app",
+              label: "Instalar o Zeile Notebook",
+              icon: <Download className="size-4 shrink-0" />,
+              onSelect: () => {
+                promptInstall();
+                onOpenChange(false);
+              },
             },
-          },
-        ]
-      : []),
-  ];
+          ]
+        : []),
+    ];
 
   const filteredGlobalActions = globalActions.filter(
     (action) => query.trim() === "" || matches(action.label),
@@ -193,6 +253,15 @@ export function NotebookCommandPalette({
         },
       });
     }
+  }
+  for (const hit of blockResults) {
+    flat.push({
+      key: `block-${hit.block_id}`,
+      onSelect: () => {
+        router.push(buildNotebookHref(hit.notebook_id, hit.block_id));
+        onOpenChange(false);
+      },
+    });
   }
 
   useEffect(() => {
@@ -242,8 +311,8 @@ export function NotebookCommandPalette({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Buscar caderno ou time..."
-              aria-label="Buscar caderno ou time"
+              placeholder="Buscar cadernos, times e blocos..."
+              aria-label="Buscar cadernos, times e blocos"
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <kbd className="hidden rounded-md border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">
@@ -365,6 +434,43 @@ export function NotebookCommandPalette({
                   </div>
                 ))}
               </div>
+            ))}
+
+            {blockResults.length > 0 && (
+              <div className="mt-3 mb-1 px-3 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                Blocos
+              </div>
+            )}
+            {blockResults.map((hit) => (
+              <button
+                key={`block-${hit.block_id}`}
+                type="button"
+                onClick={() => {
+                  router.push(buildNotebookHref(hit.notebook_id, hit.block_id));
+                  onOpenChange(false);
+                }}
+                onMouseEnter={() =>
+                  setActiveIndex(
+                    flat.findIndex((i) => i.key === `block-${hit.block_id}`),
+                  )
+                }
+                className={cn(
+                  rowClass(`block-${hit.block_id}`),
+                  "flex-col items-start gap-1",
+                )}
+              >
+                <span className="flex items-center gap-2.5">
+                  <TextSearch className="size-4 shrink-0" />
+                  <span className="truncate">
+                    {hit.notebook_title || "Sem título"}
+                  </span>
+                </span>
+                {hit.snippet && (
+                  <span className="line-clamp-2 pl-[26px] text-left text-xs text-muted-foreground">
+                    {renderSnippet(hit.snippet)}
+                  </span>
+                )}
+              </button>
             ))}
           </div>
         </DialogPrimitive.Content>

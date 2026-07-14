@@ -14,8 +14,9 @@ use crate::{
         error::ApiError,
         notebook::{
             NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookResponse,
-            PublicSearchQuery, SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
-            UpdateNotebookVisibility, delete_notebook, get_public_notebooks, update_notebook_title,
+            PublicSearchQuery, RankedSearchItem, RankedSearchQuery, SearchQuery, SearchResult,
+            SyncNotebookRequest, UpdateNotebookTitle, UpdateNotebookVisibility, delete_notebook,
+            get_public_notebooks, update_notebook_title,
         },
         state::AppState,
     },
@@ -377,6 +378,31 @@ pub async fn api_search_notebooks(
     let search_term = format!("%{}%", params.q);
 
     let results = models::notebook::search_user_blocks(&mut conn, id, &search_term).await?;
+
+    Ok((StatusCode::OK, Json(results)))
+}
+
+pub async fn api_search_notebooks_ranked(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<RankedSearchQuery>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Vec<RankedSearchItem>>), ApiError> {
+    let id = extract_claims_from_header(&headers).await?.1.id;
+
+    let term = params.q.trim();
+    if term.is_empty() {
+        return Ok((StatusCode::OK, Json(Vec::<RankedSearchItem>::new())));
+    }
+
+    let limit = params.limit.unwrap_or(16).clamp(1, 50);
+
+    let mut conn = state
+        .pool
+        .get()
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
+
+    let results = models::notebook::search_notebooks_ranked(&mut conn, id, term, limit).await?;
 
     Ok((StatusCode::OK, Json(results)))
 }

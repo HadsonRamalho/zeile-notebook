@@ -1,7 +1,15 @@
 import type { Block, Notebook } from "../types";
-import type { PublicNotebookResponse } from "../types/notebook-types";
+import type {
+  PublicNotebookResponse,
+  RankedSearchItem,
+} from "../types/notebook-types";
 import type { TeamRole } from "../types/team-types";
 import { api } from "./base";
+
+export async function searchNotebooksRanked(query: string, limit = 16) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return api.get<RankedSearchItem[]>(`/notebook/search/ranked/?${params}`);
+}
 
 export async function createNotebook() {
   return api.post<string>("/notebook/create");

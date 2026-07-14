@@ -3,7 +3,8 @@ use automerge::{AutoCommit, ObjType, ReadDoc, ROOT, ScalarValue, Value as AmValu
 use chrono::{DateTime, Utc};
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    OptionalExtension, PgTextExpressionMethods, QueryDsl, Selectable, SelectableHelper,
+    OptionalExtension, PgTextExpressionMethods, QueryDsl, QueryableByName, Selectable,
+    SelectableHelper,
     prelude::{Associations, Identifiable, Insertable, Queryable},
 };
 use diesel_async::{
@@ -206,6 +207,59 @@ pub struct SearchResult {
     pub content: String,
 }
 
+#[derive(Deserialize)]
+pub struct RankedSearchQuery {
+    pub q: String,
+    #[serde(default)]
+    pub limit: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub struct RankedSearchItem {
+    pub kind: String,
+    pub notebook_id: Uuid,
+    pub block_id: Option<Uuid>,
+    pub notebook_title: String,
+    pub team_id: Option<Uuid>,
+    pub team_name: Option<String>,
+    pub snippet: String,
+    pub rank: f32,
+}
+
+#[derive(QueryableByName)]
+struct NotebookHitRow {
+    #[diesel(sql_type = diesel::sql_types::Uuid)]
+    notebook_id: Uuid,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    notebook_title: String,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Uuid>)]
+    team_id: Option<Uuid>,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    team_name: Option<String>,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    snippet: String,
+    #[diesel(sql_type = diesel::sql_types::Float)]
+    rank: f32,
+}
+
+#[derive(QueryableByName)]
+struct BlockHitRow {
+    #[diesel(sql_type = diesel::sql_types::Uuid)]
+    block_id: Uuid,
+    #[diesel(sql_type = diesel::sql_types::Uuid)]
+    notebook_id: Uuid,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    notebook_title: String,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Uuid>)]
+    team_id: Option<Uuid>,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    team_name: Option<String>,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    snippet: String,
+    #[diesel(sql_type = diesel::sql_types::Float)]
+    rank: f32,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NotebookPermission {
     OwnerOrTeam,
@@ -341,6 +395,7 @@ pub async fn find_blocks_by_notebook_id(
     match blocks_dsl::blocks
         .filter(blocks_dsl::notebook_id.eq(param_nb_id))
         .order(blocks_dsl::position.asc())
+        .select(Block::as_select())
         .load::<Block>(conn)
         .await
     {
@@ -408,6 +463,7 @@ pub async fn get_notebook_with_blocks(
 
     let db_blocks: Vec<Block> = match Block::belonging_to(&notebook)
         .order(blocks::position.asc())
+        .select(Block::as_select())
         .load::<Block>(conn)
         .await
     {
@@ -465,6 +521,7 @@ pub async fn clone_notebook(
 
     let db_blocks: Vec<Block> = match Block::belonging_to(&target_notebook)
         .order(blocks::position.asc())
+        .select(Block::as_select())
         .load::<Block>(conn)
         .await
     {
@@ -547,6 +604,103 @@ pub async fn search_user_blocks(
         .collect::<Vec<SearchResult>>();
 
     Ok(final_results)
+}
+
+pub async fn search_notebooks_ranked(
+    conn: &mut AsyncPgConnection,
+    current_user_id: Uuid,
+    query_text: &str,
+    limit: i64,
+) -> Result<Vec<RankedSearchItem>, ApiError> {
+    use diesel::sql_types::{BigInt, Text, Uuid as SqlUuid};
+
+    let notebook_sql = "\
+        SELECT n.id AS notebook_id, \
+               n.title AS notebook_title, \
+               n.team_id AS team_id, \
+               t.name AS team_name, \
+               ts_headline('simple', coalesce(n.search_text, ''), query, \
+                   'StartSel=‹,StopSel=›,MaxFragments=1,MinWords=4,MaxWords=14,ShortWord=2') AS snippet, \
+               ts_rank_cd(n.search_tsv, query) AS rank \
+        FROM notebooks n \
+        LEFT JOIN teams t ON t.id = n.team_id, \
+             plainto_tsquery('simple', $1) query \
+        WHERE (n.user_id = $2 OR n.team_id IN (SELECT team_id FROM team_members WHERE user_id = $2)) \
+          AND n.search_tsv @@ query \
+        ORDER BY rank DESC \
+        LIMIT $3";
+
+    let block_sql = "\
+        SELECT b.id AS block_id, \
+               b.notebook_id AS notebook_id, \
+               n.title AS notebook_title, \
+               n.team_id AS team_id, \
+               t.name AS team_name, \
+               ts_headline('simple', b.content, query, \
+                   'StartSel=‹,StopSel=›,MaxFragments=1,MinWords=4,MaxWords=14,ShortWord=2') AS snippet, \
+               ts_rank_cd(b.search_tsv, query) AS rank \
+        FROM blocks b \
+        JOIN notebooks n ON n.id = b.notebook_id \
+        LEFT JOIN teams t ON t.id = n.team_id, \
+             plainto_tsquery('simple', $1) query \
+        WHERE (n.user_id = $2 OR n.team_id IN (SELECT team_id FROM team_members WHERE user_id = $2)) \
+          AND b.search_tsv @@ query \
+        ORDER BY rank DESC \
+        LIMIT $3";
+
+    let notebook_rows: Vec<NotebookHitRow> = diesel::sql_query(notebook_sql)
+        .bind::<Text, _>(query_text)
+        .bind::<SqlUuid, _>(current_user_id)
+        .bind::<BigInt, _>(limit)
+        .load(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    let block_rows: Vec<BlockHitRow> = diesel::sql_query(block_sql)
+        .bind::<Text, _>(query_text)
+        .bind::<SqlUuid, _>(current_user_id)
+        .bind::<BigInt, _>(limit)
+        .load(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    let mut items: Vec<RankedSearchItem> =
+        Vec::with_capacity(notebook_rows.len() + block_rows.len());
+
+    for r in notebook_rows {
+        items.push(RankedSearchItem {
+            kind: "notebook".to_string(),
+            notebook_id: r.notebook_id,
+            block_id: None,
+            notebook_title: r.notebook_title,
+            team_id: r.team_id,
+            team_name: r.team_name,
+            snippet: r.snippet,
+            rank: r.rank,
+        });
+    }
+
+    for r in block_rows {
+        items.push(RankedSearchItem {
+            kind: "block".to_string(),
+            notebook_id: r.notebook_id,
+            block_id: Some(r.block_id),
+            notebook_title: r.notebook_title,
+            team_id: r.team_id,
+            team_name: r.team_name,
+            snippet: r.snippet,
+            rank: r.rank,
+        });
+    }
+
+    items.sort_by(|a, b| {
+        b.rank
+            .partial_cmp(&a.rank)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    items.truncate(limit as usize);
+
+    Ok(items)
 }
 
 pub async fn load_notebook_data(
