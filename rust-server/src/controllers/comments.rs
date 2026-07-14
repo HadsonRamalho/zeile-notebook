@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     controllers::{
+        activity::spawn_record,
         jwt::extract_claims_from_header,
         notifications::{NotificationInput, spawn_deliver},
         permissions::{TargetCtx, require},
@@ -185,6 +186,15 @@ pub async fn api_create_thread(
     .await?;
 
     broadcast_comment_event(&state, notebook_id, comment_signal(notebook_id));
+    spawn_record(
+        &state,
+        notebook_id,
+        Some(user_id),
+        name.clone(),
+        "comment".to_string(),
+        Some(payload.block_id.clone()),
+        None,
+    );
     notify_mentions(&state, notebook_id, payload.block_id, body, user_id, name);
 
     Ok((

@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod activity;
 pub mod challenge;
 pub mod challenge_judge;
 pub mod chat;

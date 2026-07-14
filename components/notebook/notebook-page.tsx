@@ -31,6 +31,7 @@ import { useAuth } from "@/context/auth-context";
 import { useAutomergeSync } from "@/hooks/use-automerge-sync";
 import { useCapabilities } from "@/hooks/use-capabilities";
 import { usePresence } from "@/hooks/use-presence";
+import { recordEditActivity } from "@/lib/api/activity-service";
 import { useBlockAnchor } from "@/lib/notebook-anchor";
 import { consumePendingImport } from "@/lib/pendingImport";
 import type {
@@ -48,7 +49,9 @@ import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-
 import { defaultLatexContent } from "./blocks/latex/latex-cell";
 import { defaultSqlContent } from "./blocks/sql/sql-cell";
 import { defaultTypstContent } from "./blocks/typst/typst-cell";
+import { ActivityFeed } from "./collaboration/activity-feed";
 import { CollabBar } from "./collaboration/collab-bar";
+import { FollowBar } from "./collaboration/follow-bar";
 import { LiveCursors } from "./collaboration/live-cursors";
 import { BlockComments } from "./comments/block-comments";
 import { CommentsProvider } from "./comments/comments-context";
@@ -122,7 +125,28 @@ export default function RustInteractivePage({
     editMessage,
     deleteMessage,
     updateFocus,
+    updateViewport,
   } = usePresence(pageId, user, refetchCapabilities);
+
+  const [followingId, setFollowingId] = useState<string | null>(null);
+  const isAutoScrollingRef = useRef(false);
+  const lastEditPingRef = useRef(0);
+
+  const pingEdit = useCallback(() => {
+    if (!userPermissions?.can_write) return;
+    const now = Date.now();
+    if (now - lastEditPingRef.current < 30000) return;
+    lastEditPingRef.current = now;
+    recordEditActivity(pageId).catch(() => {});
+  }, [pageId, userPermissions]);
+
+  const trackedUpdateBlock = useCallback(
+    (id: string, val: string) => {
+      updateBlockContent(id, val);
+      pingEdit();
+    },
+    [updateBlockContent, pingEdit],
+  );
 
   const AUTOMERGE_HISTORY_PAGE_SIZE = 50;
   const [automergeHistory, setAutomergeHistory] = useState<
@@ -203,6 +227,56 @@ export default function RustInteractivePage({
 
   useBlockAnchor(blocks.length > 0);
 
+  const followed = collaborators.find((c) => c.id === followingId);
+  const followedViewport = followed?.viewportBlockId ?? null;
+
+  useEffect(() => {
+    const computeTop = () => {
+      const els = document.querySelectorAll<HTMLElement>("[data-block-id]");
+      let bestId: string | null = null;
+      let bestTop = Number.POSITIVE_INFINITY;
+      for (const el of els) {
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom > 140 && rect.top < bestTop) {
+          bestTop = rect.top;
+          bestId = el.getAttribute("data-block-id");
+        }
+      }
+      return bestId;
+    };
+    const onScroll = () => {
+      updateViewport(computeTop());
+      if (followingId && !isAutoScrollingRef.current) {
+        setFollowingId(null);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [updateViewport, followingId]);
+
+  useEffect(() => {
+    if (!followingId || !followedViewport) return;
+    const el = document.querySelector<HTMLElement>(
+      `[data-block-id="${CSS.escape(followedViewport)}"]`,
+    );
+    if (!el) return;
+    isAutoScrollingRef.current = true;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const timer = window.setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [followingId, followedViewport]);
+
+  useEffect(() => {
+    if (!followingId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFollowingId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [followingId]);
+
   const hasAppliedPendingImport = useRef(false);
 
   useEffect(() => {
@@ -249,6 +323,7 @@ export default function RustInteractivePage({
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
+    pingEdit();
   };
 
   // Deletar um bloco não pede confirmação (fricção alta demais para uma ação
@@ -312,6 +387,7 @@ export default function RustInteractivePage({
     const next = [...blocks];
     [next[index], next[target]] = [next[target], next[index]];
     reorderBlocks(next);
+    pingEdit();
   };
 
   const handleDeleteBlock = (id: string) => {
@@ -319,6 +395,7 @@ export default function RustInteractivePage({
     const removed = blocks[index];
     if (!removed) return;
     deleteBlock(id);
+    pingEdit();
     toast(`Bloco "${removed.title || "sem título"}" excluído.`, {
       action: {
         label: "Desfazer",
@@ -428,6 +505,18 @@ export default function RustInteractivePage({
             </button>
           )}
 
+          {!previewDoc && (
+            <div className="fixed bottom-6 left-6 z-floating flex items-center gap-2 print:hidden">
+              <FollowBar
+                collaborators={collaborators}
+                followingId={followingId}
+                onFollow={setFollowingId}
+                onStop={() => setFollowingId(null)}
+              />
+              <ActivityFeed notebookId={pageId} />
+            </div>
+          )}
+
           {presenting && (
             <PresentationMode
               blocks={blocks}
@@ -535,7 +624,7 @@ export default function RustInteractivePage({
                         setIsDragging={setIsDragging}
                         removeBlock={handleDeleteBlock}
                         moveBlock={handleMoveBlock}
-                        updateBlock={updateBlockContent}
+                        updateBlock={trackedUpdateBlock}
                         updateBlockMetadata={updateBlockMetadataSync}
                         updateDrawingScene={updateDrawingScene}
                         doc={doc}

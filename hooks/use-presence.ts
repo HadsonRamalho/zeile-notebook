@@ -20,6 +20,7 @@ export type Collaborator = {
   avatar?: string | null;
   cursor: { x: number; y: number } | null;
   focusedBlockId: string | null;
+  viewportBlockId: string | null;
   isGuest: boolean;
 };
 
@@ -95,9 +96,11 @@ export function usePresence(
   const lastSeenRef = useRef<Map<string, number>>(new Map());
 
   const lastSendTime = useRef(0);
+  const lastViewportSend = useRef(0);
   const myState = useRef({
     cursor: null as { x: number; y: number } | null,
     focusedBlockId: null as string | null,
+    viewportBlockId: null as string | null,
   });
 
   const broadcastPresence = useCallback(() => {
@@ -112,6 +115,7 @@ export function usePresence(
           isGuest: !currentUser,
           cursor: myState.current.cursor,
           focusedBlockId: myState.current.focusedBlockId,
+          viewportBlockId: myState.current.viewportBlockId,
         }),
       );
     }
@@ -129,6 +133,7 @@ export function usePresence(
             isGuest: !currentUser,
             cursor: myState.current.cursor,
             focusedBlockId: myState.current.focusedBlockId,
+            viewportBlockId: myState.current.viewportBlockId,
           }),
         );
       }
@@ -144,77 +149,82 @@ export function usePresence(
         try {
           const data = JSON.parse(raw);
 
-        if (data.type === "capabilities_updated") {
-          onCapabilitiesChangedRef.current?.();
-          return;
-        }
+          if (data.type === "capabilities_updated") {
+            onCapabilitiesChangedRef.current?.();
+            return;
+          }
 
-        // o servidor coalesce a presença num batch periódico (updates + gone)
-        if (data.type === "presence_batch") {
-          setCollaborators((prev) => {
-            const next = new Map(prev);
-            for (const u of data.updates || []) {
-              if (!u?.userId || u.userId === socketUserIdRef.current) continue;
-              lastSeenRef.current.set(u.userId, Date.now());
-              next.set(u.userId, {
-                id: u.userId,
-                name: u.name || "Visitante",
-                color: stringToColor(u.name || u.userId),
-                cursor: u.cursor ?? null,
-                focusedBlockId: u.focusedBlockId ?? null,
-                avatar: u.avatar ?? null,
-                isGuest: u.isGuest ?? true,
-              });
-            }
-            for (const goneId of data.gone || []) {
-              next.delete(goneId);
-              lastSeenRef.current.delete(goneId);
-            }
-            return next;
-          });
-          return;
-        }
-
-        if (data.userId === socketUserIdRef.current) return;
-
-        if (data.type === "init") {
-          socketUserIdRef.current = data.userId;
-          setSocketUserId(data.userId);
-          broadcastPresenceWithId(data.userId);
-          return;
-        }
-
-        if (data.type === "chat_message" && data.message) {
-          setMessages((prev) => upsertMessage(prev, mapChatMessage(data.message)));
-          return;
-        }
-
-        if (data.type === "disconnect") {
-          lastSeenRef.current.delete(data.userId);
-          setCollaborators((prev) => {
-            const next = new Map(prev);
-            next.delete(data.userId);
-            return next;
-          });
-          return;
-        }
-
-        if (data.type === "presence") {
-          lastSeenRef.current.set(data.userId, Date.now());
-          setCollaborators((prev) => {
-            const next = new Map(prev);
-            next.set(data.userId, {
-              id: data.userId,
-              name: data.name || "Visitante",
-              color: stringToColor(data.name || data.userId),
-              cursor: data.cursor,
-              focusedBlockId: data.focusedBlockId,
-              avatar: data.avatar,
-              isGuest: data.isGuest ?? true,
+          // o servidor coalesce a presença num batch periódico (updates + gone)
+          if (data.type === "presence_batch") {
+            setCollaborators((prev) => {
+              const next = new Map(prev);
+              for (const u of data.updates || []) {
+                if (!u?.userId || u.userId === socketUserIdRef.current)
+                  continue;
+                lastSeenRef.current.set(u.userId, Date.now());
+                next.set(u.userId, {
+                  id: u.userId,
+                  name: u.name || "Visitante",
+                  color: stringToColor(u.name || u.userId),
+                  cursor: u.cursor ?? null,
+                  focusedBlockId: u.focusedBlockId ?? null,
+                  viewportBlockId: u.viewportBlockId ?? null,
+                  avatar: u.avatar ?? null,
+                  isGuest: u.isGuest ?? true,
+                });
+              }
+              for (const goneId of data.gone || []) {
+                next.delete(goneId);
+                lastSeenRef.current.delete(goneId);
+              }
+              return next;
             });
-            return next;
-          });
-        }
+            return;
+          }
+
+          if (data.userId === socketUserIdRef.current) return;
+
+          if (data.type === "init") {
+            socketUserIdRef.current = data.userId;
+            setSocketUserId(data.userId);
+            broadcastPresenceWithId(data.userId);
+            return;
+          }
+
+          if (data.type === "chat_message" && data.message) {
+            setMessages((prev) =>
+              upsertMessage(prev, mapChatMessage(data.message)),
+            );
+            return;
+          }
+
+          if (data.type === "disconnect") {
+            lastSeenRef.current.delete(data.userId);
+            setCollaborators((prev) => {
+              const next = new Map(prev);
+              next.delete(data.userId);
+              return next;
+            });
+            return;
+          }
+
+          if (data.type === "presence") {
+            lastSeenRef.current.set(data.userId, Date.now());
+            setCollaborators((prev) => {
+              const next = new Map(prev);
+              next.set(data.userId, {
+                id: data.userId,
+                name: data.name || "Visitante",
+                color: stringToColor(data.name || data.userId),
+                cursor: data.cursor,
+                focusedBlockId: data.focusedBlockId,
+                viewportBlockId: data.viewportBlockId ?? null,
+                avatar: data.avatar,
+                isGuest: data.isGuest ?? true,
+              });
+              return next;
+            });
+          }
         } catch (e) {
           console.error("Erro ao ler WebSocket:", e);
         }
@@ -275,7 +285,11 @@ export function usePresence(
   }, [pageId]);
 
   const sendChatMessage = useCallback(
-    (text: string, parentId?: string | null, quotedMessageId?: string | null) => {
+    (
+      text: string,
+      parentId?: string | null,
+      quotedMessageId?: string | null,
+    ) => {
       const trimmed = text.trim();
       if (!trimmed) return;
       // persiste via REST; o servidor difunde o evento chat_message de volta
@@ -286,7 +300,8 @@ export function usePresence(
         quotedMessageId: quotedMessageId ?? null,
       })
         .then((dto) => {
-          if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
+          if (dto)
+            setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
         })
         .catch(() => {});
     },
@@ -299,7 +314,8 @@ export function usePresence(
       if (!trimmed) return;
       editNotebookMessage(pageId, messageId, trimmed)
         .then((dto) => {
-          if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
+          if (dto)
+            setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
         })
         .catch(() => {});
     },
@@ -310,7 +326,8 @@ export function usePresence(
     (messageId: string) => {
       deleteNotebookMessage(pageId, messageId)
         .then((dto) => {
-          if (dto) setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
+          if (dto)
+            setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
         })
         .catch(() => {});
     },
@@ -337,6 +354,19 @@ export function usePresence(
     [broadcastPresence],
   );
 
+  const updateViewport = useCallback(
+    (blockId: string | null) => {
+      if (myState.current.viewportBlockId === blockId) return;
+      myState.current.viewportBlockId = blockId;
+      const now = Date.now();
+      if (now - lastViewportSend.current > 200) {
+        broadcastPresence();
+        lastViewportSend.current = now;
+      }
+    },
+    [broadcastPresence],
+  );
+
   return {
     socketUserId,
     collaborators: Array.from(collaborators.values()),
@@ -346,5 +376,6 @@ export function usePresence(
     deleteMessage,
     updateCursor,
     updateFocus,
+    updateViewport,
   };
 }

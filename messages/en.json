@@ -714,5 +714,21 @@
     "send": "Send",
     "comment": "Comment",
     "empty": "No comments on this block yet."
+  },
+  "presence": {
+    "follow": "Follow",
+    "follow_name": "Follow {name}",
+    "following": "Following {name}",
+    "stop_following": "Stop following"
+  },
+  "activity": {
+    "title": "Activity",
+    "empty": "No activity yet.",
+    "since_last_visit": "Since your last visit",
+    "earlier": "Earlier",
+    "kind_edit": "edited the notebook",
+    "kind_comment": "commented",
+    "kind_snapshot": "created a version",
+    "kind_publish": "published the notebook"
   }
 }

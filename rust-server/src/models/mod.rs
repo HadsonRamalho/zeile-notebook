@@ -1,3 +1,4 @@
+pub mod activity;
 pub mod admin;
 pub mod challenge;
 pub mod chat;

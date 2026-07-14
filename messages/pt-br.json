@@ -714,5 +714,21 @@
     "send": "Enviar",
     "comment": "Comentar",
     "empty": "Nenhum comentário neste bloco ainda."
+  },
+  "presence": {
+    "follow": "Seguir",
+    "follow_name": "Seguir {name}",
+    "following": "Seguindo {name}",
+    "stop_following": "Parar de seguir"
+  },
+  "activity": {
+    "title": "Atividade",
+    "empty": "Nenhuma atividade ainda.",
+    "since_last_visit": "Desde sua última visita",
+    "earlier": "Antes",
+    "kind_edit": "editou o caderno",
+    "kind_comment": "comentou",
+    "kind_snapshot": "criou uma versão",
+    "kind_publish": "publicou o caderno"
   }
 }
