@@ -672,5 +672,14 @@
     "action_create": "Create notebook",
     "action_explore": "Explore",
     "dismiss": "Dismiss"
+  },
+  "presentation": {
+    "present": "Present",
+    "exit": "Exit presentation",
+    "next": "Next block",
+    "previous": "Previous block",
+    "overview": "Overview",
+    "fullscreen": "Fullscreen",
+    "untitled_block": "Untitled block"
   }
 }

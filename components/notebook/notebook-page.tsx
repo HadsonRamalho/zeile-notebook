@@ -10,6 +10,7 @@ import {
   Eye,
   FileText,
   GitCompareArrows,
+  Presentation,
   RotateCw,
   X,
 } from "lucide-react";
@@ -51,6 +52,7 @@ import { LiveCursors } from "./collaboration/live-cursors";
 import { HistoryDiffView } from "./history/history-diff-view";
 import { useNotebook } from "./notebook-context";
 import { CapabilitiesProvider } from "./permissions/capabilities";
+import { PresentationMode } from "./presentation/presentation-mode";
 import { ReorderItem } from "./reorder/reorder-item";
 import { ReorderTools } from "./reorder/reorder-tools";
 
@@ -64,6 +66,8 @@ export default function RustInteractivePage({
   header,
 }: RustInteractivePageProps) {
   const tEmpty = useTranslations("empty_states");
+  const tPresent = useTranslations("presentation");
+  const [presenting, setPresenting] = useState(false);
   const { user } = useAuth();
   const { isDragging, setIsDragging, setLiveNotebook } = useNotebook();
   const tokenX = getCookie("auth_token");
@@ -400,6 +404,31 @@ export default function RustInteractivePage({
         />
         <LiveCursors collaborators={collaborators} />
         <ScrollProgress />
+
+        {!previewDoc && (
+          <button
+            type="button"
+            onClick={() => setPresenting(true)}
+            title={tPresent("present")}
+            className="fixed bottom-6 right-6 z-floating flex items-center gap-2 rounded-full border border-border bg-card/85 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg backdrop-blur-md transition-colors hover:text-primary print:hidden"
+          >
+            <Presentation className="size-4" />
+            {tPresent("present")}
+          </button>
+        )}
+
+        {presenting && (
+          <PresentationMode
+            blocks={blocks}
+            doc={displayDoc}
+            sessionId={sessionId}
+            notebookId={pageId}
+            updateBlock={updateBlockContent}
+            updateBlockMetadata={updateBlockMetadataSync}
+            updateDrawingScene={updateDrawingScene}
+            onClose={() => setPresenting(false)}
+          />
+        )}
 
         {!isConnected && <Refreshing />}
 

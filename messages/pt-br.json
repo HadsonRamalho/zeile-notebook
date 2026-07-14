@@ -672,5 +672,14 @@
     "action_create": "Criar caderno",
     "action_explore": "Explorar",
     "dismiss": "Dispensar"
+  },
+  "presentation": {
+    "present": "Apresentar",
+    "exit": "Sair da apresentação",
+    "next": "Próximo bloco",
+    "previous": "Bloco anterior",
+    "overview": "Visão geral",
+    "fullscreen": "Tela cheia",
+    "untitled_block": "Bloco sem título"
   }
 }
