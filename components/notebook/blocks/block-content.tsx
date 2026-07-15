@@ -19,6 +19,7 @@ import { FreeDrawingCell } from "./free-drawing/free-drawing-cell";
 import { GenericBlockEditor } from "./generic/generic-code-block";
 import { GoEditor } from "./go/go-editor";
 import { LatexCell } from "./latex/latex-cell";
+import { MermaidCell } from "./mermaid/mermaid-cell";
 import { NotebookReferenceBlock } from "./notebook-ref/notebook-ref-block";
 import PythonSandbox from "./python/python-editor";
 import { RustEditor } from "./rust/rust-editor";
@@ -198,6 +199,12 @@ export function BlockContent({
         />
       ) : block.type === "latex" ? (
         <LatexCell
+          content={block.content}
+          onChange={(val) => updateBlock(block.id, val)}
+          canWrite={canEditContent}
+        />
+      ) : block.type === "mermaid" ? (
+        <MermaidCell
           content={block.content}
           onChange={(val) => updateBlock(block.id, val)}
           canWrite={canEditContent}

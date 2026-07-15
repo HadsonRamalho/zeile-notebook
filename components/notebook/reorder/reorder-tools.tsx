@@ -23,6 +23,7 @@ import {
   TableProperties,
   Terminal,
   Waypoints,
+  Workflow,
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -153,6 +154,11 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
           label: "Gráfico",
           icon: <BarChart3 size={14} />,
           onClick: () => addBlock(index, "chart"),
+        },
+        {
+          label: "Mermaid",
+          icon: <Workflow size={14} />,
+          onClick: () => addBlock(index, "mermaid"),
         },
         {
           label: "Typst",

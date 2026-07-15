@@ -59,6 +59,8 @@ function blockToMarkdown(block: Block, asset: AssetRef | null): string {
       return fence(codeLanguage(block), block.content);
     case "sql":
       return fence("sql", block.content);
+    case "mermaid":
+      return fence("mermaid", block.content);
     case "latex":
       return `$$\n${block.content.trim()}\n$$`;
     case "database_schema":

@@ -48,6 +48,7 @@ import { ScrollProgress } from "../ui/scroll-progress";
 import { defaultChartContent } from "./blocks/chart/chart-cell";
 import { defaultDatabaseSchemaContent } from "./blocks/database-schema/database-schema-cell";
 import { defaultLatexContent } from "./blocks/latex/latex-cell";
+import { defaultMermaidContent } from "./blocks/mermaid/mermaid-cell";
 import { defaultSqlContent } from "./blocks/sql/sql-cell";
 import { defaultTypstContent } from "./blocks/typst/typst-cell";
 import { ActivityFeed } from "./collaboration/activity-feed";
@@ -335,7 +336,9 @@ export default function RustInteractivePage({
                   ? defaultTypstContent
                   : type === "chart"
                     ? defaultChartContent
-                    : "";
+                    : type === "mermaid"
+                      ? defaultMermaidContent
+                      : "";
     const title = getBlockTitle(type, language ?? "rust", blocks.length);
 
     addBlockSync(index, type, content, language, title, metadata);
@@ -696,6 +699,7 @@ function getBlockTitle(
   if (type === "typst") return "Typst";
   if (type === "challenge") return "Desafio";
   if (type === "chart") return "Gráfico";
+  if (type === "mermaid") return "Mermaid";
   if (type !== "code") return "Bloco de Texto";
 
   const titles: Record<string, string> = {

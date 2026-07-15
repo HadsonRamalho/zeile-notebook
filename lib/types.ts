@@ -14,7 +14,8 @@ export type BlockType =
   | "challenge"
   | "notebook_ref"
   | "template_ref"
-  | "chart";
+  | "chart"
+  | "mermaid";
 
 export type DrawingElement = {
   id: string;
