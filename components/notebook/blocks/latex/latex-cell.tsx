@@ -39,7 +39,7 @@ export function LatexCell({ content, onChange, canWrite }: LatexCellProps) {
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-lg border bg-card",
+        "relative flex w-full flex-col overflow-hidden rounded-lg border bg-card",
         fullscreen && "fixed inset-0 z-overlay overflow-auto",
       )}
     >
@@ -55,17 +55,29 @@ export function LatexCell({ content, onChange, canWrite }: LatexCellProps) {
       >
         {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>
-      <div className="grid grid-cols-1 gap-3 p-3 pt-10 lg:grid-cols-2 lg:pt-3">
-        <BlockEditor
-          content={content}
-          type="text"
-          onBlur={() => {}}
-          onChange={onChange}
-          readOnly={!canWrite}
-          minHeight="120px"
-          className="bg-muted"
-        />
-        <div className="min-h-[120px] overflow-auto rounded-md border border-border bg-background p-4">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3 p-3 pt-10 lg:grid-cols-2 lg:pt-3",
+          fullscreen && "min-h-0 flex-1",
+        )}
+      >
+        <div className={cn(fullscreen && "h-full overflow-auto")}>
+          <BlockEditor
+            content={content}
+            type="text"
+            onBlur={() => {}}
+            onChange={onChange}
+            readOnly={!canWrite}
+            minHeight="120px"
+            className="bg-muted"
+          />
+        </div>
+        <div
+          className={cn(
+            "min-h-[120px] overflow-auto rounded-md border border-border bg-background p-4",
+            fullscreen && "h-full",
+          )}
+        >
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : html ? (

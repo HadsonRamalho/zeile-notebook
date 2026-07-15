@@ -117,7 +117,7 @@ export function TypstCell({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-lg border bg-card",
+        "relative flex w-full flex-col overflow-hidden rounded-lg border bg-card",
         fullscreen && "fixed inset-0 z-overlay overflow-auto",
       )}
     >
@@ -165,16 +165,28 @@ export function TypstCell({
           {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
       </div>
-      <div className="grid grid-cols-1 gap-3 p-3 pt-12 lg:grid-cols-2 lg:pt-3">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3 p-3 pt-12 lg:grid-cols-2 lg:pt-3",
+          fullscreen && "min-h-0 flex-1",
+        )}
+      >
         <div
-          style={{
-            height: 240,
-            minHeight: 240,
-            maxHeight: 480,
-            resize: "vertical",
-            overflow: "auto",
-          }}
-          className="print:!h-auto print:!max-h-none print:!overflow-visible"
+          style={
+            fullscreen
+              ? undefined
+              : {
+                  height: 240,
+                  minHeight: 240,
+                  maxHeight: 480,
+                  resize: "vertical",
+                  overflow: "auto",
+                }
+          }
+          className={cn(
+            "print:!h-auto print:!max-h-none print:!overflow-visible",
+            fullscreen && "h-full min-h-0 overflow-auto",
+          )}
         >
           <BlockEditor
             content={content}
@@ -187,14 +199,21 @@ export function TypstCell({
           />
         </div>
         <div
-          style={{
-            height: 240,
-            minHeight: 240,
-            maxHeight: 480,
-            resize: "vertical",
-            overflow: "auto",
-          }}
-          className="print:!h-auto print:!max-h-none print:!overflow-visible rounded-md border border-border bg-white p-4"
+          style={
+            fullscreen
+              ? undefined
+              : {
+                  height: 240,
+                  minHeight: 240,
+                  maxHeight: 480,
+                  resize: "vertical",
+                  overflow: "auto",
+                }
+          }
+          className={cn(
+            "print:!h-auto print:!max-h-none print:!overflow-visible rounded-md border border-border bg-white p-4",
+            fullscreen && "h-full min-h-0 overflow-auto",
+          )}
         >
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
