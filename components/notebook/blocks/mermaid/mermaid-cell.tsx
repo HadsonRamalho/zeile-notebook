@@ -1,14 +1,33 @@
 "use client";
 
-import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { makeMermaidInteractive } from "@/lib/mermaid-interactive";
+import "@xyflow/react/dist/style.css";
+import {
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  Background,
+  ConnectionMode,
+  Controls,
+  ReactFlow,
+  type ReactFlowInstance,
+} from "@xyflow/react";
+import { Code2, Maximize2, Minimize2, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  graphToMermaid,
+  loadMermaidGraph,
+  type MermaidEdge,
+  type MermaidGraph,
+  type MermaidNode,
+  mermaidToGraph,
+} from "@/lib/mermaid-graph";
 import { cn } from "@/lib/utils";
 import { BlockEditor } from "../block-editor";
+import { MermaidEditContext } from "./mermaid-context";
+import { mermaidEdgeTypes } from "./mermaid-edge";
+import { mermaidNodeTypes } from "./mermaid-node";
 
-export const defaultMermaidContent =
-  "graph TD\n  A[Início] --> B{Decisão}\n  B -->|Sim| C[Fim]\n  B -->|Não| A";
+export { defaultMermaidContent } from "@/lib/mermaid-graph";
 
 interface MermaidCellProps {
   content: string;
@@ -18,89 +37,141 @@ interface MermaidCellProps {
 
 export function MermaidCell({ content, onChange, canWrite }: MermaidCellProps) {
   const [fullscreen, setFullscreen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { resolvedTheme } = useTheme();
-  const previewRef = useRef<HTMLDivElement>(null);
-  const cleanupRef = useRef<(() => void) | null>(null);
-  const genRef = useRef(0);
-  const rawId = useId();
-
-  const renderDiagram = useCallback(async () => {
-    const gen = ++genRef.current;
-    const code = content.trim();
-
-    cleanupRef.current?.();
-    cleanupRef.current = null;
-
-    if (!code) {
-      setError(null);
-      if (previewRef.current) previewRef.current.innerHTML = "";
-      return;
-    }
-
-    try {
-      const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme: resolvedTheme === "dark" ? "dark" : "default",
-        themeVariables: { primaryColor: "#169e69" },
-      });
-      const renderId = `mermaid-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-      const { svg } = await mermaid.render(renderId, code);
-      if (gen !== genRef.current || !previewRef.current) return;
-      setError(null);
-      previewRef.current.innerHTML = svg;
-      const svgEl = previewRef.current.querySelector("svg");
-      if (svgEl instanceof SVGSVGElement) {
-        svgEl.style.maxWidth = "none";
-        svgEl.style.width = "100%";
-        svgEl.style.height = "100%";
-        cleanupRef.current = makeMermaidInteractive(svgEl);
-      }
-    } catch (err) {
-      if (gen !== genRef.current) return;
-      if (previewRef.current) previewRef.current.innerHTML = "";
-      setError(
-        err instanceof Error ? err.message : "Erro ao renderizar Mermaid",
-      );
-    }
-  }, [content, resolvedTheme, rawId]);
+  const [showCode, setShowCode] = useState(false);
+  const initial = useRef(loadMermaidGraph(content)).current;
+  const [direction, setDirection] = useState(initial.direction);
+  const [nodes, setNodes] = useState<MermaidNode[]>(initial.nodes);
+  const [edges, setEdges] = useState<MermaidEdge[]>(initial.edges);
+  const [codeText, setCodeText] = useState("");
+  const lastSynced = useRef(content);
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flowRef = useRef<ReactFlowInstance<MermaidNode, MermaidEdge> | null>(
+    null,
+  );
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    renderDiagram();
+    if (content === lastSynced.current) return;
+    const graph = loadMermaidGraph(content);
+    lastSynced.current = content;
+    setDirection(graph.direction);
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
+  }, [content]);
+
+  useEffect(() => {
     return () => {
-      cleanupRef.current?.();
-      cleanupRef.current = null;
+      if (commitTimer.current) clearTimeout(commitTimer.current);
     };
-  }, [renderDiagram]);
+  }, []);
+
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+    const observer = new ResizeObserver(() => {
+      flowRef.current?.fitView({ padding: 0.2 });
+    });
+    observer.observe(wrapperRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const commit = useCallback(
+    (graph: MermaidGraph) => {
+      if (!canWrite) return;
+      const serialized = JSON.stringify(graph);
+      if (serialized === lastSynced.current) return;
+      lastSynced.current = serialized;
+      if (commitTimer.current) clearTimeout(commitTimer.current);
+      commitTimer.current = setTimeout(() => onChange(serialized), 250);
+    },
+    [canWrite, onChange],
+  );
+
+  const addNode = useCallback(() => {
+    setNodes((current) => {
+      const next: MermaidNode[] = [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          type: "mermaid",
+          position: { x: 60 * current.length, y: 60 * current.length },
+          data: { label: "Novo nó", shape: "rect" },
+        },
+      ];
+      commit({ direction, nodes: next, edges });
+      return next;
+    });
+  }, [commit, direction, edges]);
+
+  const openCode = () => {
+    setCodeText(graphToMermaid({ direction, nodes, edges }));
+    setShowCode(true);
+  };
+
+  const applyCode = useCallback(
+    (text: string) => {
+      setCodeText(text);
+      const graph = mermaidToGraph(text);
+      setDirection(graph.direction);
+      setNodes(graph.nodes);
+      setEdges(graph.edges);
+      commit(graph);
+    },
+    [commit],
+  );
 
   return (
     <div
+      ref={wrapperRef}
+      style={
+        fullscreen
+          ? undefined
+          : {
+              height: 420,
+              minHeight: 420,
+              resize: "vertical",
+              overflow: "hidden",
+            }
+      }
       className={cn(
-        "relative flex w-full flex-col overflow-hidden rounded-lg border bg-card",
-        fullscreen && "fixed inset-0 z-overlay",
+        "print:!h-auto print:!overflow-visible",
+        fullscreen
+          ? "fixed inset-0 z-overlay bg-background"
+          : "relative w-full overflow-hidden rounded-lg border bg-card",
       )}
     >
       <div
         className={cn(
-          "absolute right-2 top-2 flex gap-1.5",
+          "print:hidden absolute right-2 top-2 flex gap-1.5",
           fullscreen ? "z-overlay-controls" : "z-10",
         )}
       >
+        {canWrite && (
+          <button
+            type="button"
+            onClick={addNode}
+            className="flex items-center gap-1 rounded-md border border-border bg-card/85 px-2 py-1.5 text-xs text-muted-foreground shadow-lg backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
+            title="Adicionar nó"
+          >
+            <Plus size={14} />
+            Nó
+          </button>
+        )}
         <button
           type="button"
-          onClick={() => renderDiagram()}
-          className="rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
-          title="Redefinir visualização"
-          aria-label="Redefinir visualização"
+          onClick={() => (showCode ? setShowCode(false) : openCode())}
+          className={cn(
+            "rounded-md border border-border bg-card/85 p-1.5 text-muted-foreground shadow-lg backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground",
+            showCode && "bg-accent text-accent-foreground",
+          )}
+          title="Ver código Mermaid"
+          aria-label="Ver código Mermaid"
         >
-          <RotateCcw size={16} />
+          <Code2 size={16} />
         </button>
         <button
           type="button"
           onClick={() => setFullscreen((v) => !v)}
-          className="print:hidden rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
+          className="rounded-md border border-border bg-card/85 p-1.5 text-muted-foreground shadow-lg backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
           title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
           aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
         >
@@ -108,41 +179,90 @@ export function MermaidCell({ content, onChange, canWrite }: MermaidCellProps) {
         </button>
       </div>
 
-      <div
-        className={cn(
-          "grid grid-cols-1 gap-3 p-3 pt-10 lg:grid-cols-2 lg:pt-3",
-          fullscreen && "min-h-0 flex-1",
-        )}
-      >
-        <div className={cn("min-h-0 overflow-auto", fullscreen && "h-full")}>
+      {showCode ? (
+        <div className="h-full overflow-auto p-3 pt-12">
           <BlockEditor
-            content={content}
+            content={codeText}
             type="text"
             onBlur={() => {}}
-            onChange={onChange}
+            onChange={(value) => canWrite && applyCode(value)}
             readOnly={!canWrite}
             minHeight="120px"
             className="bg-muted"
           />
         </div>
-        <div
-          className={cn(
-            "relative overflow-hidden rounded-md border border-border bg-background",
-            fullscreen ? "h-full" : "h-80",
-          )}
-        >
-          {error && <p className="p-4 text-sm text-destructive">{error}</p>}
-          <div
-            ref={previewRef}
-            className={cn("h-full w-full", error && "hidden")}
-          />
-          {!error && !content.trim() && (
-            <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-              Digite um diagrama Mermaid para ver a prévia.
-            </p>
-          )}
-        </div>
-      </div>
+      ) : (
+        <MermaidEditContext.Provider value={canWrite}>
+          <ReactFlow
+            style={
+              {
+                "--xy-background-color": "var(--card)",
+                "--xy-background-pattern-color": "var(--border)",
+                "--xy-edge-stroke": "var(--muted-foreground)",
+                "--xy-edge-stroke-selected": "var(--primary)",
+                "--xy-handle-background-color": "var(--primary)",
+                "--xy-handle-border-color": "var(--background)",
+              } as React.CSSProperties
+            }
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={mermaidNodeTypes}
+            edgeTypes={mermaidEdgeTypes}
+            connectionMode={ConnectionMode.Loose}
+            nodesDraggable={canWrite}
+            nodesConnectable={canWrite}
+            elementsSelectable={canWrite}
+            onNodesChange={(changes) => {
+              setNodes((current) => {
+                const next = applyNodeChanges(changes, current);
+                commit({ direction, nodes: next, edges });
+                return next;
+              });
+            }}
+            onEdgesChange={(changes) => {
+              setEdges((current) => {
+                const next = applyEdgeChanges(changes, current);
+                commit({ direction, nodes, edges: next });
+                return next;
+              });
+            }}
+            onConnect={(connection) => {
+              setEdges((current) => {
+                const next = addEdge(
+                  { ...connection, type: "mermaidEdge", data: {} },
+                  current,
+                ) as MermaidEdge[];
+                commit({ direction, nodes, edges: next });
+                return next;
+              });
+            }}
+            onInit={(instance) => {
+              flowRef.current = instance;
+            }}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            minZoom={0.1}
+          >
+            <Background />
+            <Controls
+              showInteractive={canWrite}
+              className="print:hidden overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur"
+              style={
+                {
+                  "--xy-controls-button-background-color": "transparent",
+                  "--xy-controls-button-background-color-hover":
+                    "var(--accent)",
+                  "--xy-controls-button-color": "var(--muted-foreground)",
+                  "--xy-controls-button-color-hover":
+                    "var(--accent-foreground)",
+                  "--xy-controls-button-border-color": "var(--border)",
+                  "--xy-controls-box-shadow": "none",
+                } as React.CSSProperties
+              }
+            />
+          </ReactFlow>
+        </MermaidEditContext.Provider>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { contentToMermaidText } from "@/lib/mermaid-graph";
 import type { Block, Notebook } from "@/lib/types";
 
 export type AssetRef = { path: string; kind: "image" | "file" };
@@ -60,7 +61,7 @@ function blockToMarkdown(block: Block, asset: AssetRef | null): string {
     case "sql":
       return fence("sql", block.content);
     case "mermaid":
-      return fence("mermaid", block.content);
+      return fence("mermaid", contentToMermaidText(block.content));
     case "latex":
       return `$$\n${block.content.trim()}\n$$`;
     case "database_schema":

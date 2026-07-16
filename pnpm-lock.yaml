@@ -131,9 +131,6 @@ importers:
       lucide-react:
         specifier: ^0.562.0
         version: 0.562.0(react@19.2.6)
-      mermaid:
-        specifier: ^11.16.0
-        version: 11.16.0
       motion:
         specifier: ^12.34.1
         version: 12.40.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
