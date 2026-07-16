@@ -259,9 +259,7 @@ export function loadMermaidGraph(content: string): MermaidGraph {
         edges: parsed.edges,
       };
     }
-  } catch {
-    // não é JSON: trata como texto Mermaid
-  }
+  } catch {}
   return mermaidToGraph(content);
 }
 
