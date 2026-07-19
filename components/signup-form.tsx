@@ -5,7 +5,7 @@ import { AlertCircle, UserPlus } from "lucide-react";
 import { Loader } from "@/components/motion/loader";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/auth-context";
+import { type AccountType, isDesktopRuntime } from "@/lib/runtime/router";
 import { signupSchema } from "@/lib/schemas/auth-schemas";
 import type { SignupFormValues } from "@/lib/types/auth-types";
 import { cn } from "@/lib/utils";
@@ -36,9 +37,18 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const t = useTranslations("signup");
-  const { register } = useAuth();
+  const { register, account } = useAuth();
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [accountType, setAccountType] = useState<AccountType>("cloud");
+
+  useEffect(() => {
+    if (isDesktopRuntime()) {
+      setIsDesktop(true);
+      setAccountType(account);
+    }
+  }, [account]);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -55,7 +65,10 @@ export function SignupForm({
     setGlobalError("");
 
     try {
-      await register({ ...data, password_hash: data.password });
+      await register(
+        { ...data, password_hash: data.password },
+        isDesktop ? accountType : undefined,
+      );
     } catch (err: any) {
       setGlobalError(err.message || t("errors.default"));
     } finally {
@@ -77,6 +90,27 @@ export function SignupForm({
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">
+            {isDesktop && (
+              <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/40 p-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={accountType === "cloud" ? "secondary" : "ghost"}
+                  onClick={() => setAccountType("cloud")}
+                >
+                  {t("account_cloud")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={accountType === "local" ? "secondary" : "ghost"}
+                  onClick={() => setAccountType("local")}
+                >
+                  {t("account_local")}
+                </Button>
+              </div>
+            )}
+
             {globalError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />

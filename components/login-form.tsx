@@ -30,24 +30,33 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/auth-context";
 import { BASE_URL } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
+import { type AccountType, isDesktopRuntime } from "@/lib/runtime/router";
 import { loginSchema } from "@/lib/schemas/auth-schemas";
 import type { LoginFormValues } from "@/lib/types/auth-types";
 import { cn } from "@/lib/utils";
 import { GithubIcon } from "./icons/github-icon";
-import { GoogleIcon } from "./icons/google-icon";
 import { BackButton } from "./interface/back-button";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const { signIn } = useAuth();
+  const { signIn, account } = useAuth();
   const t = useTranslations("login");
   const a = useTranslations("api_errors");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [accountType, setAccountType] = useState<AccountType>("cloud");
   const searchParams = useSearchParams();
   const authError = searchParams.get("auth_error");
+
+  useEffect(() => {
+    if (isDesktopRuntime()) {
+      setIsDesktop(true);
+      setAccountType(account);
+    }
+  }, [account]);
 
   const handleGithubLogin = () => {
     const redirectUrl = `${BASE_URL}/user/login/github`;
@@ -83,7 +92,7 @@ export function LoginForm({
     setError("");
 
     try {
-      await signIn(data);
+      await signIn(data, isDesktop ? accountType : undefined);
     } catch (err: any) {
       handleApiError({ err, t: a, setError });
     } finally {
@@ -105,33 +114,53 @@ export function LoginForm({
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">
-            <div className="flex flex-col gap-4">
-              <Button
-                variant="outline"
-                type="button"
-                disabled={isLoading}
-                onClick={handleGithubLogin}
-              >
-                <GithubIcon />
-                {t("github_button")}
-              </Button>
-              {/*
-                <Button variant="outline" type="button" disabled={isLoading}>
-                  <GoogleIcon />
-                  Login com Google
-                </Button> */}
-            </div>
+            {isDesktop && (
+              <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/40 p-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={accountType === "cloud" ? "secondary" : "ghost"}
+                  onClick={() => setAccountType("cloud")}
+                >
+                  {t("account_cloud")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={accountType === "local" ? "secondary" : "ghost"}
+                  onClick={() => setAccountType("local")}
+                >
+                  {t("account_local")}
+                </Button>
+              </div>
+            )}
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  {t("divider")}
-                </span>
-              </div>
-            </div>
+            {accountType === "cloud" && (
+              <>
+                <div className="flex flex-col gap-4">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    disabled={isLoading}
+                    onClick={handleGithubLogin}
+                  >
+                    <GithubIcon />
+                    {t("github_button")}
+                  </Button>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      {t("divider")}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
 
             {error && (
               <Alert variant="destructive">

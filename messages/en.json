@@ -72,6 +72,8 @@
   "login": {
     "title": "Welcome",
     "description": "Log in with your GitHub or Google account",
+    "account_cloud": "Zeile account",
+    "account_local": "Local account",
     "github_button": "Login with GitHub",
     "divider": "Or continue with",
     "email_label": "Email",
@@ -98,6 +100,8 @@
   "signup": {
     "title": "Create an account",
     "description": "Enter your details below to get started",
+    "account_cloud": "Zeile account",
+    "account_local": "Local account",
     "fields": {
       "name": "Full Name",
       "namePlaceholder": "John Doe",

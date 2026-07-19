@@ -72,6 +72,8 @@
   "login": {
     "title": "Bem-vindo",
     "description": "Faça login com sua conta GitHub ou Google",
+    "account_cloud": "Conta Zeile",
+    "account_local": "Conta local",
     "github_button": "Login com GitHub",
     "divider": "Ou continue com",
     "email_label": "Email",
@@ -98,6 +100,8 @@
   "signup": {
     "title": "Crie sua conta",
     "description": "Preencha os dados abaixo para começar",
+    "account_cloud": "Conta Zeile",
+    "account_local": "Conta local",
     "fields": {
       "name": "Nome Completo",
       "namePlaceholder": "João da Silva",
