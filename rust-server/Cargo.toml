@@ -57,6 +57,8 @@ bytes = { version = "1.11.1", features = ["serde"] }
 automerge = { version = "0.9.0", features = ["wasm"] }
 libc = "0.2.182"
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
+postgresql_embedded = { version = "0.18", optional = true }
 
 [features]
 serde-wasm-bindgen = ["dep:serde-wasm-bindgen"]
+embedded-pg = ["dep:postgresql_embedded"]
