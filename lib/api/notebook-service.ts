@@ -5,7 +5,9 @@ import type {
   RankedSearchItem,
 } from "../types/notebook-types";
 import type { TeamRole } from "../types/team-types";
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("notebook-crud");
 
 export async function searchNotebooksRanked(query: string, limit = 16) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });

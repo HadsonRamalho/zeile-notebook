@@ -2,7 +2,9 @@ import type {
   ProfileSecurityFormValues,
   UpdateUser,
 } from "../types/user-types";
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("user");
 
 export async function updateProfile(data: UpdateUser) {
   return api.patch("/user/update", data);

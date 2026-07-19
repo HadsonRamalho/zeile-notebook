@@ -1,5 +1,7 @@
 import type { Language, RunStatus } from "../types";
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("exec-compiled");
 
 interface RunCodeProps {
   setOutput: (o: string) => void;

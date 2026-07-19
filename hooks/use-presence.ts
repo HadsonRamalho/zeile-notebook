@@ -1,4 +1,5 @@
 import { getCookie } from "cookies-next";
+import { tokenCookieName } from "@/lib/runtime/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type ChatMessageDTO,
@@ -143,7 +144,7 @@ export function usePresence(
 
   useEffect(() => {
     // presença divide o mesmo socket do sync (mensagens chegam como texto)
-    const token = getCookie("auth_token")?.toString() || "";
+    const token = getCookie(tokenCookieName())?.toString() || "";
     const handle = subscribeNotebookSocket(pageId, token, {
       onText: (raw) => {
         try {

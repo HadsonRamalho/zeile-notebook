@@ -2,6 +2,7 @@
 
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
+import { tokenCookieName } from "@/lib/runtime/router";
 import {
   Check,
   ChevronDown,
@@ -79,7 +80,7 @@ export default function RustInteractivePage({
   const [presenting, setPresenting] = useState(false);
   const { user } = useAuth();
   const { isDragging, setIsDragging, setLiveNotebook } = useNotebook();
-  const tokenX = getCookie("auth_token");
+  const tokenX = getCookie(tokenCookieName());
   const token = tokenX?.toString() || "";
   const sessionId = useRef(crypto.randomUUID()).current;
   const capabilities = useCapabilities(pageId);

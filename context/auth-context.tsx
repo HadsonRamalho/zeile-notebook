@@ -5,19 +5,28 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import { api } from "@/lib/api/base";
+import { createApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { deleteAccount } from "@/lib/api/user-service";
+import {
+  type AccountType,
+  getActiveAccount,
+  setActiveAccount,
+  tokenCookieName,
+} from "@/lib/runtime/router";
 import type { LoginUser, RegisterUser, User } from "@/lib/types/user-types";
+
+const authApi = createApi("auth");
 
 interface AuthContextType {
   user: User | null;
+  account: AccountType;
   githubSignIn: (token: string) => void;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signIn: (data: LoginUser) => Promise<void>;
+  signIn: (data: LoginUser, account?: AccountType) => Promise<void>;
   signOut: () => void;
-  register: (data: RegisterUser) => Promise<void>;
+  register: (data: RegisterUser, account?: AccountType) => Promise<void>;
   deleteProfile: () => Promise<void>;
 }
 
@@ -30,21 +39,23 @@ export function AuthProvider({
 }): React.ReactNode {
   const t = useTranslations("api_errors");
   const [user, setUser] = useState<User | null>(null);
+  const [account, setAccount] = useState<AccountType>("cloud");
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     async function loadUserFromSession() {
-      const token = getCookie("auth_token");
+      const current = getActiveAccount();
+      setAccount(current);
+      const token = getCookie(tokenCookieName(current));
 
       if (!token) {
-        console.log("Token não encontrado nos cookies");
         setIsLoading(false);
         return;
       }
 
       try {
-        const profile = await api.get<User>("/user/me");
+        const profile = await authApi.get<User>("/user/me");
         setUser(profile);
       } catch (err) {
         handleApiError({ err, t });
@@ -58,68 +69,60 @@ export function AuthProvider({
   }, []);
 
   const githubSignIn = async (token: string) => {
-    try {
-      setCookie("auth_token", token, { maxAge: 60 * 60 * 24 * 7 });
+    setActiveAccount("cloud");
+    setAccount("cloud");
+    setCookie(tokenCookieName("cloud"), token, { maxAge: 60 * 60 * 24 * 7 });
 
-      const profile = await api.get<User>("/user/me");
+    const profile = await authApi.get<User>("/user/me");
 
-      setUser(profile);
-      router.push("/notebook");
-      router.refresh();
-    } catch (error) {
-      throw error;
-    }
+    setUser(profile);
+    router.push("/notebook");
+    router.refresh();
   };
 
-  const signIn = async (data: LoginUser) => {
-    try {
-      const token = await api.post<string>("/user/login", data);
+  const signIn = async (data: LoginUser, target: AccountType = account) => {
+    setActiveAccount(target);
+    setAccount(target);
 
-      setCookie("auth_token", token, { maxAge: 60 * 60 * 24 * 7 });
+    const token = await authApi.post<string>("/user/login", data);
 
-      const profile = await api.get<User>("/user/me");
+    setCookie(tokenCookieName(target), token, { maxAge: 60 * 60 * 24 * 7 });
 
-      setUser(profile);
-      router.push("/notebook");
-      router.refresh();
-    } catch (error) {
-      throw error;
-    }
+    const profile = await authApi.get<User>("/user/me");
+
+    setUser(profile);
+    router.push("/notebook");
+    router.refresh();
   };
 
-  const register = async (data: RegisterUser) => {
-    try {
-      const token = await api.post<string>("/user/register", {
-        ...data,
-        primary_provider: "Email",
-      });
+  const register = async (data: RegisterUser, target: AccountType = account) => {
+    setActiveAccount(target);
+    setAccount(target);
 
-      setCookie("auth_token", token, { maxAge: 60 * 60 * 24 * 7 });
+    const token = await authApi.post<string>("/user/register", {
+      ...data,
+      primary_provider: "Email",
+    });
 
-      const profile = await api.get<User>("/user/me");
+    setCookie(tokenCookieName(target), token, { maxAge: 60 * 60 * 24 * 7 });
 
-      setUser(profile);
-      router.push("/notebook");
-      router.refresh();
-    } catch (error) {
-      throw error;
-    }
+    const profile = await authApi.get<User>("/user/me");
+
+    setUser(profile);
+    router.push("/notebook");
+    router.refresh();
   };
 
   const deleteProfile = async () => {
-    try {
-      await deleteAccount();
+    await deleteAccount();
 
-      deleteCookie("auth_token");
-      setUser(null);
-      router.push("/");
-    } catch (error) {
-      throw error;
-    }
+    deleteCookie(tokenCookieName(account));
+    setUser(null);
+    router.push("/");
   };
 
   const signOut = () => {
-    deleteCookie("auth_token");
+    deleteCookie(tokenCookieName(account));
     setUser(null);
   };
 
@@ -129,6 +132,7 @@ export function AuthProvider({
         deleteProfile,
         githubSignIn,
         user,
+        account,
         isLoading,
         register,
         isAuthenticated: !!user,

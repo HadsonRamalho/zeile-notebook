@@ -1,5 +1,7 @@
 import type { LoginUser, RegisterUser, User } from "../types/user-types";
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("auth");
 
 export async function login(data: LoginUser) {
   return api.post<string>("/user/login", data);
