@@ -10,6 +10,7 @@ content/docs/api-reference/*/endpoints/
 /.next/
 /out/
 /build
+/dist/
 *.tsbuildinfo
 
 # misc

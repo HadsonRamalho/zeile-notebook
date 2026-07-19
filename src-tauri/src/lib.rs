@@ -1,0 +1,188 @@
+use std::net::TcpStream;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+
+const FRONTEND_PORT: u16 = 3000;
+const BACKEND_PORT: u16 = 3099;
+
+struct Children(Mutex<Vec<Child>>);
+
+#[cfg(unix)]
+fn ensure_executable(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    if let Ok(meta) = std::fs::metadata(path) {
+        let mut perms = meta.permissions();
+        perms.set_mode(0o755);
+        let _ = std::fs::set_permissions(path, perms);
+    }
+}
+
+#[cfg(not(unix))]
+fn ensure_executable(_path: &Path) {}
+
+fn wait_for_port(port: u16, timeout: Duration) -> bool {
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(150));
+    }
+    false
+}
+
+const BACKEND_NAME: &str = if cfg!(windows) {
+    "rust-server.exe"
+} else {
+    "rust-server"
+};
+const NODE_NAME: &str = if cfg!(windows) { "node.exe" } else { "node" };
+
+fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
+    let bin = if cfg!(debug_assertions) {
+        std::env::var("ZEILE_BACKEND_BIN")
+            .unwrap_or_else(|_| {
+                format!("../rust-server/target/debug/{BACKEND_NAME}")
+            })
+            .into()
+    } else {
+        let bin = resource_dir.join(format!("resources/backend/{BACKEND_NAME}"));
+        ensure_executable(&bin);
+        bin
+    };
+
+    let mut cmd = Command::new(&bin);
+    cmd.env("DATABASE_TLS", "off").env("PORT", BACKEND_PORT.to_string());
+    if let Ok(app_data) = app.path().app_local_data_dir() {
+        cmd.env("ZEILE_PG_DATA", app_data.join("pg"));
+    }
+
+    match cmd.spawn() {
+        Ok(child) => {
+            log::info!("backend local iniciado: {}", bin.display());
+            Some(child)
+        }
+        Err(e) => {
+            log::error!("falha ao iniciar backend local ({}): {e}", bin.display());
+            None
+        }
+    }
+}
+
+fn extract_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<PathBuf> {
+    let archive = resource_dir.join("resources/next.tar.gz");
+    let dest = app.path().app_local_data_dir().ok()?.join("next");
+    let stamp = dest.join(".stamp");
+    let version = env!("CARGO_PKG_VERSION");
+
+    let up_to_date = dest.join("server.js").exists()
+        && std::fs::read_to_string(&stamp).ok().as_deref() == Some(version);
+
+    if !up_to_date {
+        let _ = std::fs::remove_dir_all(&dest);
+        if std::fs::create_dir_all(&dest).is_err() {
+            return None;
+        }
+        let status = Command::new("tar")
+            .arg("xzf")
+            .arg(&archive)
+            .arg("-C")
+            .arg(&dest)
+            .status();
+        match status {
+            Ok(s) if s.success() => {}
+            _ => {
+                log::error!("falha ao extrair {}", archive.display());
+                return None;
+            }
+        }
+        let _ = std::fs::write(&stamp, version);
+    }
+
+    Some(dest)
+}
+
+fn spawn_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
+    let node = resource_dir.join(format!("resources/{NODE_NAME}"));
+    let dir = extract_frontend(app, resource_dir)?;
+    let server = dir.join("server.js");
+    ensure_executable(&node);
+
+    let mut cmd = Command::new(&node);
+    cmd.arg(&server)
+        .current_dir(&dir)
+        .env("PORT", FRONTEND_PORT.to_string())
+        .env("HOSTNAME", "127.0.0.1");
+
+    match cmd.spawn() {
+        Ok(child) => {
+            log::info!("frontend local iniciado: {}", server.display());
+            Some(child)
+        }
+        Err(e) => {
+            log::error!("falha ao iniciar frontend local ({}): {e}", server.display());
+            None
+        }
+    }
+}
+
+fn kill_children(handle: &tauri::AppHandle) {
+    if let Some(state) = handle.try_state::<Children>() {
+        if let Ok(mut guard) = state.0.lock() {
+            for mut child in guard.drain(..) {
+                let _ = child.kill();
+            }
+        }
+    }
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .setup(|app| {
+            if cfg!(debug_assertions) {
+                app.handle().plugin(
+                    tauri_plugin_log::Builder::default()
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )?;
+            }
+
+            let resource_dir = app.path().resource_dir().unwrap_or_default();
+
+            let mut children = Vec::new();
+            if let Some(child) = spawn_backend(app.handle(), &resource_dir) {
+                children.push(child);
+            }
+            if !cfg!(debug_assertions) {
+                if let Some(child) = spawn_frontend(app.handle(), &resource_dir) {
+                    children.push(child);
+                }
+            }
+            app.manage(Children(Mutex::new(children)));
+
+            if !wait_for_port(FRONTEND_PORT, Duration::from_secs(30)) {
+                log::warn!("frontend em :{FRONTEND_PORT} não respondeu a tempo");
+            }
+
+            let url = format!("http://localhost:{FRONTEND_PORT}");
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse()?))
+                .title("Zeile Notebook")
+                .inner_size(1400.0, 900.0)
+                .resizable(true)
+                .build()?;
+
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|handle, event| {
+            if let RunEvent::ExitRequested { .. } = event {
+                kill_children(handle);
+            }
+        });
+}
