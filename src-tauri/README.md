@@ -54,7 +54,7 @@ coleta os instaladores em `dist/<versão>/<triple>/`.
 
 Cross-compile entre OSes não é viável numa máquina só. Use o workflow
 `.github/workflows/desktop-release.yml` (matriz `tauri-action`, um runner por OS), disparado
-por tag `v*` → cria um GitHub Release em rascunho. Cobre Linux (`deb`/`rpm`),
+por tag `v*` → cria um GitHub Release em rascunho. Cobre Linux (`deb`/`rpm`/`appimage`),
 macOS (`dmg`) e Windows (`nsis`/`msi`).
 
 O pipeline é cross-platform: a orquestração vive em `scripts/prepare-desktop.mjs` (Node,
@@ -85,9 +85,14 @@ outras rolling têm `libxml2.so.16`** → o embarcado falha no initdb. No dev Ar
 fallback (`DATABASE_URL` para um Postgres local) ou um shim de compat. Para offline total
 (LAN), avaliar a feature `bundled` do `postgresql_embedded` (embute o PG no binário).
 
-## Decisões em aberto (ainda pendentes)
+## AppImage
 
-1. **AppImage**: removido dos alvos (`deb`/`rpm` apenas) — o `linuxdeploy` falhava.
+Incluído nos alvos Linux (`deb`, `rpm`, `appimage`). O `failed to run linuxdeploy` que
+ocorria antes é resolvido pelas envs `APPIMAGE_EXTRACT_AND_RUN=1` e `NO_STRIP=1`, aplicadas
+em `scripts/build-desktop.mjs` e no workflow de CI.
+
+É o formato recomendado para distros não-Debian/Fedora (Arch, Garuda, openSUSE...), já que
+`.deb`/`.rpm` não são instaláveis nativamente nelas. Validado rodando em Garuda (Arch).
 
 ## Execução de código compilado por plataforma
 

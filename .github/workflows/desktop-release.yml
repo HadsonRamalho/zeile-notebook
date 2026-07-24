@@ -17,7 +17,7 @@ jobs:
         include:
           - os: ubuntu-latest
             triple: x86_64-unknown-linux-gnu
-            bundles: deb,rpm
+            bundles: deb,rpm,appimage
           - os: macos-latest
             triple: aarch64-apple-darwin
             bundles: dmg
@@ -69,6 +69,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          NO_STRIP: 1
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Zeile Desktop ${{ github.ref_name }}"

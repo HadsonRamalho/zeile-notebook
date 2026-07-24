@@ -28,7 +28,7 @@ const version = JSON.parse(
   readFileSync(join(root, "package.json"), "utf8"),
 ).version;
 const DEFAULT_BUNDLES = {
-  linux: "deb,rpm",
+  linux: "deb,rpm,appimage",
   win32: "nsis,msi",
   darwin: "dmg",
 };
@@ -92,7 +92,15 @@ mkdirSync(destDir, { recursive: true });
 const tauriArgs = ["tauri", "build"];
 if (target) tauriArgs.push("--target", target);
 if (bundles) tauriArgs.push("--bundles", bundles);
-execSync(`pnpm ${tauriArgs.join(" ")}`, { cwd: root, stdio: "inherit" });
+execSync(`pnpm ${tauriArgs.join(" ")}`, {
+  cwd: root,
+  stdio: "inherit",
+  env: {
+    ...process.env,
+    APPIMAGE_EXTRACT_AND_RUN: "1",
+    NO_STRIP: "1",
+  },
+});
 
 const artifacts = collect(bundleDir, destDir);
 console.log(`\n> ${artifacts.length} artefato(s) em dist/${version}/${target || hostTriple()}:`);
