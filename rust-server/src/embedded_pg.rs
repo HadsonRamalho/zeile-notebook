@@ -4,12 +4,7 @@ use postgresql_embedded::{PostgreSQL, Settings};
 
 const DB_NAME: &str = "zeile";
 
-pub async fn ensure_running() -> Option<PostgreSQL> {
-    if std::env::var("DATABASE_URL").is_ok() {
-        tracing::info!("DATABASE_URL definido; usando Postgres externo (embarcado ignorado)");
-        return None;
-    }
-
+async fn provision() -> Result<PostgreSQL, Box<dyn std::error::Error>> {
     let data_dir = std::env::var("ZEILE_PG_DATA")
         .map(PathBuf::from)
         .unwrap_or_else(|_| std::env::temp_dir().join("zeile-pgdata"));
@@ -22,24 +17,11 @@ pub async fn ensure_running() -> Option<PostgreSQL> {
     };
 
     let mut postgresql = PostgreSQL::new(settings);
-    postgresql
-        .setup()
-        .await
-        .expect("falha ao instalar PostgreSQL embarcado");
-    postgresql
-        .start()
-        .await
-        .expect("falha ao iniciar PostgreSQL embarcado");
+    postgresql.setup().await?;
+    postgresql.start().await?;
 
-    if !postgresql
-        .database_exists(DB_NAME)
-        .await
-        .expect("falha ao verificar database")
-    {
-        postgresql
-            .create_database(DB_NAME)
-            .await
-            .expect("falha ao criar database");
+    if !postgresql.database_exists(DB_NAME).await? {
+        postgresql.create_database(DB_NAME).await?;
     }
 
     let url = postgresql.settings().url(DB_NAME);
@@ -48,6 +30,27 @@ pub async fn ensure_running() -> Option<PostgreSQL> {
         std::env::set_var("DATABASE_TLS", "off");
     }
 
-    tracing::info!("PostgreSQL embarcado pronto em {DB_NAME}");
-    Some(postgresql)
+    Ok(postgresql)
+}
+
+pub async fn ensure_running() -> Option<PostgreSQL> {
+    dotenvy::dotenv().ok();
+
+    if std::env::var("DATABASE_URL").is_ok() {
+        tracing::info!("DATABASE_URL definido; usando Postgres externo (embarcado ignorado)");
+        return None;
+    }
+
+    match provision().await {
+        Ok(postgresql) => {
+            tracing::info!("PostgreSQL embarcado pronto em {DB_NAME}");
+            Some(postgresql)
+        }
+        Err(e) => {
+            tracing::error!(
+                "PostgreSQL embarcado indisponível: {e}. Defina DATABASE_URL para usar um Postgres externo."
+            );
+            None
+        }
+    }
 }
