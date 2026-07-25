@@ -10,9 +10,6 @@ const WEBKIT_ENV_VARS: [&str; 2] = [
     "WEBKIT_DISABLE_COMPOSITING_MODE",
 ];
 
-// o WebKitGTK lê essas variáveis antes do main(), então definí-las com set_var não tem
-// efeito: é preciso reexecutar o processo já com elas no ambiente. sem isso o webview
-// fica em branco em GPUs/compositores onde a alocação de buffer GBM falha.
 #[cfg(target_os = "linux")]
 fn reexec_with_webkit_env() {
     use std::os::unix::process::CommandExt;

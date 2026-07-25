@@ -72,10 +72,12 @@ const CLOUD_ONLY_CAPABILITIES: ReadonlySet<Capability> = new Set([
 
 export function isDesktopRuntime(): boolean {
   if (process.env.NEXT_PUBLIC_RUNTIME === "desktop") return true;
-  return (
-    typeof window !== "undefined" &&
-    (window as unknown as { __TAURI__?: unknown }).__TAURI__ !== undefined
-  );
+  if (typeof window === "undefined") return false;
+  const w = window as unknown as {
+    __TAURI__?: unknown;
+    __TAURI_INTERNALS__?: unknown;
+  };
+  return w.__TAURI_INTERNALS__ !== undefined || w.__TAURI__ !== undefined;
 }
 
 export function getActiveAccount(): AccountType {
