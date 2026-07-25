@@ -42,6 +42,27 @@ const BACKEND_NAME: &str = if cfg!(windows) {
 };
 const NODE_NAME: &str = if cfg!(windows) { "node.exe" } else { "node" };
 
+fn jwt_secret(app: &tauri::AppHandle) -> Option<String> {
+    let dir = app.path().app_local_data_dir().ok()?;
+    let path = dir.join("jwt_secret");
+
+    if let Ok(existing) = std::fs::read_to_string(&path) {
+        let existing = existing.trim().to_string();
+        if !existing.is_empty() {
+            return Some(existing);
+        }
+    }
+
+    let secret = format!(
+        "{}{}",
+        uuid::Uuid::new_v4().simple(),
+        uuid::Uuid::new_v4().simple()
+    );
+    std::fs::create_dir_all(&dir).ok()?;
+    std::fs::write(&path, &secret).ok()?;
+    Some(secret)
+}
+
 fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
     let bin = if cfg!(debug_assertions) {
         std::env::var("ZEILE_BACKEND_BIN")
@@ -59,6 +80,11 @@ fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
     cmd.env("DATABASE_TLS", "off").env("PORT", BACKEND_PORT.to_string());
     if let Ok(app_data) = app.path().app_local_data_dir() {
         cmd.env("ZEILE_PG_DATA", app_data.join("pg"));
+    }
+    if std::env::var_os("JWT_SECRET").is_none() {
+        if let Some(secret) = jwt_secret(app) {
+            cmd.env("JWT_SECRET", secret);
+        }
     }
 
     match cmd.spawn() {
