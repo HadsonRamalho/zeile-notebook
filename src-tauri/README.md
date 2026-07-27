@@ -102,6 +102,24 @@ handlers `/run*` (`http/mod.rs`) retornam "não suportado nesta plataforma" via
 `if !cfg!(unix)`. No Windows/macOS-não-unix os blocos compilados ficam indisponíveis;
 Python/JS continuam (rodam no webview, sem backend). Compila em todas as plataformas.
 
+## Assinatura de código (Windows)
+
+Os instaladores não são assinados, então o SmartScreen bloqueia com "editor desconhecido".
+Para testar: **Mais informações → Executar assim mesmo**.
+
+Para distribuir sem o aviso é preciso um certificado Authenticode (desde 2023 todos exigem
+token físico ou HSM):
+
+| opção | custo aprox. | reputação no SmartScreen |
+|---|---|---|
+| Azure Trusted Signing | ~US$ 10/mês | boa, sem token físico; exige validação de org/indivíduo |
+| Certificado OV | ~US$ 200–400/ano | só depois de acumular downloads |
+| Certificado EV | ~US$ 400–700/ano | imediata |
+
+Com o certificado em mãos, configurar em `tauri.conf.json` →
+`bundle.windows.certificateThumbprint` (+ `timestampUrl`), ou `signCommand` no caso do
+Azure Trusted Signing; no CI, passar os segredos como env do `tauri-action`.
+
 ## Build no Windows — dependências
 
 - Rust + **MSVC Build Tools** ("Desktop development with C++").
