@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Formato de commit do Zeile: `<type>: <descrição>` ou `<type>(<escopo>): <descrição>`.
+# Ativar num clone novo:  git config core.hooksPath .githooks
+
+set -euo pipefail
+
+msg_file="$1"
+subject=$(head -n1 "$msg_file")
+
+# Commits gerados pelo git (merge, revert, fixup, squash) passam sem checagem.
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup!"*|"squash!"*) exit 0 ;;
+esac
+
+TYPES='feat|fix|refactor|test|docs|chore'
+
+if ! printf '%s' "$subject" | grep -qE "^($TYPES)(\([a-z0-9._-]+\))?: .+"; then
+  cat >&2 <<EOF
+
+Mensagem de commit fora do formato.
+
+  recebido: $subject
+
+  esperado: <type>: <descrição>
+            <type>(<escopo>): <descrição>
+
+  types válidos: feat, fix, refactor, test, docs, chore
+
+  exemplos: feat: editor visual de mermaid
+            fix(desktop): não matar o backend antes do checkpoint
+            docs: registra os padrões de código
+
+EOF
+  exit 1
+fi
+
+# O subject é a linha que aparece em toda listagem de log; acima de ~72 colunas
+# ela é truncada. Aviso, não erro.
+if [ "${#subject}" -gt 72 ]; then
+  printf '\naviso: subject com %d caracteres (>72) — será truncado nas listagens de log.\n\n' "${#subject}" >&2
+fi
+
+exit 0
