@@ -12,7 +12,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import Script from "next/script";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { RunTsxInSandbox } from "@/lib/api";
+import { runTsxInSandbox } from "@/lib/sandbox/tsx-sandbox";
 import type { Block, TsMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { EditorHeader } from "../default/editor-header";
@@ -118,7 +118,7 @@ export function TsxEditor({
   const editorFiles = { ...pageFiles, "/App.tsx": block.content };
 
   const handleRunSimple = async () => {
-    const url = await RunTsxInSandbox(block, pageBlocks);
+    const url = await runTsxInSandbox(block, pageBlocks);
     setSandboxUrl(url);
   };
 

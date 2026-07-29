@@ -4,8 +4,8 @@ import { BookSearch, Info, NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/cn";
 import { isActive } from "@/lib/urls";
+import { cn } from "@/lib/utils";
 
 export function PrimaryNav() {
   const t = useTranslations("homepage");

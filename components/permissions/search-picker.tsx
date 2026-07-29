@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 
 export interface PickerItem {
   id: string;

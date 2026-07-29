@@ -3,7 +3,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { SPRING_PANEL } from "@/lib/ease";
-import { useHoverCapable } from "@/lib/hooks/use-hover-capable";
+import { useHoverCapable } from "@/hooks/use-hover-capable";
 import {
   NOT_FOUND_DEFAULTS,
   NotFoundActions,

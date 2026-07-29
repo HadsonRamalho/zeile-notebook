@@ -50,7 +50,6 @@ import {
   fetchTeamRoles,
   updateRole,
 } from "@/lib/api/teams-service";
-import { cn } from "@/lib/cn";
 import type { Notebook } from "@/lib/types";
 import type {
   CatalogPermission,
@@ -62,6 +61,7 @@ import type {
   TeamMemberWithRoleAndUserData,
   TeamRole,
 } from "@/lib/types/team-types";
+import { cn } from "@/lib/utils";
 
 type Effect = GrantEffect | "none";
 

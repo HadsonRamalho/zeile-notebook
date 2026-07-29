@@ -8,7 +8,7 @@ import { Database, Terminal } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
-import { useLocalStorage } from "@/hooks/use-local-storate";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import {
   type CellValue,
   clearCellResult,

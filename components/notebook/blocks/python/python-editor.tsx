@@ -29,8 +29,8 @@ export default function PythonSandbox({
 
   async function handleRun() {
     setIsRunning(true);
-    const { RunPythonInSandbox } = await import("../../../../lib/api");
-    const res = await RunPythonInSandbox(block.content);
+    const { runPythonInSandbox } = await import("@/lib/sandbox/python-sandbox");
+    const res = await runPythonInSandbox(block.content);
 
     if (res.error) {
       setOutput(`Erro: ${res.error}`);

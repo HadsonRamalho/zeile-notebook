@@ -139,16 +139,16 @@ export interface Block {
 export interface NotebookMeta {
   id: string;
   title: string;
-  createdAt: number;
+  userId: string | null;
+  team_id: string | null;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
   folderId?: string | null;
   tags?: string[];
   publicSlug?: string | null;
 }
 
 export interface Notebook extends NotebookMeta {
-  userId: string;
   blocks: Block[];
-  isPublic: boolean;
-  publicSlug?: string | null;
-  updatedAt: number;
 }

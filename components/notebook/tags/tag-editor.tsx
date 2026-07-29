@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { MAX_TAG_LEN, MAX_TAGS } from "@/lib/api/folders-service";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 
 export function TagList({
   tags,

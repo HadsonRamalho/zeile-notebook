@@ -10,7 +10,7 @@ import {
 import { Loader } from "@/components/motion/loader";
 import { type AnchorHTMLAttributes, useEffect, useState } from "react";
 import type { BlockMetadata } from "@/lib/types";
-import { cn } from "../lib/cn";
+import { cn } from "@/lib/utils";
 import { GithubIcon } from "./icons/github-icon";
 
 export function GithubInfo({

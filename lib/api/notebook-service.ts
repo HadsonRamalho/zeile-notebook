@@ -1,4 +1,4 @@
-import type { Block, Notebook } from "../types";
+import type { Block, Notebook, NotebookMeta } from "../types";
 import type {
   PublicNotebookDoc,
   PublicNotebookResponse,
@@ -38,14 +38,6 @@ export async function updateNotebookVisibility(id: string, isVisible: boolean) {
 
 export async function getCurrentNotebook(id: string) {
   return api.get<Notebook>(`/notebook/${id}`);
-}
-
-export interface NotebookMeta {
-  id: string;
-  user_id: string | null;
-  team_id: string | null;
-  is_public: boolean;
-  publicSlug?: string | null;
 }
 
 export async function getNotebookMeta(id: string) {

@@ -29,9 +29,9 @@ import {
   fetchTeamFolders,
 } from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
-import { cn } from "@/lib/cn";
 import type { NotebookMeta } from "@/lib/types";
 import type { Team, TeamRole } from "@/lib/types/team-types";
+import { cn } from "@/lib/utils";
 import { NotebookCommandPalette } from "./notebook-command-palette";
 
 const EXPANDED_STORAGE_KEY = "notebook-rail-expanded";

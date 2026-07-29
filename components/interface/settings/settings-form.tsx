@@ -2,9 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Bell, BellOff, Palette, Save, SlidersHorizontal } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useLocalStorage } from "@/hooks/use-local-storate";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { BackButton } from "../back-button";
 

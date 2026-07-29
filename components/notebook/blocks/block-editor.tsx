@@ -19,7 +19,7 @@ import diff from "fast-diff";
 import { useTheme } from "next-themes";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
-import { useLocalStorage } from "@/hooks/use-local-storate";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { BlockType, Language } from "@/lib/types";
 
 interface BlockEditorProps {

@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { Airplay, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { type ComponentProps, useEffect, useState } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "@/lib/utils";
 import { useThemeToggle } from "../ui/skiper-ui/skiper26";
 
 const itemVariants = cva(

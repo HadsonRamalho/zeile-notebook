@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/motion/select";
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
-import { useLocalStorage } from "@/hooks/use-local-storate";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { BlockType, Language } from "@/lib/types";
 
 interface BlockEditorProps {

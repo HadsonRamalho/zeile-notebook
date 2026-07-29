@@ -2,7 +2,7 @@
 import type { ComponentProps } from "react";
 import { Search } from "lucide-react";
 import { useSearchContext } from "@/lib/search-context";
-import { cn } from "../../lib/cn";
+import { cn } from "@/lib/utils";
 import { type ButtonProps, buttonVariants } from "../ui/fumadocs-button";
 
 interface SearchToggleProps

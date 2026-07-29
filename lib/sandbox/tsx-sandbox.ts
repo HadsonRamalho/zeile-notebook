@@ -1,7 +1,6 @@
-import { getSharedPyodide } from "./pyodideStore";
-import type { Block } from "./types";
+import type { Block } from "@/lib/types";
 
-export async function RunTsxInSandbox(block: Block, pageBlocks: Block[]) {
+export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
   if (typeof window === "undefined") {
     console.error("Window não foi definida");
     return null;
@@ -97,27 +96,4 @@ export async function RunTsxInSandbox(block: Block, pageBlocks: Block[]) {
     `;
   const blob = new Blob([iframeHtml], { type: "text/html" });
   return URL.createObjectURL(blob);
-}
-
-export async function RunPythonInSandbox(code: string) {
-  try {
-    const pyodide = await getSharedPyodide();
-
-    let output = "";
-    pyodide.setStdout({
-      batched: (str: string) => {
-        output += `${str}\n`;
-      },
-    });
-
-    await pyodide.loadPackagesFromImports(code);
-    const result = await pyodide.runPythonAsync(code);
-
-    return {
-      output: output,
-      result: result?.toString(),
-    };
-  } catch (err: any) {
-    return { error: err.message };
-  }
 }

@@ -4,12 +4,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
-import { getNotebookMeta, type NotebookMeta } from "@/lib/api/notebook-service";
+import { getNotebookMeta } from "@/lib/api/notebook-service";
 import {
   EXPORT_PERMISSION,
   type ExportFormat,
   exportNotebook,
 } from "@/lib/export";
+import type { NotebookMeta } from "@/lib/types";
 import { ExportMenu, type ExportOption } from "./export-menu";
 import { useNotebook } from "./notebook-context";
 import { ControlActions, type ControlRules } from "./notebook-controls-actions";

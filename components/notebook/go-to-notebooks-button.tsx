@@ -1,7 +1,7 @@
 import { NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 
 export function GoToNotebooksButton({ className }: { className?: string }) {
   const t = useTranslations("sidebar");

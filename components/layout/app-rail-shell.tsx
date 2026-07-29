@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { NotebookManagerProvider } from "@/components/notebook/notebook-manager";
 import { NotebookRail } from "@/components/notebook/sidebar/notebook-rail";
 import { TeamNotebookManagerProvider } from "@/components/notebook/team/team-notebook-manager";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 
 const BARE_PREFIXES = [
   "/docs",

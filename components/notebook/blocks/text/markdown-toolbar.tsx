@@ -14,7 +14,7 @@ import {
   Quote,
   Strikethrough,
 } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 
 function wrapSelection(view: EditorView, mark: string, placeholder: string) {
   const { state } = view;
