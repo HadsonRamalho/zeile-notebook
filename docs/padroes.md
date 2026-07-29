@@ -209,8 +209,15 @@ Camadas existentes: `routes/` → `controllers/` → `models/`, mais `sec/` (per
 
 ### 14. Testes
 
-**Zero.** Nenhum `*.test.ts` / `*.spec.ts`, nenhum `#[cfg(test)]`, nenhum `tests/`,
-nenhum script `test` no `package.json`.
+**Correção ao diagnóstico original**, que registrava "zero testes": o backend **tem** 19 testes
+passando em 4 módulos `#[cfg(test)]`, todos de 2026-07-10, na leva `feat(perms)`:
+`controllers/permissions.rs` (precedência de nível, deny × allow, owner, baseline público),
+`sec/catalog/mod.rs` (unicidade de chave, expansão de `general`, alvos de `implied_by`),
+`controllers/grants.rs` e `db_migrations.rs`. O de migrations só roda se
+`TEST_MIGRATION_DATABASE_URL` estiver definida — sem ela, retorna cedo e passa sem verificar nada.
+
+O **frontend** é que tem zero: nenhum `*.test.ts` / `*.spec.ts`. A afirmação original valia para
+ele, não para o repo.
 
 ### 15. CI e gate de qualidade
 
@@ -481,17 +488,17 @@ salvo indicação. `[ ]` = pendente.
 
 #### 1 · Colisões — bug latente, zero dependência
 
-- [ ] Unificar `cn`: `lib/utils.ts` (`twMerge(clsx(…))`) vs `lib/cn.ts` (só `twMerge`) → uma só
-- [ ] Unificar `NotebookMeta`: `lib/types.ts` (camelCase) vs `lib/api/notebook-service.ts` (snake_case)
-- [ ] Remover `publicSlug` redeclarado (`NotebookMeta` **e** `Notebook extends NotebookMeta`)
-- [ ] `lib/api.ts` → `lib/sandbox/` (não é API: é execução em sandbox)
-- [ ] `lib/hooks/` → `hooks/`
-- [ ] `use-local-storate.ts` → `use-local-storage.ts`
+- [x] Unificar `cn`: `lib/utils.ts` (`twMerge(clsx(…))`) vs `lib/cn.ts` (só `twMerge`) → uma só
+- [x] Unificar `NotebookMeta`: `lib/types.ts` (camelCase) vs `lib/api/notebook-service.ts` (snake_case)
+- [x] Remover `publicSlug` redeclarado (`NotebookMeta` **e** `Notebook extends NotebookMeta`)
+- [x] `lib/api.ts` → `lib/sandbox/` (não é API: é execução em sandbox)
+- [x] `lib/hooks/` → `hooks/`
+- [x] `use-local-storate.ts` → `use-local-storage.ts`
 
 #### 2 · Rede de teste
 
-- [ ] Vitest configurado + script `test`/`test:watch`
-- [ ] `cargo test` no CI (passa com 0 testes, mas o passo existe)
+- [x] Vitest configurado + script `test`/`test:watch`
+- [x] `cargo test` no CI (passa com 0 testes, mas o passo existe)
 
 #### 3 · Primeira leva de suítes (Q74, escritas conforme Q76)
 
