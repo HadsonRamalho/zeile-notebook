@@ -8,6 +8,7 @@ import {
   LanguageShowcaseGrid,
 } from "@/components/interface/home/languages";
 import { NotebooksCta } from "@/components/interface/home/notebooks-cta";
+import { VideoShowcase } from "@/components/interface/home/video-showcase";
 import { RetroGrid } from "@/components/ui/retro-grid";
 import { baseOptions } from "@/lib/layout.shared";
 
@@ -180,59 +181,3 @@ const shortcuts = [
   { prefix: "02", title: "nav.explore", href: "/explore" },
 ];
 
-function VideoShowcase() {
-  return (
-    <section className="relative z-20 mt-10 w-full px-4 md:mx-auto md:max-w-7xl md:px-6">
-      <div className="relative overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
-        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
-          <div className="flex gap-1.5">
-            <div className="h-3 w-3 rounded-full bg-red-500/80" />
-            <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-            <div className="h-3 w-3 rounded-full bg-green-500/80" />
-          </div>
-          <div className="mx-auto flex h-6 items-center rounded bg-background px-4 text-xs font-medium text-muted-foreground shadow-sm">
-            zeile.app/demo
-          </div>
-        </div>
-
-        <div className="flex w-full flex-col md:flex-row bg-black">
-          <div className="relative w-full md:w-1/2 border-b md:border-b-0 md:border-r border-white/10">
-            <div style={{ paddingBottom: "100%", position: "relative" }}>
-              <iframe
-                src="https://player.vimeo.com/video/1166077256?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1&background=1"
-                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                }}
-                title="Zeile Demo Left"
-              />
-            </div>
-          </div>
-
-          <div className="relative w-full md:w-1/2">
-            <div style={{ paddingBottom: "100%", position: "relative" }}>
-              <iframe
-                src="https://player.vimeo.com/video/1166078982?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1&background=1"
-                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                }}
-                title="Zeile Demo Right"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}

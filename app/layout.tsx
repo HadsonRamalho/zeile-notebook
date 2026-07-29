@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./global.css";
@@ -26,8 +25,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </ThemeProvider>
       </body>
-      <Script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js" />
-      <Script src="https://unpkg.com/@babel/standalone/babel.min.js" />
     </html>
   );
 }
