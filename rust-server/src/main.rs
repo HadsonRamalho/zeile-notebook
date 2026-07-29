@@ -6,6 +6,8 @@ use crate::controllers::utils::auto_delete_files;
 
 pub mod controllers;
 pub mod db_migrations;
+#[cfg(feature = "embedded-pg")]
+pub mod embedded_pg;
 pub mod executor;
 pub mod file;
 pub mod http;
@@ -45,6 +47,9 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    #[cfg(feature = "embedded-pg")]
+    let _embedded_pg = crate::embedded_pg::ensure_running().await;
 
     crate::db_migrations::run_pending_migrations();
 

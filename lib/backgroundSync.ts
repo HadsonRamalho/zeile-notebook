@@ -1,4 +1,5 @@
 import { del, get, set } from "idb-keyval";
+import { isDesktopRuntime } from "@/lib/runtime/router";
 
 export const BACKGROUND_SYNC_QUEUE_KEY = "zeile-background-sync-queue";
 export const BACKGROUND_SYNC_TAG = "zeile-retry-queue";
@@ -50,7 +51,7 @@ export async function queueRequest(
   });
   await set(BACKGROUND_SYNC_QUEUE_KEY, current);
 
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isDesktopRuntime()) return;
   if (!("serviceWorker" in navigator) || !("SyncManager" in window)) return;
 
   try {

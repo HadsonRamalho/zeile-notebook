@@ -1,4 +1,6 @@
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("challenges");
 import type {
   AuthoringTestCase,
   ChallengeDetail,

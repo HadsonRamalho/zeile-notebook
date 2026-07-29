@@ -1,11 +1,12 @@
-import { getCookie } from "cookies-next";
 import { queueRequest } from "@/lib/backgroundSync";
+import { type Capability, resolve } from "@/lib/runtime/router";
 
 export const BASE_URL =
   process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
 
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
+  capability?: Capability;
 }
 
 export class ApiClientError extends Error {
@@ -25,15 +26,16 @@ export class ApiClientError extends Error {
 }
 
 async function http<T>(path: string, config?: FetchOptions): Promise<T> {
-  const url = `${BASE_URL}${path}`;
-  const token = getCookie("auth_token");
+  const { capability, ...rest } = config ?? {};
+  const target = resolve(capability);
+  const url = `${target.baseUrl}${path}`;
 
   const init: RequestInit = {
-    ...config,
+    ...rest,
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...config?.headers,
+      ...(target.token && { Authorization: `Bearer ${target.token}` }),
+      ...rest.headers,
     },
   };
 
@@ -67,19 +69,40 @@ async function http<T>(path: string, config?: FetchOptions): Promise<T> {
   return text ? JSON.parse(text) : (null as unknown as T);
 }
 
-export const api = {
-  get: <T>(path: string, config?: FetchOptions) =>
-    http<T>(path, { ...config, method: "GET" }),
+export function createApi(capability?: Capability) {
+  const withCapability = (config?: FetchOptions): FetchOptions => ({
+    ...config,
+    capability: config?.capability ?? capability,
+  });
 
-  post: <T>(path: string, body?: any, config?: FetchOptions) =>
-    http<T>(path, { ...config, method: "POST", body: JSON.stringify(body) }),
+  return {
+    get: <T>(path: string, config?: FetchOptions) =>
+      http<T>(path, { ...withCapability(config), method: "GET" }),
 
-  put: <T>(path: string, body: any, config?: FetchOptions) =>
-    http<T>(path, { ...config, method: "PUT", body: JSON.stringify(body) }),
+    post: <T>(path: string, body?: any, config?: FetchOptions) =>
+      http<T>(path, {
+        ...withCapability(config),
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
 
-  delete: <T>(path: string, config?: FetchOptions) =>
-    http<T>(path, { ...config, method: "DELETE" }),
+    put: <T>(path: string, body: any, config?: FetchOptions) =>
+      http<T>(path, {
+        ...withCapability(config),
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
 
-  patch: <T>(path: string, body?: any, config?: FetchOptions) =>
-    http<T>(path, { ...config, method: "PATCH", body: JSON.stringify(body) }),
-};
+    delete: <T>(path: string, config?: FetchOptions) =>
+      http<T>(path, { ...withCapability(config), method: "DELETE" }),
+
+    patch: <T>(path: string, body?: any, config?: FetchOptions) =>
+      http<T>(path, {
+        ...withCapability(config),
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+  };
+}
+
+export const api = createApi();

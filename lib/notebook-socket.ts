@@ -1,6 +1,8 @@
 // conexão websocket única por notebook, compartilhada por sync (binário) e presença
 // (texto) via endpoint /notebook/ws/combined/:id. reconexão com backoff+jitter aqui.
 
+import { resolve } from "@/lib/runtime/router";
+
 export type NotebookSocketHandlers = {
   onOpen?: () => void;
   onClose?: () => void;
@@ -31,7 +33,7 @@ function wsUrl(notebookId: string): string {
     typeof window !== "undefined" && window.location.protocol === "https:"
       ? "wss://"
       : "ws://";
-  const host = process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
+  const host = resolve("sync").wsHost;
   return `${protocol}${host}/notebook/ws/combined/${notebookId}`;
 }
 

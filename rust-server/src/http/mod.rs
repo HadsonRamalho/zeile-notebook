@@ -61,12 +61,22 @@ async fn enforce_execute(
     }
 }
 
+fn unsupported_execution() -> CodeResponse {
+    CodeResponse {
+        stdout: String::new(),
+        stderr: "Execução de código compilado (Rust/Go/C++/Zig) não é suportada nesta plataforma. Use blocos Python/JS.".into(),
+    }
+}
+
 pub async fn verify_request(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if !cfg!(unix) {
+        return Json(unsupported_execution());
+    }
     if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "rust").await {
         return Json(denied);
     }
@@ -288,6 +298,9 @@ pub async fn verify_go_request(
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if !cfg!(unix) {
+        return Json(unsupported_execution());
+    }
     if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await {
         return Json(denied);
     }
@@ -382,6 +395,9 @@ pub async fn verify_cpp_request(
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if !cfg!(unix) {
+        return Json(unsupported_execution());
+    }
     if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "cpp").await {
         return Json(denied);
     }
@@ -510,6 +526,9 @@ pub async fn verify_zig_request(
     headers: HeaderMap,
     Json(payload): Json<CodeRequest>,
 ) -> Json<CodeResponse> {
+    if !cfg!(unix) {
+        return Json(unsupported_execution());
+    }
     if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "zig").await {
         return Json(denied);
     }

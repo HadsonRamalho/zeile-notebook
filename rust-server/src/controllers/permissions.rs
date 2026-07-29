@@ -450,25 +450,44 @@ async fn run_caps_listener(
     db_url: &str,
     presence: &PresenceRegistry,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let rustls_config = ClientConfig::with_platform_verifier()?;
-    let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config);
-    let (client, mut connection) = tokio_postgres::connect(db_url, tls).await?;
-
     // uma task dirige a conexão para poder ler as notificações
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
-    let conn_task = tokio::spawn(async move {
-        let mut stream =
-            futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
-        while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
-            match msg {
-                Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
-                    let _ = tx.send(n.payload().to_string());
+    let (client, conn_task) = if crate::routes::database_tls_enabled() {
+        let rustls_config = ClientConfig::with_platform_verifier()?;
+        let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config);
+        let (client, mut connection) = tokio_postgres::connect(db_url, tls).await?;
+        let conn_task = tokio::spawn(async move {
+            let mut stream =
+                futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+            while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
+                match msg {
+                    Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
+                        let _ = tx.send(n.payload().to_string());
+                    }
+                    Ok(_) => {}
+                    Err(_) => break,
                 }
-                Ok(_) => {}
-                Err(_) => break,
             }
-        }
-    });
+        });
+        (client, conn_task)
+    } else {
+        let (client, mut connection) =
+            tokio_postgres::connect(db_url, tokio_postgres::NoTls).await?;
+        let conn_task = tokio::spawn(async move {
+            let mut stream =
+                futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+            while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
+                match msg {
+                    Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
+                        let _ = tx.send(n.payload().to_string());
+                    }
+                    Ok(_) => {}
+                    Err(_) => break,
+                }
+            }
+        });
+        (client, conn_task)
+    };
 
     client.batch_execute("LISTEN zeile_caps").await?;
     tracing::info!("LISTEN zeile_caps ativo");

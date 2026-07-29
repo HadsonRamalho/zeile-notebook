@@ -5,7 +5,9 @@ import type {
   AdminUserView,
   PaginatedResponse,
 } from "../types/admin-types";
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("admin");
 
 export async function fetchAdminStats(): Promise<AdminSystemStats> {
   const response = await api.get<AdminSystemStats>("/admin/stats");

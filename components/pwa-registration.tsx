@@ -3,13 +3,18 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import { isDesktopRuntime } from "@/lib/runtime/router";
 
 export function PWARegistration() {
   const isOnline = useOnlineStatus();
   const hasMounted = useRef(false);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    if (
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator) ||
+      isDesktopRuntime()
+    ) {
       return;
     }
 

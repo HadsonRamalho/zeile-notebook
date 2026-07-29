@@ -108,6 +108,7 @@ pub async fn run_safe_bin(
         cmd.env("CGO_ENABLED", "0");
     }
 
+    #[cfg(unix)]
     unsafe {
         cmd.pre_exec(|| {
             libc::setpgid(0, 0);

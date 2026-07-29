@@ -92,9 +92,7 @@ pub fn get_jwt_secret_from_env() -> Result<String, ApiError> {
 
     match env::var("JWT_SECRET") {
         Ok(secret) => Ok(secret),
-        Err(error) => {
-            return Err(ApiError::DatabaseConnection(error.to_string()));
-        }
+        Err(_) => Err(ApiError::MissingEnv("JWT_SECRET".to_string())),
     }
 }
 

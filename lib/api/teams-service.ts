@@ -11,7 +11,9 @@ import type {
   UpdateTeam,
   UpdateTeamRole,
 } from "../types/team-types";
-import { api } from "./base";
+import { createApi } from "./base";
+
+const api = createApi("teams");
 
 export async function createTeam(team: NewTeam) {
   return await api.post<Team>(`/team`, team);

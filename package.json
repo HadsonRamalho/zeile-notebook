@@ -9,7 +9,11 @@
     "start": "next start",
     "types:check": "next typegen && tsc --noEmit",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "desktop:release": "node scripts/build-desktop.mjs"
   },
   "dependencies": {
     "@automerge/automerge": "^3.2.3",
@@ -81,6 +85,7 @@
     "@serwist/turbopack": "^9.5.11",
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.20",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/mdx": "^2.0.13",
     "@types/node": "^25.0.5",
     "@types/react": "^19.2.8",

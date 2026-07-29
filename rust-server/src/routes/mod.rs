@@ -50,15 +50,33 @@ pub async fn print_common_route() -> Result<(StatusCode, Json<String>), (StatusC
     Ok((StatusCode::OK, Json("Common route!".to_string())))
 }
 
-pub fn establish_connection(config: &str) -> BoxFuture<'_, ConnectionResult<AsyncPgConnection>> {
-    let fut = async {
-        let rustls_config = ClientConfig::with_platform_verifier();
-        let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config.unwrap());
-        let (client, conn) = tokio_postgres::connect(config, tls)
-            .await
-            .map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
+pub fn database_tls_enabled() -> bool {
+    match std::env::var("DATABASE_TLS") {
+        Ok(v) => {
+            let v = v.trim().to_ascii_lowercase();
+            v != "off" && v != "0" && v != "false" && v != "no"
+        }
+        Err(_) => true,
+    }
+}
 
-        AsyncPgConnection::try_from_client_and_connection(client, conn).await
+pub fn establish_connection(config: &str) -> BoxFuture<'_, ConnectionResult<AsyncPgConnection>> {
+    let fut = async move {
+        if database_tls_enabled() {
+            let rustls_config = ClientConfig::with_platform_verifier();
+            let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config.unwrap());
+            let (client, conn) = tokio_postgres::connect(config, tls)
+                .await
+                .map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
+
+            AsyncPgConnection::try_from_client_and_connection(client, conn).await
+        } else {
+            let (client, conn) = tokio_postgres::connect(config, tokio_postgres::NoTls)
+                .await
+                .map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
+
+            AsyncPgConnection::try_from_client_and_connection(client, conn).await
+        }
     };
     fut.boxed()
 }
