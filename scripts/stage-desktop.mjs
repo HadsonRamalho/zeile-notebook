@@ -5,9 +5,11 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
+  realpathSync,
   rmSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const isWin = process.platform === "win32";
@@ -46,6 +48,26 @@ cpSync(staticDir, join(standalone, ".next", "static"), { recursive: true });
 if (existsSync(publicDir)) {
   cpSync(publicDir, join(standalone, "public"), { recursive: true });
 }
+
+function materializeDanglingLinks(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      if (existsSync(full)) continue;
+      const source = join(root, relative(standalone, full));
+      rmSync(full, { force: true });
+      if (!existsSync(source)) {
+        console.warn(`link sem alvo removido: ${relative(standalone, full)}`);
+        continue;
+      }
+      cpSync(realpathSync(source), full, { recursive: true, dereference: true });
+    } else if (entry.isDirectory()) {
+      materializeDanglingLinks(full);
+    }
+  }
+}
+
+materializeDanglingLinks(standalone);
 
 const tar = spawnSync(
   "tar",

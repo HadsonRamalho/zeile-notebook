@@ -99,6 +99,64 @@ fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
     }
 }
 
+fn open_archive(
+    archive: &Path,
+) -> std::io::Result<tar::Archive<flate2::read::GzDecoder<std::fs::File>>> {
+    let file = std::fs::File::open(archive)?;
+    Ok(tar::Archive::new(flate2::read::GzDecoder::new(file)))
+}
+
+#[cfg(not(windows))]
+fn extract_archive(archive: &Path, dest: &Path) -> std::io::Result<()> {
+    open_archive(archive)?.unpack(dest)
+}
+
+#[cfg(windows)]
+fn extract_archive(archive: &Path, dest: &Path) -> std::io::Result<()> {
+    let mut pending: Vec<(PathBuf, PathBuf)> = Vec::new();
+
+    for entry in open_archive(archive)?.entries()? {
+        let mut entry = entry?;
+        if entry.header().entry_type().is_symlink() {
+            let link = dest.join(entry.path()?.into_owned());
+            if let Some(target) = entry.link_name()? {
+                pending.push((link, target.into_owned()));
+            }
+            continue;
+        }
+        entry.unpack_in(dest)?;
+    }
+
+    while !pending.is_empty() {
+        let before = pending.len();
+        let mut retry = Vec::new();
+
+        for (link, target) in pending {
+            let Some(parent) = link.parent() else { continue };
+            let resolved = parent.join(&target);
+            if resolved.is_dir() {
+                let _ = std::fs::create_dir_all(parent);
+                let _ = junction::create(&resolved, &link);
+            } else if resolved.is_file() {
+                let _ = std::fs::create_dir_all(parent);
+                let _ = std::fs::copy(&resolved, &link);
+            } else {
+                retry.push((link, target));
+            }
+        }
+
+        if retry.len() == before {
+            for (link, _) in &retry {
+                log::warn!("link sem alvo apos extracao: {}", link.display());
+            }
+            break;
+        }
+        pending = retry;
+    }
+
+    Ok(())
+}
+
 fn extract_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<PathBuf> {
     let archive = resource_dir.join("resources/next.tar.gz");
     let dest = app.path().app_local_data_dir().ok()?.join("next");
@@ -113,18 +171,9 @@ fn extract_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<PathB
         if std::fs::create_dir_all(&dest).is_err() {
             return None;
         }
-        let status = Command::new("tar")
-            .arg("xzf")
-            .arg(&archive)
-            .arg("-C")
-            .arg(&dest)
-            .status();
-        match status {
-            Ok(s) if s.success() => {}
-            _ => {
-                log::error!("falha ao extrair {}", archive.display());
-                return None;
-            }
+        if let Err(e) = extract_archive(&archive, &dest) {
+            log::error!("falha ao extrair {}: {e}", archive.display());
+            return None;
         }
         let _ = std::fs::write(&stamp, version);
     }
