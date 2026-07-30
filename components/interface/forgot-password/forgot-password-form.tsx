@@ -26,11 +26,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api/base";
+import { createApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { getRequestResetSchema } from "@/lib/schemas/auth-schemas";
 import type { RequestResetFormValues } from "@/lib/types/auth-types";
 import { cn } from "@/lib/utils";
+
+const api = createApi("auth");
 
 export function ForgotPasswordForm({
   className,

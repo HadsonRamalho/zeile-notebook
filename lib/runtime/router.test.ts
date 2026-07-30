@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CAPABILITIES } from "./router";
 
 const cookies = new Map<string, string>();
 
@@ -172,18 +173,57 @@ describe("resolve — para onde o dado vai", () => {
     expect(resolve("notebook-crud").token).toBe("");
   });
 
-  it("FAIL-OPEN CONHECIDO (Q99): sem capacidade, resolve manda para a nuvem", async () => {
+  it("a conta passada por argumento vence o cookie", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("local");
 
-    expect(resolve().kind).toBe("remote");
+    expect(resolve("auth", "cloud").baseUrl).toBe(REMOTE_API);
+    expect(resolve("auth", "local").baseUrl).toBe(LOCAL_API);
   });
 
-  it("FURO CONHECIDO (Q99 furo 2): 'public' não é capacidade local", async () => {
+  it("notebook público é capacidade de nuvem, não vai para 127.0.0.1", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("local");
 
-    expect(resolve("public").kind).toBe("remote");
+    expect(resolve("public").baseUrl).toBe(REMOTE_API);
+  });
+});
+
+describe("partição das capacidades", () => {
+  it("no desktop com conta local, exatamente estas capacidades ficam na máquina", async () => {
+    const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
+    setAccount("local");
+
+    const locais = CAPABILITIES.filter((c) => resolve(c).kind === "local");
+
+    expect([...locais].sort()).toEqual(
+      [
+        "activity",
+        "auth",
+        "challenges",
+        "comments",
+        "exec-compiled",
+        "folders",
+        "grants",
+        "notebook-crud",
+        "snapshots",
+        "sync",
+        "user",
+      ].sort(),
+    );
+  });
+
+  it("capacidade de nuvem no desktop local continua indisponível offline", async () => {
+    const { isCapabilityAvailable, resolve } = await loadRouter({
+      NEXT_PUBLIC_RUNTIME: "desktop",
+    });
+    setAccount("local");
+
+    for (const cap of CAPABILITIES) {
+      if (resolve(cap).kind === "remote") {
+        expect(isCapabilityAvailable(cap, false), cap).toBe(false);
+      }
+    }
   });
 });
 

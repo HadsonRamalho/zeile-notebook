@@ -8,6 +8,7 @@ import type { TeamRole } from "../types/team-types";
 import { createApi } from "./base";
 
 const api = createApi("notebook-crud");
+const publicApi = createApi("public");
 
 export async function searchNotebooksRanked(query: string, limit = 16) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
@@ -15,7 +16,7 @@ export async function searchNotebooksRanked(query: string, limit = 16) {
 }
 
 export async function getPublicNotebookBySlug(slug: string) {
-  return api.get<PublicNotebookDoc>(`/notebook/public/${slug}`);
+  return publicApi.get<PublicNotebookDoc>(`/notebook/public/${slug}`);
 }
 
 export async function createNotebook() {
@@ -78,5 +79,5 @@ export async function fetchPublicNotebooks(query?: string) {
   const path = q
     ? `/notebook/all/public?q=${encodeURIComponent(q)}`
     : "/notebook/all/public";
-  return await api.get<PublicNotebookResponse[]>(path);
+  return await publicApi.get<PublicNotebookResponse[]>(path);
 }
