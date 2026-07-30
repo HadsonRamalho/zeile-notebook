@@ -1359,7 +1359,7 @@ mod tests {
         let no_limite = "a".repeat(MAX_TAG_LEN);
 
         assert_eq!(
-            normalize_tags(&[no_limite.clone()]).unwrap(),
+            normalize_tags(std::slice::from_ref(&no_limite)).unwrap(),
             vec![no_limite]
         );
     }
