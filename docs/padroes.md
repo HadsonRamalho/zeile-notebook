@@ -502,11 +502,12 @@ salvo indicação. `[ ]` = pendente.
 
 #### 3 · Primeira leva de suítes (Q74, escritas conforme Q76)
 
-- [ ] `lib/permissions/engine.ts` — `can`/`effectiveKeys`/`targetLevel`: precedência de nível, deny vence allow no mesmo nível, `implied_by` transitivo e circular, catálogo vazio, default deny
-- [ ] **Teste de paridade TS ↔ Rust** — mesma regra de precedência está implementada duas vezes (`engine.ts` e `controllers/permissions.rs`) e nada garante que concordem
-- [ ] `models/notebook.rs` — lógica Automerge
-- [ ] `lib/drawing-scene.ts` + `free-drawing/engine.ts` — inclusive a invariante de `drawing-scene.ts:50` ("só reescreve quando o conteúdo muda"), cuja quebra causa loop de eco
-- [ ] `lib/runtime/router.ts` (branch `tauri`) — decide para onde vai o dado do usuário
+- [x] `lib/permissions/engine.ts` — `can`/`effectiveKeys`/`targetLevel`: precedência de nível, deny vence allow no mesmo nível, `implied_by` transitivo e circular, catálogo vazio, default deny
+- [x] **Teste de paridade TS ↔ Rust** — mesma regra de precedência está implementada duas vezes (`engine.ts` e `controllers/permissions.rs`) e nada garante que concordem → o Rust serializa o catálogo em `contracts/permission-catalog.json`, guardado por snapshot test (`UPDATE_PERMISSION_CATALOG_SNAPSHOT=1` regenera), e a suíte TS consome esse mesmo arquivo repetindo os 7 casos do Rust
+- [x] `models/notebook.rs` — lógica Automerge
+- [x] `lib/drawing-scene.ts` + `free-drawing/engine.ts` — inclusive a invariante de `drawing-scene.ts:50` ("só reescreve quando o conteúdo muda"), cuja quebra causa loop de eco
+- [x] `lib/runtime/router.ts` (branch `tauri`) — decide para onde vai o dado do usuário
+- [x] Serviço Postgres + `TEST_MIGRATION_DATABASE_URL` no job `rust-test` do CI — sem eles, `embedded_migrations_apply_from_scratch_and_are_idempotent` retornava cedo e passava sem verificar nada
 
 #### 4 · Capacidade fail-closed (Q99, branch `tauri`)
 

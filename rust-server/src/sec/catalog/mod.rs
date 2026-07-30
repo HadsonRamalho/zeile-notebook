@@ -214,4 +214,32 @@ mod tests {
         let expanded = cat.expands_to("notebook.blocks.execute");
         assert!(expanded.contains(&"notebook.blocks.rust.execute".to_string()));
     }
+
+    const SNAPSHOT_PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../contracts/permission-catalog.json"
+    );
+
+    #[test]
+    fn snapshot_matches_committed_catalog() {
+        let current = serde_json::to_value(catalog()).expect("serializar catálogo");
+
+        if std::env::var("UPDATE_PERMISSION_CATALOG_SNAPSHOT").is_ok() {
+            let pretty = serde_json::to_string_pretty(&current).expect("formatar snapshot");
+            std::fs::write(SNAPSHOT_PATH, format!("{pretty}\n")).expect("escrever snapshot");
+            return;
+        }
+
+        let raw = std::fs::read_to_string(SNAPSHOT_PATH).unwrap_or_else(|e| {
+            panic!(
+                "não foi possível ler {SNAPSHOT_PATH}: {e}. Rode com UPDATE_PERMISSION_CATALOG_SNAPSHOT=1 para gerar."
+            )
+        });
+        let committed: serde_json::Value = serde_json::from_str(&raw).expect("snapshot inválido");
+
+        assert_eq!(
+            committed, current,
+            "o catálogo mudou e o snapshot não: rode `UPDATE_PERMISSION_CATALOG_SNAPSHOT=1 cargo test snapshot_matches_committed_catalog` e commite o resultado"
+        );
+    }
 }
