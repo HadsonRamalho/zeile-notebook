@@ -1,24 +1,27 @@
 import { getCookie, setCookie } from "cookies-next";
 
-export type Capability =
-  | "auth"
-  | "user"
-  | "notebook-crud"
-  | "folders"
-  | "snapshots"
-  | "comments"
-  | "activity"
-  | "sync"
-  | "exec-compiled"
-  | "challenges"
-  | "grants"
-  | "teams"
-  | "chat"
-  | "templates"
-  | "public"
-  | "push"
-  | "notifications"
-  | "admin";
+export const CAPABILITIES = [
+  "auth",
+  "user",
+  "notebook-crud",
+  "folders",
+  "snapshots",
+  "comments",
+  "activity",
+  "sync",
+  "exec-compiled",
+  "challenges",
+  "grants",
+  "teams",
+  "chat",
+  "templates",
+  "public",
+  "push",
+  "notifications",
+  "admin",
+] as const;
+
+export type Capability = (typeof CAPABILITIES)[number];
 
 export type TargetKind = "remote" | "local";
 export type AccountType = "cloud" | "local";
@@ -113,11 +116,13 @@ function tokenFor(kind: TargetKind): string {
   return (getCookie(key) as string | undefined) ?? "";
 }
 
-export function resolve(capability?: Capability): Target {
+export function resolve(
+  capability: Capability,
+  account: AccountType = getActiveAccount(),
+): Target {
   const useLocal =
     isDesktopRuntime() &&
-    getActiveAccount() === "local" &&
-    capability !== undefined &&
+    account === "local" &&
     LOCAL_CAPABILITIES.has(capability);
 
   if (useLocal) {

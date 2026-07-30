@@ -511,12 +511,16 @@ salvo indicação. `[ ]` = pendente.
 
 #### 4 · Capacidade fail-closed (Q99, branch `tauri`)
 
-- [ ] `capability` obrigatória no tipo: `createApi(cap: Capability)` sem default; remover `export const api = createApi()`
-- [ ] Furo 1: `"public"` existe no tipo e nenhum serviço usa — `getPublicNotebookBySlug` está sob `notebook-crud` (local) e roteia para `127.0.0.1`
-- [ ] Furo 2: `login-form.tsx` e `profile-form.tsx` importam `BASE_URL` direto, furando `resolve()`
-- [ ] Furo 3: `forgot-password-form.tsx` e `reset-password-form.tsx` usam o `api` sem capacidade
-- [ ] Furo 4: `app/api/search/route.ts` (rota de servidor) importa o cliente do browser
+- [x] `capability` obrigatória no tipo: `createApi(cap: Capability)` sem default; remover `export const api = createApi()`. `resolve(capability)` também deixou de aceitar `undefined`, que era o fail-open de verdade
+- [x] Furo 1: `"public"` existe no tipo e nenhum serviço usa — `getPublicNotebookBySlug` está sob `notebook-crud` (local) e roteia para `127.0.0.1` → `getPublicNotebookBySlug` e `fetchPublicNotebooks` passaram para um `createApi("public")`
+- [x] Furo 2: `login-form.tsx` e `profile-form.tsx` importam `BASE_URL` direto, furando `resolve()` → `BASE_URL` deixou de ser exportado; ambos usam `resolve("auth")`. O login passa a conta por argumento porque o seletor de conta só mexe em estado do React, e o cookie pode estar desatualizado
+- [x] Furo 3: `forgot-password-form.tsx` e `reset-password-form.tsx` usam o `api` sem capacidade → `createApi("auth")` em cada um
+- [x] Furo 4: `app/api/search/route.ts` (rota de servidor) importa o cliente do browser → `fetch` direto, tipado, sem passar pelo cliente que lê cookie do browser
 - [ ] Furo 5: `exec-compiled` sem eixo de plataforma → resolvido pela etapa 12 (Q104)
+
+`CAPABILITIES` virou array `as const` (o tipo deriva dele), e um teste garante que toda capacidade
+está classificada como local ou exclusiva de nuvem — capacidade nova sem classificação quebra a suíte
+em vez de virar remota por omissão.
 
 #### 5 · Segurança 🔴
 

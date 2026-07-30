@@ -1,7 +1,33 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { api } from "@/lib/api/base";
 import { getDocPages } from "@/lib/docs";
+
+const REMOTE_API = process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
+
+interface NotebookSearchHit {
+  id: string;
+  title: string;
+  content?: unknown;
+}
+
+async function searchNotebooks(
+  query: string,
+  token: string,
+): Promise<NotebookSearchHit[]> {
+  const response = await fetch(
+    `${REMOTE_API}/notebook/search/?q=${encodeURIComponent(query)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`busca no notebook falhou: ${response.status}`);
+  }
+
+  return (await response.json()) as NotebookSearchHit[];
+}
 
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -68,16 +94,9 @@ export async function GET(request: Request) {
     const token = (await cookies()).get("auth_token")?.value;
 
     if (token) {
-      const rustResponse: any = await api.get<any[]>(
-        `/notebook/search/?q=${encodeURIComponent(query)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const rustResponse = await searchNotebooks(query, token);
 
-      const dynamicResults = rustResponse.flatMap((page: any) => {
+      const dynamicResults = rustResponse.flatMap((page) => {
         const url = `/notebook/${page.id}`;
         const nodes = [];
 

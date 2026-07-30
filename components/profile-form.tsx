@@ -36,8 +36,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-context";
-import { BASE_URL } from "@/lib/api/base";
 import { updateProfile } from "@/lib/api/user-service";
+import { resolve } from "@/lib/runtime/router";
 import { profileSchema } from "@/lib/schemas/user-schemas";
 import type { ProfileFormValues } from "@/lib/types/user-types";
 import { GithubIcon } from "./icons/github-icon";
@@ -57,7 +57,7 @@ export function ProfileForm() {
   const canEditEmail = user?.primary_provider === "Email";
 
   const handleLinkGithub = () => {
-    const redirectUrl = `${BASE_URL}/user/link/github`;
+    const redirectUrl = `${resolve("auth").baseUrl}/user/link/github`;
     window.location.href = redirectUrl;
   };
 

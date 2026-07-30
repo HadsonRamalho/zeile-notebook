@@ -28,9 +28,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/auth-context";
-import { BASE_URL } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
-import { type AccountType, isDesktopRuntime } from "@/lib/runtime/router";
+import {
+  type AccountType,
+  isDesktopRuntime,
+  resolve,
+} from "@/lib/runtime/router";
 import { loginSchema } from "@/lib/schemas/auth-schemas";
 import type { LoginFormValues } from "@/lib/types/auth-types";
 import { cn } from "@/lib/utils";
@@ -59,7 +62,7 @@ export function LoginForm({
   }, [account]);
 
   const handleGithubLogin = () => {
-    const redirectUrl = `${BASE_URL}/user/login/github`;
+    const redirectUrl = `${resolve("auth", accountType).baseUrl}/user/login/github`;
     window.location.href = redirectUrl;
   };
 
