@@ -1173,3 +1173,215 @@ pub async fn get_public_notebooks(
 
     Ok(public_notebooks)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use automerge::transaction::Transactable;
+
+    fn doc_com_blocos(blocos: &[(&str, &str)]) -> AutoCommit {
+        let mut doc = AutoCommit::new();
+        let blocks = doc
+            .put_object(ROOT, "blocks", ObjType::List)
+            .expect("lista blocks");
+        for (i, (title, content)) in blocos.iter().enumerate() {
+            let block = doc
+                .insert_object(&blocks, i, ObjType::Map)
+                .expect("mapa de bloco");
+            let title_id = doc
+                .put_object(&block, "title", ObjType::Text)
+                .expect("texto title");
+            doc.splice_text(&title_id, 0, 0, title)
+                .expect("escreve title");
+            let content_id = doc
+                .put_object(&block, "content", ObjType::Text)
+                .expect("texto content");
+            doc.splice_text(&content_id, 0, 0, content)
+                .expect("escreve content");
+        }
+        doc
+    }
+
+    #[test]
+    fn extract_search_text_devolve_vazio_sem_blocks() {
+        let doc = AutoCommit::new();
+        assert_eq!(extract_search_text(&doc), "");
+    }
+
+    #[test]
+    fn extract_search_text_devolve_vazio_quando_blocks_nao_e_lista() {
+        let mut doc = AutoCommit::new();
+        doc.put(ROOT, "blocks", "nao sou lista").expect("put");
+        assert_eq!(extract_search_text(&doc), "");
+    }
+
+    #[test]
+    fn extract_search_text_concatena_title_e_content_na_ordem() {
+        let doc = doc_com_blocos(&[("Primeiro", "corpo um"), ("Segundo", "corpo dois")]);
+
+        assert_eq!(
+            extract_search_text(&doc),
+            "Primeiro\ncorpo um\nSegundo\ncorpo dois\n"
+        );
+    }
+
+    #[test]
+    fn extract_search_text_le_campo_escalar_alem_de_texto_crdt() {
+        let mut doc = AutoCommit::new();
+        let blocks = doc
+            .put_object(ROOT, "blocks", ObjType::List)
+            .expect("lista blocks");
+        let block = doc.insert_object(&blocks, 0, ObjType::Map).expect("bloco");
+        doc.put(&block, "title", "titulo escalar")
+            .expect("put title");
+        doc.put(&block, "content", "conteudo escalar")
+            .expect("put content");
+
+        assert_eq!(
+            extract_search_text(&doc),
+            "titulo escalar\nconteudo escalar\n"
+        );
+    }
+
+    #[test]
+    fn extract_search_text_ignora_campo_vazio_sem_deixar_linha_em_branco() {
+        let doc = doc_com_blocos(&[("", "so o corpo")]);
+
+        assert_eq!(extract_search_text(&doc), "so o corpo\n");
+    }
+
+    #[test]
+    fn extract_search_text_ignora_entrada_que_nao_e_mapa() {
+        let mut doc = AutoCommit::new();
+        let blocks = doc
+            .put_object(ROOT, "blocks", ObjType::List)
+            .expect("lista blocks");
+        doc.insert(&blocks, 0, "sou escalar")
+            .expect("insere escalar");
+        let block = doc.insert_object(&blocks, 1, ObjType::Map).expect("bloco");
+        doc.put(&block, "title", "sobrevivi").expect("put title");
+
+        assert_eq!(extract_search_text(&doc), "sobrevivi\n");
+    }
+
+    #[test]
+    fn extract_search_text_ignora_campos_fora_de_title_e_content() {
+        let mut doc = AutoCommit::new();
+        let blocks = doc
+            .put_object(ROOT, "blocks", ObjType::List)
+            .expect("lista blocks");
+        let block = doc.insert_object(&blocks, 0, ObjType::Map).expect("bloco");
+        doc.put(&block, "title", "indexa").expect("put title");
+        doc.put(&block, "language", "rust").expect("put language");
+        doc.put(&block, "metadata", "nao indexa")
+            .expect("put metadata");
+
+        assert_eq!(extract_search_text(&doc), "indexa\n");
+    }
+
+    #[test]
+    fn extract_search_text_sobrevive_a_round_trip_de_serializacao() {
+        let mut doc = doc_com_blocos(&[("Titulo", "Corpo")]);
+        let bytes = doc.save();
+        let recarregado = AutoCommit::load(&bytes).expect("recarrega doc");
+
+        assert_eq!(extract_search_text(&recarregado), extract_search_text(&doc));
+    }
+
+    #[test]
+    fn slugify_normaliza_caixa_e_separadores() {
+        assert_eq!(slugify("Meu Primeiro Caderno"), "meu-primeiro-caderno");
+        assert_eq!(slugify("A  B---C"), "a-b-c");
+        assert_eq!(slugify("  espaços  nas  bordas  "), "espa-os-nas-bordas");
+    }
+
+    #[test]
+    fn slugify_descarta_nao_alfanumerico_ascii() {
+        assert_eq!(slugify("Relatório #1 (final)!"), "relat-rio-1-final");
+        assert_eq!(slugify("a/b\\c"), "a-b-c");
+    }
+
+    #[test]
+    fn slugify_cai_para_caderno_quando_nada_sobra() {
+        assert_eq!(slugify(""), "caderno");
+        assert_eq!(slugify("!!!"), "caderno");
+        assert_eq!(slugify("日本語"), "caderno");
+    }
+
+    #[test]
+    fn slugify_limita_a_60_caracteres() {
+        let slug = slugify(&"a".repeat(100));
+
+        assert_eq!(slug.chars().count(), 60);
+    }
+
+    #[test]
+    fn slugify_nao_deixa_hifen_nas_bordas() {
+        let slug = slugify("---meio---");
+
+        assert!(!slug.starts_with('-'), "slug: {slug}");
+        assert!(!slug.ends_with('-'), "slug: {slug}");
+    }
+
+    #[test]
+    fn normalize_tags_remove_vazias_e_apara_espaco() {
+        let tags = vec![
+            "  rust  ".to_string(),
+            "".to_string(),
+            "   ".to_string(),
+            "web".to_string(),
+        ];
+
+        assert_eq!(normalize_tags(&tags).unwrap(), vec!["rust", "web"]);
+    }
+
+    #[test]
+    fn normalize_tags_deduplica_ignorando_caixa_e_mantem_a_primeira() {
+        let tags = vec!["Rust".to_string(), "rust".to_string(), "RUST".to_string()];
+
+        assert_eq!(normalize_tags(&tags).unwrap(), vec!["Rust"]);
+    }
+
+    #[test]
+    fn normalize_tags_aceita_lista_vazia() {
+        assert_eq!(normalize_tags(&[]).unwrap(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn normalize_tags_recusa_tag_acima_do_limite() {
+        let longa = "a".repeat(MAX_TAG_LEN + 1);
+
+        assert!(normalize_tags(&[longa]).is_err());
+    }
+
+    #[test]
+    fn normalize_tags_aceita_tag_exatamente_no_limite() {
+        let no_limite = "a".repeat(MAX_TAG_LEN);
+
+        assert_eq!(
+            normalize_tags(std::slice::from_ref(&no_limite)).unwrap(),
+            vec![no_limite]
+        );
+    }
+
+    #[test]
+    fn normalize_tags_conta_caracteres_nao_bytes() {
+        let acentuada = "á".repeat(MAX_TAG_LEN);
+
+        assert!(normalize_tags(&[acentuada]).is_ok());
+    }
+
+    #[test]
+    fn normalize_tags_recusa_acima_do_maximo_de_tags() {
+        let muitas: Vec<String> = (0..=MAX_TAGS).map(|i| format!("tag{i}")).collect();
+
+        assert!(normalize_tags(&muitas).is_err());
+    }
+
+    #[test]
+    fn normalize_tags_aceita_exatamente_o_maximo_de_tags() {
+        let no_limite: Vec<String> = (0..MAX_TAGS).map(|i| format!("tag{i}")).collect();
+
+        assert_eq!(normalize_tags(&no_limite).unwrap().len(), MAX_TAGS);
+    }
+}

@@ -1,0 +1,1220 @@
+{
+  "permissions": [
+    {
+      "implied_by": [],
+      "key": "notebook.view",
+      "label": "perm.notebook.view",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.edit",
+      "label": "perm.notebook.edit",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.delete",
+      "label": "perm.notebook.delete",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.edit_name",
+      "label": "perm.notebook.edit_name",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.tags.edit",
+      "label": "perm.notebook.tags.edit",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.manage_privacy",
+      "label": "perm.notebook.manage_privacy",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.manage_clones",
+      "label": "perm.notebook.manage_clones",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.manage_public",
+      "label": "perm.notebook.manage_public",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.pages.add",
+      "label": "perm.notebook.pages.add",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.pages.delete",
+      "label": "perm.notebook.pages.delete",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.export",
+      "label": "perm.notebook.export.all",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.export"
+      ],
+      "key": "notebook.export.markdown",
+      "label": "perm.notebook.export.markdown",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.export"
+      ],
+      "key": "notebook.export.markdown_assets",
+      "label": "perm.notebook.export.markdown_assets",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.export"
+      ],
+      "key": "notebook.export.pdf",
+      "label": "perm.notebook.export.pdf",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.export"
+      ],
+      "key": "notebook.export.json",
+      "label": "perm.notebook.export.json",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.export"
+      ],
+      "key": "notebook.export.json_assets",
+      "label": "perm.notebook.export.json_assets",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.view"
+      ],
+      "key": "notebook.blocks.view",
+      "label": "perm.notebook.blocks.view",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.blocks.add",
+      "label": "perm.notebook.blocks.add",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.blocks.edit",
+      "label": "perm.notebook.blocks.edit",
+      "targets": [
+        "notebook",
+        "block"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "notebook.blocks.delete",
+      "label": "perm.notebook.blocks.delete",
+      "targets": [
+        "notebook",
+        "block"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "notebook.blocks.execute",
+      "label": "perm.notebook.blocks.execute",
+      "targets": [
+        "notebook",
+        "block"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.reorder",
+      "label": "perm.notebook.blocks.reorder",
+      "targets": [
+        "notebook"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.rust.view",
+      "label": "perm.notebook.blocks.rust.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.rust.add",
+      "label": "perm.notebook.blocks.rust.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.rust.edit",
+      "label": "perm.notebook.blocks.rust.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.go.view",
+      "label": "perm.notebook.blocks.go.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.go.add",
+      "label": "perm.notebook.blocks.go.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.go.edit",
+      "label": "perm.notebook.blocks.go.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.python.view",
+      "label": "perm.notebook.blocks.python.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.python.add",
+      "label": "perm.notebook.blocks.python.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.python.edit",
+      "label": "perm.notebook.blocks.python.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.cpp.view",
+      "label": "perm.notebook.blocks.cpp.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.cpp.add",
+      "label": "perm.notebook.blocks.cpp.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.cpp.edit",
+      "label": "perm.notebook.blocks.cpp.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.zig.view",
+      "label": "perm.notebook.blocks.zig.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.zig.add",
+      "label": "perm.notebook.blocks.zig.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.zig.edit",
+      "label": "perm.notebook.blocks.zig.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.tsx.view",
+      "label": "perm.notebook.blocks.tsx.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.tsx.add",
+      "label": "perm.notebook.blocks.tsx.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.tsx.edit",
+      "label": "perm.notebook.blocks.tsx.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.drawing.view",
+      "label": "perm.notebook.blocks.drawing.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.drawing.add",
+      "label": "perm.notebook.blocks.drawing.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.drawing.edit",
+      "label": "perm.notebook.blocks.drawing.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.text.view",
+      "label": "perm.notebook.blocks.text.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.text.add",
+      "label": "perm.notebook.blocks.text.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.text.edit",
+      "label": "perm.notebook.blocks.text.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.latex.view",
+      "label": "perm.notebook.blocks.latex.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.latex.add",
+      "label": "perm.notebook.blocks.latex.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.latex.edit",
+      "label": "perm.notebook.blocks.latex.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.sql.view",
+      "label": "perm.notebook.blocks.sql.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.sql.add",
+      "label": "perm.notebook.blocks.sql.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.sql.edit",
+      "label": "perm.notebook.blocks.sql.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.typst.view",
+      "label": "perm.notebook.blocks.typst.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.typst.add",
+      "label": "perm.notebook.blocks.typst.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.typst.edit",
+      "label": "perm.notebook.blocks.typst.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.database_schema.view",
+      "label": "perm.notebook.blocks.database_schema.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.database_schema.add",
+      "label": "perm.notebook.blocks.database_schema.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.database_schema.edit",
+      "label": "perm.notebook.blocks.database_schema.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.challenge.view",
+      "label": "perm.notebook.blocks.challenge.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.challenge.add",
+      "label": "perm.notebook.blocks.challenge.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.challenge.edit",
+      "label": "perm.notebook.blocks.challenge.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.component.view",
+      "label": "perm.notebook.blocks.component.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.component.add",
+      "label": "perm.notebook.blocks.component.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.component.edit",
+      "label": "perm.notebook.blocks.component.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.notebook_ref.view",
+      "label": "perm.notebook.blocks.notebook_ref.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.notebook_ref.add",
+      "label": "perm.notebook.blocks.notebook_ref.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.notebook_ref.edit",
+      "label": "perm.notebook.blocks.notebook_ref.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.view"
+      ],
+      "key": "notebook.blocks.template_ref.view",
+      "label": "perm.notebook.blocks.template_ref.view",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.add"
+      ],
+      "key": "notebook.blocks.template_ref.add",
+      "label": "perm.notebook.blocks.template_ref.add",
+      "targets": [
+        "block_type",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.edit"
+      ],
+      "key": "notebook.blocks.template_ref.edit",
+      "label": "perm.notebook.blocks.template_ref.edit",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.execute"
+      ],
+      "key": "notebook.blocks.rust.execute",
+      "label": "perm.notebook.blocks.rust.execute",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.execute"
+      ],
+      "key": "notebook.blocks.go.execute",
+      "label": "perm.notebook.blocks.go.execute",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.execute"
+      ],
+      "key": "notebook.blocks.python.execute",
+      "label": "perm.notebook.blocks.python.execute",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.execute"
+      ],
+      "key": "notebook.blocks.cpp.execute",
+      "label": "perm.notebook.blocks.cpp.execute",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.execute"
+      ],
+      "key": "notebook.blocks.zig.execute",
+      "label": "perm.notebook.blocks.zig.execute",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.blocks.execute"
+      ],
+      "key": "notebook.blocks.tsx.execute",
+      "label": "perm.notebook.blocks.tsx.execute",
+      "targets": [
+        "block_type",
+        "block",
+        "notebook"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "team.manage",
+      "label": "perm.team.manage",
+      "targets": [
+        "team"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "team.manage"
+      ],
+      "key": "team.edit_name",
+      "label": "perm.team.edit_name",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "team.manage"
+      ],
+      "key": "team.invite_users",
+      "label": "perm.team.invite_users",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "team.manage"
+      ],
+      "key": "team.remove_users",
+      "label": "perm.team.remove_users",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "team.manage"
+      ],
+      "key": "team.roles.create_role",
+      "label": "perm.team.roles.create_role",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "team.manage"
+      ],
+      "key": "team.roles.edit_role_name",
+      "label": "perm.team.roles.edit_role_name",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "team.manage"
+      ],
+      "key": "team.roles.edit_role_permissions",
+      "label": "perm.team.roles.edit_role_permissions",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "chat.view",
+      "label": "perm.chat.view",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "general",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [],
+      "key": "chat.messages.send",
+      "label": "perm.chat.messages.send",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "chat.view"
+      ],
+      "key": "chat.team.access",
+      "label": "perm.chat.team.access",
+      "targets": [
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "chat.messages.send"
+      ],
+      "key": "chat.messages.reply",
+      "label": "perm.chat.messages.reply",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "chat.messages.send"
+      ],
+      "key": "chat.messages.quote",
+      "label": "perm.chat.messages.quote",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "chat.messages.send"
+      ],
+      "key": "chat.messages.edit",
+      "label": "perm.chat.messages.edit",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "chat.messages.send"
+      ],
+      "key": "chat.messages.delete",
+      "label": "perm.chat.messages.delete",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [],
+      "key": "chat.messages.delete_any",
+      "label": "perm.chat.messages.delete_any",
+      "targets": [
+        "team",
+        "notebook",
+        "chat"
+      ],
+      "tier": "granular",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.view"
+      ],
+      "key": "comment.view",
+      "label": "perm.comment.view",
+      "targets": [
+        "notebook",
+        "team"
+      ],
+      "tier": "general",
+      "view": "cosmetic"
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "comment.create",
+      "label": "perm.comment.create",
+      "targets": [
+        "notebook",
+        "team"
+      ],
+      "tier": "general",
+      "view": null
+    },
+    {
+      "implied_by": [
+        "notebook.edit"
+      ],
+      "key": "comment.resolve",
+      "label": "perm.comment.resolve",
+      "targets": [
+        "notebook",
+        "team"
+      ],
+      "tier": "granular",
+      "view": null
+    }
+  ]
+}
