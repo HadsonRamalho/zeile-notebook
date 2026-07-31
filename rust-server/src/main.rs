@@ -62,7 +62,7 @@ async fn run() -> Result<(), BootError> {
         .layer(TraceLayer::new_for_http());
 
     let port = crate::bootstrap::port()?;
-    let addr = format!("0.0.0.0:{port}");
+    let addr = format!("{}:{port}", crate::bootstrap::bind_host()?);
 
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

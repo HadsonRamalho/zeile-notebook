@@ -12,6 +12,7 @@ use crate::models::state::AppState;
 use crate::routes::establish_connection;
 
 const DEFAULT_PORT: u16 = 3099;
+const DEFAULT_BIND_HOST: &str = "0.0.0.0";
 const DEFAULT_POOL_SIZE: usize = 50;
 const DEFAULT_JUDGE_CONCURRENCY: usize = 2;
 
@@ -106,6 +107,28 @@ pub fn port() -> Result<u16, BootError> {
     parse_env_number("PORT", DEFAULT_PORT, "uma porta entre 1 e 65535", |p| {
         *p > 0
     })
+}
+
+pub fn bind_host_from(raw: Option<String>) -> Result<String, BootError> {
+    let valor = raw.unwrap_or_default();
+    let valor = valor.trim();
+
+    if valor.is_empty() {
+        return Ok(DEFAULT_BIND_HOST.to_string());
+    }
+
+    valor
+        .parse::<std::net::IpAddr>()
+        .map(|ip| ip.to_string())
+        .map_err(|_| BootError::InvalidEnv {
+            var: "BIND_ADDR",
+            value: valor.to_string(),
+            expected: "um endereço IP, como 127.0.0.1 ou 0.0.0.0",
+        })
+}
+
+pub fn bind_host() -> Result<String, BootError> {
+    bind_host_from(std::env::var("BIND_ADDR").ok())
 }
 
 pub fn judge_concurrency() -> Result<usize, BootError> {
@@ -253,6 +276,32 @@ mod tests {
         with_env("DATABASE_URL", Some(""), || {
             assert!(matches!(database_url(), Err(BootError::MissingDatabaseUrl)));
         });
+    }
+
+    #[test]
+    fn sem_bind_addr_o_servidor_escuta_em_todas_as_interfaces() {
+        assert_eq!(bind_host_from(None).unwrap(), "0.0.0.0");
+    }
+
+    #[test]
+    fn bind_addr_de_loopback_e_respeitado() {
+        assert_eq!(
+            bind_host_from(Some(" 127.0.0.1 ".to_string())).unwrap(),
+            "127.0.0.1"
+        );
+    }
+
+    #[test]
+    fn bind_addr_invalido_impede_o_boot() {
+        let err = bind_host_from(Some("localhost".to_string())).unwrap_err();
+
+        assert!(matches!(
+            err,
+            BootError::InvalidEnv {
+                var: "BIND_ADDR",
+                ..
+            }
+        ));
     }
 
     #[test]

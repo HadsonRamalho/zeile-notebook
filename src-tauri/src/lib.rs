@@ -8,6 +8,7 @@ use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 const FRONTEND_PORT: u16 = 3000;
 const BACKEND_PORT: u16 = 3099;
+const LOOPBACK: &str = "127.0.0.1";
 
 struct Children(Mutex<Vec<Child>>);
 
@@ -36,7 +37,7 @@ fn hide_console(_cmd: &mut Command) {}
 fn wait_for_port(port: u16, timeout: Duration) -> bool {
     let start = Instant::now();
     while start.elapsed() < timeout {
-        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
+        if TcpStream::connect((LOOPBACK, port)).is_ok() {
             return true;
         }
         std::thread::sleep(Duration::from_millis(150));
@@ -51,6 +52,20 @@ const BACKEND_NAME: &str = if cfg!(windows) {
 };
 const NODE_NAME: &str = if cfg!(windows) { "node.exe" } else { "node" };
 
+#[cfg(unix)]
+fn restrict_to_owner(path: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut perms = std::fs::metadata(path)?.permissions();
+    perms.set_mode(0o600);
+    std::fs::set_permissions(path, perms)
+}
+
+#[cfg(not(unix))]
+fn restrict_to_owner(_path: &Path) -> std::io::Result<()> {
+    Ok(())
+}
+
 fn jwt_secret(app: &tauri::AppHandle) -> Option<String> {
     let dir = app.path().app_local_data_dir().ok()?;
     let path = dir.join("jwt_secret");
@@ -58,6 +73,9 @@ fn jwt_secret(app: &tauri::AppHandle) -> Option<String> {
     if let Ok(existing) = std::fs::read_to_string(&path) {
         let existing = existing.trim().to_string();
         if !existing.is_empty() {
+            if let Err(e) = restrict_to_owner(&path) {
+                log::warn!("nao foi possivel restringir {}: {e}", path.display());
+            }
             return Some(existing);
         }
     }
@@ -69,6 +87,15 @@ fn jwt_secret(app: &tauri::AppHandle) -> Option<String> {
     );
     std::fs::create_dir_all(&dir).ok()?;
     std::fs::write(&path, &secret).ok()?;
+
+    if let Err(e) = restrict_to_owner(&path) {
+        log::error!(
+            "segredo de JWT gravado sem permissao restrita em {}: {e}",
+            path.display()
+        );
+        return None;
+    }
+
     Some(secret)
 }
 
@@ -87,7 +114,9 @@ fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
 
     let mut cmd = Command::new(&bin);
     hide_console(&mut cmd);
-    cmd.env("DATABASE_TLS", "off").env("PORT", BACKEND_PORT.to_string());
+    cmd.env("DATABASE_TLS", "off")
+        .env("PORT", BACKEND_PORT.to_string())
+        .env("BIND_ADDR", LOOPBACK);
     if let Ok(app_data) = app.path().app_local_data_dir() {
         cmd.env("ZEILE_PG_DATA", app_data.join("pg"));
     }
@@ -202,7 +231,7 @@ fn spawn_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> 
     cmd.arg(&server)
         .current_dir(&dir)
         .env("PORT", FRONTEND_PORT.to_string())
-        .env("HOSTNAME", "127.0.0.1");
+        .env("HOSTNAME", LOOPBACK);
 
     match cmd.spawn() {
         Ok(child) => {
@@ -255,7 +284,7 @@ pub fn run() {
                 log::warn!("frontend em :{FRONTEND_PORT} não respondeu a tempo");
             }
 
-            let url = format!("http://localhost:{FRONTEND_PORT}");
+            let url = format!("http://{LOOPBACK}:{FRONTEND_PORT}");
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse()?))
                 .title("Zeile Notebook")
                 .inner_size(1400.0, 900.0)

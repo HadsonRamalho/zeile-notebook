@@ -524,17 +524,24 @@ em vez de virar remota por omissão.
 
 #### 5 · Segurança 🔴
 
-- [ ] Separar bootstrap de roteamento (Q50) — pré-requisito de 6 e do `ready`
-- [ ] `NEXT_PUBLIC_GITHUB_TOKEN` → `GITHUB_TOKEN` (Q60): `env.example`, `lib/env.ts:31`, `app/api/github/route.ts:17`
-- [ ] CORS por env, métodos e headers restritos (Q62)
-- [ ] Body limit 1 MB global + override 100 MB só em sync/upload (Q63)
-- [ ] Rate limit: login, forgot-password, convite de time, judge (Q64)
-- [ ] Não vazar mensagem do Diesel em 500 (Q65)
-- [ ] `health/live` + `health/ready`, fora de `/api` (Q67)
-- [ ] Erro descritivo no boot em vez de `.unwrap()` (Q69)
-- [ ] Timeout em `reqwest` e `lettre`, valor por env (Q70)
-- [ ] `request_id` no tracing (Q71)
-- [ ] **Desktop (Q103)**: bind loopback via `BIND_ADDR` · Postgres embarcado `bundled` em vez de download em runtime · `jwt_secret` com `0600`, senha do PG gerada, `ZEILE_PG_DATA` exigido em vez de cair para `temp_dir()` · CSP definida no `tauri.conf.json`
+Entregue como stack de cinco PRs dependentes, um por bloco coeso, em vez de um PR único.
+
+- [x] Separar bootstrap de roteamento (Q50) — pré-requisito de 6 e do `ready`. `bootstrap.rs` concentra pool, env, background tasks e TLS; `routes/mod.rs` só compõe rotas
+- [x] `NEXT_PUBLIC_GITHUB_TOKEN` → `GITHUB_TOKEN` (Q60). A variável saiu do schema compartilhado de `lib/env.ts` por ser server-only, e um teste de guarda barra qualquer `NEXT_PUBLIC_*` com nome de segredo
+- [x] CORS por env, métodos e headers restritos (Q62). Sem `CORS_ALLOWED_ORIGINS`, só localhost e `FRONTEND_URL`
+- [x] Body limit 1 MB global + override 100 MB só em sync/upload (Q63). Não há rota HTTP de sync — o override ficou em `PUT /notebook/{id}/content` e `POST /notebook/{id}/snapshots`
+- [x] Rate limit: login, forgot-password, convite de time, judge (Q64). Janela fixa por IP, 429 com `Retry-After`
+- [x] Não vazar mensagem do Diesel em 500 (Q65). `details` também é zerado em toda resposta 5xx, o que fecha o `MISSING_ENV_VAR`
+- [x] `health/live` + `health/ready`, fora de `/api` (Q67)
+- [x] Erro descritivo no boot em vez de `.unwrap()` (Q69). `BootError` com mensagem acionável e exit code 1
+- [x] Timeout em `reqwest` e `lettre`, valor por env (Q70). `get_smtp_data` deixou de dar `.unwrap()` e devolve `Result`
+- [x] `request_id` no tracing (Q71). Header validado na entrada, span com método e rota, id devolvido na resposta
+- [x] **Desktop (Q103)**: bind loopback via `BIND_ADDR` · Postgres embarcado `bundled` em vez de download em runtime · `jwt_secret` com `0600`, senha do PG gerada, `ZEILE_PG_DATA` exigido em vez de cair para `temp_dir()` · CSP definida no `tauri.conf.json`
+
+**Em aberto, saindo desta etapa**: a CSP do `tauri.conf.json` só vale para conteúdo servido pelo próprio
+Tauri, e a janela usa `WebviewUrl::External` apontando para o Next local — a CSP efetiva dessa página
+teria de vir do header de resposta do Next, o que afeta também o deploy de nuvem. Tratar junto do Q61
+(`docs/env-vars.md`), onde a origem da API por ambiente já vai estar declarada.
 
 #### 6 · Shutdown gracioso 🔴 — o único item que perde dado hoje
 
