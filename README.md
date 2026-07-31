@@ -26,9 +26,46 @@ Executing third-party code on the server utilizes isolation layers to maintain s
 5. **Process Management:** Use of *Process Groups* (PGID) with defined timeouts to terminate infinite loop processes and their respective child threads.
 6. **Session Isolation:** Compilation workspaces are generated and mapped via UUID, preventing file collision between users sharing the same network.
 
+## Architecture
+
+Two applications live in this repository:
+
+| | Stack | Where |
+|---|---|---|
+| **Frontend** | Next.js 16 (App Router) · React 19 · next-intl (pt-br/en) · fumadocs | repository root |
+| **Backend** | Axum · Diesel-async · PostgreSQL · Automerge (CRDT) · WebSocket | `rust-server/` |
+
+The backend owns authentication, notebooks, teams, realtime sync and code execution. The
+desktop build (`src-tauri/`) wraps both processes and runs them bound to loopback. Generated
+OpenAPI docs are served by the backend at `/docs`.
+
 ## Local Development
 
-*(Coming soon: Instructions to configure and run the Next.js frontend and the Rust/Axum execution engine).*
+**Requirements:** Node 22 · pnpm 11.10 · Rust stable (edition 2024) · PostgreSQL 16.
+
+```bash
+# frontend — from the repository root
+cp env.example .env.local        # then fill in the values
+pnpm install
+pnpm dev                         # http://localhost:3000
+
+# backend — from rust-server/
+cp .env.example .env             # DATABASE_URL and JWT_SECRET are required
+diesel setup                     # applies the migrations
+cargo run                        # http://localhost:3099, Swagger UI at /docs
+```
+
+Other useful commands: `pnpm lint` (Biome), `pnpm types:check`, `pnpm test` (Vitest) and, in
+`rust-server/`, `cargo test`.
+
+### Before self-hosting
+
+Zeile **compiles and runs code submitted by its users** on the machine hosting the backend.
+That is the product, not an accident — but it means an exposed instance is an execution target.
+Read the isolation layers above, install `bwrap`, `prlimit` and `wasmtime` on the host (code
+execution is spawned through them and fails without them), and set `CORS_ALLOWED_ORIGINS`,
+`JWT_SECRET` and `BIND_ADDR` explicitly in every deployment. The defaults are meant for local
+development.
 
 ## Terms and Privacy
 
@@ -47,4 +84,6 @@ fork is welcome, calling it Zeile is not.
 
 ## Contributing
 
-To contribute to the development of the block interface or the execution engine, access the instructions in the repository at [HadsonRamalho/docs](https://github.com/HadsonRamalho/docs).
+Issues and pull requests go to [HadsonRamalho/zeile-notebook](https://github.com/HadsonRamalho/zeile-notebook).
+Pull requests follow the template in `.github/pull_request_template.md`; the code conventions
+that apply in review are the ones in `docs/padroes.md`.
