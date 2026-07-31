@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::controllers::utils::auto_delete_files;
+use crate::bootstrap::BootError;
 
+pub mod bootstrap;
 pub mod controllers;
 pub mod db_migrations;
 #[cfg(feature = "embedded-pg")]
@@ -32,47 +32,49 @@ pub struct CodeResponse {
 
 #[tokio::main]
 async fn main() {
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .expect("Falha ao instalar provedor de criptografia rustls");
+    if let Err(error) = run().await {
+        eprintln!("zeile-server não subiu: {error}");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<(), BootError> {
+    crate::bootstrap::install_crypto_provider()?;
+    crate::bootstrap::init_tracing();
 
     crate::sec::catalog::init();
-
-    tokio::spawn(auto_delete_files());
-
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,tower_http=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
 
     #[cfg(feature = "embedded-pg")]
     let _embedded_pg = crate::embedded_pg::ensure_running().await;
 
-    crate::db_migrations::run_pending_migrations();
+    let db_url = crate::bootstrap::database_url()?;
 
-    let app = crate::routes::init_routes()
+    crate::db_migrations::run_pending_migrations(&db_url).map_err(BootError::Migration)?;
+
+    let pool = crate::bootstrap::build_pool(db_url.clone())?;
+    let state = crate::bootstrap::build_state(pool)?;
+    crate::bootstrap::spawn_background_tasks(&state, db_url);
+
+    let app = crate::routes::build_router(state)
         .await
         .layer(TraceLayer::new_for_http());
 
-    // porta configurável por env (default 3099)
-    let port: u16 = std::env::var("PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(3099);
+    let port = crate::bootstrap::port()?;
+    let addr = format!("0.0.0.0:{port}");
 
-    let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
-        .unwrap();
+        .map_err(|source| BootError::Bind {
+            addr: addr.clone(),
+            source,
+        })?;
 
-    tracing::info!("Servidor rodando em http://0.0.0.0:{port}");
+    tracing::info!("Servidor rodando em http://{addr}");
 
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
     .await
-    .unwrap();
+    .map_err(BootError::Serve)
 }
