@@ -37,6 +37,14 @@ The system complies with data protection standards and collects only the data ne
 * Use of the infrastructure for malware, DDoS, or mining will result in account suspension and deletion of linked data.
 * Refer to the full [Privacy Policy](/docs/privacy) and [Terms of Use](/docs/terms).
 
+## License
+
+Zeile Notebook is released under the [MIT License](LICENSE). You are free to use, modify and
+distribute it, including commercially, as long as the copyright notice is kept.
+
+The license covers the source code. The **Zeile** name and logo are not licensed with it — a
+fork is welcome, calling it Zeile is not.
+
 ## Contributing
 
 To contribute to the development of the block interface or the execution engine, access the instructions in the repository at [HadsonRamalho/docs](https://github.com/HadsonRamalho/docs).
