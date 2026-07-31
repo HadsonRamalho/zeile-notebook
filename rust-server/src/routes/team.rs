@@ -72,7 +72,13 @@ pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/{id}", get(api_get_team))
         .route("/{id}", delete(api_delete_team))
         .route("/invites/accept", post(api_accept_invite))
-        .route("/{id}/invites", post(api_invite_member))
+        .route(
+            "/{id}/invites",
+            post(api_invite_member).route_layer(crate::rate_limit!(
+                "team-invite",
+                crate::middleware::rate_limit::TEAM_INVITE
+            )),
+        )
         .route("/", post(api_create_team))
         .route("/", get(api_get_user_teams));
 

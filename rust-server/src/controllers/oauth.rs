@@ -105,7 +105,7 @@ async fn get_github_user(
 
     let token_result = client
         .exchange_code(AuthorizationCode::new(params.code))
-        .request_async(&oauth2::reqwest::Client::new())
+        .request_async(&crate::outbound::http_client())
         .await;
 
     let token = match token_result {
@@ -172,7 +172,7 @@ pub async fn api_link_github_callback(
     State(state): State<Arc<AppState>>,
     Query(params): Query<AuthRequest>,
 ) -> impl IntoResponse {
-    let http_client = ReqwestClient::new();
+    let http_client = crate::outbound::http_client();
 
     let base_redirect_url = get_var_from_env("FRONTEND_URL").unwrap();
 
@@ -273,7 +273,7 @@ pub async fn api_github_callback(
     State(state): State<Arc<AppState>>,
     Query(params): Query<AuthRequest>,
 ) -> impl IntoResponse {
-    let http_client = ReqwestClient::new();
+    let http_client = crate::outbound::http_client();
 
     let base_redirect_url = get_var_from_env("FRONTEND_URL").unwrap();
 

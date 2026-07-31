@@ -1,52 +1,12 @@
-use std::sync::Arc;
+use axum::http::StatusCode;
 
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
-use http_body_util::BodyExt;
-use tower::ServiceExt;
-
-use crate::bootstrap;
-use crate::routes::build_router;
-
-static CRYPTO: std::sync::Once = std::sync::Once::new();
-
-async fn router_com_banco_inalcancavel() -> axum::Router {
-    CRYPTO.call_once(|| {
-        bootstrap::install_crypto_provider().expect("provedor de criptografia");
-    });
-
-    let pool = bootstrap::build_pool(
-        "postgres://usuario:senha@127.0.0.1:1/banco-que-nao-existe".to_string(),
-    )
-    .expect("pool é preguiçoso e deve ser construído sem conectar");
-
-    let state = bootstrap::build_state(pool).expect("estado");
-
-    build_router(state).await
-}
+use crate::routes::test_support::{corpo_em_texto, get, responder};
 
 async fn resposta(path: &str) -> (StatusCode, String) {
-    let router = router_com_banco_inalcancavel().await;
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri(path)
-                .body(Body::empty())
-                .expect("requisição"),
-        )
-        .await
-        .expect("resposta");
-
+    let response = responder(get(path)).await;
     let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("corpo")
-        .to_bytes();
 
-    (status, String::from_utf8_lossy(&bytes).to_string())
+    (status, corpo_em_texto(response).await)
 }
 
 #[tokio::test]

@@ -29,8 +29,20 @@ pub async fn challenge_routes() -> OpenApiRouter<Arc<AppState>> {
             get(api_get_reference).post(api_set_reference),
         )
         .route("/{id}/reference/{language}", delete(api_delete_reference))
-        .route("/{id}/submit", post(api_submit))
-        .route("/{id}/run", post(api_run_samples))
+        .route(
+            "/{id}/submit",
+            post(api_submit).route_layer(crate::rate_limit!(
+                "challenge-submit",
+                crate::middleware::rate_limit::JUDGE
+            )),
+        )
+        .route(
+            "/{id}/run",
+            post(api_run_samples).route_layer(crate::rate_limit!(
+                "challenge-run",
+                crate::middleware::rate_limit::JUDGE
+            )),
+        )
         .route("/{id}/submissions", get(api_list_my_submissions))
         .route("/{id}/leaderboard", get(api_leaderboard))
         .route("/submissions/{submission_id}", get(api_get_submission));

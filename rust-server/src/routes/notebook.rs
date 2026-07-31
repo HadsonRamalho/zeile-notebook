@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, patch, post, put};
 use utoipa_axum::router::OpenApiRouter;
 
@@ -54,7 +55,11 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/{id}", delete(api_delete_notebook))
         .route("/{id}", get(api_get_single_notebook))
         .route("/{id}/full", get(api_get_single_notebook_with_blocks))
-        .route("/{id}/content", put(api_save_notebook_content))
+        .route(
+            "/{id}/content",
+            put(api_save_notebook_content)
+                .route_layer(DefaultBodyLimit::max(crate::routes::BODY_LIMIT_CONTEUDO)),
+        )
         .route("/{id}/clone", post(api_clone_notebook))
         .route("/{id}/visibility", patch(api_update_notebook_visibility))
         .route("/{id}/permissions", get(api_get_user_notebook_permissions))
@@ -98,7 +103,9 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         )
         .route(
             "/{id}/snapshots",
-            get(api_list_snapshots).post(api_create_snapshot),
+            get(api_list_snapshots)
+                .post(api_create_snapshot)
+                .route_layer(DefaultBodyLimit::max(crate::routes::BODY_LIMIT_CONTEUDO)),
         )
         .route(
             "/{id}/snapshots/{snapshot_id}/restore",

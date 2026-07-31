@@ -8,6 +8,8 @@ use serde_json::json;
 use thiserror::Error;
 use utoipa::ToSchema;
 
+pub const INTERNAL_MESSAGE: &str = "Internal server error";
+
 #[derive(Error, Debug, Serialize, ToSchema)]
 pub enum ApiError {
     #[error("Error processing your request: {0}")]
@@ -112,7 +114,11 @@ impl IntoResponse for ApiError {
             | ApiError::DatabaseConnection(_)
             | ApiError::CreateToken(_)
             | ApiError::SendingEmail => {
-                (StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
+                tracing::error!(error_code, "falha de infraestrutura: {self}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    INTERNAL_MESSAGE.to_string(),
+                )
             }
 
             ApiError::Request(_) | ApiError::InvalidData | ApiError::MissingFrontendUrl => {
@@ -135,10 +141,19 @@ impl IntoResponse for ApiError {
 
             ApiError::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
 
-            _ => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unknown error".to_string(),
-            ),
+            _ => {
+                tracing::error!(error_code, "erro não classificado: {self}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    INTERNAL_MESSAGE.to_string(),
+                )
+            }
+        };
+
+        let details = if status.is_server_error() {
+            json!({})
+        } else {
+            details
         };
 
         let body = json!({
