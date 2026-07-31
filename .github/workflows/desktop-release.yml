@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -71,8 +76,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPIMAGE_EXTRACT_AND_RUN: 1
           NO_STRIP: 1
+          NEXT_PUBLIC_API: ${{ vars.NEXT_PUBLIC_API }}
+          NEXT_PUBLIC_WS_URL: ${{ vars.NEXT_PUBLIC_WS_URL }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Zeile Desktop ${{ github.ref_name }}"
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: "Zeile Desktop ${{ inputs.tag || github.ref_name }}"
           releaseDraft: true
           args: --target ${{ matrix.triple }} --bundles ${{ matrix.bundles }}

@@ -1,0 +1,76 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versão (ex.: 1.0.1). Vazio incrementa o patch da atual"
+        required: false
+        type: string
+      prerelease:
+        description: "Sufixo de pré-lançamento (ex.: rc.1). Opcional"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Definir versão
+        id: version
+        run: |
+          set -euo pipefail
+          input="${{ inputs.version }}"
+          if [ -z "$input" ]; then
+            input=$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number);console.log(\`\${a}.\${b}.\${c+1}\`)")
+          fi
+          tag="v$input"
+          if [ -n "${{ inputs.prerelease }}" ]; then
+            tag="$tag-${{ inputs.prerelease }}"
+          fi
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "::error::a tag $tag já existe"
+            exit 1
+          fi
+          echo "version=$input" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Aplicar versão e criar tag
+        run: |
+          set -euo pipefail
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ steps.version.outputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git commit -am "chore(release): ${{ steps.version.outputs.tag }}"
+            git push origin main
+          fi
+          git tag -a "${{ steps.version.outputs.tag }}" -m "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+  build:
+    needs: tag
+    uses: ./.github/workflows/desktop-release.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+    permissions:
+      contents: write
