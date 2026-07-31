@@ -8,6 +8,7 @@ pub mod snapshots;
 pub mod email;
 pub mod folder;
 pub mod grants;
+pub mod health;
 pub mod jwt;
 pub mod metrics;
 pub mod notebook;
