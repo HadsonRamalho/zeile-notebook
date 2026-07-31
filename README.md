@@ -26,6 +26,50 @@ Executing third-party code on the server utilizes isolation layers to maintain s
 5. **Process Management:** Use of *Process Groups* (PGID) with defined timeouts to terminate infinite loop processes and their respective child threads.
 6. **Session Isolation:** Compilation workspaces are generated and mapped via UUID, preventing file collision between users sharing the same network.
 
+### The path of a submission
+
+Every block execution walks the same pipeline. Compilation and execution are separate stages
+with separate protections, and the isolation of the execution stage is identical for every
+language:
+
+```mermaid
+flowchart TD
+    A["Block submits code<br/>POST /api/..."] --> B{"1 · Static analysis<br/>sec::verify_code"}
+    B -->|blocked token or module| R["Rejected — nothing is written to disk"]
+    B -->|accepted| C["2 · Session workspace<br/>files/lang/uuid"]
+    C --> D{Language}
+
+    D -->|Rust| E["3 · Build inside bwrap<br/>--unshare-all, --die-with-parent<br/>read-only bind of /usr /lib /bin<br/>cargo build --offline<br/>target wasm32-wasip1"]
+    D -->|C++| F["Build under prlimit<br/>--cpu=10, --as=2 GiB"]
+    D -->|Go, Zig| G["Build on the host"]
+
+    E --> H
+    F --> H
+    G --> H["4 · Run sandbox<br/>prlimit --cpu=N -- bwrap<br/>--unshare-all, --new-session<br/>read-only rootfs, fresh /tmp /proc /dev"]
+
+    H -->|wasm| I["5 · wasmtime + WASI<br/>no direct host syscalls"]
+    H -->|native binary| J["Direct exec<br/>GOMAXPROCS=1, CGO_ENABLED=0"]
+
+    I --> K
+    J --> K["6 · Process group + wall timeout<br/>setpgid at spawn<br/>kill -9 -PGID takes the children too"]
+    K --> L["stdout / stderr returned to the block"]
+```
+
+| Layer | Mechanism | What it is there for | Where |
+|---|---|---|---|
+| 1 | token and module blocklist, `#![forbid(unsafe_code)]` prepended to Rust | stop the obvious before spending CPU on it | `src/sec/mod.rs` |
+| 2 | workspace named by session UUID | one submission cannot read or overwrite another's files | `src/executor/mod.rs` |
+| 3 | `bwrap` around the build | the compiler itself runs code (build scripts, macros) — for Rust that happens with no network and a read-only rootfs | `src/executor/mod.rs` |
+| 4 | `prlimit` + `bwrap` around the run | CPU ceiling, no network, no writable host filesystem | `src/file/mod.rs` |
+| 5 | `wasmtime` running WASI | Rust never becomes a native host binary | `src/file/mod.rs` |
+| 6 | `setpgid` + wall-clock timeout + `kill -9 -PGID` | an infinite loop, or a process that forks children, still dies | `src/file/mod.rs` |
+
+Judge and challenge submissions additionally pass through a semaphore (`JUDGE_CONCURRENCY`,
+default 2), so a burst of submissions cannot take the whole machine.
+
+No single layer here is trusted on its own — the blocklist of layer 1 is a filter, not a proof,
+and it exists to make layers 3 to 6 cheaper, not to replace them.
+
 ## Architecture
 
 Two applications live in this repository:
