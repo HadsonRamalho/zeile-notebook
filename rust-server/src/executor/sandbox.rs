@@ -6,8 +6,6 @@ use crate::file::RunLimits;
 
 pub const MOUNT_POINT: &str = "/app";
 
-/// Cache compartilhado entre sessões. Sem ele o cache nasce vazio a cada submissão e o
-/// `go build` de um hello world passa de ~50 ms para ~2,8 s (docs/medicoes).
 pub const CACHE_MOUNT: &str = "/cache";
 
 const DEFAULT_CACHE_DIR: &str = "files/.build-cache";
@@ -23,8 +21,6 @@ pub fn shared_cache_dir() -> Option<String> {
     caminho_absoluto(&dir).ok()
 }
 
-/// Compilar executa código — `build.rs`, macros, diretivas de linker, `#cgo` —, então a
-/// compilação usa o mesmo isolamento da execução, com teto de memória maior.
 pub const COMPILE_LIMITS: RunLimits = RunLimits {
     cpu_secs: 30,
     mem_kb: 4 * 1024 * 1024,
@@ -33,7 +29,6 @@ pub const COMPILE_LIMITS: RunLimits = RunLimits {
 
 #[derive(Clone)]
 pub struct CompileSandbox {
-    /// caminho absoluto no host; vira `/app` lá dentro
     pub workdir: String,
     pub toolchain: Vec<String>,
     pub cache: Option<String>,
@@ -57,7 +52,6 @@ impl CompileSandbox {
         self
     }
 
-    /// `/cache` quando o diretório compartilhado existe; senão, dentro da sessão
     pub fn cache_path(&self, sufixo: &str) -> String {
         match self.cache {
             Some(_) => format!("{CACHE_MOUNT}/{sufixo}"),
@@ -70,8 +64,6 @@ impl CompileSandbox {
         self
     }
 
-    /// Um compilador fora de `/usr` (`ZIG_PATH=/opt/zig/zig`) não estaria visível lá
-    /// dentro.
     pub fn com_compilador(self, program: &str) -> Self {
         let path = Path::new(program);
 
@@ -90,7 +82,6 @@ impl CompileSandbox {
         self
     }
 
-    /// Argumentos do `prlimit` até o `bwrap`, exclusive o compilador.
     pub fn args(&self) -> Vec<String> {
         let mut args = self.limits.prlimit_args();
         args.push("--".into());
@@ -162,7 +153,6 @@ impl CompileSandbox {
     }
 }
 
-/// O diretório da sessão é relativo e o `bwrap` exige caminho absoluto no bind.
 pub fn caminho_absoluto(dir: &str) -> Result<String, String> {
     std::fs::canonicalize(dir)
         .map(|p| p.to_string_lossy().to_string())

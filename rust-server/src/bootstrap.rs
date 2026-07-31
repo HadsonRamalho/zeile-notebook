@@ -177,7 +177,6 @@ pub fn build_state(pool: Pool<AsyncPgConnection>) -> Result<Arc<AppState>, BootE
 }
 
 pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
-    // toda task de fundo morre com o sinal: o dreno final precisa do pool livre
     until_shutdown(state, crate::controllers::utils::auto_delete_files());
 
     until_shutdown(

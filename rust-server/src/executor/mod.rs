@@ -194,9 +194,7 @@ async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
         .com_env("GOCACHE", sandbox.cache_path("go-build"))
         .com_env("GOMODCACHE", sandbox.cache_path("go-mod"))
         .com_env("GOPATH", "/app/.go")
-        // `#cgo` faz o go invocar o compilador C com flags do próprio código do usuário
         .com_env("CGO_ENABLED", "0")
-        // sem rede no sandbox: `local` falha dizendo isso em vez de tentar baixar
         .com_env("GOTOOLCHAIN", "local")
         .command(&go_path, &["build", "-o", &bin_name, "main.go"])
         .output()
@@ -265,7 +263,6 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
         .com_compilador(&zig_path)
         .com_cache_compartilhado();
 
-    // o cache padrão do zig fica no HOME, que aqui é somente-leitura
     let cache_global = sandbox.cache_path("zig");
 
     let compile_output = sandbox
@@ -407,8 +404,6 @@ int main() { std::cout << "ola do sandbox" << std::endl; }
         assert!(resultado.stdout.contains("ola do sandbox"), "{resultado:?}");
     }
 
-    /// o Rust já compilava sob `bwrap`; o que este teste protege é a adição do
-    /// `prlimit` — um teto apertado demais quebraria o `rustc` sem quebrar Go nem C++
     #[tokio::test]
     async fn rust_continua_compilando_com_o_envelope_completo() {
         if !tem_sandbox() || !existe("cargo") {

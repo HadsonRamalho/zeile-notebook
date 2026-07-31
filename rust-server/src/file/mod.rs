@@ -27,8 +27,6 @@ impl Default for RunLimits {
 }
 
 impl RunLimits {
-    /// `wall_ms` fica de fora de propósito: `prlimit` não tem limite de tempo de
-    /// parede, quem o honra é o `timeout` do tokio.
     pub fn prlimit_args(&self) -> Vec<String> {
         vec![
             format!("--cpu={}", self.cpu_secs),
@@ -343,8 +341,6 @@ mod tests {
             .unwrap_or(false)
     }
 
-    /// lê o limite de dentro do processo filho: se `--as` sumir do envelope de novo,
-    /// este teste quebra
     #[test]
     fn os_limites_chegam_ao_processo_filho() {
         if !existe("prlimit") || !existe("sh") {
@@ -367,7 +363,6 @@ mod tests {
         let texto = String::from_utf8_lossy(&saida.stdout);
         let mut linhas = texto.split_whitespace();
 
-        // `ulimit -v` reporta em KB, a mesma unidade de `mem_kb`
         assert_eq!(linhas.next(), Some("262144"), "memória: {texto}");
         assert_eq!(linhas.next(), Some("7"), "cpu: {texto}");
     }

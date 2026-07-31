@@ -24,8 +24,6 @@ impl Reason {
     }
 }
 
-/// `watch` em vez de `Notify` porque quem espera depois do disparo também precisa
-/// acordar — uma conexão que abriu no meio do encerramento não pode ficar pendurada.
 #[derive(Clone)]
 pub struct Shutdown {
     tx: Arc<watch::Sender<bool>>,
@@ -43,13 +41,11 @@ impl Shutdown {
         Self { tx: Arc::new(tx) }
     }
 
-    /// devolve `false` quando o encerramento já estava em curso
     pub fn trigger(&self, reason: Reason) -> bool {
         if *self.tx.borrow() {
             return false;
         }
 
-        // `send` falha sem inscritos e o disparo se perderia num servidor ocioso
         self.tx.send_replace(true);
         tracing::info!("shutdown requested ({})", reason.as_str());
         true
@@ -107,8 +103,6 @@ pub async fn wait_for_os_signal() {
     }
 }
 
-/// Persiste todo notebook ativo antes de soltar o pool: entre dois ciclos do
-/// `checkpoint_loop` o documento Automerge vive só em memória.
 pub async fn drain(state: &Arc<AppState>) {
     let saved = checkpoint_all(state).await;
     tracing::info!("shutdown: {saved} notebook(s) checkpointed");

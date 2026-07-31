@@ -87,7 +87,6 @@ async fn run() -> Result<(), BootError> {
     )
     .with_graceful_shutdown(async move { graceful.wait().await });
 
-    // sem o teto, um cliente pendurado adiaria indefinidamente o checkpoint final
     let served = match tokio::time::timeout(crate::shutdown::grace_period(), server).await {
         Ok(result) => result,
         Err(_) => {

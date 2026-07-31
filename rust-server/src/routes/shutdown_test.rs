@@ -6,7 +6,6 @@ use crate::routes::test_support::{post_de, router_e_estado};
 
 const TOKEN: &str = "3f6b1e2c-0000-4000-8000-abcdefabcdef";
 
-/// `ZEILE_SHELL_TOKEN` é estado de processo e os testes rodam em paralelo
 static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 struct TokenDeSessao(Option<String>);

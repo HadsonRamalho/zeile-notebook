@@ -53,8 +53,6 @@ pub fn get(path: &str) -> Request<Body> {
         .expect("requisição")
 }
 
-/// a extensão `ConnectInfo` é o que `into_make_service_with_connect_info` injeta em
-/// produção; sem ela o handler não enxerga o peer
 pub fn post_de(path: &str, peer: &str, headers: &[(&str, &str)]) -> Request<Body> {
     let peer: std::net::SocketAddr = peer.parse().expect("endereço do peer");
 

@@ -105,7 +105,6 @@ pub async fn websocket_handler(
     })
 }
 
-/// 1001 "going away": o cliente entende como "reconecte depois", não como erro
 fn close_frame_de_shutdown() -> CloseFrame {
     CloseFrame {
         code: 1001,
@@ -231,8 +230,6 @@ async fn handle_socket(
 
     notebook.peers.remove(&session_id);
 
-    // no encerramento quem persiste é o `drain`: tirar o notebook do registry aqui o
-    // esconderia do checkpoint final
     if shutdown.is_triggered() {
         let mut inner = notebook.inner.lock().await;
         inner.peer_states.remove(&session_id);

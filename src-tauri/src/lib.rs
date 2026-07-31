@@ -23,7 +23,6 @@ struct Procs {
 }
 
 struct Shell {
-    /// token de sessão do `POST /internal/shutdown`
     token: String,
     procs: Mutex<Procs>,
     stopping: AtomicBool,
@@ -266,8 +265,6 @@ fn spawn_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> 
     }
 }
 
-/// HTTP/1.1 mínimo sobre o loopback: são duas requisições, não vale um cliente HTTP
-/// inteiro no bundle.
 fn http_status(port: u16, request: &str) -> Option<u16> {
     let addr = SocketAddr::new(LOOPBACK.parse().ok()?, port);
     let mut stream = TcpStream::connect_timeout(&addr, PROBE_TIMEOUT).ok()?;
@@ -279,7 +276,6 @@ fn http_status(port: u16, request: &str) -> Option<u16> {
     let mut buffer = [0u8; 64];
     let mut lidos = 0;
 
-    // "HTTP/1.1 202 " — 13 bytes bastam para o status
     while lidos < 13 {
         match stream.read(&mut buffer[lidos..]) {
             Ok(0) => break,
@@ -321,8 +317,6 @@ fn backend_ready() -> bool {
     .is_some()
 }
 
-/// Fecha o backend pedindo, não matando: entre dois ciclos do `checkpoint_loop` o
-/// documento Automerge vive só em memória. SIGKILL vira último recurso, por timeout.
 fn stop_backend(shell: &Shell) {
     let mut procs = match shell.procs.lock() {
         Ok(guard) => guard,
@@ -371,8 +365,6 @@ fn stop_backend(shell: &Shell) {
         let _ = backend.wait();
     }
 
-    // o frontend não guarda estado; encerra depois para a janela não morrer antes do
-    // checkpoint do backend
     if let Some(mut frontend) = procs.frontend.take() {
         let _ = frontend.kill();
         let _ = frontend.wait();
@@ -444,7 +436,6 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
         .run(|handle, event| match event {
-            // sem `prevent_exit` a janela morre antes do checkpoint final
             RunEvent::ExitRequested { api, .. } => {
                 let Some(shell) = handle.try_state::<Shell>() else {
                     return;

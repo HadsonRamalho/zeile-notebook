@@ -12,8 +12,6 @@ use crate::shutdown::Reason;
 pub const TOKEN_HEADER: &str = "x-zeile-shell-token";
 pub const TOKEN_VAR: &str = "ZEILE_SHELL_TOKEN";
 
-/// Sem a variável a rota responde 404: um endpoint que derruba o servidor não deve nem
-/// anunciar que existe no deploy de nuvem.
 pub fn expected_token() -> Option<String> {
     std::env::var(TOKEN_VAR)
         .ok()
@@ -21,7 +19,6 @@ pub fn expected_token() -> Option<String> {
         .filter(|token| !token.is_empty())
 }
 
-/// tempo constante: um early-return por byte vazaria o prefixo correto
 pub fn tokens_match(expected: &str, received: &str) -> bool {
     if expected.len() != received.len() {
         return false;
