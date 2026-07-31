@@ -62,3 +62,7 @@ postgresql_embedded = { version = "0.18", optional = true }
 [features]
 serde-wasm-bindgen = ["dep:serde-wasm-bindgen"]
 embedded-pg = ["dep:postgresql_embedded"]
+
+[dev-dependencies]
+http-body-util = "0.1.4"
+tower = { version = "0.5.3", features = ["util"] }
