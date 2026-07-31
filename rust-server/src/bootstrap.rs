@@ -179,7 +179,10 @@ pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
 mod tests {
     use super::*;
 
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn with_env<T>(var: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let previous = std::env::var(var).ok();
         unsafe {
             match value {

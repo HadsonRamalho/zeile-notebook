@@ -26,6 +26,8 @@ use utoipa_axum::router::OpenApiRouter;
 pub mod admin;
 pub mod challenge;
 pub mod docs;
+#[cfg(test)]
+mod health_test;
 pub mod notebook;
 pub mod notifications;
 pub mod permissions;
@@ -86,6 +88,8 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
         .nest_service("/images", get_service(ServeDir::new("./images")));
 
     Router::new()
+        .route("/health/live", get(crate::controllers::health::live))
+        .route("/health/ready", get(crate::controllers::health::ready))
         .nest("/api", app.into())
         .nest("/api", run_rust_routes().await.into())
         .nest("/api/user", user_routes().await.into())
@@ -99,11 +103,15 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
         .nest("/api/admin", admin_routes().await.into())
         .nest(
             "/api/notifications",
-            crate::routes::notifications::notification_routes().await.into(),
+            crate::routes::notifications::notification_routes()
+                .await
+                .into(),
         )
         .nest(
             "/api/permissions",
-            crate::routes::permissions::permissions_routes().await.into(),
+            crate::routes::permissions::permissions_routes()
+                .await
+                .into(),
         )
         .merge(utoipa_swagger_ui::SwaggerUi::new("/docs").url(
             "/api-docs/openapi.json",
