@@ -1,0 +1,12 @@
+* @HadsonRamalho
+
+/rust-server/src/sec/       @HadsonRamalho
+/rust-server/src/executor/  @HadsonRamalho
+/rust-server/src/file/      @HadsonRamalho
+/rust-server/src/middleware/ @HadsonRamalho
+/rust-server/migrations/    @HadsonRamalho
+/src-tauri/                 @HadsonRamalho
+/.github/workflows/         @HadsonRamalho
+/.github/CODEOWNERS         @HadsonRamalho
+/LICENSE                    @HadsonRamalho
+/docs/decisoes.md           @HadsonRamalho
