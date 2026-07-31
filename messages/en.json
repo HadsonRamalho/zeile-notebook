@@ -16,7 +16,8 @@
     "USER_NOT_FOUND": "We couldn't find a user with this email.",
     "MISSING_ENV_VAR": "System configuration error: Missing environment variable {env_var}.",
     "PASSWORDS_DO_NOT_MATCH": "The provided passwords do not match.",
-    "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
+    "UNKNOWN_ERROR": "An unexpected error occurred. Please try again.",
+    "RATE_LIMITED": "Too many attempts. Please wait a moment and try again."
   },
   "loading": {
     "loading": "Loading..."
