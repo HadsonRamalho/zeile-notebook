@@ -4,21 +4,13 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-pub fn run_pending_migrations() {
-    let db_url = match crate::controllers::utils::get_database_url_from_env() {
-        Ok(url) => url,
-        Err(_) => {
-            tracing::warn!("DATABASE_URL ausente; migrações embutidas não serão aplicadas");
-            return;
-        }
-    };
-
-    let mut conn =
-        PgConnection::establish(&db_url).expect("Falha ao conectar ao banco para migrações");
+pub fn run_pending_migrations(db_url: &str) -> Result<(), String> {
+    let mut conn = PgConnection::establish(db_url)
+        .map_err(|e| format!("não foi possível conectar ao banco para migrar: {e}"))?;
 
     let applied = conn
         .run_pending_migrations(MIGRATIONS)
-        .expect("Falha ao aplicar migrações pendentes");
+        .map_err(|e| format!("migração pendente falhou: {e}"))?;
 
     if applied.is_empty() {
         tracing::info!("Nenhuma migração pendente");
@@ -27,6 +19,8 @@ pub fn run_pending_migrations() {
             tracing::info!("Migração aplicada: {}", migration);
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
