@@ -543,11 +543,17 @@ Tauri, e a janela usa `WebviewUrl::External` apontando para o Next local — a C
 teria de vir do header de resposta do Next, o que afeta também o deploy de nuvem. Tratar junto do Q61
 (`docs/env-vars.md`), onde a origem da API por ambiente já vai estar declarada.
 
-#### 6 · Shutdown gracioso 🔴 — o único item que perde dado hoje
+#### 6 · Shutdown gracioso 🔴 + simetria da sandbox 🔴
 
 - [ ] Backend: sinaliza · para de aceitar conexão · checkpoint de todo o `sync_registry` · close frame nos WS · drena o pool (Q68)
 - [ ] `POST /internal/shutdown` com token de sessão + peer loopback (Q102)
 - [ ] Shell: segurar o `ExitRequested` (é cancelável) → chamar shutdown → poll `ready` → SIGKILL só por timeout (Q98)
+- [ ] Compilar Go, Zig e C++ dentro do `bwrap`, como já se faz com Rust (Q106)
+- [ ] Aplicar o `RunLimits` inteiro no `prlimit` — hoje só `cpu_secs` chega lá (Q107)
+
+Os dois últimos entraram nesta etapa por serem 🔴 e por ficarem visíveis no momento em que o
+repositório abrir: qualquer pessoa lê `compile_go` e vê que o `go build` roda no host. Não são
+tema de shutdown; são a dívida que a escrita do diagrama de isolamento do README revelou.
 
 #### 7 · Compatibilidade de versão (Q100)
 
@@ -837,6 +843,17 @@ Além das 4 áreas do Q97, o desktop pede:
 | **Q103** | **Os quatro itens de segurança do desktop**: bind loopback (env `BIND_ADDR`, `0.0.0.0` só no perfil LAN da Fase 4) · Postgres embarcado via feature `bundled` em vez de download em runtime · `jwt_secret` com `0600`, senha do PG gerada em vez de `"zeile"` fixo, e `ZEILE_PG_DATA` exigido em vez de cair para `temp_dir()` · CSP definida no `tauri.conf.json`. | O `bundled` resolve três coisas de uma vez: cadeia de suprimento, a premissa offline-first (hoje o 1º launch exige internet) e o caveat do `libxml2` em Arch. As `capabilities/default.json` já estão mínimas (`core:default`) — o problema é a página não rodar em origem privilegiada e a CSP estar `null`, num app que interpreta markdown, LaTeX, Mermaid, SVG e executa TSX em iframe. **Definir a CSP é o de maior retorno**; trocar o modelo de serving (sair do sidecar Node) é projeto grande e fica fora daqui. |
 | **Q104** | **Capacidade resolvida em runtime pelo backend**: `GET /capabilities` devolve o que ele realmente sabe fazer, por linguagem. O front desabilita bloco por bloco com base na resposta. | A plataforma não era a pergunta certa: no Linux `exec-compiled` depende de `bwrap`/`prlimit`/`wasmtime` **e** da toolchain de cada linguagem — são quatro respostas, não uma, e duas máquinas Linux divergem. Elimina heurística de plataforma no cliente e serve à Fase 4, onde o host do professor pode ter só parte das toolchains. |
 | **Q105** | **O backend devolve status estruturado** (`{ status, errorCode, stdout, stderr }`); o cliente ramifica por código, nunca por substring. | Remove `stderr.includes("Erro de Compilação Go:")`, `includes("Finished \`dev\` profile")`, `includes("file not found for module")` e `includes("Segurança:")`. É literal mágico decidindo fluxo: quebra quando o cargo muda a frase — e o backend já sabe a resposta — foi ele que invocou o compilador. Encaixa em Q32 (`errorCode` aditivo) + Q45 (chave nos dois locales). |
+
+### Decisões da sandbox de execução
+
+Levantadas ao escrever o diagrama de isolamento do README, lendo `src/sec/mod.rs`,
+`src/executor/mod.rs` e `src/file/mod.rs` em vez da lista de camadas que já estava documentada.
+As duas são 🔴 e entram na etapa 6.
+
+| # | Decisão | Consequência |
+|---|---|---|
+| **Q106** 🔴 | **A compilação de Go, Zig e C++ passa a acontecer dentro do `bwrap`**, com o mesmo envelope já usado em `compile_rust`: `--unshare-all --die-with-parent --new-session`, bind read-only de `/usr` `/lib` `/bin`, `/tmp` novo, e o workspace da sessão montado em `/app`. | Hoje a etapa de execução é idêntica para todas as linguagens, mas a de **compilação não é**: `compile_rust` roda sob `bwrap`; `compile_cpp` só sob `prlimit --cpu=10 --as=2147483648`; `compile_go` e `compile_zig` invocam o compilador direto no host. Isso importa porque **compilador executa código** — `build.rs`, macros, diretivas de linker, `#cgo`. O `verify_*_code` barra o óbvio, mas é blocklist textual, não prova, e é justamente a camada que o resto do modelo assume como falível. <br>**Hipótese registrada**: a assimetria é resíduo de medição antiga de performance, não decisão de projeto. Então a entrega **precisa vir com número** — tempo de compilação por linguagem antes e depois, na mesma máquina. Se o custo for real, a resposta é reaproveitar o sandbox (bind read-only do toolchain, cache do `go build`), não abrir mão dele. |
+| **Q107** 🔴 | **O `RunLimits` inteiro chega ao `prlimit`**: `mem_kb` vira `--as`, e o campo deixa de existir sem efeito. | `RunLimits` declara `cpu_secs`, `mem_kb` e `wall_ms`. Em `file/mod.rs` só o `--cpu` é montado; `wall_ms` é honrado pelo `timeout` do tokio; **`mem_kb` não é aplicado em lugar nenhum** — nem o default de 1 GiB, nem o valor por desafio que `challenge_judge.rs:37` calcula com `mem_limit_kb.max(4096)`. Ou seja: o teto de memória por submissão existe no tipo, no juiz e na documentação, e não existe no processo. Uma alocação grande hoje é contida pelo cgroup do host, se houver, ou por nada. <br>Fechar isso é uma linha de argumento no comando — o que custa é o teste que prova o limite ativo, e é ele que impede a regressão silenciosa de novo. |
 
 ### Pendências de housekeeping da branch
 
