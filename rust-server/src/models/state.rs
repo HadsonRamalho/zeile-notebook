@@ -18,6 +18,7 @@ pub struct AppState {
     pub presence_registry: PresenceRegistry,
     pub push: Option<PushState>,
     pub judge_semaphore: Arc<Semaphore>,
+    pub shutdown: crate::shutdown::Shutdown,
 }
 
 impl FromRef<AppState> for Pool<AsyncPgConnection> {

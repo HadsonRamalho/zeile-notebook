@@ -1,6 +1,8 @@
-use std::net::TcpStream;
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -10,7 +12,21 @@ const FRONTEND_PORT: u16 = 3000;
 const BACKEND_PORT: u16 = 3099;
 const LOOPBACK: &str = "127.0.0.1";
 
-struct Children(Mutex<Vec<Child>>);
+const SHUTDOWN_BUDGET: Duration = Duration::from_secs(10);
+const PROBE_TIMEOUT: Duration = Duration::from_millis(500);
+const POLL_STEP: Duration = Duration::from_millis(100);
+
+#[derive(Default)]
+struct Procs {
+    backend: Option<Child>,
+    frontend: Option<Child>,
+}
+
+struct Shell {
+    token: String,
+    procs: Mutex<Procs>,
+    stopping: AtomicBool,
+}
 
 #[cfg(unix)]
 fn ensure_executable(path: &Path) {
@@ -99,12 +115,10 @@ fn jwt_secret(app: &tauri::AppHandle) -> Option<String> {
     Some(secret)
 }
 
-fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
+fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path, token: &str) -> Option<Child> {
     let bin = if cfg!(debug_assertions) {
         std::env::var("ZEILE_BACKEND_BIN")
-            .unwrap_or_else(|_| {
-                format!("../rust-server/target/debug/{BACKEND_NAME}")
-            })
+            .unwrap_or_else(|_| format!("../rust-server/target/debug/{BACKEND_NAME}"))
             .into()
     } else {
         let bin = resource_dir.join(format!("resources/backend/{BACKEND_NAME}"));
@@ -116,7 +130,8 @@ fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
     hide_console(&mut cmd);
     cmd.env("DATABASE_TLS", "off")
         .env("PORT", BACKEND_PORT.to_string())
-        .env("BIND_ADDR", LOOPBACK);
+        .env("BIND_ADDR", LOOPBACK)
+        .env("ZEILE_SHELL_TOKEN", token);
     if let Ok(app_data) = app.path().app_local_data_dir() {
         cmd.env("ZEILE_PG_DATA", app_data.join("pg"));
     }
@@ -171,7 +186,9 @@ fn extract_archive(archive: &Path, dest: &Path) -> std::io::Result<()> {
         let mut retry = Vec::new();
 
         for (link, target) in pending {
-            let Some(parent) = link.parent() else { continue };
+            let Some(parent) = link.parent() else {
+                continue;
+            };
             let resolved = parent.join(&target);
             if resolved.is_dir() {
                 let _ = std::fs::create_dir_all(parent);
@@ -239,19 +256,138 @@ fn spawn_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> 
             Some(child)
         }
         Err(e) => {
-            log::error!("falha ao iniciar frontend local ({}): {e}", server.display());
+            log::error!(
+                "falha ao iniciar frontend local ({}): {e}",
+                server.display()
+            );
             None
         }
     }
 }
 
-fn kill_children(handle: &tauri::AppHandle) {
-    if let Some(state) = handle.try_state::<Children>() {
-        if let Ok(mut guard) = state.0.lock() {
-            for mut child in guard.drain(..) {
-                let _ = child.kill();
+fn http_status(port: u16, request: &str) -> Option<u16> {
+    let addr = SocketAddr::new(LOOPBACK.parse().ok()?, port);
+    let mut stream = TcpStream::connect_timeout(&addr, PROBE_TIMEOUT).ok()?;
+
+    stream.set_read_timeout(Some(PROBE_TIMEOUT)).ok()?;
+    stream.set_write_timeout(Some(PROBE_TIMEOUT)).ok()?;
+    stream.write_all(request.as_bytes()).ok()?;
+
+    let mut buffer = [0u8; 64];
+    let mut lidos = 0;
+
+    while lidos < 13 {
+        match stream.read(&mut buffer[lidos..]) {
+            Ok(0) => break,
+            Ok(n) => lidos += n,
+            Err(_) => break,
+        }
+    }
+
+    std::str::from_utf8(&buffer[..lidos])
+        .ok()?
+        .split_whitespace()
+        .nth(1)?
+        .parse()
+        .ok()
+}
+
+fn request_backend_shutdown(token: &str) -> Option<u16> {
+    http_status(
+        BACKEND_PORT,
+        &format!(
+            "POST /internal/shutdown HTTP/1.1\r\n\
+             Host: {LOOPBACK}:{BACKEND_PORT}\r\n\
+             x-zeile-shell-token: {token}\r\n\
+             Content-Length: 0\r\n\
+             Connection: close\r\n\r\n"
+        ),
+    )
+}
+
+fn backend_ready() -> bool {
+    http_status(
+        BACKEND_PORT,
+        &format!(
+            "GET /health/ready HTTP/1.1\r\n\
+             Host: {LOOPBACK}:{BACKEND_PORT}\r\n\
+             Connection: close\r\n\r\n"
+        ),
+    )
+    .is_some()
+}
+
+fn stop_backend(shell: &Shell) {
+    let mut procs = match shell.procs.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+
+    let prazo = Instant::now() + SHUTDOWN_BUDGET;
+
+    if let Some(backend) = procs.backend.as_mut() {
+        match request_backend_shutdown(&shell.token) {
+            Some(status) if (200..300).contains(&status) => {
+                log::info!("shutdown pedido ao backend (HTTP {status})");
+            }
+            Some(status) => {
+                log::warn!("backend recusou o shutdown (HTTP {status}); seguindo para o kill");
+            }
+            None => {
+                log::warn!("backend não respondeu ao pedido de shutdown; seguindo para o kill");
             }
         }
+
+        while Instant::now() < prazo {
+            match backend.try_wait() {
+                Ok(Some(status)) => {
+                    log::info!("backend encerrou sozinho ({status})");
+                    procs.backend = None;
+                    break;
+                }
+                Ok(None) => {
+                    if backend_ready() {
+                        log::debug!("backend ainda atende /health/ready");
+                    }
+                    std::thread::sleep(POLL_STEP);
+                }
+                Err(e) => {
+                    log::warn!("não foi possível checar o backend: {e}");
+                    break;
+                }
+            }
+        }
+    }
+
+    if let Some(mut backend) = procs.backend.take() {
+        log::warn!("backend não encerrou em {SHUTDOWN_BUDGET:?}; matando o processo");
+        let _ = backend.kill();
+        let _ = backend.wait();
+    }
+
+    if let Some(mut frontend) = procs.frontend.take() {
+        let _ = frontend.kill();
+        let _ = frontend.wait();
+    }
+}
+
+fn kill_children(handle: &tauri::AppHandle) {
+    let Some(shell) = handle.try_state::<Shell>() else {
+        return;
+    };
+
+    let mut procs = match shell.procs.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+
+    for mut child in procs
+        .backend
+        .take()
+        .into_iter()
+        .chain(procs.frontend.take())
+    {
+        let _ = child.kill();
     }
 }
 
@@ -269,16 +405,20 @@ pub fn run() {
 
             let resource_dir = app.path().resource_dir().unwrap_or_default();
 
-            let mut children = Vec::new();
-            if let Some(child) = spawn_backend(app.handle(), &resource_dir) {
-                children.push(child);
-            }
-            if !cfg!(debug_assertions) {
-                if let Some(child) = spawn_frontend(app.handle(), &resource_dir) {
-                    children.push(child);
-                }
-            }
-            app.manage(Children(Mutex::new(children)));
+            let token = uuid::Uuid::new_v4().to_string();
+
+            let backend = spawn_backend(app.handle(), &resource_dir, &token);
+            let frontend = if cfg!(debug_assertions) {
+                None
+            } else {
+                spawn_frontend(app.handle(), &resource_dir)
+            };
+
+            app.manage(Shell {
+                token,
+                procs: Mutex::new(Procs { backend, frontend }),
+                stopping: AtomicBool::new(false),
+            });
 
             if !wait_for_port(FRONTEND_PORT, Duration::from_secs(30)) {
                 log::warn!("frontend em :{FRONTEND_PORT} não respondeu a tempo");
@@ -295,9 +435,27 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|handle, event| {
-            if let RunEvent::ExitRequested { .. } = event {
-                kill_children(handle);
+        .run(|handle, event| match event {
+            RunEvent::ExitRequested { api, .. } => {
+                let Some(shell) = handle.try_state::<Shell>() else {
+                    return;
+                };
+
+                if shell.stopping.swap(true, Ordering::AcqRel) {
+                    return;
+                }
+
+                api.prevent_exit();
+
+                let handle = handle.clone();
+                std::thread::spawn(move || {
+                    if let Some(shell) = handle.try_state::<Shell>() {
+                        stop_backend(&shell);
+                    }
+                    handle.exit(0);
+                });
             }
+            RunEvent::Exit => kill_children(handle),
+            _ => {}
         });
 }

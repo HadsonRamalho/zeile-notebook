@@ -26,6 +26,15 @@ impl Default for RunLimits {
     }
 }
 
+impl RunLimits {
+    pub fn prlimit_args(&self) -> Vec<String> {
+        vec![
+            format!("--cpu={}", self.cpu_secs),
+            format!("--as={}", self.mem_kb.saturating_mul(1024)),
+        ]
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RunOutcome {
     pub stdout: String,
@@ -54,10 +63,9 @@ pub async fn run_safe_bin(
 
     let is_wasm = caminho_binario.ends_with(".wasm");
 
-    let cpu_arg = format!("--cpu={}", limits.cpu_secs);
-
     let mut cmd = Command::new("prlimit");
-    cmd.args([cpu_arg.as_str(), "--"]);
+    cmd.args(limits.prlimit_args());
+    cmd.arg("--");
 
     cmd.arg("bwrap");
 
@@ -301,4 +309,61 @@ pub async fn register_log(
     file.write_all(log_content.as_bytes())?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn o_envelope_carrega_cpu_e_memoria() {
+        let limits = RunLimits {
+            cpu_secs: 3,
+            mem_kb: 4096,
+            wall_ms: 1000,
+        };
+
+        assert_eq!(limits.prlimit_args(), vec!["--cpu=3", "--as=4194304"]);
+    }
+
+    #[test]
+    fn o_default_declara_1_gib_de_memoria() {
+        let args = RunLimits::default().prlimit_args();
+
+        assert!(args.contains(&"--as=1073741824".to_string()), "{args:?}");
+    }
+
+    fn existe(binario: &str) -> bool {
+        std::process::Command::new("sh")
+            .args(["-c", &format!("command -v {binario}")])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn os_limites_chegam_ao_processo_filho() {
+        if !existe("prlimit") || !existe("sh") {
+            eprintln!("prlimit ou sh ausente; teste pulado");
+            return;
+        }
+
+        let limits = RunLimits {
+            cpu_secs: 7,
+            mem_kb: 262_144,
+            wall_ms: 1000,
+        };
+
+        let saida = std::process::Command::new("prlimit")
+            .args(limits.prlimit_args())
+            .args(["--", "sh", "-c", "ulimit -v; ulimit -t"])
+            .output()
+            .expect("prlimit deveria executar");
+
+        let texto = String::from_utf8_lossy(&saida.stdout);
+        let mut linhas = texto.split_whitespace();
+
+        assert_eq!(linhas.next(), Some("262144"), "memória: {texto}");
+        assert_eq!(linhas.next(), Some("7"), "cpu: {texto}");
+    }
 }

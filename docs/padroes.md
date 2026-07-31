@@ -545,15 +545,29 @@ teria de vir do header de resposta do Next, o que afeta também o deploy de nuve
 
 #### 6 · Shutdown gracioso 🔴 + simetria da sandbox 🔴
 
-- [ ] Backend: sinaliza · para de aceitar conexão · checkpoint de todo o `sync_registry` · close frame nos WS · drena o pool (Q68)
-- [ ] `POST /internal/shutdown` com token de sessão + peer loopback (Q102)
-- [ ] Shell: segurar o `ExitRequested` (é cancelável) → chamar shutdown → poll `ready` → SIGKILL só por timeout (Q98)
-- [ ] Compilar Go, Zig e C++ dentro do `bwrap`, como já se faz com Rust (Q106)
-- [ ] Aplicar o `RunLimits` inteiro no `prlimit` — hoje só `cpu_secs` chega lá (Q107)
+- [x] Backend: sinaliza · para de aceitar conexão · checkpoint de todo o `sync_registry` · close frame nos WS · drena o pool (Q68). `shutdown.rs` com um `watch` de disparo único; `axum::serve(...).with_graceful_shutdown` com teto de `SHUTDOWN_GRACE_SECS` (default 5s) para que o checkpoint aconteça mesmo com conexão pendurada; close frame 1001 ("going away") nos três handlers de WS; as 4 tasks de fundo morrem junto com o sinal
+- [x] `POST /internal/shutdown` com token de sessão + peer loopback (Q102). Sem `ZEILE_SHELL_TOKEN` a rota responde 404 — no deploy de nuvem ela não existe; peer fora do loopback também é 404; token errado é 403, comparado em tempo constante
+- [x] Shell: segurar o `ExitRequested` (é cancelável) → chamar shutdown → poll `ready` → SIGKILL só por timeout (Q98). Orçamento de 10s; HTTP/1.1 mínimo sobre `TcpStream` em vez de um cliente HTTP no bundle; o gate real é o `try_wait` do processo, e o frontend só é encerrado depois do backend
+- [x] Compilar Go, Zig e C++ dentro do `bwrap`, como já se faz com Rust (Q106). `executor/sandbox.rs` concentra o envelope; medição em [docs/medicoes/compilacao-sandbox.md](medicoes/compilacao-sandbox.md)
+- [x] Aplicar o `RunLimits` inteiro no `prlimit` — hoje só `cpu_secs` chega lá (Q107). `mem_kb` vira `--as`, e o teste lê o limite de dentro do processo filho (`ulimit -v`), não do comando montado
 
 Os dois últimos entraram nesta etapa por serem 🔴 e por ficarem visíveis no momento em que o
 repositório abrir: qualquer pessoa lê `compile_go` e vê que o `go build` roda no host. Não são
 tema de shutdown; são a dívida que a escrita do diagrama de isolamento do README revelou.
+
+**Saindo desta etapa, três coisas a registrar:**
+
+1. **A hipótese do Q106 se confirmou**: o `bwrap` custa poucos milissegundos, não havia
+   trade-off de performance. O que quase virou regressão foi outra coisa — pôr o `GOCACHE`
+   dentro do workspace da sessão faz cada submissão recompilar a stdlib (50 ms → 2,8 s). A saída é
+   a que o próprio Q106 previa: cache do servidor montado read-write em `/cache`
+   (`ZEILE_BUILD_CACHE`), compartilhado entre sessões.
+2. **Zig não foi medido nem exercitado por teste** — não há toolchain na máquina de medição. O
+   envelope dele está escrito por simetria (cache local na sessão, global compartilhado), e a
+   primeira execução real numa máquina com `zig` é verificação pendente.
+3. **`env_clear` no envelope de compilação**: antes o compilador herdava o ambiente inteiro do
+   servidor, `DATABASE_URL` e `JWT_SECRET` incluídos. Não era item de nenhuma questão; apareceu ao
+   escrever o envelope.
 
 #### 7 · Compatibilidade de versão (Q100)
 
