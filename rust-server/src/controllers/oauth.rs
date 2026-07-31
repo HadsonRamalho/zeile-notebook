@@ -49,7 +49,23 @@ macro_rules! oauth_client {
     }};
 }
 
+fn oauth_configured() -> bool {
+    ["API_URL", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"]
+        .iter()
+        .all(|key| get_var_from_env(key).is_ok())
+}
+
+fn oauth_unavailable() -> Redirect {
+    tracing::warn!("OAuth do GitHub indisponível: API_URL/GITHUB_CLIENT_* ausentes");
+    let frontend =
+        get_var_from_env("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    Redirect::to(&format!("{frontend}/login?auth_error=oauth_unavailable"))
+}
+
 pub async fn api_github_login() -> Redirect {
+    if !oauth_configured() {
+        return oauth_unavailable();
+    }
     let api_url = get_var_from_env("API_URL").unwrap();
     let redirect_url = format!("{}/api/user/auth/callback/github", api_url);
     let client = oauth_client!().set_redirect_uri(RedirectUrl::new(redirect_url).unwrap());
@@ -64,6 +80,9 @@ pub async fn api_github_login() -> Redirect {
 }
 
 pub async fn api_link_github_init() -> impl IntoResponse {
+    if !oauth_configured() {
+        return oauth_unavailable().into_response();
+    }
     let api_url = get_var_from_env("API_URL").unwrap();
     let redirect_url = format!("{}/api/user/link/github/callback", api_url);
     let client = oauth_client!().set_redirect_uri(RedirectUrl::new(redirect_url).unwrap());
@@ -74,7 +93,7 @@ pub async fn api_link_github_init() -> impl IntoResponse {
         .add_scope(Scope::new("user:email".to_string()))
         .url();
 
-    Redirect::to(auth_url.as_str())
+    Redirect::to(auth_url.as_str()).into_response()
 }
 
 async fn get_github_user(

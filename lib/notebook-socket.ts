@@ -29,12 +29,9 @@ type Conn = {
 const conns = new Map<string, Conn>();
 
 function wsUrl(notebookId: string): string {
-  const protocol =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? "wss://"
-      : "ws://";
-  const host = resolve("sync").wsHost;
-  return `${protocol}${host}/notebook/ws/combined/${notebookId}`;
+  const target = resolve("sync");
+  const protocol = target.wsSecure ? "wss://" : "ws://";
+  return `${protocol}${target.wsHost}/notebook/ws/combined/${notebookId}`;
 }
 
 function connect(notebookId: string, conn: Conn) {

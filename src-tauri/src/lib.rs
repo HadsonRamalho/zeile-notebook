@@ -24,6 +24,15 @@ fn ensure_executable(path: &Path) {
 #[cfg(not(unix))]
 fn ensure_executable(_path: &Path) {}
 
+#[cfg(windows)]
+fn hide_console(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000);
+}
+
+#[cfg(not(windows))]
+fn hide_console(_cmd: &mut Command) {}
+
 fn wait_for_port(port: u16, timeout: Duration) -> bool {
     let start = Instant::now();
     while start.elapsed() < timeout {
@@ -77,6 +86,7 @@ fn spawn_backend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> {
     };
 
     let mut cmd = Command::new(&bin);
+    hide_console(&mut cmd);
     cmd.env("DATABASE_TLS", "off").env("PORT", BACKEND_PORT.to_string());
     if let Ok(app_data) = app.path().app_local_data_dir() {
         cmd.env("ZEILE_PG_DATA", app_data.join("pg"));
@@ -188,6 +198,7 @@ fn spawn_frontend(app: &tauri::AppHandle, resource_dir: &Path) -> Option<Child> 
     ensure_executable(&node);
 
     let mut cmd = Command::new(&node);
+    hide_console(&mut cmd);
     cmd.arg(&server)
         .current_dir(&dir)
         .env("PORT", FRONTEND_PORT.to_string())

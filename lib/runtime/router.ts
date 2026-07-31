@@ -30,6 +30,7 @@ export interface Target {
   kind: TargetKind;
   baseUrl: string;
   wsHost: string;
+  wsSecure: boolean;
   token: string;
 }
 
@@ -37,6 +38,8 @@ const REMOTE_BASE_URL =
   process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
 const REMOTE_WS_HOST =
   process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
+const REMOTE_WS_SECURE =
+  process.env.NEXT_PUBLIC_WS_URL?.startsWith("https://") ?? false;
 
 const LOCAL_BASE_URL =
   process.env.NEXT_PUBLIC_LOCAL_API || "http://127.0.0.1:3099/api";
@@ -130,6 +133,7 @@ export function resolve(
       kind: "local",
       baseUrl: LOCAL_BASE_URL,
       wsHost: LOCAL_WS_HOST,
+      wsSecure: false,
       token: tokenFor("local"),
     };
   }
@@ -138,6 +142,7 @@ export function resolve(
     kind: "remote",
     baseUrl: REMOTE_BASE_URL,
     wsHost: REMOTE_WS_HOST,
+    wsSecure: REMOTE_WS_SECURE,
     token: tokenFor("remote"),
   };
 }
