@@ -18,20 +18,23 @@ pub async fn send_email(transport: &SmtpTransport, email: &Message) -> Result<()
     }
 }
 
-pub fn get_smtp_data(credentials: (String, String)) -> SmtpTransport {
+pub fn get_smtp_data(credentials: (String, String)) -> Result<SmtpTransport, ApiError> {
     let smtp_username = credentials.0;
     let smtp_password = credentials.1;
 
     let smtp_server = "smtp.gmail.com";
     let smtp_credentials = Credentials::new(smtp_username.to_string(), smtp_password.to_string());
 
-    let smtp_transport = SmtpTransport::starttls_relay(&smtp_server)
-        .unwrap()
+    let relay = SmtpTransport::starttls_relay(smtp_server).map_err(|e| {
+        tracing::error!("STARTTLS indisponível para {smtp_server}: {e}");
+        ApiError::SendingEmail
+    })?;
+
+    Ok(relay
         .credentials(smtp_credentials)
         .authentication(vec![Mechanism::Plain])
-        .build();
-
-    smtp_transport
+        .timeout(Some(crate::outbound::smtp_timeout()))
+        .build())
 }
 
 pub async fn send_team_invitation_email(
@@ -47,7 +50,7 @@ pub async fn send_team_invitation_email(
 
     let from_email = credentials.0.clone();
 
-    let smtp_transport = get_smtp_data(credentials);
+    let smtp_transport = get_smtp_data(credentials)?;
 
     let email = Message::builder()
         .from(Mailbox { name: Some("Zeile Notebook".to_string()), email: Address::from_str(&from_email).unwrap() })
@@ -188,7 +191,7 @@ pub async fn send_password_reset_email(
     };
 
     let from_email = credentials.0.clone();
-    let smtp_transport = get_smtp_data(credentials);
+    let smtp_transport = get_smtp_data(credentials)?;
 
     let email = Message::builder()
         .from(Mailbox { name: Some("Zeile Notebook".to_string()), email: Address::from_str(&from_email).unwrap() })

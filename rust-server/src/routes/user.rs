@@ -22,10 +22,22 @@ pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/me", get(api_get_logged_user))
         .route("/", delete(api_delete_user))
         .route("/register", post(api_register_user))
-        .route("/login", post(api_login_user))
+        .route(
+            "/login",
+            post(api_login_user).route_layer(crate::rate_limit!(
+                "user-login",
+                crate::middleware::rate_limit::LOGIN
+            )),
+        )
         .route("/update", patch(api_update_user_data))
         .route("/password", patch(api_update_user_password))
-        .route("/request-password-reset", post(api_request_password_reset))
+        .route(
+            "/request-password-reset",
+            post(api_request_password_reset).route_layer(crate::rate_limit!(
+                "user-password-reset",
+                crate::middleware::rate_limit::PASSWORD_RESET
+            )),
+        )
         .route("/execute-password-reset", post(api_execute_password_reset))
         .route("/login/github", get(api_github_login))
         .route("/link/github", get(api_link_github_init))

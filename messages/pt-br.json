@@ -16,7 +16,8 @@
     "USER_NOT_FOUND": "Não encontramos nenhum usuário com este e-mail.",
     "MISSING_ENV_VAR": "Erro de configuração interna: Falta a variável {env_var}.",
     "PASSWORDS_DO_NOT_MATCH": "As senhas informadas não conferem.",
-    "UNKNOWN_ERROR": "Ocorreu um erro inesperado. Tente novamente."
+    "UNKNOWN_ERROR": "Ocorreu um erro inesperado. Tente novamente.",
+    "RATE_LIMITED": "Tentativas demais. Aguarde um instante e tente novamente."
   },
   "loading": {
     "loading": "Carregando..."

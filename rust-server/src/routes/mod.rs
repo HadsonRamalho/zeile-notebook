@@ -19,7 +19,6 @@ use hyper::StatusCode;
 use rustls::ClientConfig;
 use rustls_platform_verifier::ConfigVerifierExt;
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -28,12 +27,16 @@ pub mod challenge;
 pub mod docs;
 #[cfg(test)]
 mod health_test;
+#[cfg(test)]
+mod middleware_test;
 pub mod notebook;
 pub mod notifications;
 pub mod permissions;
 pub mod run_rust;
 pub mod team;
 pub mod template;
+#[cfg(test)]
+mod test_support;
 pub mod user;
 
 pub async fn print_protected_route()
@@ -78,6 +81,9 @@ pub fn establish_connection(config: &str) -> BoxFuture<'_, ConnectionResult<Asyn
     fut.boxed()
 }
 
+pub const BODY_LIMIT_PADRAO: usize = 1024 * 1024;
+pub const BODY_LIMIT_CONTEUDO: usize = 1024 * 1024 * 100;
+
 pub async fn build_router(app_state: Arc<AppState>) -> Router {
     let app = OpenApiRouter::<Arc<AppState>>::new()
         .route("/common", get(print_common_route))
@@ -118,11 +124,9 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
             crate::routes::docs::get_api_docs(),
         ))
         .with_state(app_state)
-        .layer(DefaultBodyLimit::max(1024 * 1024 * 100))
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        )
+        .layer(DefaultBodyLimit::max(BODY_LIMIT_PADRAO))
+        .layer(crate::middleware::cors::cors_layer())
+        .layer(axum::middleware::from_fn(
+            crate::middleware::request_id::propagate,
+        ))
 }
