@@ -3,6 +3,7 @@ name = "rust-server"
 version = "0.1.0"
 edition = "2024"
 authors = ["HadsonRamalho"]
+license = "MIT"
 
 [dependencies]
 axum = { version = "0.8.4", features = ["macros", "multipart", "ws"] }

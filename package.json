@@ -2,6 +2,7 @@
   "name": "docs",
   "version": "1.0.2",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "generate-docs": "node scripts/run-generate.mjs",
     "build": "next build && npx serwist build serwist.config.mjs",
