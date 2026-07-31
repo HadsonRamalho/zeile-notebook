@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
-  env.loadEnv();
   const { searchParams } = new URL(request.url);
   const owner = searchParams.get("owner");
   const repo = searchParams.get("repo");
@@ -14,7 +12,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const GITHUB_TOKEN = env.get("NEXT_PUBLIC_GITHUB_TOKEN");
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
   try {
     const response = await fetch(
