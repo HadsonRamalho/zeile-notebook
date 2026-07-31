@@ -12,7 +12,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' http://127.0.0.1:3000 http://127.0.0.1:3099; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:3000 https://cdn.jsdelivr.net https://unpkg.com https://sql.js.org; style-src 'self' 'unsafe-inline' http://127.0.0.1:3000; img-src 'self' data: blob: http://127.0.0.1:3000 http://127.0.0.1:3099; font-src 'self' data: http://127.0.0.1:3000; connect-src 'self' http://127.0.0.1:3000 http://127.0.0.1:3099 ws://127.0.0.1:3099 https://cdn.jsdelivr.net https://unpkg.com https://sql.js.org https://api.github.com; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'"
     }
   },
   "bundle": {
