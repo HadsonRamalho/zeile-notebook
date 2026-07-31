@@ -28,9 +28,6 @@ const envSchema = z.object({
   NEXT_PUBLIC_RUST_NOTEBOOK_API: z.url({
     error: "NEXT_PUBLIC_RUST_NOTEBOOK_API é obrigatório",
   }),
-  NEXT_PUBLIC_GITHUB_TOKEN: z
-    .string()
-    .min(1, { error: "NEXT_PUBLIC_GITHUB_TOKEN é obrigatório" }),
 });
 
 const envError = "Não é possível acessar o ENV antes de carregá-lo";
@@ -47,7 +44,6 @@ class Env {
     const values = {
       NEXT_PUBLIC_MODE: process.env.NEXT_PUBLIC_MODE,
       NEXT_PUBLIC_RUST_NOTEBOOK_API: process.env.NEXT_PUBLIC_RUST_NOTEBOOK_API,
-      NEXT_PUBLIC_GITHUB_TOKEN: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
     };
 
     const result = envSchema.safeParse(values);
