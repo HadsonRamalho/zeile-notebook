@@ -17,6 +17,7 @@ pub mod outbound;
 pub mod routes;
 pub mod schema;
 pub mod sec;
+pub mod shutdown;
 
 #[derive(Deserialize)]
 pub struct CodeRequest {
@@ -57,7 +58,7 @@ async fn run() -> Result<(), BootError> {
     let state = crate::bootstrap::build_state(pool)?;
     crate::bootstrap::spawn_background_tasks(&state, db_url);
 
-    let app = crate::routes::build_router(state)
+    let app = crate::routes::build_router(state.clone())
         .await
         .layer(TraceLayer::new_for_http());
 
@@ -73,10 +74,29 @@ async fn run() -> Result<(), BootError> {
 
     tracing::info!("Servidor rodando em http://{addr}");
 
-    axum::serve(
+    let signal = state.shutdown.clone();
+    tokio::spawn(async move {
+        crate::shutdown::wait_for_os_signal().await;
+        signal.trigger(crate::shutdown::Reason::Signal);
+    });
+
+    let graceful = state.shutdown.clone();
+    let server = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
-    .await
-    .map_err(BootError::Serve)
+    .with_graceful_shutdown(async move { graceful.wait().await });
+
+    // sem o teto, um cliente pendurado adiaria indefinidamente o checkpoint final
+    let served = match tokio::time::timeout(crate::shutdown::grace_period(), server).await {
+        Ok(result) => result,
+        Err(_) => {
+            tracing::warn!("shutdown: grace period elapsed with connections still open");
+            Ok(())
+        }
+    };
+
+    crate::shutdown::drain(&state).await;
+
+    served.map_err(BootError::Serve)
 }

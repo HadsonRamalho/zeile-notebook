@@ -172,19 +172,24 @@ pub fn build_state(pool: Pool<AsyncPgConnection>) -> Result<Arc<AppState>, BootE
         sync_registry,
         push: crate::controllers::push::load_push_state(),
         judge_semaphore: Arc::new(tokio::sync::Semaphore::new(judge_concurrency()?)),
+        shutdown: crate::shutdown::Shutdown::new(),
     }))
 }
 
 pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
-    tokio::spawn(crate::controllers::utils::auto_delete_files());
+    // toda task de fundo morre com o sinal: o dreno final precisa do pool livre
+    until_shutdown(state, crate::controllers::utils::auto_delete_files());
 
-    tokio::spawn(crate::controllers::websocket::checkpoint_loop(
-        state.sync_registry.clone(),
-        state.pool.clone(),
-    ));
+    until_shutdown(
+        state,
+        crate::controllers::websocket::checkpoint_loop(
+            state.sync_registry.clone(),
+            state.pool.clone(),
+        ),
+    );
 
     let pool = state.pool.clone();
-    tokio::spawn(async move {
+    until_shutdown(state, async move {
         match crate::models::notebook::backfill_search_text(&pool).await {
             Ok(n) if n > 0 => tracing::info!("search_text backfill: {n} notebooks"),
             Ok(_) => {}
@@ -192,10 +197,24 @@ pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
         }
     });
 
-    tokio::spawn(crate::controllers::permissions::caps_listen_loop(
-        db_url,
-        state.presence_registry.clone(),
-    ));
+    until_shutdown(
+        state,
+        crate::controllers::permissions::caps_listen_loop(db_url, state.presence_registry.clone()),
+    );
+}
+
+fn until_shutdown<F>(state: &Arc<AppState>, task: F)
+where
+    F: std::future::Future<Output = ()> + Send + 'static,
+{
+    let shutdown = state.shutdown.clone();
+
+    tokio::spawn(async move {
+        tokio::select! {
+            _ = task => {}
+            _ = shutdown.wait() => {}
+        }
+    });
 }
 
 #[cfg(test)]

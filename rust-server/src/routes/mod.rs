@@ -9,7 +9,7 @@ use crate::routes::user::user_routes;
 use axum::{Json, Router};
 use axum::{
     extract::DefaultBodyLimit,
-    routing::{get, get_service},
+    routing::{get, get_service, post},
 };
 use diesel::{ConnectionError, ConnectionResult};
 use diesel_async::AsyncPgConnection;
@@ -33,6 +33,8 @@ pub mod notebook;
 pub mod notifications;
 pub mod permissions;
 pub mod run_rust;
+#[cfg(test)]
+mod shutdown_test;
 pub mod team;
 pub mod template;
 #[cfg(test)]
@@ -96,6 +98,10 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health/live", get(crate::controllers::health::live))
         .route("/health/ready", get(crate::controllers::health::ready))
+        .route(
+            "/internal/shutdown",
+            post(crate::controllers::shutdown::request_shutdown),
+        )
         .nest("/api", app.into())
         .nest("/api", run_rust_routes().await.into())
         .nest("/api/user", user_routes().await.into())

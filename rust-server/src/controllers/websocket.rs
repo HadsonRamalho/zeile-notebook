@@ -2,7 +2,7 @@
 use axum::{
     extract::{
         Path, State as AxumState,
-        ws::{Message, WebSocket, WebSocketUpgrade},
+        ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
 };
@@ -24,16 +24,17 @@ use crate::{
     controllers::{
         jwt::extract_claims_from_ws_headers,
         metrics::METRICS,
-        sync::{
-            ActiveNotebook, INBOUND_SOFT_CAP, NotebookInner, PeerHandle, PresenceMember,
-            PresenceRoom, PRESENCE_CHANNEL_CAP, SyncRegistry, PEER_CHANNEL_CAP,
-        },
         permissions::{CapabilitySet, TargetCtx, capabilities_cached},
+        sync::{
+            ActiveNotebook, INBOUND_SOFT_CAP, NotebookInner, PEER_CHANNEL_CAP,
+            PRESENCE_CHANNEL_CAP, PeerHandle, PresenceMember, PresenceRoom, SyncRegistry,
+        },
     },
     models::{
         notebook::{checkpoint_notebook_data, extract_search_text, load_notebook_data},
         state::AppState,
     },
+    shutdown::Shutdown,
 };
 
 fn checkpoint_interval_secs() -> u64 {
@@ -99,8 +100,17 @@ pub async fn websocket_handler(
             user_token,
             state.sync_registry.clone(),
             pool,
+            state.shutdown.clone(),
         )
     })
+}
+
+/// 1001 "going away": o cliente entende como "reconecte depois", não como erro
+fn close_frame_de_shutdown() -> CloseFrame {
+    CloseFrame {
+        code: 1001,
+        reason: "server shutting down".into(),
+    }
 }
 
 async fn handle_socket(
@@ -109,6 +119,7 @@ async fn handle_socket(
     original_user_id: Option<Uuid>,
     registry: SyncRegistry,
     pool: Pool<AsyncPgConnection>,
+    shutdown: Shutdown,
 ) {
     // chave de peer por conexão, não por user_id (duas abas do mesmo usuário colidiam)
     let session_id = Uuid::new_v4();
@@ -177,10 +188,22 @@ async fn handle_socket(
     }
     notebook.peers.insert(session_id, peer.clone());
 
+    let shutdown_send = shutdown.clone();
     let mut send_task = tokio::spawn(async move {
-        while let Some(packet) = rx.recv().await {
-            if sender.send(Message::Binary(packet.into())).await.is_err() {
-                break;
+        loop {
+            tokio::select! {
+                packet = rx.recv() => match packet {
+                    Some(packet) => {
+                        if sender.send(Message::Binary(packet.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => break,
+                },
+                _ = shutdown_send.wait() => {
+                    let _ = sender.send(Message::Close(Some(close_frame_de_shutdown()))).await;
+                    break;
+                }
             }
         }
     });
@@ -207,6 +230,15 @@ async fn handle_socket(
     METRICS.ws_sync_active.dec();
 
     notebook.peers.remove(&session_id);
+
+    // no encerramento quem persiste é o `drain`: tirar o notebook do registry aqui o
+    // esconderia do checkpoint final
+    if shutdown.is_triggered() {
+        let mut inner = notebook.inner.lock().await;
+        inner.peer_states.remove(&session_id);
+        return;
+    }
+
     let data_to_save = {
         let mut inner = notebook.inner.lock().await;
         inner.peer_states.remove(&session_id);
@@ -487,10 +519,22 @@ async fn handle_presence_socket(
         room_arc
     };
 
+    let shutdown_send = state.shutdown.clone();
     let mut send_task = tokio::spawn(async move {
-        while let Some(msg_text) = rx.recv().await {
-            if sender.send(Message::Text(msg_text.into())).await.is_err() {
-                break;
+        loop {
+            tokio::select! {
+                msg_text = rx.recv() => match msg_text {
+                    Some(msg_text) => {
+                        if sender.send(Message::Text(msg_text.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => break,
+                },
+                _ = shutdown_send.wait() => {
+                    let _ = sender.send(Message::Close(Some(close_frame_de_shutdown()))).await;
+                    break;
+                }
             }
         }
     });
@@ -515,9 +559,7 @@ async fn handle_presence_socket(
                             *member_for_recv.name.lock().unwrap() = Some(name.to_string());
                         }
                         *member_for_recv.latest.lock().unwrap() = Some(v);
-                        member_for_recv
-                            .changed
-                            .store(true, Ordering::Release);
+                        member_for_recv.changed.store(true, Ordering::Release);
                     }
                 }
                 // chat: difunde imediatamente + push de menção
@@ -549,8 +591,7 @@ async fn handle_presence_socket(
                             {
                                 if mentions_name(chat_text, &mentioned_name) {
                                     let state_for_push = state_for_recv.clone();
-                                    let title =
-                                        format!("{} mencionou você no chat", sender_name);
+                                    let title = format!("{} mencionou você no chat", sender_name);
                                     let body = chat_text.to_string();
                                     let url = format!("/notebook/{}", notebook_id);
                                     tokio::spawn(async move {
@@ -925,8 +966,14 @@ async fn handle_combined_socket(
     let _ = member
         .tx
         .try_send(format!(r#"{{"type":"init","userId":"{}"}}"#, session_id));
-    let room = join_presence_room(&state.presence_registry, notebook_id, session_id, member.clone());
+    let room = join_presence_room(
+        &state.presence_registry,
+        notebook_id,
+        session_id,
+        member.clone(),
+    );
 
+    let shutdown_send = state.shutdown.clone();
     let mut send_task = tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -942,6 +989,10 @@ async fn handle_combined_socket(
                     }
                     None => break,
                 },
+                _ = shutdown_send.wait() => {
+                    let _ = sender.send(Message::Close(Some(close_frame_de_shutdown()))).await;
+                    break;
+                }
             }
         }
     });
@@ -988,6 +1039,14 @@ async fn handle_combined_socket(
     METRICS.ws_presence_active.dec();
 
     notebook.peers.remove(&session_id);
+
+    if state.shutdown.is_triggered() {
+        let mut inner = notebook.inner.lock().await;
+        inner.peer_states.remove(&session_id);
+        room.subscribers.remove(&session_id);
+        return;
+    }
+
     let data_to_save = {
         let mut inner = notebook.inner.lock().await;
         inner.peer_states.remove(&session_id);
