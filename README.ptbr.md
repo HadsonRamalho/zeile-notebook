@@ -130,4 +130,4 @@ chamá-lo de Zeile não é.
 
 Issues e pull requests vão para [HadsonRamalho/zeile-notebook](https://github.com/HadsonRamalho/zeile-notebook).
 Pull requests seguem o template em `.github/pull_request_template.md`; as convenções de código
-válidas em review são as de `docs/padroes.md`.
+válidas em review são as de `docs/decisoes.md`.
