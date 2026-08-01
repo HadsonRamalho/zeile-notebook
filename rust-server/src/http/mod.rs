@@ -30,20 +30,35 @@ use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
 use crate::sec::verify_zig_code;
 
+fn execucao_negada(motivo: &str) -> CodeResponse {
+    CodeResponse {
+        stdout: String::new(),
+        stderr: motivo.to_string(),
+    }
+}
+
 async fn enforce_execute(
     pool: &Pool<AsyncPgConnection>,
     headers: &HeaderMap,
     notebook_id: Option<Uuid>,
     language: &str,
-) -> Result<(), CodeResponse> {
-    let user_id = extract_claims_from_header(headers)
-        .await
-        .ok()
-        .map(|claims| claims.1.id);
+) -> Result<Uuid, CodeResponse> {
+    let user_id = match extract_claims_from_header(headers).await {
+        Ok(claims) => claims.1.id,
+        Err(_) => {
+            return Err(execucao_negada(
+                "É necessário estar autenticado para executar código.",
+            ));
+        }
+    };
 
     let notebook_id = match notebook_id {
         Some(id) => id,
-        None => return Ok(()),
+        None => {
+            return Err(execucao_negada(
+                "É necessário informar o notebook do bloco que está sendo executado.",
+            ));
+        }
     };
 
     let key = format!("notebook.blocks.{language}.execute");
@@ -52,12 +67,11 @@ async fn enforce_execute(
         block_type: Some(language.to_string()),
     };
 
-    match require(pool, user_id, notebook_id, &key, &target).await {
-        Ok(_) => Ok(()),
-        Err(_) => Err(CodeResponse {
-            stdout: String::new(),
-            stderr: "Você não tem permissão para executar este tipo de bloco.".to_string(),
-        }),
+    match require(pool, Some(user_id), notebook_id, &key, &target).await {
+        Ok(_) => Ok(user_id),
+        Err(_) => Err(execucao_negada(
+            "Você não tem permissão para executar este tipo de bloco.",
+        )),
     }
 }
 
@@ -77,9 +91,20 @@ pub async fn verify_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "rust").await {
+    if let Err(denied) =
+        enforce_execute(&state.pool, &headers, payload.notebook_id, "rust").await
+    {
         return Json(denied);
     }
+
+    let _permit = match state.judge_semaphore.clone().acquire_owned().await {
+        Ok(permit) => permit,
+        Err(_) => {
+            return Json(execucao_negada(
+                "O servidor está encerrando e não aceita novas execuções.",
+            ));
+        }
+    };
 
     let addr = addr.ip();
     let ip = headers
@@ -301,9 +326,20 @@ pub async fn verify_go_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await {
+    if let Err(denied) =
+        enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await
+    {
         return Json(denied);
     }
+
+    let _permit = match state.judge_semaphore.clone().acquire_owned().await {
+        Ok(permit) => permit,
+        Err(_) => {
+            return Json(execucao_negada(
+                "O servidor está encerrando e não aceita novas execuções.",
+            ));
+        }
+    };
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
@@ -398,9 +434,20 @@ pub async fn verify_cpp_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "cpp").await {
+    if let Err(denied) =
+        enforce_execute(&state.pool, &headers, payload.notebook_id, "cpp").await
+    {
         return Json(denied);
     }
+
+    let _permit = match state.judge_semaphore.clone().acquire_owned().await {
+        Ok(permit) => permit,
+        Err(_) => {
+            return Json(execucao_negada(
+                "O servidor está encerrando e não aceita novas execuções.",
+            ));
+        }
+    };
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
@@ -529,9 +576,20 @@ pub async fn verify_zig_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) = enforce_execute(&state.pool, &headers, payload.notebook_id, "zig").await {
+    if let Err(denied) =
+        enforce_execute(&state.pool, &headers, payload.notebook_id, "zig").await
+    {
         return Json(denied);
     }
+
+    let _permit = match state.judge_semaphore.clone().acquire_owned().await {
+        Ok(permit) => permit,
+        Err(_) => {
+            return Json(execucao_negada(
+                "O servidor está encerrando e não aceita novas execuções.",
+            ));
+        }
+    };
     let addr = addr.ip();
     let ip = headers
         .get("x-forwarded-for")
