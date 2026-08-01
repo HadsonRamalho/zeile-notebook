@@ -6,7 +6,6 @@ use axum::{
 };
 use diesel_async::{AsyncPgConnection, pooled_connection::deadpool::Pool};
 use hyper::{HeaderMap, StatusCode};
-use pwhash::bcrypt::verify;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -14,7 +13,7 @@ use crate::{
     controllers::{
         email::send_password_reset_email,
         jwt::{extract_claims_from_header, generate_jwt},
-        utils::{Sanitize, get_conn, password_hash},
+        utils::{Sanitize, get_conn, hash_precisa_migrar, password_hash, password_verify},
     },
     models::{
         self,
@@ -88,13 +87,23 @@ pub async fn api_login_user(
         )));
     }
 
-    let password_valid = match &user.password_hash {
-        Some(hash) => verify(&user_input.password, hash),
+    let hash_atual = user.password_hash.clone();
+
+    let password_valid = match &hash_atual {
+        Some(hash) => password_verify(&user_input.password, hash),
         None => false,
     };
 
     if !password_valid {
         return Err(ApiError::InvalidCredentials);
+    }
+
+    if hash_atual.as_deref().is_some_and(hash_precisa_migrar) {
+        let novo_hash = password_hash(&user_input.password);
+
+        if let Err(e) = models::user::update_user_password(conn, &user.id, novo_hash).await {
+            tracing::warn!("falha ao migrar hash de senha do usuário {}: {e}", user.id);
+        }
     }
 
     let token = generate_jwt(UserAuthInfo::from(user))?;
@@ -193,7 +202,7 @@ pub async fn api_update_user_password(
     }
 
     let is_current_password_valid = match &user.password_hash {
-        Some(hash) => verify(&user_input.current_password, hash),
+        Some(hash) => password_verify(&user_input.current_password, hash),
         None => false,
     };
 
