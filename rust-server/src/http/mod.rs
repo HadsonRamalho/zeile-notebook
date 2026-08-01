@@ -21,6 +21,7 @@ use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{TargetCtx, require};
 use crate::models::state::AppState;
 use crate::controllers::utils::extract_module_name;
+use crate::executor::sanitize_session;
 use crate::file::RunLimits;
 use crate::file::register_log;
 use crate::file::run_safe_bin;
@@ -37,12 +38,16 @@ fn execucao_negada(motivo: &str) -> CodeResponse {
     }
 }
 
+pub fn sessao_de_execucao(user_id: Uuid, notebook_id: Uuid) -> String {
+    sanitize_session(&format!("u_{}_n_{}", user_id, notebook_id))
+}
+
 async fn enforce_execute(
     pool: &Pool<AsyncPgConnection>,
     headers: &HeaderMap,
     notebook_id: Option<Uuid>,
     language: &str,
-) -> Result<Uuid, CodeResponse> {
+) -> Result<String, CodeResponse> {
     let user_id = match extract_claims_from_header(headers).await {
         Ok(claims) => claims.1.id,
         Err(_) => {
@@ -68,7 +73,7 @@ async fn enforce_execute(
     };
 
     match require(pool, Some(user_id), notebook_id, &key, &target).await {
-        Ok(_) => Ok(user_id),
+        Ok(_) => Ok(sessao_de_execucao(user_id, notebook_id)),
         Err(_) => Err(execucao_negada(
             "Você não tem permissão para executar este tipo de bloco.",
         )),
@@ -91,11 +96,11 @@ pub async fn verify_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) =
-        enforce_execute(&state.pool, &headers, payload.notebook_id, "rust").await
-    {
-        return Json(denied);
-    }
+    let safe_session =
+        match enforce_execute(&state.pool, &headers, payload.notebook_id, "rust").await {
+            Ok(session) => session,
+            Err(denied) => return Json(denied),
+        };
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
@@ -120,10 +125,6 @@ pub async fn verify_request(
         .to_string();
 
     info!("Nova requisição de IP: {}", ip);
-
-    let safe_session = payload
-        .session_id
-        .replace(|c: char| !c.is_alphanumeric(), "_");
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
         error!("Falha no log de arquivo: {}", e);
@@ -326,11 +327,11 @@ pub async fn verify_go_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) =
-        enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await
-    {
-        return Json(denied);
-    }
+    let safe_session =
+        match enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await {
+            Ok(session) => session,
+            Err(denied) => return Json(denied),
+        };
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
@@ -354,10 +355,6 @@ pub async fn verify_go_request(
         .to_string();
 
     info!("Nova requisição de IP: {}", ip);
-
-    let safe_session = payload
-        .session_id
-        .replace(|c: char| !c.is_alphanumeric(), "_");
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
         error!("Falha no log de arquivo: {}", e);
@@ -434,11 +431,11 @@ pub async fn verify_cpp_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) =
-        enforce_execute(&state.pool, &headers, payload.notebook_id, "cpp").await
-    {
-        return Json(denied);
-    }
+    let safe_session =
+        match enforce_execute(&state.pool, &headers, payload.notebook_id, "cpp").await {
+            Ok(session) => session,
+            Err(denied) => return Json(denied),
+        };
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
@@ -462,10 +459,6 @@ pub async fn verify_cpp_request(
         .to_string();
 
     info!("Nova requisição C++ de IP: {}", ip);
-
-    let safe_session = payload
-        .session_id
-        .replace(|c: char| !c.is_alphanumeric(), "_");
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
         error!("Falha no log de arquivo: {}", e);
@@ -576,11 +569,11 @@ pub async fn verify_zig_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    if let Err(denied) =
-        enforce_execute(&state.pool, &headers, payload.notebook_id, "zig").await
-    {
-        return Json(denied);
-    }
+    let safe_session =
+        match enforce_execute(&state.pool, &headers, payload.notebook_id, "zig").await {
+            Ok(session) => session,
+            Err(denied) => return Json(denied),
+        };
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
@@ -604,10 +597,6 @@ pub async fn verify_zig_request(
         .to_string();
 
     info!("Nova requisição Zig de IP: {}", ip);
-
-    let safe_session = payload
-        .session_id
-        .replace(|c: char| !c.is_alphanumeric(), "_");
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
         error!("Falha no log de arquivo: {}", e);

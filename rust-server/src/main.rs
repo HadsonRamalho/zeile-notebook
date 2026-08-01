@@ -22,7 +22,6 @@ pub mod shutdown;
 #[derive(Deserialize)]
 pub struct CodeRequest {
     pub code: String,
-    pub session_id: String,
     #[serde(default)]
     pub notebook_id: Option<uuid::Uuid>,
 }
