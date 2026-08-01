@@ -105,18 +105,32 @@ pub async fn api_accept_invite(
 
     let user = models::user::find_user_by_id(conn, &id).await?;
 
-    let invitation = match crate::models::team_invitation::consume_invitation_by_token(
+    // O convite é encontrado, e não consumido de saída: se a validação falhar
+    // depois de consumir, quem tem o link derruba o convite de quem foi
+    // convidado de verdade.
+    let invitation = match crate::models::team_invitation::find_invitation_by_token(
         &mut conn,
-        &payload.token.trim(),
+        payload.token.trim(),
     )
     .await
     {
         Ok(inv) => inv,
-        Err(e) => return Err(ApiError::Database(e.to_string())),
+        Err(_) => return Err(ApiError::InvalidData),
     };
 
     if Utc::now().naive_utc() > invitation.expires_at {
+        let _ = crate::models::team_invitation::delete_invitation(&mut conn, invitation.id).await;
         return Err(ApiError::InvalidData);
+    }
+
+    if !crate::models::team_invitation::email_corresponde(&invitation.email, &user.email) {
+        tracing::warn!(
+            "convite do time {} recusado: aceito por conta diferente da convidada",
+            invitation.team_id
+        );
+        return Err(ApiError::PermissionDenied(
+            "Este convite foi enviado para outro e-mail.".to_string(),
+        ));
     }
 
     let new_member = NewTeamMember {
@@ -125,8 +139,13 @@ pub async fn api_accept_invite(
         role_id: invitation.role_id,
     };
 
-    match models::team::add_user_to_team(&mut conn, &new_member).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+    if let Err(e) = models::team::add_user_to_team(&mut conn, &new_member).await {
+        return Err(ApiError::Database(e.to_string()));
     }
+
+    // Consome só depois de entrar no time: se a inserção falhar, o convite
+    // continua valendo para uma nova tentativa.
+    let _ = crate::models::team_invitation::delete_invitation(&mut conn, invitation.id).await;
+
+    Ok(StatusCode::OK)
 }
