@@ -1,8 +1,9 @@
 use std::path::Path;
+use std::time::Duration;
 
 use tokio::process::Command;
 
-use crate::file::RunLimits;
+use crate::file::{RunLimits, prlimit_interno_args};
 
 pub const MOUNT_POINT: &str = "/app";
 
@@ -24,8 +25,12 @@ pub fn shared_cache_dir() -> Option<String> {
 pub const COMPILE_LIMITS: RunLimits = RunLimits {
     cpu_secs: 30,
     mem_kb: 4 * 1024 * 1024,
-    wall_ms: 0,
+    wall_ms: 120_000,
 };
+
+pub const COMPILE_TMPFS_MB: u64 = 512;
+
+pub const COMPILE_MAX_PROCESSOS: u64 = 512;
 
 #[derive(Clone)]
 pub struct CompileSandbox {
@@ -107,7 +112,9 @@ impl CompileSandbox {
             "/dev",
             "--proc",
             "/proc",
-            "--dir",
+            "--size",
+            &(COMPILE_TMPFS_MB * 1024 * 1024).to_string(),
+            "--tmpfs",
             "/tmp",
         ] {
             args.push(flag.into());
@@ -131,6 +138,8 @@ impl CompileSandbox {
         args.push("--chdir".into());
         args.push(MOUNT_POINT.into());
 
+        args.extend(prlimit_interno_args(COMPILE_MAX_PROCESSOS));
+
         args
     }
 
@@ -150,6 +159,23 @@ impl CompileSandbox {
         }
 
         cmd
+    }
+
+    pub async fn executar(
+        &self,
+        program: &str,
+        program_args: &[&str],
+    ) -> Result<std::process::Output, String> {
+        let execucao = self.command(program, program_args).output();
+
+        match tokio::time::timeout(Duration::from_millis(self.limits.wall_ms), execucao).await {
+            Ok(Ok(output)) => Ok(output),
+            Ok(Err(e)) => Err(format!("Falha ao invocar {}: {}", program, e)),
+            Err(_) => Err(format!(
+                "A compilação passou de {}s e foi interrompida.",
+                self.limits.wall_ms / 1000
+            )),
+        }
     }
 }
 
@@ -198,6 +224,69 @@ mod tests {
         assert_eq!(args[1], "--as=4294967296");
         assert_eq!(args[2], "--");
         assert_eq!(args[3], "bwrap");
+    }
+
+    #[test]
+    fn a_compilacao_tem_teto_de_processos_dentro_do_namespace() {
+        let args = CompileSandbox::new("/srv/files/go/abc").args();
+
+        let bwrap = posicao(&args, "bwrap");
+        let nproc = posicao(&args, &format!("--nproc={COMPILE_MAX_PROCESSOS}"));
+
+        assert!(nproc > bwrap, "--nproc precisa ficar dentro do user namespace");
+        assert_eq!(args[nproc - 1], "/usr/bin/prlimit");
+        assert_eq!(args.last().unwrap(), "--");
+    }
+
+    #[test]
+    fn a_compilacao_tem_tmpfs_com_teto() {
+        let args = CompileSandbox::new("/srv/files/go/abc").args();
+
+        let size = posicao(&args, "--size");
+
+        assert_eq!(args[size + 1], (COMPILE_TMPFS_MB * 1024 * 1024).to_string());
+        assert_eq!(args[size + 2], "--tmpfs");
+        assert_eq!(args[size + 3], "/tmp");
+    }
+
+    #[test]
+    fn a_compilacao_tem_watchdog_de_wall_clock() {
+        assert!(
+            COMPILE_LIMITS.wall_ms > 0,
+            "sem wall_ms a compilação pode ficar presa para sempre"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_compilacao_travada_e_interrompida_pelo_watchdog() {
+        let existe = |b: &str| {
+            std::process::Command::new("sh")
+                .args(["-c", &format!("command -v {b}")])
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+        };
+
+        if !existe("bwrap") || !existe("prlimit") {
+            eprintln!("bwrap/prlimit ausente; teste pulado");
+            return;
+        }
+
+        let dir = "files/teste_watchdog";
+        std::fs::create_dir_all(dir).expect("diretório da sessão");
+        let abs = caminho_absoluto(dir).expect("caminho absoluto");
+
+        let mut sandbox = CompileSandbox::new(abs);
+        sandbox.limits.wall_ms = 1_000;
+
+        let erro = sandbox
+            .executar("sleep", &["30"])
+            .await
+            .expect_err("o watchdog deveria interromper");
+
+        let _ = std::fs::remove_dir_all(dir);
+
+        assert!(erro.contains("interrompida"), "{erro}");
     }
 
     #[test]
