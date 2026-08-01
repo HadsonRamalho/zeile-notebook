@@ -121,9 +121,47 @@ pub fn random_hash() -> String {
     bcrypt::hash(now).unwrap()
 }
 
+/// Prefixo PHC de um hash argon2. bcrypt usa `$2a$`/`$2b$`/`$2y$`, então o
+/// prefixo distingue hash novo de hash legado sem precisar de coluna extra.
+const PREFIXO_ARGON2: &str = "$argon2";
+
 pub fn password_hash(input: &str) -> String {
-    let output = bcrypt::hash(input).unwrap();
-    output
+    use argon2::password_hash::{SaltString, rand_core::OsRng};
+    use argon2::{Argon2, PasswordHasher};
+
+    let salt = SaltString::generate(&mut OsRng);
+
+    match Argon2::default().hash_password(input.as_bytes(), &salt) {
+        Ok(hash) => hash.to_string(),
+        Err(e) => {
+            // Não há como seguir com um hash fraco: sem isso o cadastro
+            // gravaria credencial que não protege nada.
+            panic!("falha ao derivar hash de senha: {e}");
+        }
+    }
+}
+
+pub fn password_verify(senha: &str, hash: &str) -> bool {
+    if !hash.starts_with(PREFIXO_ARGON2) {
+        return bcrypt::verify(senha, hash);
+    }
+
+    use argon2::password_hash::PasswordHash;
+    use argon2::{Argon2, PasswordVerifier};
+
+    PasswordHash::new(hash)
+        .map(|esperado| {
+            Argon2::default()
+                .verify_password(senha.as_bytes(), &esperado)
+                .is_ok()
+        })
+        .unwrap_or(false)
+}
+
+/// Hash legado que deve ser regravado em argon2id no próximo login bem-sucedido,
+/// que é o único momento em que a senha em claro está disponível.
+pub fn hash_precisa_migrar(hash: &str) -> bool {
+    !hash.starts_with(PREFIXO_ARGON2)
 }
 
 pub fn random_public_id() -> i32 {
@@ -359,6 +397,52 @@ pub fn get_email_credentials() -> Result<(String, String), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn o_hash_novo_e_argon2id() {
+        let hash = password_hash("senha-do-usuario");
+
+        assert!(hash.starts_with("$argon2id$"), "{hash}");
+        assert!(!hash_precisa_migrar(&hash));
+    }
+
+    #[test]
+    fn dois_hashes_da_mesma_senha_diferem() {
+        let a = password_hash("mesma-senha");
+        let b = password_hash("mesma-senha");
+
+        assert_ne!(a, b, "o salt deveria tornar cada hash único");
+    }
+
+    #[test]
+    fn verifica_a_senha_certa_e_recusa_a_errada() {
+        let hash = password_hash("senha-correta");
+
+        assert!(password_verify("senha-correta", &hash));
+        assert!(!password_verify("senha-errada", &hash));
+        assert!(!password_verify("", &hash));
+    }
+
+    #[test]
+    fn hash_bcrypt_legado_continua_validando() {
+        let legado = bcrypt::hash("senha-antiga").expect("hash bcrypt");
+
+        assert!(
+            password_verify("senha-antiga", &legado),
+            "usuário antigo ficaria trancado fora da conta"
+        );
+        assert!(!password_verify("outra", &legado));
+        assert!(
+            hash_precisa_migrar(&legado),
+            "hash bcrypt precisa ser marcado para migração"
+        );
+    }
+
+    #[test]
+    fn hash_corrompido_nao_valida_nada() {
+        assert!(!password_verify("qualquer", "$argon2id$lixo"));
+        assert!(!password_verify("qualquer", ""));
+    }
 
     const CURTA: Duration = Duration::from_millis(150);
 

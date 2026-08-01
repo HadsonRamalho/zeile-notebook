@@ -63,6 +63,7 @@ postgresql_embedded = { version = "0.18", optional = true, default-features = fa
     "rustls",
     "theseus",
 ] }
+argon2 = { version = "0.5.3", features = ["std"] }
 
 [features]
 serde-wasm-bindgen = ["dep:serde-wasm-bindgen"]
