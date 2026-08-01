@@ -44,6 +44,107 @@ pub struct RunOutcome {
     pub wall_ms: u64,
 }
 
+fn wasmtime_path() -> String {
+    if let Ok(path) = std::env::var("WASMTIME_PATH") {
+        return path;
+    }
+
+    let home = std::env::var("HOME").unwrap_or_default();
+
+    let possible_paths = [
+        format!("{}/.wasmtime/bin/wasmtime", home),
+        "/usr/bin/wasmtime".to_string(),
+        "/usr/local/bin/wasmtime".to_string(),
+    ];
+
+    possible_paths
+        .into_iter()
+        .find(|p| Path::new(p).exists())
+        .unwrap_or_else(|| {
+            warn!("AVISO: wasmtime não encontrado nos caminhos padrões. Usando fallback cego.");
+            "wasmtime".to_string()
+        })
+}
+
+pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String> {
+    let mut args = limits.prlimit_args();
+    args.push("--".into());
+    args.push("bwrap".into());
+
+    for flag in [
+        "--unshare-all",
+        "--die-with-parent",
+        "--new-session",
+        "--clearenv",
+        "--ro-bind",
+        "/usr",
+        "/usr",
+        "--ro-bind-try",
+        "/lib",
+        "/lib",
+        "--ro-bind-try",
+        "/lib64",
+        "/lib64",
+        "--ro-bind-try",
+        "/bin",
+        "/bin",
+        "--dir",
+        "/tmp",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--chdir",
+        "/tmp",
+        "--setenv",
+        "PATH",
+        "/usr/bin:/bin",
+        "--setenv",
+        "HOME",
+        "/tmp",
+        "--setenv",
+        "TMPDIR",
+        "/tmp",
+    ] {
+        args.push(flag.into());
+    }
+
+    if caminho_binario.ends_with(".wasm") {
+        for arg in [
+            "--ro-bind-try",
+            &wasmtime_path(),
+            "/app/wasmtime",
+            "--ro-bind",
+            caminho_binario,
+            "/app/main.wasm",
+            "/app/wasmtime",
+            "run",
+            "/app/main.wasm",
+        ] {
+            args.push(arg.into());
+        }
+
+        return args;
+    }
+
+    for arg in [
+        "--setenv",
+        "GOMAXPROCS",
+        "1",
+        "--setenv",
+        "CGO_ENABLED",
+        "0",
+        "--ro-bind",
+        caminho_binario,
+        "/app/main",
+        "/app/main",
+    ] {
+        args.push(arg.into());
+    }
+
+    args
+}
+
 pub async fn run_safe_bin(
     caminho_binario: &str,
     stdin: Option<&str>,
@@ -61,60 +162,11 @@ pub async fn run_safe_bin(
         };
     }
 
-    let is_wasm = caminho_binario.ends_with(".wasm");
-
     let mut cmd = Command::new("prlimit");
-    cmd.args(limits.prlimit_args());
-    cmd.arg("--");
+    cmd.args(run_envelope_args(caminho_binario, limits));
 
-    cmd.arg("bwrap");
-
-    cmd.args(["--unshare-all"]);
-    cmd.args(["--die-with-parent"]);
-    cmd.args(["--new-session"]);
-
-    cmd.args(["--ro-bind", "/usr", "/usr"]);
-    cmd.args(["--ro-bind-try", "/lib", "/lib"]);
-    cmd.args(["--ro-bind-try", "/lib64", "/lib64"]);
-    cmd.args(["--ro-bind-try", "/bin", "/bin"]);
-
-    cmd.args(["--dir", "/tmp"]);
-    cmd.args(["--proc", "/proc"]);
-    cmd.args(["--dev", "/dev"]);
-    cmd.args(["--chdir", "/tmp"]);
-
-    if is_wasm {
-        let wasmtime_path = std::env::var("WASMTIME_PATH").unwrap_or_else(|_| {
-            let home = std::env::var("HOME").unwrap_or_default();
-
-            let possible_paths = [
-                format!("{}/.wasmtime/bin/wasmtime", home),
-                "/usr/bin/wasmtime".to_string(),
-                "/usr/local/bin/wasmtime".to_string(),
-            ];
-
-            possible_paths
-                .into_iter()
-                .find(|p| Path::new(p).exists())
-                .unwrap_or_else(|| {
-                    warn!(
-                        "AVISO: wasmtime não encontrado nos caminhos padrões. Usando fallback cego."
-                    );
-                    "wasmtime".to_string()
-                })
-        });
-
-        cmd.args(["--ro-bind-try", &wasmtime_path, "/app/wasmtime"]);
-        cmd.args(["--ro-bind", caminho_binario, "/app/main.wasm"]);
-
-        cmd.arg("/app/wasmtime").arg("run").arg("/app/main.wasm");
-    } else {
-        cmd.args(["--ro-bind", caminho_binario, "/app/main"]);
-        cmd.arg("/app/main");
-
-        cmd.env("GOMAXPROCS", "1");
-        cmd.env("CGO_ENABLED", "0");
-    }
+    cmd.env_clear();
+    cmd.env("PATH", "/usr/bin:/bin");
 
     #[cfg(unix)]
     unsafe {
@@ -339,6 +391,58 @@ mod tests {
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
+    }
+
+    #[test]
+    fn o_envelope_de_execucao_limpa_o_ambiente_do_servidor() {
+        let args = run_envelope_args("/app/bin", RunLimits::default());
+
+        assert!(
+            args.contains(&"--clearenv".to_string()),
+            "--clearenv ausente: {args:?}"
+        );
+    }
+
+    #[test]
+    fn o_envelope_declara_apenas_variaveis_neutras() {
+        let args = run_envelope_args("/app/bin", RunLimits::default());
+
+        let declaradas: Vec<&String> = args
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i > 0 && args[i - 1] == "--setenv")
+            .map(|(_, v)| v)
+            .collect();
+
+        assert_eq!(
+            declaradas,
+            vec!["PATH", "HOME", "TMPDIR", "GOMAXPROCS", "CGO_ENABLED"],
+            "o envelope declarou variáveis inesperadas"
+        );
+    }
+
+    #[tokio::test]
+    async fn o_ambiente_do_servidor_nao_vaza_para_o_codigo_do_usuario() {
+        if !existe("bwrap") || !existe("prlimit") {
+            eprintln!("bwrap/prlimit ausente; teste pulado");
+            return;
+        }
+
+        unsafe {
+            std::env::set_var("ZEILE_SEGREDO_DE_TESTE", "jwt-secret-nao-deve-vazar");
+        }
+
+        let saida = run_safe_bin("/usr/bin/env", None, RunLimits::default()).await;
+
+        unsafe {
+            std::env::remove_var("ZEILE_SEGREDO_DE_TESTE");
+        }
+
+        assert!(
+            !saida.stdout.contains("jwt-secret-nao-deve-vazar"),
+            "o ambiente do servidor vazou para dentro do sandbox:\n{}",
+            saida.stdout
+        );
     }
 
     #[test]
