@@ -99,7 +99,6 @@ export function PublicNotebookView({ slug }: PublicNotebookViewProps) {
               updateBlockMetadata={() => {}}
               updateDrawingScene={() => {}}
               doc={doc}
-              sessionId=""
               notebookId={doc?.id}
               canEditContent={false}
               canExecute={false}
