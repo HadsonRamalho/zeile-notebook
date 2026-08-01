@@ -21,7 +21,13 @@ pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
     let routes = OpenApiRouter::new()
         .route("/me", get(api_get_logged_user))
         .route("/", delete(api_delete_user))
-        .route("/register", post(api_register_user))
+        .route(
+            "/register",
+            post(api_register_user).route_layer(crate::rate_limit!(
+                "user-register",
+                crate::middleware::rate_limit::REGISTER
+            )),
+        )
         .route(
             "/login",
             post(api_login_user).route_layer(crate::rate_limit!(
@@ -38,7 +44,13 @@ pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
                 crate::middleware::rate_limit::PASSWORD_RESET
             )),
         )
-        .route("/execute-password-reset", post(api_execute_password_reset))
+        .route(
+            "/execute-password-reset",
+            post(api_execute_password_reset).route_layer(crate::rate_limit!(
+                "user-password-reset-execute",
+                crate::middleware::rate_limit::PASSWORD_RESET
+            )),
+        )
         .route("/login/github", get(api_github_login))
         .route("/link/github", get(api_link_github_init))
         .route("/link/github/callback", get(api_link_github_callback))

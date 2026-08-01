@@ -31,6 +31,9 @@ mod health_test;
 mod middleware_test;
 pub mod notebook;
 pub mod notifications;
+#[cfg(test)]
+mod rate_limit_global_test;
+
 pub mod permissions;
 pub mod run_rust;
 #[cfg(test)]
@@ -133,6 +136,9 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
         ))
         .with_state(app_state)
         .layer(DefaultBodyLimit::max(BODY_LIMIT_PADRAO))
+        .layer(axum::middleware::from_fn(
+            crate::middleware::rate_limit::enforce_global,
+        ))
         .layer(crate::middleware::cors::cors_layer())
         .layer(axum::middleware::from_fn(
             crate::middleware::request_id::propagate,
