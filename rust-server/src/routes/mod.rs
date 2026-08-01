@@ -43,7 +43,7 @@ mod shutdown_test;
 pub mod team;
 pub mod template;
 #[cfg(test)]
-mod test_support;
+pub(crate) mod test_support;
 pub mod user;
 
 pub async fn print_protected_route()
