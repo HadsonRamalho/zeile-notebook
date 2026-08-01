@@ -17,14 +17,15 @@ Whether prototyping an API, teaching a programming language, or documenting arch
 
 Executing third-party code on the server utilizes isolation layers to maintain stability and protect the system against abuse (such as DoS, cryptocurrency mining, or unauthorized access):
 
-1. **Static Analysis (AST/Regex):** Prior to compilation, the code is scanned to block compiler directives (e.g., `//go:generate`) and system imports (e.g., `include!` macros in Rust or `os/exec` subpackages in Go).
+1. **Static Analysis:** Prior to compilation, the code is scanned to block compiler directives (e.g., `//go:`) and system imports (e.g., `include!` macros in Rust or `os/exec` subpackages in Go). This is a filter, not the boundary — see the note under the layer table.
 2. **Container Isolation (Bubblewrap/Bwrap):** The compilation process and execution occur within a restricted environment.
    * *Network Namespace:* Removal of network access (`--unshare-all`) to prevent external connections.
    * *Filesystem Read-Only:* The base filesystem is mounted in read-only mode. The process only accesses a temporary virtual directory.
 3. **WebAssembly (WASI):** Rust code is compiled to Wasm and executed through the `wasmtime` engine, restricting direct access to the host architecture.
-4. **Kernel Limits (prlimit):** Processes have defined limits for CPU usage and thread count to mitigate resource exhaustion.
+4. **Kernel Limits (prlimit):** Processes have ceilings for CPU time, address space, file size and open descriptors, plus a process cap applied inside the namespace, to mitigate resource exhaustion and fork bombs.
 5. **Process Management:** Use of *Process Groups* (PGID) with defined timeouts to terminate infinite loop processes and their respective child threads.
-6. **Session Isolation:** Compilation workspaces are generated and mapped via UUID, preventing file collision between users sharing the same network.
+6. **Session Isolation:** Compilation workspaces are derived server-side from the authenticated user and the notebook, so the client cannot choose the path and one submission cannot land in another's workspace.
+7. **Environment Isolation:** The sandbox is entered with `--clearenv` and an explicit variable allowlist, so the server's own secrets never reach submitted code.
 
 ### The path of a submission
 
@@ -34,14 +35,16 @@ language:
 
 ```mermaid
 flowchart TD
-    A["Block submits code<br/>POST /api/..."] --> B{"1 · Static analysis<br/>sec::verify_code"}
+    A["Block submits code<br/>POST /api/..."] --> A2{"0 · Authenticated<br/>+ permission + rate limit"}
+    A2 -->|anonymous or over quota| R
+    A2 -->|accepted| B{"1 · Static analysis<br/>sec::verify_code"}
     B -->|blocked token or module| R["Rejected — nothing is written to disk"]
-    B -->|accepted| C["2 · Session workspace<br/>files/lang/uuid"]
+    B -->|accepted| C["2 · Workspace derived from<br/>user + notebook"]
     C --> D{Language}
 
     D -->|Rust| E["3 · Build inside bwrap<br/>--unshare-all, --die-with-parent<br/>read-only bind of /usr /lib /bin<br/>cargo build --offline<br/>target wasm32-wasip1"]
-    D -->|C++| F["Build under prlimit<br/>--cpu=10, --as=2 GiB"]
-    D -->|Go, Zig| G["Build on the host"]
+    D -->|C++| F["Build inside bwrap<br/>under prlimit"]
+    D -->|Go, Zig| G["Build inside bwrap<br/>with a shared build cache"]
 
     E --> H
     F --> H
@@ -57,18 +60,23 @@ flowchart TD
 
 | Layer | Mechanism | What it is there for | Where |
 |---|---|---|---|
-| 1 | token and module blocklist, `#![forbid(unsafe_code)]` prepended to Rust | stop the obvious before spending CPU on it | `src/sec/mod.rs` |
-| 2 | workspace named by session UUID | one submission cannot read or overwrite another's files | `src/executor/mod.rs` |
-| 3 | `bwrap` around the build | the compiler itself runs code (build scripts, macros) — for Rust that happens with no network and a read-only rootfs | `src/executor/mod.rs` |
-| 4 | `prlimit` + `bwrap` around the run | CPU ceiling, no network, no writable host filesystem | `src/file/mod.rs` |
-| 5 | `wasmtime` running WASI | Rust never becomes a native host binary | `src/file/mod.rs` |
-| 6 | `setpgid` + wall-clock timeout + `kill -9 -PGID` | an infinite loop, or a process that forks children, still dies | `src/file/mod.rs` |
+| 0 | authenticated request, `notebook.blocks.<lang>.execute` permission, per-language rate limit | nobody executes anonymously, and one origin cannot flood the queue | `src/http/mod.rs`, `src/routes/run_rust.rs` |
+| 1 | token, import and module blocklist, `#![forbid(unsafe_code)]` prepended to Rust | stop the obvious before spending CPU on it | `src/sec/mod.rs` |
+| 2 | workspace derived from user + notebook | one submission cannot read or overwrite another's files, and the client does not choose the path | `src/http/mod.rs`, `src/executor/mod.rs` |
+| 3 | `bwrap` around the build, with `prlimit`, a cleared environment and a wall-clock watchdog | the compiler itself runs code (build scripts, macros) — for Rust that happens with no network and a read-only rootfs | `src/executor/sandbox.rs` |
+| 4 | `prlimit` + `bwrap` around the run | CPU, address space, file size and descriptor ceilings; no network; no writable host filesystem | `src/file/mod.rs` |
+| 5 | `--clearenv` plus an explicit `--setenv` allowlist | the server's own environment (`JWT_SECRET`, `DATABASE_URL`, SMTP credentials) never reaches user code | `src/file/mod.rs` |
+| 6 | `--nproc` applied by a second `prlimit` **inside** the namespace | a fork bomb is capped without the host uid's thread count breaking `clone` | `src/file/mod.rs` |
+| 7 | `wasmtime` running WASI | Rust never becomes a native host binary | `src/file/mod.rs` |
+| 8 | `setpgid` + wall-clock timeout + `kill -9 -PGID` | an infinite loop, or a process that forks children, still dies | `src/file/mod.rs` |
 
-Judge and challenge submissions additionally pass through a semaphore (`JUDGE_CONCURRENCY`,
-default 2), so a burst of submissions cannot take the whole machine.
+Every execution route — `/api/run*` as well as judge and challenge submissions — passes through
+the same semaphore (`JUDGE_CONCURRENCY`, default 2), so a burst cannot take the whole machine.
 
-No single layer here is trusted on its own — the blocklist of layer 1 is a filter, not a proof,
-and it exists to make layers 3 to 6 cheaper, not to replace them.
+No single layer here is trusted on its own. Layer 1 is a filter, not a proof: it reads source
+text, so a determined submission can get past it (an escaped Go import path, a C++ identifier
+spelled unusually). It exists to make the later layers cheaper, not to replace them — the actual
+boundary is the `bwrap` envelope of layers 3 to 8.
 
 ## Architecture
 
