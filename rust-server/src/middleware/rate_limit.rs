@@ -33,6 +33,10 @@ pub const TEAM_INVITE: Quota = Quota::new(20, 3600);
 pub const JUDGE: Quota = Quota::new(10, 60);
 pub const REGISTER: Quota = Quota::new(5, 3600);
 
+/// Rotação legítima acontece a cada 15 minutos por sessão; a folga cobre várias
+/// abas do mesmo usuário sem servir de oráculo para força bruta de token.
+pub const REFRESH: Quota = Quota::new(60, 3600);
+
 pub const GLOBAL_USUARIO: Quota = Quota::new(600, 60);
 
 pub const GLOBAL_ORIGEM: Quota = Quota::new(2000, 60);

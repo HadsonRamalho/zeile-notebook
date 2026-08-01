@@ -7,7 +7,10 @@ use hyper::{HeaderMap, StatusCode};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode};
 use serde::{Deserialize, Serialize};
 
-const JWT_EXP_HOURS: i64 = 24 * 7;
+/// Validade do access token. Curta de propósito: a revogação de verdade mora no
+/// refresh token, que é conferido no banco a cada rotação. Com sete dias, um
+/// token vazado valia uma semana e não havia como cortar.
+const JWT_EXP_MINUTES: i64 = 15;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResetClaims {
@@ -100,9 +103,13 @@ pub fn get_jwt_secret_from_env() -> Result<String, ApiError> {
     }
 }
 
+pub fn access_token_ttl_secs() -> i64 {
+    JWT_EXP_MINUTES * 60
+}
+
 pub fn generate_jwt(input: UserAuthInfo) -> Result<String, ApiError> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::hours(JWT_EXP_HOURS))
+        .checked_add_signed(chrono::Duration::minutes(JWT_EXP_MINUTES))
         .expect("Invalid timestamp")
         .timestamp() as usize;
 
