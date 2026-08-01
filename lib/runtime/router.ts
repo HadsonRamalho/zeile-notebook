@@ -50,7 +50,10 @@ const LOCAL_WS_HOST =
 const ACCOUNT_COOKIE = "zeile_account";
 const REMOTE_TOKEN_COOKIE = "auth_token";
 const LOCAL_TOKEN_COOKIE = "local_auth_token";
+const REMOTE_REFRESH_COOKIE = "refresh_token";
+const LOCAL_REFRESH_COOKIE = "local_refresh_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+export const REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 const LOCAL_CAPABILITIES: ReadonlySet<Capability> = new Set([
   "auth",
@@ -98,6 +101,10 @@ export function setActiveAccount(account: AccountType) {
 
 export function tokenCookieName(account: AccountType = getActiveAccount()) {
   return account === "local" ? LOCAL_TOKEN_COOKIE : REMOTE_TOKEN_COOKIE;
+}
+
+export function refreshCookieName(account: AccountType = getActiveAccount()) {
+  return account === "local" ? LOCAL_REFRESH_COOKIE : REMOTE_REFRESH_COOKIE;
 }
 
 function isOnline(): boolean {
