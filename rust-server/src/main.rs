@@ -80,21 +80,41 @@ async fn run() -> Result<(), BootError> {
     });
 
     let graceful = state.shutdown.clone();
-    let server = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
-    )
-    .with_graceful_shutdown(async move { graceful.wait().await });
+    let mut server = tokio::spawn(async move {
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+        )
+        .with_graceful_shutdown(async move { graceful.wait().await })
+        .await
+    });
 
-    let served = match tokio::time::timeout(crate::shutdown::grace_period(), server).await {
-        Ok(result) => result,
-        Err(_) => {
-            tracing::warn!("shutdown: grace period elapsed with connections still open");
-            Ok(())
+    let served = tokio::select! {
+        finished = &mut server => join_result(finished),
+        _ = state.shutdown.wait() => {
+            match tokio::time::timeout(crate::shutdown::grace_period(), server).await {
+                Ok(finished) => join_result(finished),
+                Err(_) => {
+                    tracing::warn!("shutdown: grace period elapsed with connections still open");
+                    Ok(())
+                }
+            }
         }
     };
 
     crate::shutdown::drain(&state).await;
 
     served.map_err(BootError::Serve)
+}
+
+fn join_result(
+    finished: Result<std::io::Result<()>, tokio::task::JoinError>,
+) -> std::io::Result<()> {
+    match finished {
+        Ok(result) => result,
+        Err(join_error) => {
+            tracing::error!("shutdown: a task do servidor encerrou de forma anormal: {join_error}");
+            Ok(())
+        }
+    }
 }
