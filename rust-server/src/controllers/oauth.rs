@@ -62,6 +62,40 @@ fn oauth_unavailable() -> Redirect {
     Redirect::to(&format!("{frontend}/login?auth_error=oauth_unavailable"))
 }
 
+/// Redireciona para o front com o par de tokens. O access token de 15 minutos
+/// sozinho deixaria a sessão do OAuth cair em 15 minutos, sem como renovar.
+///
+/// O refresh viaja na query como o access token já viajava — o que significa que
+/// ambos passam pelo histórico do navegador. É a fraqueza que este fluxo já
+/// tinha; trocar por um código de troca de uso único é a evolução natural.
+async fn redirect_com_sessao(
+    conn: &mut diesel_async::AsyncPgConnection,
+    user: models::user::User,
+    base_redirect_url: &str,
+) -> axum::response::Response {
+    let user_id = user.id;
+
+    let Ok(token) = generate_jwt(UserAuthInfo::from(user)) else {
+        return Redirect::to(&format!("{}/login?auth_error=token", base_redirect_url))
+            .into_response();
+    };
+
+    let refresh = match models::refresh_token::emitir(conn, user_id).await {
+        Ok((_, refresh)) => refresh,
+        Err(e) => {
+            tracing::error!("falha ao emitir refresh token no OAuth: {e}");
+            return Redirect::to(&format!("{}/login?auth_error=token", base_redirect_url))
+                .into_response();
+        }
+    };
+
+    Redirect::to(&format!(
+        "{}/auth-callback?token={}&refresh={}",
+        base_redirect_url, token, refresh
+    ))
+    .into_response()
+}
+
 pub async fn api_github_login() -> Redirect {
     if !oauth_configured() {
         return oauth_unavailable();
@@ -223,13 +257,8 @@ pub async fn api_link_github_callback(
     }
 
     let base_redirect_url = get_var_from_env("FRONTEND_URL").unwrap();
-    let token = generate_jwt(UserAuthInfo::from(user)).unwrap();
 
-    Redirect::to(&format!(
-        "{}/auth-callback?token={}",
-        base_redirect_url, token
-    ))
-    .into_response()
+    redirect_com_sessao(conn, user, &base_redirect_url).await
 }
 
 async fn get_user_github_email(
@@ -307,12 +336,7 @@ pub async fn api_github_callback(
             ))
             .into_response();
         }
-        let token = generate_jwt(UserAuthInfo::from(user)).unwrap();
-        return Redirect::to(&format!(
-            "{}/auth-callback?token={}",
-            base_redirect_url, token
-        ))
-        .into_response();
+        return redirect_com_sessao(&mut conn, user, &base_redirect_url).await;
     }
 
     let _ = api_register_user(
@@ -336,12 +360,7 @@ pub async fn api_github_callback(
 
     let base_redirect_url = get_var_from_env("FRONTEND_URL").unwrap();
     if let Some(user) = user_exists {
-        let token = generate_jwt(UserAuthInfo::from(user)).unwrap();
-        return Redirect::to(&format!(
-            "{}/auth-callback?token={}",
-            base_redirect_url, token
-        ))
-        .into_response();
+        return redirect_com_sessao(&mut conn, user, &base_redirect_url).await;
     }
     Redirect::to(&base_redirect_url).into_response()
 }
