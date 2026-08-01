@@ -15,7 +15,7 @@ use crate::{
         notebook::{
             NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookDoc,
             PublicNotebookResponse, PublicSearchQuery, RankedSearchItem, RankedSearchQuery,
-            SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
+            BlockRequest, SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
             UpdateNotebookVisibility, delete_notebook, get_public_notebooks,
             update_notebook_title,
         },
@@ -253,6 +253,61 @@ pub async fn api_get_single_notebook_with_blocks(
     Ok((StatusCode::OK, Json(notebook)))
 }
 
+pub const MAX_BLOCOS: usize = 1000;
+
+pub const MAX_BYTES_POR_BLOCO: usize = 512 * 1024;
+
+pub const MAX_BYTES_TOTAIS: usize = 8 * 1024 * 1024;
+
+fn peso_do_bloco(bloco: &BlockRequest) -> usize {
+    let metadata = bloco
+        .metadata
+        .as_ref()
+        .and_then(|m| serde_json::to_vec(m).ok())
+        .map(|v| v.len())
+        .unwrap_or(0);
+
+    bloco.title.len() + bloco.content.len() + metadata
+}
+
+/// O teto de corpo da rota barra um payload gigante, mas não distingue mil
+/// blocos pequenos de um bloco enorme, e nem sequer olha metadata — que é Jsonb
+/// vindo do cliente e serviria de porta lateral para o mesmo abuso.
+pub fn validar_conteudo(payload: &SyncNotebookRequest) -> Result<(), ApiError> {
+    if payload.blocks.len() > MAX_BLOCOS {
+        return Err(ApiError::Request(format!(
+            "Notebook acima do limite de {} blocos (recebidos {}).",
+            MAX_BLOCOS,
+            payload.blocks.len()
+        )));
+    }
+
+    let mut total = payload.title.len();
+
+    for (indice, bloco) in payload.blocks.iter().enumerate() {
+        let peso = peso_do_bloco(bloco);
+
+        if peso > MAX_BYTES_POR_BLOCO {
+            return Err(ApiError::Request(format!(
+                "Bloco {} acima do limite de {} KB.",
+                indice + 1,
+                MAX_BYTES_POR_BLOCO / 1024
+            )));
+        }
+
+        total += peso;
+
+        if total > MAX_BYTES_TOTAIS {
+            return Err(ApiError::Request(format!(
+                "Conteúdo do notebook acima do limite de {} MB.",
+                MAX_BYTES_TOTAIS / (1024 * 1024)
+            )));
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn api_save_notebook_content(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -260,6 +315,8 @@ pub async fn api_save_notebook_content(
     Json(payload): Json<SyncNotebookRequest>,
 ) -> Result<StatusCode, ApiError> {
     let id = extract_claims_from_header(&headers).await?.1.id;
+
+    validar_conteudo(&payload)?;
 
     crate::controllers::permissions::require(
         &state.pool,
@@ -442,4 +499,87 @@ pub async fn api_get_public_notebooks(
         StatusCode::OK,
         Json(get_public_notebooks(&mut conn, q).await?),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use models::notebook::{BlockType, SyncNotebookRequest};
+
+    fn bloco(conteudo: &str) -> BlockRequest {
+        BlockRequest {
+            id: Uuid::new_v4(),
+            title: "bloco".to_string(),
+            block_type: BlockType::Text,
+            content: conteudo.to_string(),
+            language: None,
+            metadata: None,
+        }
+    }
+
+    fn pedido(blocos: Vec<BlockRequest>) -> SyncNotebookRequest {
+        SyncNotebookRequest {
+            title: "notebook".to_string(),
+            blocks: blocos,
+            is_public: false,
+        }
+    }
+
+    #[test]
+    fn um_notebook_comum_passa() {
+        let blocos = (0..50).map(|i| bloco(&format!("conteúdo {i}"))).collect();
+
+        assert!(validar_conteudo(&pedido(blocos)).is_ok());
+    }
+
+    #[test]
+    fn barra_bloco_unico_gigante() {
+        let gordo = "x".repeat(MAX_BYTES_POR_BLOCO + 1);
+
+        let erro = validar_conteudo(&pedido(vec![bloco(&gordo)]))
+            .expect_err("bloco acima do teto deveria ser recusado");
+
+        assert!(erro.to_string().contains("Bloco 1"), "{erro}");
+    }
+
+    #[test]
+    fn barra_excesso_de_blocos() {
+        let blocos = (0..MAX_BLOCOS + 1).map(|_| bloco("oi")).collect();
+
+        let erro = validar_conteudo(&pedido(blocos)).expect_err("excesso de blocos passou");
+
+        assert!(erro.to_string().contains("blocos"), "{erro}");
+    }
+
+    #[test]
+    fn barra_soma_de_blocos_pequenos() {
+        let pedaco = "y".repeat(MAX_BYTES_POR_BLOCO / 2);
+        let quantos = MAX_BYTES_TOTAIS / pedaco.len() + 2;
+        let blocos = (0..quantos).map(|_| bloco(&pedaco)).collect();
+
+        let erro = validar_conteudo(&pedido(blocos))
+            .expect_err("muitos blocos válidos somando acima do total deveriam ser recusados");
+
+        assert!(erro.to_string().contains("MB"), "{erro}");
+    }
+
+    #[test]
+    fn metadata_nao_e_porta_lateral() {
+        let mut b = bloco("pequeno");
+        b.metadata = serde_json::from_str(&format!(
+            "{{\"type\":\"generic\",\"lixo\":\"{}\"}}",
+            "z".repeat(MAX_BYTES_POR_BLOCO)
+        ))
+        .ok();
+
+        assert!(
+            b.metadata.is_some(),
+            "o teste precisa de metadata preenchido para valer"
+        );
+
+        let erro = validar_conteudo(&pedido(vec![b]))
+            .expect_err("metadata gigante deveria contar no peso do bloco");
+
+        assert!(erro.to_string().contains("Bloco 1"), "{erro}");
+    }
 }

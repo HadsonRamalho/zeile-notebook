@@ -89,7 +89,11 @@ pub fn establish_connection(config: &str) -> BoxFuture<'_, ConnectionResult<Asyn
 }
 
 pub const BODY_LIMIT_PADRAO: usize = 1024 * 1024;
-pub const BODY_LIMIT_CONTEUDO: usize = 1024 * 1024 * 100;
+
+/// Teto do corpo da rota de conteúdo. O `Json<T>` desserializa tudo em memória
+/// antes de qualquer validação, então o número que importa é este multiplicado
+/// pela concorrência esperada — não o tamanho de um notebook plausível.
+pub const BODY_LIMIT_CONTEUDO: usize = 1024 * 1024 * 20;
 
 pub async fn build_router(app_state: Arc<AppState>) -> Router {
     let app = OpenApiRouter::<Arc<AppState>>::new()
