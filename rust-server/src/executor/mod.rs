@@ -112,7 +112,7 @@ async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> 
         .com_env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir))
         .com_env("RUSTUP_HOME", rustup_dir)
         .com_env("CARGO_HOME", cargo_dir)
-        .command(
+        .executar(
             "cargo",
             &[
                 "build",
@@ -122,9 +122,7 @@ async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> 
                 "-q",
             ],
         )
-        .output()
-        .await
-        .map_err(|e| format!("Erro ao invocar cargo: {}", e))?;
+        .await?;
 
     let stdout_str = String::from_utf8_lossy(&compile_output.stdout);
     let mut formatted_errors = String::new();
@@ -196,18 +194,17 @@ async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
         .com_env("GOPATH", "/app/.go")
         .com_env("CGO_ENABLED", "0")
         .com_env("GOTOOLCHAIN", "local")
-        .command(&go_path, &["build", "-o", &bin_name, "main.go"])
-        .output()
-        .await;
+        .executar(&go_path, &["build", "-o", &bin_name, "main.go"])
+        .await?;
 
-    match compile_output {
-        Ok(out) if out.status.success() => Ok(bin_path.to_string_lossy().to_string()),
-        Ok(out) => Err(format!(
-            "Erro de Compilação Go:\n{}",
-            String::from_utf8_lossy(&out.stderr)
-        )),
-        Err(e) => Err(format!("Falha ao invocar compilador Go: {}", e)),
+    if compile_output.status.success() {
+        return Ok(bin_path.to_string_lossy().to_string());
     }
+
+    Err(format!(
+        "Erro de Compilação Go:\n{}",
+        String::from_utf8_lossy(&compile_output.stderr)
+    ))
 }
 
 async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
@@ -227,21 +224,20 @@ async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
     let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
     let compile_output = CompileSandbox::new(caminho_absoluto(&user_dir)?)
         .com_compilador(&cpp_path)
-        .command(
+        .executar(
             &cpp_path,
             &["-O2", "-std=c++20", "-o", &bin_name, "main.cpp"],
         )
-        .output()
-        .await;
+        .await?;
 
-    match compile_output {
-        Ok(out) if out.status.success() => Ok(bin_path.to_string_lossy().to_string()),
-        Ok(out) => Err(format!(
-            "Erro de Compilação C++:\n{}",
-            String::from_utf8_lossy(&out.stderr)
-        )),
-        Err(e) => Err(format!("Falha ao invocar compilador C++: {}", e)),
+    if compile_output.status.success() {
+        return Ok(bin_path.to_string_lossy().to_string());
     }
+
+    Err(format!(
+        "Erro de Compilação C++:\n{}",
+        String::from_utf8_lossy(&compile_output.stderr)
+    ))
 }
 
 async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
@@ -266,7 +262,7 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
     let cache_global = sandbox.cache_path("zig");
 
     let compile_output = sandbox
-        .command(
+        .executar(
             &zig_path,
             &[
                 "build-exe",
@@ -281,17 +277,16 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
                 "main.zig",
             ],
         )
-        .output()
-        .await;
+        .await?;
 
-    match compile_output {
-        Ok(out) if out.status.success() => Ok(bin_path.to_string_lossy().to_string()),
-        Ok(out) => Err(format!(
-            "Erro de Compilação Zig:\n{}",
-            String::from_utf8_lossy(&out.stderr)
-        )),
-        Err(e) => Err(format!("Falha ao invocar compilador Zig: {}", e)),
+    if compile_output.status.success() {
+        return Ok(bin_path.to_string_lossy().to_string());
     }
+
+    Err(format!(
+        "Erro de Compilação Zig:\n{}",
+        String::from_utf8_lossy(&compile_output.stderr)
+    ))
 }
 
 #[cfg(test)]

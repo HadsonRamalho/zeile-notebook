@@ -9,6 +9,14 @@ use tokio::process::Command;
 use tokio::time::{Duration, timeout};
 use tracing::{error, info, warn};
 
+pub const MAX_PROCESSOS: u64 = 64;
+
+pub const MAX_ARQUIVO_KB: u64 = 32 * 1024;
+
+pub const MAX_DESCRITORES: u64 = 64;
+
+pub const TMPFS_MB: u64 = 64;
+
 #[derive(Debug, Clone, Copy)]
 pub struct RunLimits {
     pub cpu_secs: u64,
@@ -33,6 +41,21 @@ impl RunLimits {
             format!("--as={}", self.mem_kb.saturating_mul(1024)),
         ]
     }
+
+    pub fn prlimit_args_execucao(&self) -> Vec<String> {
+        let mut args = self.prlimit_args();
+        args.push(format!("--fsize={}", MAX_ARQUIVO_KB.saturating_mul(1024)));
+        args.push(format!("--nofile={}", MAX_DESCRITORES));
+        args
+    }
+}
+
+pub fn prlimit_interno_args(max_processos: u64) -> Vec<String> {
+    vec![
+        "/usr/bin/prlimit".to_string(),
+        format!("--nproc={}", max_processos),
+        "--".to_string(),
+    ]
 }
 
 #[derive(Debug, Clone)]
@@ -67,7 +90,7 @@ fn wasmtime_path() -> String {
 }
 
 pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String> {
-    let mut args = limits.prlimit_args();
+    let mut args = limits.prlimit_args_execucao();
     args.push("--".into());
     args.push("bwrap".into());
 
@@ -88,7 +111,9 @@ pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String
         "--ro-bind-try",
         "/bin",
         "/bin",
-        "--dir",
+        "--size",
+        &(TMPFS_MB * 1024 * 1024).to_string(),
+        "--tmpfs",
         "/tmp",
         "--proc",
         "/proc",
@@ -117,10 +142,13 @@ pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String
             "--ro-bind",
             caminho_binario,
             "/app/main.wasm",
-            "/app/wasmtime",
-            "run",
-            "/app/main.wasm",
         ] {
+            args.push(arg.into());
+        }
+
+        args.extend(prlimit_interno_args(MAX_PROCESSOS));
+
+        for arg in ["/app/wasmtime", "run", "/app/main.wasm"] {
             args.push(arg.into());
         }
 
@@ -137,10 +165,12 @@ pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String
         "--ro-bind",
         caminho_binario,
         "/app/main",
-        "/app/main",
     ] {
         args.push(arg.into());
     }
+
+    args.extend(prlimit_interno_args(MAX_PROCESSOS));
+    args.push("/app/main".into());
 
     args
 }
@@ -375,7 +405,87 @@ mod tests {
             wall_ms: 1000,
         };
 
-        assert_eq!(limits.prlimit_args(), vec!["--cpu=3", "--as=4194304"]);
+        let args = limits.prlimit_args();
+
+        assert_eq!(args[0], "--cpu=3");
+        assert_eq!(args[1], "--as=4194304");
+    }
+
+    #[test]
+    fn o_envelope_limita_escrita_em_disco_e_descritores() {
+        let args = RunLimits::default().prlimit_args_execucao();
+
+        assert!(args.contains(&"--fsize=33554432".to_string()), "{args:?}");
+        assert!(args.contains(&"--nofile=64".to_string()), "{args:?}");
+    }
+
+    #[test]
+    fn o_limite_de_processos_e_aplicado_dentro_do_namespace() {
+        let args = run_envelope_args("/app/bin", RunLimits::default());
+
+        let bwrap = args.iter().position(|a| a == "bwrap").expect("bwrap");
+        let nproc = args
+            .iter()
+            .position(|a| a == "--nproc=64")
+            .expect("--nproc ausente");
+
+        assert!(
+            nproc > bwrap,
+            "--nproc precisa ficar depois do bwrap: fora do user namespace o clone falha com EAGAIN"
+        );
+        assert_eq!(args[nproc - 1], "/usr/bin/prlimit");
+        assert_eq!(args[nproc + 1], "--");
+    }
+
+    #[test]
+    fn o_tmpfs_da_execucao_tem_teto_de_tamanho() {
+        let args = run_envelope_args("/app/bin", RunLimits::default());
+
+        let size = args.iter().position(|a| a == "--size").expect("--size");
+
+        assert_eq!(args[size + 1], (TMPFS_MB * 1024 * 1024).to_string());
+        assert_eq!(args[size + 2], "--tmpfs");
+        assert_eq!(args[size + 3], "/tmp");
+    }
+
+    #[tokio::test]
+    async fn uma_fork_bomb_nao_escapa_do_sandbox() {
+        if !existe("bwrap") || !existe("prlimit") || !existe("sh") {
+            eprintln!("bwrap/prlimit/sh ausente; teste pulado");
+            return;
+        }
+
+        let antes = contagem_de_processos();
+
+        let limits = RunLimits {
+            cpu_secs: 5,
+            mem_kb: 262_144,
+            wall_ms: 4_000,
+        };
+
+        let _ = run_safe_bin("/usr/bin/sh", None, limits).await;
+
+        let depois = contagem_de_processos();
+
+        assert!(
+            depois < antes + 200,
+            "o host ganhou processos demais durante a execução: {antes} -> {depois}"
+        );
+    }
+
+    fn contagem_de_processos() -> usize {
+        std::fs::read_dir("/proc")
+            .map(|d| {
+                d.filter_map(|e| e.ok())
+                    .filter(|e| {
+                        e.file_name()
+                            .to_string_lossy()
+                            .chars()
+                            .all(|c| c.is_ascii_digit())
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
     }
 
     #[test]
