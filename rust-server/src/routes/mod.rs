@@ -96,6 +96,8 @@ pub const BODY_LIMIT_PADRAO: usize = 1024 * 1024;
 pub const BODY_LIMIT_CONTEUDO: usize = 1024 * 1024 * 20;
 
 pub async fn build_router(app_state: Arc<AppState>) -> Router {
+    let app_state_para_sessao = app_state.clone();
+
     let app = OpenApiRouter::<Arc<AppState>>::new()
         .route("/common", get(print_common_route))
         .route(
@@ -140,6 +142,10 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
         ))
         .with_state(app_state)
         .layer(DefaultBodyLimit::max(BODY_LIMIT_PADRAO))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state_para_sessao,
+            crate::controllers::session::enforce_session,
+        ))
         .layer(axum::middleware::from_fn(
             crate::middleware::rate_limit::enforce_global,
         ))

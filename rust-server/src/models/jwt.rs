@@ -9,4 +9,8 @@ pub struct Claims {
     pub role: UserRole,
     pub email: String,
     pub exp: usize,
+    /// Instante de emissão. Opcional para que token emitido antes desta versão
+    /// continue decodificando em vez de derrubar todas as sessões no deploy.
+    #[serde(default)]
+    pub iat: Option<i64>,
 }

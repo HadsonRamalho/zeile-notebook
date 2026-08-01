@@ -16,6 +16,7 @@ pub mod notifications;
 pub mod oauth;
 pub mod permissions;
 pub mod push;
+pub mod session;
 pub mod shutdown;
 pub mod sync;
 pub mod team;

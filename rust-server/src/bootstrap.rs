@@ -172,6 +172,7 @@ pub fn build_state(pool: Pool<AsyncPgConnection>) -> Result<Arc<AppState>, BootE
         sync_registry,
         push: crate::controllers::push::load_push_state(),
         judge_semaphore: Arc::new(tokio::sync::Semaphore::new(judge_concurrency()?)),
+        sessoes: Arc::new(crate::controllers::session::CacheDeSessao::new()),
         shutdown: crate::shutdown::Shutdown::new(),
     }))
 }
