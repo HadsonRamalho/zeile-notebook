@@ -179,6 +179,8 @@ pub fn build_state(pool: Pool<AsyncPgConnection>) -> Result<Arc<AppState>, BootE
 pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
     until_shutdown(state, crate::controllers::utils::auto_delete_files());
 
+    until_shutdown(state, crate::controllers::utils::auto_delete_logs());
+
     until_shutdown(
         state,
         crate::controllers::websocket::checkpoint_loop(
