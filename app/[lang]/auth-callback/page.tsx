@@ -10,11 +10,12 @@ function AuthContent() {
   const searchParams = useSearchParams();
   const { githubSignIn } = useAuth();
   const token = searchParams.get("token");
+  const refreshToken = searchParams.get("refresh");
   const error = searchParams.get("error") || searchParams.get("auth_error");
 
   useEffect(() => {
     if (token) {
-      githubSignIn(token);
+      githubSignIn(token, refreshToken ?? undefined);
       return;
     }
     if (error) {

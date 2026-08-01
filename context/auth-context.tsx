@@ -9,6 +9,12 @@ import { createApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { deleteAccount } from "@/lib/api/user-service";
 import {
+  encerrarSessaoNoServidor,
+  guardarSessao,
+  limparSessao,
+  type Sessao,
+} from "@/lib/api/session";
+import {
   type AccountType,
   getActiveAccount,
   setActiveAccount,
@@ -21,11 +27,11 @@ const authApi = createApi("auth");
 interface AuthContextType {
   user: User | null;
   account: AccountType;
-  githubSignIn: (token: string) => void;
+  githubSignIn: (token: string, refreshToken?: string) => void;
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (data: LoginUser, account?: AccountType) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   register: (data: RegisterUser, account?: AccountType) => Promise<void>;
   deleteProfile: () => Promise<void>;
 }
@@ -68,10 +74,18 @@ export function AuthProvider({
     loadUserFromSession();
   }, []);
 
-  const githubSignIn = async (token: string) => {
+  const githubSignIn = async (token: string, refreshToken?: string) => {
     setActiveAccount("cloud");
     setAccount("cloud");
-    setCookie(tokenCookieName("cloud"), token, { maxAge: 60 * 60 * 24 * 7 });
+
+    guardarSessao(
+      {
+        accessToken: token,
+        refreshToken: refreshToken ?? "",
+        expiresInSecs: 15 * 60,
+      },
+      "cloud",
+    );
 
     const profile = await authApi.get<User>("/user/me");
 
@@ -84,9 +98,9 @@ export function AuthProvider({
     setActiveAccount(target);
     setAccount(target);
 
-    const token = await authApi.post<string>("/user/login", data);
+    const sessao = await authApi.post<Sessao>("/user/login", data);
 
-    setCookie(tokenCookieName(target), token, { maxAge: 60 * 60 * 24 * 7 });
+    guardarSessao(sessao, target);
 
     const profile = await authApi.get<User>("/user/me");
 
@@ -99,12 +113,12 @@ export function AuthProvider({
     setActiveAccount(target);
     setAccount(target);
 
-    const token = await authApi.post<string>("/user/register", {
+    const sessao = await authApi.post<Sessao>("/user/register", {
       ...data,
       primary_provider: "Email",
     });
 
-    setCookie(tokenCookieName(target), token, { maxAge: 60 * 60 * 24 * 7 });
+    guardarSessao(sessao, target);
 
     const profile = await authApi.get<User>("/user/me");
 
@@ -116,13 +130,17 @@ export function AuthProvider({
   const deleteProfile = async () => {
     await deleteAccount();
 
-    deleteCookie(tokenCookieName(account));
+    limparSessao(account);
     setUser(null);
     router.push("/");
   };
 
-  const signOut = () => {
-    deleteCookie(tokenCookieName(account));
+  const signOut = async () => {
+    // Revoga no servidor antes de esquecer localmente: sem isso o refresh token
+    // seguiria válido por trinta dias em quem tiver uma copia dele.
+    await encerrarSessaoNoServidor(account);
+
+    limparSessao(account);
     setUser(null);
   };
 
