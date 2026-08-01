@@ -30,7 +30,6 @@ export function ZigEditorMDX({
       block={block}
       onCodeChange={setCode}
       isDragging={false}
-      sessionId={"1234-1234-1234-1234"}
     />
   );
 }

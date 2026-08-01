@@ -82,7 +82,6 @@ export default function RustInteractivePage({
   const { isDragging, setIsDragging, setLiveNotebook } = useNotebook();
   const tokenX = getCookie(tokenCookieName());
   const token = tokenX?.toString() || "";
-  const sessionId = useRef(crypto.randomUUID()).current;
   const capabilities = useCapabilities(pageId);
   const {
     can: canDo,
@@ -544,7 +543,6 @@ export default function RustInteractivePage({
             <PresentationMode
               blocks={blocks}
               doc={displayDoc}
-              sessionId={sessionId}
               notebookId={pageId}
               updateBlock={updateBlockContent}
               updateBlockMetadata={updateBlockMetadataSync}
@@ -651,7 +649,6 @@ export default function RustInteractivePage({
                         updateBlockMetadata={updateBlockMetadataSync}
                         updateDrawingScene={updateDrawingScene}
                         doc={doc}
-                        sessionId={sessionId}
                         notebookId={pageId}
                         canWrite={!previewDoc && !!userPermissions?.can_write}
                       />

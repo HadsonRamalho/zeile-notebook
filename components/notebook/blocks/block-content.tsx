@@ -119,7 +119,6 @@ interface BlockContentProps {
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
   updateDrawingScene: (id: string, elements: readonly DrawingElement[]) => void;
   doc: Notebook | null;
-  sessionId: string;
   notebookId?: string;
   canEditContent: boolean;
   canExecute: boolean;
@@ -134,7 +133,6 @@ export function BlockContent({
   updateBlockMetadata,
   updateDrawingScene,
   doc,
-  sessionId,
   notebookId,
   canEditContent,
   canExecute,
@@ -256,7 +254,6 @@ export function BlockContent({
         <GoEditor
           block={block}
           isDragging={isDragging}
-          sessionId={sessionId}
           notebookId={notebookId}
           canExecute={canExecute}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
@@ -265,7 +262,6 @@ export function BlockContent({
         <CppEditor
           block={block}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
-          sessionId={sessionId}
           notebookId={notebookId}
           canExecute={canExecute}
         />
@@ -273,7 +269,6 @@ export function BlockContent({
         <ZigEditor
           block={block}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
-          sessionId={sessionId}
           notebookId={notebookId}
           canExecute={canExecute}
         />
@@ -316,7 +311,6 @@ export function BlockContent({
         <RustEditor
           block={block}
           isDragging={isDragging}
-          sessionId={sessionId}
           notebookId={notebookId}
           canExecute={canExecute}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
