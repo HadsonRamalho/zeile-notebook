@@ -31,6 +31,26 @@ pub const LOGIN: Quota = Quota::new(10, 60);
 pub const PASSWORD_RESET: Quota = Quota::new(5, 300);
 pub const TEAM_INVITE: Quota = Quota::new(20, 3600);
 pub const JUDGE: Quota = Quota::new(10, 60);
+pub const REGISTER: Quota = Quota::new(5, 3600);
+
+pub const GLOBAL_USUARIO: Quota = Quota::new(600, 60);
+
+pub const GLOBAL_ORIGEM: Quota = Quota::new(2000, 60);
+
+pub const DESLIGA_VAR: &str = "ZEILE_RATE_LIMIT_OFF";
+
+const CAMINHOS_LIVRES: [&str; 3] = ["/health/live", "/health/ready", "/internal/shutdown"];
+
+pub fn limite_global_desligado() -> bool {
+    std::env::var(DESLIGA_VAR).is_ok_and(|valor| {
+        let valor = valor.trim().to_ascii_lowercase();
+        valor == "1" || valor == "true" || valor == "on" || valor == "yes"
+    })
+}
+
+pub fn caminho_livre(path: &str) -> bool {
+    CAMINHOS_LIVRES.contains(&path)
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Decision {
@@ -144,6 +164,28 @@ pub fn client_key(request: &Request) -> String {
         .unwrap_or_else(|| "sem-origem".to_string())
 }
 
+fn resposta_limitada(bucket: &str, client: &str, retry_after: u64) -> Response {
+    tracing::warn!("rate limit atingido em {bucket} por {client}; libera em {retry_after}s");
+
+    let mut response = (
+        StatusCode::TOO_MANY_REQUESTS,
+        axum::Json(json!({
+            "error": "Too many requests",
+            "errorCode": "RATE_LIMITED",
+            "retryAfter": retry_after,
+        })),
+    )
+        .into_response();
+
+    if let Ok(value) = HeaderValue::from_str(&retry_after.to_string()) {
+        response
+            .headers_mut()
+            .insert(hyper::header::RETRY_AFTER, value);
+    }
+
+    response
+}
+
 pub async fn enforce(State(config): State<RateLimit>, request: Request, next: Next) -> Response {
     let client = client_key(&request);
 
@@ -153,30 +195,41 @@ pub async fn enforce(State(config): State<RateLimit>, request: Request, next: Ne
     {
         Decision::Allowed => next.run(request).await,
         Decision::Limited { retry_after } => {
-            tracing::warn!(
-                "rate limit atingido em {} por {client}; libera em {retry_after}s",
-                config.bucket
-            );
-
-            let mut response = (
-                StatusCode::TOO_MANY_REQUESTS,
-                axum::Json(json!({
-                    "error": "Too many requests",
-                    "errorCode": "RATE_LIMITED",
-                    "retryAfter": retry_after,
-                })),
-            )
-                .into_response();
-
-            if let Ok(value) = HeaderValue::from_str(&retry_after.to_string()) {
-                response
-                    .headers_mut()
-                    .insert(hyper::header::RETRY_AFTER, value);
-            }
-
-            response
+            resposta_limitada(config.bucket, &client, retry_after)
         }
     }
+}
+
+/// Teto global de requisições. Tráfego autenticado é contado por usuário, e não
+/// por IP: uma sala de aula atrás de um NAT compartilha o IP, então um teto por
+/// origem estrangularia uso legítimo. O bucket por origem cobre só o tráfego
+/// anônimo, onde não existe identidade para cobrar.
+pub async fn enforce_global(request: Request, next: Next) -> Response {
+    if limite_global_desligado() || caminho_livre(request.uri().path()) {
+        return next.run(request).await;
+    }
+
+    let limiter = shared();
+    let agora = Instant::now();
+
+    let headers = request.headers().clone();
+
+    let (bucket, chave, quota) = match usuario_da_requisicao(&headers).await {
+        Some(user_id) => ("global-usuario", user_id, GLOBAL_USUARIO),
+        None => ("global-origem", client_key(&request), GLOBAL_ORIGEM),
+    };
+
+    match limiter.check(bucket, &chave, quota, agora) {
+        Decision::Allowed => next.run(request).await,
+        Decision::Limited { retry_after } => resposta_limitada(bucket, &chave, retry_after),
+    }
+}
+
+async fn usuario_da_requisicao(headers: &hyper::HeaderMap) -> Option<String> {
+    crate::controllers::jwt::extract_claims_from_header(headers)
+        .await
+        .ok()
+        .map(|(_, claims)| claims.id.to_string())
 }
 
 #[cfg(test)]
