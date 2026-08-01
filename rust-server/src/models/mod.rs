@@ -13,6 +13,7 @@ pub mod notification_preference;
 pub mod oauth;
 pub mod permission_grant;
 pub mod push_subscription;
+pub mod refresh_token;
 pub mod state;
 pub mod team;
 pub mod team_invitation;

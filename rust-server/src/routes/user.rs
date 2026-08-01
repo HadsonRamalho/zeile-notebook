@@ -10,8 +10,8 @@ use crate::{
         },
         user::{
             api_delete_user, api_execute_password_reset, api_get_logged_user, api_login_user,
-            api_register_user, api_request_password_reset, api_update_user_data,
-            api_update_user_password,
+            api_logout, api_refresh_session, api_register_user, api_request_password_reset,
+            api_update_user_data, api_update_user_password,
         },
     },
     models::state::AppState,
@@ -35,6 +35,14 @@ pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
                 crate::middleware::rate_limit::LOGIN
             )),
         )
+        .route(
+            "/refresh",
+            post(api_refresh_session).route_layer(crate::rate_limit!(
+                "user-refresh",
+                crate::middleware::rate_limit::REFRESH
+            )),
+        )
+        .route("/logout", post(api_logout))
         .route("/update", patch(api_update_user_data))
         .route("/password", patch(api_update_user_password))
         .route(

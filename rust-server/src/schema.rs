@@ -318,6 +318,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    refresh_tokens (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        #[max_length = 64]
+        token_hash -> Varchar,
+        expires_at -> Timestamptz,
+        created_at -> Timestamptz,
+        revoked_at -> Nullable<Timestamptz>,
+        replaced_by -> Nullable<Uuid>,
+    }
+}
+
+diesel::table! {
     team_invitations (id) {
         id -> Uuid,
         team_id -> Uuid,
@@ -456,6 +469,7 @@ diesel::joinable!(notifications -> teams (team_id));
 diesel::joinable!(notifications -> users (user_id));
 diesel::joinable!(permission_grants -> teams (scope_team_id));
 diesel::joinable!(push_subscriptions -> users (user_id));
+diesel::joinable!(refresh_tokens -> users (user_id));
 diesel::joinable!(team_invitations -> team_roles (role_id));
 diesel::joinable!(team_invitations -> teams (team_id));
 diesel::joinable!(team_members -> team_roles (role_id));
@@ -485,6 +499,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     notifications,
     permission_grants,
     push_subscriptions,
+    refresh_tokens,
     team_invitations,
     team_members,
     team_roles,

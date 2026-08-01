@@ -31,7 +31,7 @@ use crate::{
 pub async fn api_register_user(
     State(state): State<Arc<AppState>>,
     input: Json<NewUser>,
-) -> Result<(StatusCode, Json<String>), ApiError> {
+) -> Result<(StatusCode, Json<SessaoResponse>), ApiError> {
     let mut user_input = input.0;
     user_input.sanitize();
 
@@ -52,15 +52,41 @@ pub async fn api_register_user(
         Err(e) => return Err(ApiError::Database(e)),
     };
 
+    let user_id = user.id;
     let token = generate_jwt(UserAuthInfo::from(user))?;
-    Ok((StatusCode::CREATED, Json(token)))
+    let (_, refresh) = models::refresh_token::emitir(conn, user_id).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(SessaoResponse {
+            access_token: token,
+            refresh_token: refresh,
+            expires_in_secs: crate::controllers::jwt::access_token_ttl_secs(),
+        }),
+    ))
+}
+
+#[derive(serde::Serialize)]
+pub struct SessaoResponse {
+    #[serde(rename = "accessToken")]
+    pub access_token: String,
+    #[serde(rename = "refreshToken")]
+    pub refresh_token: String,
+    #[serde(rename = "expiresInSecs")]
+    pub expires_in_secs: i64,
+}
+
+#[derive(serde::Deserialize)]
+pub struct RefreshPayload {
+    #[serde(rename = "refreshToken")]
+    pub refresh_token: String,
 }
 
 #[utoipa::path(post, path = "/user/login", responses((status = OK, body = String), (status = 401, body = ApiError)))]
 pub async fn api_login_user(
     State(state): State<Arc<AppState>>,
     Json(input): Json<LoginUser>,
-) -> Result<Json<String>, ApiError> {
+) -> Result<Json<SessaoResponse>, ApiError> {
     let mut user_input = input;
     user_input.sanitize();
 
@@ -106,9 +132,76 @@ pub async fn api_login_user(
         }
     }
 
+    let user_id = user.id;
+    let token = generate_jwt(UserAuthInfo::from(user))?;
+    let (_, refresh) = models::refresh_token::emitir(conn, user_id).await?;
+
+    Ok(Json(SessaoResponse {
+        access_token: token,
+        refresh_token: refresh,
+        expires_in_secs: crate::controllers::jwt::access_token_ttl_secs(),
+    }))
+}
+
+/// Troca um refresh token por um par novo. O token usado é revogado e aponta
+/// para o substituto, então reuso de token já rotacionado é detectável.
+pub async fn api_refresh_session(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<RefreshPayload>,
+) -> Result<Json<SessaoResponse>, ApiError> {
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    let atual = models::refresh_token::buscar_por_token(conn, &payload.refresh_token).await?;
+
+    if !atual.utilizavel(chrono::Utc::now()) {
+        // Reuso de um token já rotacionado é sinal de vazamento: derruba a
+        // familia inteira em vez de só recusar esta tentativa.
+        if atual.replaced_by.is_some() {
+            tracing::warn!(
+                "reuso de refresh token rotacionado do usuário {}; revogando sessões",
+                atual.user_id
+            );
+            let _ = models::refresh_token::revogar_do_usuario(conn, atual.user_id).await;
+            state.sessoes.invalidar(atual.user_id);
+        }
+
+        return Err(ApiError::InvalidAuthorizationToken);
+    }
+
+    let user = models::user::find_user_by_id(conn, &atual.user_id).await?;
+
+    if !user.is_active || user.deleted_at.is_some() {
+        return Err(ApiError::NotActiveUser);
+    }
+
+    let (_, refresh) = models::refresh_token::rotacionar(conn, &atual).await?;
     let token = generate_jwt(UserAuthInfo::from(user))?;
 
-    Ok(Json(token))
+    Ok(Json(SessaoResponse {
+        access_token: token,
+        refresh_token: refresh,
+        expires_in_secs: crate::controllers::jwt::access_token_ttl_secs(),
+    }))
+}
+
+pub async fn api_logout(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<RefreshPayload>,
+) -> Result<StatusCode, ApiError> {
+    let conn = &mut get_conn(&state.pool)
+        .await
+        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+
+    // Logout de token desconhecido responde OK: dizer que não existe entregaria
+    // um oráculo de tokens válidos.
+    if let Ok(atual) = models::refresh_token::buscar_por_token(conn, &payload.refresh_token).await {
+        models::refresh_token::revogar(conn, atual.id).await?;
+        state.sessoes.invalidar(atual.user_id);
+    }
+
+    Ok(StatusCode::OK)
 }
 
 pub async fn api_update_user_data(
@@ -212,10 +305,14 @@ pub async fn api_update_user_password(
 
     let password_hash = password_hash(&user_input.new_password);
 
-    match models::user::update_user_password(conn, &id, password_hash).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => Err(e),
-    }
+    models::user::update_user_password(conn, &id, password_hash).await?;
+
+    let revogados = models::refresh_token::revogar_do_usuario(conn, id).await?;
+    state.sessoes.invalidar(id);
+
+    tracing::info!("senha trocada; {revogados} sessão(ões) revogada(s) do usuário {id}");
+
+    Ok(StatusCode::OK)
 }
 
 pub fn get_user_owner_permissions() -> TeamRole {
@@ -355,8 +452,15 @@ pub async fn api_execute_password_reset(
 
     let hashed_password = crate::controllers::utils::password_hash(&payload.new_password);
 
-    match models::user::update_user_password(conn, &claims.sub, hashed_password).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => Err(e),
-    }
+    models::user::update_user_password(conn, &claims.sub, hashed_password).await?;
+
+    let revogados = models::refresh_token::revogar_do_usuario(conn, claims.sub).await?;
+    state.sessoes.invalidar(claims.sub);
+
+    tracing::info!(
+        "senha redefinida; {revogados} sessão(ões) revogada(s) do usuário {}",
+        claims.sub
+    );
+
+    Ok(StatusCode::OK)
 }

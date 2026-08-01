@@ -184,6 +184,11 @@ pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
 
     until_shutdown(
         state,
+        crate::controllers::utils::auto_delete_refresh_tokens(state.pool.clone()),
+    );
+
+    until_shutdown(
+        state,
         crate::controllers::websocket::checkpoint_loop(
             state.sync_registry.clone(),
             state.pool.clone(),

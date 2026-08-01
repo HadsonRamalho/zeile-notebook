@@ -363,6 +363,23 @@ pub async fn limpar_logs_antigos(raiz: &str, retencao: Duration) -> u64 {
     removidos
 }
 
+/// Remove refresh tokens vencidos. Sem isso a tabela cresce para sempre com
+/// linhas que já não autorizam nada.
+pub async fn auto_delete_refresh_tokens(pool: diesel_async::pooled_connection::deadpool::Pool<AsyncPgConnection>) {
+    loop {
+        tokio::time::sleep(UM_DIA).await;
+
+        let Ok(mut conn) = pool.get().await else {
+            continue;
+        };
+
+        match crate::models::refresh_token::limpar_expirados(&mut conn).await {
+            Ok(quantos) => println!("LOG: [GC] {quantos} refresh token(s) vencido(s) removido(s)."),
+            Err(e) => eprintln!("ERRO: [GC] falha ao limpar refresh tokens: {e}"),
+        }
+    }
+}
+
 pub async fn auto_delete_logs() {
     let retencao = retencao_de_logs();
 
