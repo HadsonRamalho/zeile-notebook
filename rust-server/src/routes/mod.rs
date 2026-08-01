@@ -34,6 +34,8 @@ pub mod notifications;
 pub mod permissions;
 pub mod run_rust;
 #[cfg(test)]
+mod run_rust_test;
+#[cfg(test)]
 mod shutdown_test;
 pub mod team;
 pub mod template;
