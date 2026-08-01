@@ -101,7 +101,7 @@ pub async fn api_login_user(
     if hash_atual.as_deref().is_some_and(hash_precisa_migrar) {
         let novo_hash = password_hash(&user_input.password);
 
-        if let Err(e) = models::user::update_user_password(conn, &user.id, novo_hash).await {
+        if let Err(e) = models::user::rehash_user_password(conn, &user.id, novo_hash).await {
             tracing::warn!("falha ao migrar hash de senha do usuário {}: {e}", user.id);
         }
     }
@@ -341,15 +341,21 @@ pub async fn api_execute_password_reset(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ResetPasswordPayload>,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = crate::controllers::jwt::verify_reset_token(&payload.token)?;
+    let claims = crate::controllers::jwt::verify_reset_token(&payload.token)?;
 
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
+    let user = models::user::find_user_by_id(conn, &claims.sub).await?;
+
+    if crate::controllers::jwt::reset_token_foi_consumido(&claims, user.password_changed_at) {
+        return Err(ApiError::InvalidAuthorizationToken);
+    }
+
     let hashed_password = crate::controllers::utils::password_hash(&payload.new_password);
 
-    match models::user::update_user_password(conn, &user_id, hashed_password).await {
+    match models::user::update_user_password(conn, &claims.sub, hashed_password).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(e),
     }

@@ -47,6 +47,8 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing)]
+    pub password_changed_at: DateTime<Utc>,
 }
 
 #[derive(Clone)]
@@ -240,7 +242,29 @@ pub async fn update_user_password(
 ) -> Result<(), ApiError> {
     match diesel::update(users)
         .filter(id.eq(id_param))
-        .set(password_hash.eq(new_password))
+        .set((
+            password_hash.eq(new_password),
+            password_changed_at.eq(chrono::Utc::now()),
+        ))
+        .execute(conn)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(e) => Err(ApiError::Database(e.to_string())),
+    }
+}
+
+/// Regrava só o hash, sem mexer em `password_changed_at`. A senha não mudou —
+/// isso é a migração de algoritmo no login — então links de reset pendentes do
+/// usuário não devem ser invalidados por isso.
+pub async fn rehash_user_password(
+    conn: &mut AsyncPgConnection,
+    id_param: &Uuid,
+    new_hash: String,
+) -> Result<(), ApiError> {
+    match diesel::update(users)
+        .filter(id.eq(id_param))
+        .set(password_hash.eq(new_hash))
         .execute(conn)
         .await
     {
