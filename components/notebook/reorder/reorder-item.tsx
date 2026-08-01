@@ -24,7 +24,6 @@ interface ReorderItemProps {
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
   updateDrawingScene: (id: string, elements: readonly DrawingElement[]) => void;
   doc: Notebook | null;
-  sessionId: string;
   notebookId?: string;
   canWrite: boolean;
 }
@@ -42,7 +41,6 @@ export function ReorderItem({
   updateBlockMetadata,
   updateDrawingScene,
   doc,
-  sessionId,
   notebookId,
   canWrite,
 }: ReorderItemProps) {
@@ -123,7 +121,6 @@ export function ReorderItem({
         updateBlockMetadata={updateBlockMetadata}
         updateDrawingScene={updateDrawingScene}
         doc={doc}
-        sessionId={sessionId}
         notebookId={notebookId}
         canEditContent={canEditContent}
         canExecute={canExecute}

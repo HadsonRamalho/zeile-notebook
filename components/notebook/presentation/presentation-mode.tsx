@@ -22,7 +22,6 @@ import { BlockContent, useBlockPermissions } from "../blocks/block-content";
 interface PresentationModeProps {
   blocks: Block[];
   doc: Notebook | null;
-  sessionId: string;
   notebookId: string;
   updateBlock: (id: string, newContent: string) => void;
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
@@ -33,7 +32,6 @@ interface PresentationModeProps {
 export function PresentationMode({
   blocks,
   doc,
-  sessionId,
   notebookId,
   updateBlock,
   updateBlockMetadata,
@@ -228,7 +226,6 @@ export function PresentationMode({
                   updateBlockMetadata={updateBlockMetadata}
                   updateDrawingScene={updateDrawingScene}
                   doc={doc}
-                  sessionId={sessionId}
                   notebookId={notebookId}
                   canEditContent={false}
                   canExecute={perms.canExecute}
