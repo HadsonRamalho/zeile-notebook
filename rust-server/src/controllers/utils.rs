@@ -240,6 +240,108 @@ pub async fn auto_delete_files() {
     }
 }
 
+pub const LOG_DIR: &str = "logs";
+
+pub const RETENCAO_LOGS_DIAS_PADRAO: u64 = 3;
+
+const UM_DIA: Duration = Duration::from_secs(24 * 60 * 60);
+
+pub fn retencao_de_logs() -> Duration {
+    let dias = env::var("ZEILE_LOG_RETENTION_DAYS")
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|d| *d > 0)
+        .unwrap_or(RETENCAO_LOGS_DIAS_PADRAO);
+
+    UM_DIA * dias as u32
+}
+
+fn idade_de(metadata: &std::fs::Metadata) -> Option<Duration> {
+    metadata
+        .modified()
+        .ok()
+        .and_then(|modified| SystemTime::now().duration_since(modified).ok())
+}
+
+/// Remove arquivos de log mais velhos que a retenção e depois as pastas de
+/// sessão que ficaram vazias. Varre por arquivo, e não por pasta: uma sessão
+/// ativa tem mtime recente na pasta mas pode guardar registros antigos dentro.
+pub async fn limpar_logs_antigos(raiz: &str, retencao: Duration) -> u64 {
+    let mut removidos = 0;
+
+    let mut sessoes = match tokio::fs::read_dir(raiz).await {
+        Ok(entradas) => entradas,
+        Err(_) => return 0,
+    };
+
+    while let Ok(Some(sessao)) = sessoes.next_entry().await {
+        let caminho = sessao.path();
+
+        if !caminho.is_dir() {
+            if let Ok(metadata) = tokio::fs::metadata(&caminho).await {
+                if idade_de(&metadata).is_some_and(|idade| idade > retencao)
+                    && tokio::fs::remove_file(&caminho).await.is_ok()
+                {
+                    removidos += 1;
+                }
+            }
+            continue;
+        }
+
+        let mut registros = match tokio::fs::read_dir(&caminho).await {
+            Ok(entradas) => entradas,
+            Err(_) => continue,
+        };
+
+        let mut restantes = 0;
+
+        while let Ok(Some(registro)) = registros.next_entry().await {
+            let arquivo = registro.path();
+
+            let Ok(metadata) = tokio::fs::metadata(&arquivo).await else {
+                restantes += 1;
+                continue;
+            };
+
+            if idade_de(&metadata).is_some_and(|idade| idade > retencao) {
+                match tokio::fs::remove_file(&arquivo).await {
+                    Ok(_) => removidos += 1,
+                    Err(e) => {
+                        eprintln!("ERRO: [GC] Falha ao remover log {:?}: {}", arquivo, e);
+                        restantes += 1;
+                    }
+                }
+                continue;
+            }
+
+            restantes += 1;
+        }
+
+        if restantes == 0 {
+            let _ = tokio::fs::remove_dir(&caminho).await;
+        }
+    }
+
+    removidos
+}
+
+pub async fn auto_delete_logs() {
+    let retencao = retencao_de_logs();
+
+    println!(
+        "LOG: Iniciando retenção de logs em {} dia(s)",
+        retencao.as_secs() / UM_DIA.as_secs()
+    );
+
+    loop {
+        tokio::time::sleep(UM_DIA).await;
+
+        let removidos = limpar_logs_antigos(LOG_DIR, retencao).await;
+
+        println!("LOG: [GC] Retenção de logs concluída; {removidos} registro(s) removido(s).");
+    }
+}
+
 pub fn get_email_credentials() -> Result<(String, String), String> {
     dotenv().ok();
     let smtp_username = match env::var("SMTP_USERNAME") {
@@ -252,4 +354,101 @@ pub fn get_email_credentials() -> Result<(String, String), String> {
     };
     let credenciais = (smtp_username, smtp_password);
     Ok(credenciais)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const CURTA: Duration = Duration::from_millis(150);
+
+    async fn raiz_temporaria(nome: &str) -> std::path::PathBuf {
+        let raiz = std::env::temp_dir().join(format!("zeile_logs_{}_{}", nome, uuid::Uuid::new_v4()));
+        tokio::fs::create_dir_all(&raiz).await.expect("criar raiz");
+        raiz
+    }
+
+    #[test]
+    fn a_retencao_padrao_e_de_tres_dias() {
+        unsafe { std::env::remove_var("ZEILE_LOG_RETENTION_DAYS") };
+
+        assert_eq!(retencao_de_logs(), UM_DIA * 3);
+    }
+
+    #[test]
+    fn a_retencao_e_configuravel_e_ignora_valor_invalido() {
+        unsafe { std::env::set_var("ZEILE_LOG_RETENTION_DAYS", "7") };
+        assert_eq!(retencao_de_logs(), UM_DIA * 7);
+
+        unsafe { std::env::set_var("ZEILE_LOG_RETENTION_DAYS", "0") };
+        assert_eq!(retencao_de_logs(), UM_DIA * 3);
+
+        unsafe { std::env::set_var("ZEILE_LOG_RETENTION_DAYS", "abc") };
+        assert_eq!(retencao_de_logs(), UM_DIA * 3);
+
+        unsafe { std::env::remove_var("ZEILE_LOG_RETENTION_DAYS") };
+    }
+
+    #[tokio::test]
+    async fn remove_registro_antigo_e_preserva_o_recente() {
+        let raiz = raiz_temporaria("mistura").await;
+        let sessao = raiz.join("sessao_a");
+        tokio::fs::create_dir_all(&sessao).await.expect("sessão");
+
+        let antigo = sessao.join("antigo.log");
+        tokio::fs::write(&antigo, "código submetido antes").await.expect("escrever");
+
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        let recente = sessao.join("recente.log");
+        tokio::fs::write(&recente, "código de agora").await.expect("escrever");
+
+        let removidos = limpar_logs_antigos(raiz.to_str().unwrap(), CURTA).await;
+
+        assert_eq!(removidos, 1, "deveria remover exatamente o registro velho");
+        assert!(!antigo.exists(), "registro além da retenção deveria sair");
+        assert!(recente.exists(), "registro dentro da retenção não pode sair");
+        assert!(sessao.exists(), "a pasta ainda tem registro vivo");
+
+        let _ = tokio::fs::remove_dir_all(&raiz).await;
+    }
+
+    #[tokio::test]
+    async fn a_pasta_da_sessao_some_quando_esvazia() {
+        let raiz = raiz_temporaria("vazia").await;
+        let sessao = raiz.join("sessao_b");
+        tokio::fs::create_dir_all(&sessao).await.expect("sessão");
+        tokio::fs::write(sessao.join("antigo.log"), "conteúdo").await.expect("escrever");
+
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        limpar_logs_antigos(raiz.to_str().unwrap(), CURTA).await;
+
+        assert!(!sessao.exists(), "pasta de sessão vazia deveria ser removida");
+
+        let _ = tokio::fs::remove_dir_all(&raiz).await;
+    }
+
+    #[tokio::test]
+    async fn nada_e_removido_dentro_da_retencao() {
+        let raiz = raiz_temporaria("intacta").await;
+        let sessao = raiz.join("sessao_c");
+        tokio::fs::create_dir_all(&sessao).await.expect("sessão");
+        let registro = sessao.join("agora.log");
+        tokio::fs::write(&registro, "conteúdo").await.expect("escrever");
+
+        let removidos = limpar_logs_antigos(raiz.to_str().unwrap(), UM_DIA * 3).await;
+
+        assert_eq!(removidos, 0);
+        assert!(registro.exists());
+
+        let _ = tokio::fs::remove_dir_all(&raiz).await;
+    }
+
+    #[tokio::test]
+    async fn uma_raiz_inexistente_nao_e_erro() {
+        let inexistente = std::env::temp_dir().join(format!("zeile_ausente_{}", uuid::Uuid::new_v4()));
+
+        assert_eq!(limpar_logs_antigos(inexistente.to_str().unwrap(), CURTA).await, 0);
+    }
 }
