@@ -82,7 +82,40 @@ pub async fn execute_code(
     }
 }
 
+pub fn caminho_absoluto_do_projeto(project_path: &Path) -> String {
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+    std::fs::canonicalize(project_path)
+        .unwrap_or_else(|_| current_dir.join(project_path))
+        .to_string_lossy()
+        .to_string()
+}
+
+pub fn sandbox_rust(abs_project_path: String) -> CompileSandbox {
+    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+    let rustup_dir =
+        std::env::var("RUSTUP_HOME").unwrap_or_else(|_| format!("{}/.rustup", home_dir));
+    let cargo_dir = std::env::var("CARGO_HOME").unwrap_or_else(|_| format!("{}/.cargo", home_dir));
+
+    CompileSandbox::new(abs_project_path)
+        .com_toolchain(rustup_dir.clone())
+        .com_toolchain(cargo_dir.clone())
+        .com_env("HOME", home_dir)
+        .com_env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir))
+        .com_env("RUSTUP_HOME", rustup_dir)
+        .com_env("CARGO_HOME", cargo_dir)
+}
+
 async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> {
+    compile_rust_com_avisos(code, safe_session)
+        .await
+        .map(|(caminho, _)| caminho)
+}
+
+pub async fn compile_rust_com_avisos(
+    code: &str,
+    safe_session: &str,
+) -> Result<(String, String), String> {
     verify_code(code)?;
 
     let project_path = setup_user_env(safe_session).await;
@@ -94,24 +127,7 @@ async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> 
         .await
         .map_err(|e| format!("Erro ao salvar arquivo: {}", e))?;
 
-    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let abs_project_path = std::fs::canonicalize(&project_path)
-        .unwrap_or_else(|_| current_dir.join(&project_path))
-        .to_string_lossy()
-        .to_string();
-
-    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-    let rustup_dir =
-        std::env::var("RUSTUP_HOME").unwrap_or_else(|_| format!("{}/.rustup", home_dir));
-    let cargo_dir = std::env::var("CARGO_HOME").unwrap_or_else(|_| format!("{}/.cargo", home_dir));
-
-    let compile_output = CompileSandbox::new(abs_project_path)
-        .com_toolchain(rustup_dir.clone())
-        .com_toolchain(cargo_dir.clone())
-        .com_env("HOME", home_dir)
-        .com_env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir))
-        .com_env("RUSTUP_HOME", rustup_dir)
-        .com_env("CARGO_HOME", cargo_dir)
+    let compile_output = sandbox_rust(caminho_absoluto_do_projeto(&project_path))
         .executar(
             "cargo",
             &[
@@ -165,7 +181,7 @@ async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> 
     });
 
     info!("Submissão Rust compilada: {}", path);
-    Ok(path)
+    Ok((path, formatted_errors))
 }
 
 async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
@@ -397,6 +413,20 @@ int main() { std::cout << "ola do sandbox" << std::endl; }
 
         assert_eq!(resultado.verdict, ExecVerdict::Ok, "{resultado:?}");
         assert!(resultado.stdout.contains("ola do sandbox"), "{resultado:?}");
+    }
+
+    #[test]
+    fn o_envelope_do_rust_carrega_prlimit_e_a_toolchain() {
+        let sandbox = sandbox_rust("/srv/files/u_1_n_2".to_string());
+        let args = sandbox.args();
+
+        assert_eq!(args[0], "--cpu=30", "{args:?}");
+        assert!(args.contains(&"bwrap".to_string()), "{args:?}");
+        assert_eq!(
+            sandbox.toolchain.len(),
+            2,
+            "rustup e cargo precisam entrar como bind de leitura"
+        );
     }
 
     #[tokio::test]

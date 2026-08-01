@@ -6,7 +6,6 @@ use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::deadpool::Pool;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::process::Command;
@@ -22,6 +21,9 @@ use crate::controllers::permissions::{TargetCtx, require};
 use crate::models::state::AppState;
 use crate::controllers::utils::extract_module_name;
 use crate::executor::sanitize_session;
+use crate::executor::{
+    caminho_absoluto_do_projeto, compile_rust_com_avisos, run_compiled, sandbox_rust,
+};
 use crate::file::RunLimits;
 use crate::file::register_log;
 use crate::file::run_safe_bin;
@@ -156,54 +158,19 @@ pub async fn verify_request(
         });
     }
 
-    let file_path = src_path.join(&file_name);
-
-    let safe_code = if is_main {
-        format!("#![forbid(unsafe_code)]\n{}", payload.code)
-    } else {
-        payload.code
-    };
-
-    if let Err(e) = tokio::fs::write(&file_path, &safe_code).await {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Erro ao salvar arquivo {}: {}", file_name, e),
-        });
-    }
-
-    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let abs_project_path = std::fs::canonicalize(&project_path)
-        .unwrap_or_else(|_| current_dir.join(&project_path))
-        .to_string_lossy()
-        .to_string();
-
-    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-    let rustup_dir =
-        std::env::var("RUSTUP_HOME").unwrap_or_else(|_| format!("{}/.rustup", home_dir));
-    let cargo_dir = std::env::var("CARGO_HOME").unwrap_or_else(|_| format!("{}/.cargo", home_dir));
-
     if !is_main {
-        let mut check_cmd = Command::new("bwrap");
-        check_cmd.args(["--unshare-all", "--die-with-parent", "--new-session"]);
-        check_cmd.args(["--ro-bind", "/usr", "/usr"]);
-        check_cmd.args(["--ro-bind-try", "/lib", "/lib"]);
-        check_cmd.args(["--ro-bind-try", "/lib64", "/lib64"]);
-        check_cmd.args(["--ro-bind-try", "/bin", "/bin"]);
-        check_cmd.args(["--dev", "/dev", "--proc", "/proc", "--dir", "/tmp"]);
-        check_cmd.args(["--ro-bind-try", &rustup_dir, &rustup_dir]);
-        check_cmd.args(["--ro-bind-try", &cargo_dir, &cargo_dir]);
+        let file_path = src_path.join(&file_name);
 
-        check_cmd.args(["--bind", &abs_project_path, "/app"]);
-        check_cmd.args(["--chdir", "/app"]);
+        if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
+            return Json(CodeResponse {
+                stdout: "".into(),
+                stderr: format!("Erro ao salvar arquivo {}: {}", file_name, e),
+            });
+        }
 
-        check_cmd.env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir));
-        check_cmd.env("HOME", &home_dir);
+        let sandbox = sandbox_rust(caminho_absoluto_do_projeto(&project_path));
 
-        check_cmd.arg("cargo").arg("check");
-
-        let check_output = check_cmd.output().await;
-
-        return match check_output {
+        return match sandbox.executar("cargo", &["check"]).await {
             Ok(out) => Json(CodeResponse {
                 stdout: format!(
                     "Módulo '{}' salvo.\nStdOut Check: {}",
@@ -219,103 +186,25 @@ pub async fn verify_request(
         };
     }
 
-    info!("Executando cargo build com JSON output...");
+    info!("Iniciando build isolado da sessão {}", safe_session);
 
-    info!("Iniciando build isolado em {}", abs_project_path);
-
-    let mut build_cmd = Command::new("bwrap");
-    build_cmd.args(["--unshare-all", "--die-with-parent", "--new-session"]);
-    build_cmd.args(["--ro-bind", "/usr", "/usr"]);
-    build_cmd.args(["--ro-bind-try", "/lib", "/lib"]);
-    build_cmd.args(["--ro-bind-try", "/lib64", "/lib64"]);
-    build_cmd.args(["--ro-bind-try", "/bin", "/bin"]);
-    build_cmd.args(["--dev", "/dev", "--proc", "/proc", "--dir", "/tmp"]);
-    build_cmd.args(["--ro-bind-try", &rustup_dir, &rustup_dir]);
-    build_cmd.args(["--ro-bind-try", &cargo_dir, &cargo_dir]);
-
-    build_cmd.args(["--bind", &abs_project_path, "/app"]);
-    build_cmd.args(["--chdir", "/app"]);
-
-    build_cmd.env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir));
-    build_cmd.env("HOME", &home_dir);
-
-    build_cmd
-        .arg("cargo")
-        .arg("build")
-        .arg("--message-format=json")
-        .arg("--target=wasm32-wasip1")
-        .arg("--offline")
-        .arg("-q");
-
-    let compile_output = build_cmd.output().await;
-
-    match compile_output {
-        Ok(out) => {
-            let stdout_str = String::from_utf8_lossy(&out.stdout);
-            let mut formatted_errors = String::new();
-            let mut exe_path: Option<String> = None;
-
-            for line in stdout_str.lines() {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
-                    if let Some(message) = val.get("message") {
-                        if let Some(rendered) = message.get("rendered").and_then(|r| r.as_str()) {
-                            formatted_errors.push_str(rendered);
-                            formatted_errors.push('\n');
-                        }
-                    }
-
-                    if val.get("reason").and_then(|r| r.as_str()) == Some("compiler-artifact") {
-                        if let Some(executable) = val.get("executable").and_then(|v| v.as_str()) {
-                            if let Some(file_name) = Path::new(executable).file_name() {
-                                let real_path = project_path
-                                    .join("target/wasm32-wasip1/debug")
-                                    .join(file_name);
-                                exe_path = Some(real_path.to_string_lossy().to_string());
-                            }
-                        }
-                    }
-                }
-            }
-
-            if out.status.success() {
-                if let Some(path) = exe_path {
-                    info!("Caminho do executável traduzido: {}", path);
-                    let out = run_safe_bin(&path, None, RunLimits::default()).await;
-                    return Json(CodeResponse {
-                        stdout: out.stdout,
-                        stderr: formatted_errors + &out.stderr,
-                    });
-                } else {
-                    let fallback_name = format!("app_{}.wasm", safe_session);
-                    let fallback_path = project_path
-                        .join("target/wasm32-wasip1/debug")
-                        .join(fallback_name);
-                    let path_str = fallback_path.to_string_lossy().to_string();
-                    let out = run_safe_bin(&path_str, None, RunLimits::default()).await;
-                    return Json(CodeResponse {
-                        stdout: out.stdout,
-                        stderr: formatted_errors + &out.stderr,
-                    });
-                }
-            }
-
+    let (bin_path, avisos) = match compile_rust_com_avisos(&payload.code, &safe_session).await {
+        Ok(compilado) => compilado,
+        Err(msg) => {
             error!("Compilação falhou.");
-            let final_stderr = if !formatted_errors.is_empty() {
-                formatted_errors
-            } else {
-                String::from_utf8_lossy(&out.stderr).to_string()
-            };
-
-            Json(CodeResponse {
+            return Json(CodeResponse {
                 stdout: "".into(),
-                stderr: format!("Erro de Compilação:\n{}", final_stderr),
-            })
+                stderr: msg,
+            });
         }
-        Err(e) => Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Erro ao invocar cargo: {}", e),
-        }),
-    }
+    };
+
+    let out = run_compiled(&bin_path, None, RunLimits::default()).await;
+
+    Json(CodeResponse {
+        stdout: out.stdout,
+        stderr: avisos + &out.stderr,
+    })
 }
 
 pub async fn verify_go_request(
