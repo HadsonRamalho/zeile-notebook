@@ -112,6 +112,7 @@ pub fn generate_jwt(input: UserAuthInfo) -> Result<String, ApiError> {
         exp: expiration,
         public_id: input.public_id,
         role: input.role,
+        iat: Some(chrono::Utc::now().timestamp()),
     };
 
     let secret = get_jwt_secret_from_env()?;
