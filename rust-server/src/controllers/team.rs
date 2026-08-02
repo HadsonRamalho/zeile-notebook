@@ -18,38 +18,33 @@ use crate::{
         notebook::{NewNotebook, Notebook},
         state::AppState,
         team::{
-            NewTeam, NewTeamMember, NewTeamRole, NewTeamRoleRequest, Team, TeamMember,
-            TeamMemberResponse, TeamRole, UpdateMemberRoleRequest, UpdateTeam, UpdateTeamRole,
+            NewTeam, NewTeamMember, NewTeamRole, NewTeamRoleRequest, RolePermissions, Team,
+            TeamMember, TeamMemberResponse, TeamRole, TeamRoleView, UpdateMemberRoleRequest,
+            UpdateTeam, UpdateTeamRole,
         },
     },
 };
 
-pub fn get_default_roles(team_id: &Uuid) -> Vec<NewTeamRole> {
-    let admin_role = NewTeamRole {
-        team_id: team_id.clone(),
-        name: "Owner".to_string(),
-        can_read: true,
-        can_write: true,
-        can_manage_privacy: true,
-        can_manage_clones: true,
-        can_invite_users: true,
-        can_remove_users: true,
-        can_manage_permissions: true,
-        can_manage_team: true,
-    };
+pub fn get_default_roles(team_id: &Uuid) -> Vec<(NewTeamRole, RolePermissions)> {
+    let admin_role = (
+        NewTeamRole {
+            team_id: team_id.clone(),
+            name: "Owner".to_string(),
+        },
+        RolePermissions::all(),
+    );
 
-    let member_role = NewTeamRole {
-        team_id: team_id.clone(),
-        name: "Member".to_string(),
-        can_read: true,
-        can_write: true,
-        can_manage_privacy: false,
-        can_manage_clones: false,
-        can_invite_users: false,
-        can_remove_users: false,
-        can_manage_permissions: false,
-        can_manage_team: false,
-    };
+    let member_role = (
+        NewTeamRole {
+            team_id: team_id.clone(),
+            name: "Member".to_string(),
+        },
+        RolePermissions {
+            can_read: true,
+            can_write: true,
+            ..RolePermissions::default()
+        },
+    );
 
     vec![admin_role, member_role]
 }
@@ -153,7 +148,7 @@ pub async fn api_get_team_roles(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<Vec<TeamRole>>, ApiError> {
+) -> Result<Json<Vec<TeamRoleView>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -178,10 +173,12 @@ pub async fn api_create_team_role(
 
     require_team_permission(conn, user_id, team_id, "team.roles.create_role").await?;
 
-    let role_request = payload;
-    let role = NewTeamRole::from_request(team_id, role_request);
+    let role = NewTeamRole {
+        team_id,
+        name: payload.name,
+    };
 
-    match models::team::create_team_role(conn, &role).await {
+    match models::team::create_team_role(conn, &role, payload.permissions).await {
         Ok(_) => Ok(StatusCode::CREATED),
         Err(e) => Err(e),
     }
@@ -190,7 +187,7 @@ pub async fn api_create_team_role(
 pub async fn api_get_user_teams(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-) -> Result<Json<Vec<(Team, TeamRole)>>, ApiError> {
+) -> Result<Json<Vec<(Team, TeamRoleView)>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     let conn = &mut get_conn(&state.pool)
@@ -318,7 +315,7 @@ pub async fn api_get_team_members(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<Vec<(TeamMemberResponse, TeamRole)>>, ApiError> {
+) -> Result<Json<Vec<(TeamMemberResponse, TeamRoleView)>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -386,8 +383,8 @@ pub async fn api_create_team(
     let default_roles = get_default_roles(&team.id);
 
     let mut team_roles: Vec<TeamRole> = vec![];
-    for role in default_roles.iter() {
-        match models::team::create_team_role(conn, &role).await {
+    for (role, permissions) in default_roles.iter() {
+        match models::team::create_team_role(conn, role, *permissions).await {
             Ok(t) => {
                 team_roles.push(t);
             }
@@ -417,13 +414,14 @@ pub async fn api_get_user_team_permissions(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<(TeamMember, TeamRole)>, ApiError> {
+) -> Result<Json<(TeamMember, TeamRoleView)>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let member = get_team_member(conn, team_id, user_id).await?;
+    let (member, role) = get_team_member(conn, team_id, user_id).await?;
+    let view = models::team::build_role_view(conn, &role).await?;
 
-    Ok(Json(member))
+    Ok(Json((member, view)))
 }

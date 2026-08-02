@@ -1,4 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::models::error::ApiError;
+use crate::models::permission_grant::{grant_keys_by_role, replace_team_role_grants};
 use crate::schema::{team_members, team_roles, teams};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -36,12 +39,18 @@ pub struct UpdateTeam {
     pub image_url: Option<String>,
 }
 
-#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Debug, Clone)]
 #[diesel(table_name = team_roles)]
 pub struct TeamRole {
     pub id: Uuid,
     pub team_id: Uuid,
     pub name: String,
+    pub created_at: NaiveDateTime,
+}
+
+// os oito bools do contrato publico; a fonte de verdade e permission_grants
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RolePermissions {
     pub can_read: bool,
     pub can_write: bool,
     pub can_manage_privacy: bool,
@@ -49,43 +58,126 @@ pub struct TeamRole {
     pub can_invite_users: bool,
     pub can_remove_users: bool,
     pub can_manage_permissions: bool,
-    pub created_at: NaiveDateTime,
     pub can_manage_team: bool,
 }
 
-impl TeamRole {
-    pub fn get_view_only() -> Self {
+impl RolePermissions {
+    pub fn all() -> Self {
         Self {
-            id: Uuid::new_v4(),
-            team_id: Uuid::new_v4(),
-            name: "Default Role Name - View Only".to_string(),
             can_read: true,
-            can_write: false,
-            can_manage_privacy: false,
-            can_manage_clones: false,
-            can_invite_users: false,
-            can_remove_users: false,
-            can_manage_permissions: false,
-            created_at: chrono::Utc::now().naive_local(),
-            can_manage_team: false,
+            can_write: true,
+            can_manage_privacy: true,
+            can_manage_clones: true,
+            can_invite_users: true,
+            can_remove_users: true,
+            can_manage_permissions: true,
+            can_manage_team: true,
         }
     }
 
-    pub fn get_all_false() -> Self {
+    pub fn view_only() -> Self {
+        Self {
+            can_read: true,
+            ..Self::default()
+        }
+    }
+
+    pub fn grant_keys(&self) -> Vec<&'static str> {
+        let mut keys = Vec::new();
+        if self.can_read {
+            keys.extend(["notebook.view", "chat.view"]);
+        }
+        if self.can_write {
+            keys.extend([
+                "notebook.edit",
+                "notebook.blocks.execute",
+                "chat.messages.send",
+            ]);
+        }
+        if self.can_manage_privacy {
+            keys.push("notebook.manage_privacy");
+        }
+        if self.can_manage_clones {
+            keys.push("notebook.manage_clones");
+        }
+        if self.can_invite_users {
+            keys.push("team.invite_users");
+        }
+        if self.can_remove_users {
+            keys.push("team.remove_users");
+        }
+        if self.can_manage_permissions {
+            keys.extend([
+                "team.roles.edit_role_permissions",
+                "team.roles.create_role",
+                "team.roles.edit_role_name",
+            ]);
+        }
+        if self.can_manage_team {
+            keys.push("team.manage");
+            keys.push("chat.messages.delete_any");
+        }
+        keys
+    }
+
+    // inverso de grant_keys: le a chave representativa de cada bool
+    pub fn from_grant_keys(keys: &HashSet<String>) -> Self {
+        let has = |key: &str| keys.contains(key);
+        Self {
+            can_read: has("notebook.view"),
+            can_write: has("notebook.edit"),
+            can_manage_privacy: has("notebook.manage_privacy"),
+            can_manage_clones: has("notebook.manage_clones"),
+            can_invite_users: has("team.invite_users"),
+            can_remove_users: has("team.remove_users"),
+            can_manage_permissions: has("team.roles.edit_role_permissions"),
+            can_manage_team: has("team.manage"),
+        }
+    }
+}
+
+// mantem o formato plano que o frontend consome (`TeamRole` em lib/types/team-types.ts)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TeamRoleView {
+    pub id: Uuid,
+    pub team_id: Uuid,
+    pub name: String,
+    pub created_at: NaiveDateTime,
+    #[serde(flatten)]
+    pub permissions: RolePermissions,
+}
+
+impl TeamRoleView {
+    pub fn new(role: &TeamRole, permissions: RolePermissions) -> Self {
+        Self {
+            id: role.id,
+            team_id: role.team_id,
+            name: role.name.clone(),
+            created_at: role.created_at,
+            permissions,
+        }
+    }
+
+    // roles sinteticos: dono do notebook, notebook publico, sem acesso
+    pub fn synthetic(name: &str, permissions: RolePermissions) -> Self {
         Self {
             id: Uuid::new_v4(),
             team_id: Uuid::new_v4(),
-            name: "Default Role Name - All False".to_string(),
-            can_read: false,
-            can_write: false,
-            can_manage_privacy: false,
-            can_manage_clones: false,
-            can_invite_users: false,
-            can_remove_users: false,
-            can_manage_permissions: false,
+            name: name.to_string(),
             created_at: chrono::Utc::now().naive_local(),
-            can_manage_team: false,
+            permissions,
         }
+    }
+
+    pub fn view_only() -> Self {
+        Self::synthetic(
+            "Default Role Name - View Only",
+            RolePermissions::view_only(),
+        )
+    }
+
+    pub fn all_false() -> Self {
+        Self::synthetic("Default Role Name - All False", RolePermissions::default())
     }
 }
 
@@ -94,49 +186,17 @@ impl TeamRole {
 pub struct NewTeamRole {
     pub team_id: Uuid,
     pub name: String,
-    pub can_read: bool,
-    pub can_write: bool,
-    pub can_manage_privacy: bool,
-    pub can_manage_clones: bool,
-    pub can_invite_users: bool,
-    pub can_remove_users: bool,
-    pub can_manage_permissions: bool,
-    pub can_manage_team: bool,
 }
 
 #[derive(Serialize, Deserialize, Validate)]
 pub struct NewTeamRoleRequest {
     #[validate(length(min = 2, message = "Team role name is required"))]
     pub name: String,
-    pub can_read: bool,
-    pub can_write: bool,
-    pub can_manage_privacy: bool,
-    pub can_manage_clones: bool,
-    pub can_invite_users: bool,
-    pub can_remove_users: bool,
-    pub can_manage_permissions: bool,
-    pub can_manage_team: bool,
+    #[serde(flatten)]
+    pub permissions: RolePermissions,
 }
 
-impl NewTeamRole {
-    pub fn from_request(team_id: Uuid, r: NewTeamRoleRequest) -> Self {
-        Self {
-            team_id,
-            name: r.name,
-            can_read: r.can_read,
-            can_write: r.can_write,
-            can_manage_privacy: r.can_manage_privacy,
-            can_manage_clones: r.can_manage_clones,
-            can_invite_users: r.can_invite_users,
-            can_remove_users: r.can_remove_users,
-            can_manage_permissions: r.can_manage_permissions,
-            can_manage_team: r.can_manage_team,
-        }
-    }
-}
-
-#[derive(AsChangeset, Deserialize)]
-#[diesel(table_name = team_roles)]
+#[derive(Deserialize)]
 pub struct UpdateTeamRole {
     pub id: Uuid,
     pub name: Option<String>,
@@ -147,20 +207,27 @@ pub struct UpdateTeamRole {
     pub can_invite_users: Option<bool>,
     pub can_remove_users: Option<bool>,
     pub can_manage_permissions: Option<bool>,
+    pub can_manage_team: Option<bool>,
 }
 
-#[derive(Validate)]
-pub struct UpdateTeamRoleRequest {
-    pub id: String,
-    #[validate(length(min = 2, message = "Team role name is required"))]
-    pub name: Option<String>,
-    pub can_read: Option<bool>,
-    pub can_write: Option<bool>,
-    pub can_manage_privacy: Option<bool>,
-    pub can_manage_clones: Option<bool>,
-    pub can_invite_users: Option<bool>,
-    pub can_remove_users: Option<bool>,
-    pub can_manage_permissions: Option<bool>,
+impl UpdateTeamRole {
+    // aplica so os campos enviados sobre as permissoes vigentes
+    pub fn apply(&self, current: RolePermissions) -> RolePermissions {
+        RolePermissions {
+            can_read: self.can_read.unwrap_or(current.can_read),
+            can_write: self.can_write.unwrap_or(current.can_write),
+            can_manage_privacy: self
+                .can_manage_privacy
+                .unwrap_or(current.can_manage_privacy),
+            can_manage_clones: self.can_manage_clones.unwrap_or(current.can_manage_clones),
+            can_invite_users: self.can_invite_users.unwrap_or(current.can_invite_users),
+            can_remove_users: self.can_remove_users.unwrap_or(current.can_remove_users),
+            can_manage_permissions: self
+                .can_manage_permissions
+                .unwrap_or(current.can_manage_permissions),
+            can_manage_team: self.can_manage_team.unwrap_or(current.can_manage_team),
+        }
+    }
 }
 
 #[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
@@ -254,47 +321,10 @@ pub async fn delete_team(
     }
 }
 
-fn default_grant_keys(role: &NewTeamRole) -> Vec<&'static str> {
-    let mut keys = Vec::new();
-    if role.can_read {
-        keys.extend(["notebook.view", "chat.view"]);
-    }
-    if role.can_write {
-        keys.extend([
-            "notebook.edit",
-            "notebook.blocks.execute",
-            "chat.messages.send",
-        ]);
-    }
-    if role.can_manage_privacy {
-        keys.push("notebook.manage_privacy");
-    }
-    if role.can_manage_clones {
-        keys.push("notebook.manage_clones");
-    }
-    if role.can_invite_users {
-        keys.push("team.invite_users");
-    }
-    if role.can_remove_users {
-        keys.push("team.remove_users");
-    }
-    if role.can_manage_permissions {
-        keys.extend([
-            "team.roles.edit_role_permissions",
-            "team.roles.create_role",
-            "team.roles.edit_role_name",
-        ]);
-    }
-    if role.can_manage_team {
-        keys.push("team.manage");
-        keys.push("chat.messages.delete_any");
-    }
-    keys
-}
-
 pub async fn create_team_role(
     conn: &mut AsyncPgConnection,
     data: &NewTeamRole,
+    permissions: RolePermissions,
 ) -> Result<TeamRole, ApiError> {
     let role: TeamRole = diesel::insert_into(team_roles::table)
         .values(data)
@@ -302,45 +332,98 @@ pub async fn create_team_role(
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
 
-    crate::models::permission_grant::seed_team_role_grants(
-        conn,
-        role.id,
-        role.team_id,
-        &default_grant_keys(data),
-    )
-    .await?;
+    replace_team_role_grants(conn, role.id, role.team_id, &permissions.grant_keys()).await?;
 
     Ok(role)
+}
+
+// resolve os bools de cada role a partir dos grants, numa consulta so
+pub async fn load_role_permissions(
+    conn: &mut AsyncPgConnection,
+    role_ids: &[Uuid],
+) -> Result<HashMap<Uuid, RolePermissions>, ApiError> {
+    let keys_by_role = grant_keys_by_role(conn, role_ids).await?;
+
+    Ok(role_ids
+        .iter()
+        .map(|role_id| {
+            let permissions = match keys_by_role.get(role_id) {
+                Some(keys) => RolePermissions::from_grant_keys(keys),
+                None => RolePermissions::default(),
+            };
+            (*role_id, permissions)
+        })
+        .collect())
+}
+
+pub async fn build_role_views(
+    conn: &mut AsyncPgConnection,
+    roles: &[TeamRole],
+) -> Result<Vec<TeamRoleView>, ApiError> {
+    let role_ids: Vec<Uuid> = roles.iter().map(|role| role.id).collect();
+    let permissions = load_role_permissions(conn, &role_ids).await?;
+
+    Ok(roles
+        .iter()
+        .map(|role| TeamRoleView::new(role, permissions.get(&role.id).copied().unwrap_or_default()))
+        .collect())
+}
+
+pub async fn build_role_view(
+    conn: &mut AsyncPgConnection,
+    role: &TeamRole,
+) -> Result<TeamRoleView, ApiError> {
+    let permissions = load_role_permissions(conn, &[role.id]).await?;
+    Ok(TeamRoleView::new(
+        role,
+        permissions.get(&role.id).copied().unwrap_or_default(),
+    ))
 }
 
 pub async fn find_roles_by_team(
     conn: &mut AsyncPgConnection,
     team_id_param: Uuid,
-) -> Result<Vec<TeamRole>, ApiError> {
-    match team_roles::table
+) -> Result<Vec<TeamRoleView>, ApiError> {
+    let roles = team_roles::table
         .filter(team_roles::team_id.eq(team_id_param))
         .load::<TeamRole>(conn)
         .await
-    {
-        Ok(roles) => Ok(roles),
-        Err(e) => Err(ApiError::Database(e.to_string())),
-    }
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    build_role_views(conn, &roles).await
 }
 
 pub async fn update_team_role(
     conn: &mut AsyncPgConnection,
     role_id_param: Uuid,
     data: &UpdateTeamRole,
-) -> Result<TeamRole, ApiError> {
-    match diesel::update(team_roles::table)
-        .filter(team_roles::id.eq(role_id_param))
-        .set(data)
-        .get_result(conn)
-        .await
-    {
-        Ok(role) => Ok(role),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+) -> Result<TeamRoleView, ApiError> {
+    let role: TeamRole = match &data.name {
+        Some(new_name) => diesel::update(team_roles::table)
+            .filter(team_roles::id.eq(role_id_param))
+            .set(team_roles::name.eq(new_name))
+            .get_result(conn)
+            .await
+            .map_err(|e| ApiError::Database(e.to_string()))?,
+        None => team_roles::table
+            .filter(team_roles::id.eq(role_id_param))
+            .get_result(conn)
+            .await
+            .map_err(|e| ApiError::Database(e.to_string()))?,
+    };
+
+    let current = load_role_permissions(conn, &[role.id])
+        .await?
+        .get(&role.id)
+        .copied()
+        .unwrap_or_default();
+    let updated = data.apply(current);
+
+    if updated != current {
+        replace_team_role_grants(conn, role.id, role.team_id, &updated.grant_keys()).await?;
     }
+
+    Ok(TeamRoleView::new(&role, updated))
 }
 
 pub async fn add_user_to_team(
@@ -413,6 +496,21 @@ pub async fn find_team_member_with_role(
 pub async fn find_team_members_with_roles(
     conn: &mut AsyncPgConnection,
     team_id_param: Uuid,
+) -> Result<Vec<(TeamMemberResponse, TeamRoleView)>, ApiError> {
+    let rows = find_team_members_with_role_rows(conn, team_id_param).await?;
+    let roles: Vec<TeamRole> = rows.iter().map(|(_, role)| role.clone()).collect();
+    let views = build_role_views(conn, &roles).await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(member, _)| member)
+        .zip(views)
+        .collect())
+}
+
+pub async fn find_team_members_with_role_rows(
+    conn: &mut AsyncPgConnection,
+    team_id_param: Uuid,
 ) -> Result<Vec<(TeamMemberResponse, TeamRole)>, ApiError> {
     use crate::schema::users;
 
@@ -444,16 +542,208 @@ pub async fn find_team_members_with_roles(
 pub async fn find_user_teams(
     conn: &mut AsyncPgConnection,
     user_id_param: Uuid,
-) -> Result<Vec<(Team, TeamRole)>, ApiError> {
-    match team_members::table
+) -> Result<Vec<(Team, TeamRoleView)>, ApiError> {
+    let rows = team_members::table
         .inner_join(team_roles::table)
         .inner_join(teams::table)
         .filter(team_members::user_id.eq(user_id_param))
         .select((teams::all_columns, team_roles::all_columns))
         .load::<(Team, TeamRole)>(conn)
         .await
-    {
-        Ok(results) => Ok(results),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    let roles: Vec<TeamRole> = rows.iter().map(|(_, role)| role.clone()).collect();
+    let views = build_role_views(conn, &roles).await?;
+
+    Ok(rows.into_iter().map(|(team, _)| team).zip(views).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn keys_of(permissions: RolePermissions) -> HashSet<String> {
+        permissions
+            .grant_keys()
+            .into_iter()
+            .map(|key| key.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn os_bools_sobrevivem_a_ida_e_volta_pelos_grants() {
+        let casos = [
+            RolePermissions::default(),
+            RolePermissions::view_only(),
+            RolePermissions::all(),
+            RolePermissions {
+                can_read: true,
+                can_write: true,
+                can_remove_users: true,
+                ..RolePermissions::default()
+            },
+        ];
+
+        for caso in casos {
+            assert_eq!(RolePermissions::from_grant_keys(&keys_of(caso)), caso);
+        }
+    }
+
+    #[test]
+    fn o_json_do_role_mantem_os_oito_bools_no_nivel_de_cima() {
+        let role = TeamRoleView::synthetic("Owner", RolePermissions::view_only());
+        let json = serde_json::to_value(&role).expect("serializa");
+
+        assert_eq!(json["name"], "Owner");
+        assert_eq!(json["can_read"], true);
+        for chave in [
+            "can_write",
+            "can_manage_privacy",
+            "can_manage_clones",
+            "can_invite_users",
+            "can_remove_users",
+            "can_manage_permissions",
+            "can_manage_team",
+        ] {
+            assert_eq!(json[chave], false, "{chave} deveria vir como false");
+        }
+    }
+
+    #[test]
+    fn a_edicao_parcial_preserva_o_que_nao_foi_enviado() {
+        let atual = RolePermissions::all();
+        let payload = UpdateTeamRole {
+            id: Uuid::new_v4(),
+            name: None,
+            can_read: None,
+            can_write: Some(false),
+            can_manage_privacy: None,
+            can_manage_clones: None,
+            can_invite_users: None,
+            can_remove_users: None,
+            can_manage_permissions: None,
+            can_manage_team: None,
+        };
+
+        let resultado = payload.apply(atual);
+
+        assert!(!resultado.can_write);
+        assert!(resultado.can_read);
+        assert!(resultado.can_manage_team);
+    }
+}
+
+#[cfg(test)]
+mod tests_com_banco {
+    use super::*;
+    use diesel_async::AsyncConnection;
+
+    async fn conexao() -> Option<AsyncPgConnection> {
+        let url = std::env::var("TEST_MIGRATION_DATABASE_URL").ok()?;
+        AsyncPgConnection::establish(&url).await.ok()
+    }
+
+    async fn time(conn: &mut AsyncPgConnection) -> Uuid {
+        let team_id = Uuid::new_v4();
+        diesel::sql_query(format!(
+            "INSERT INTO teams (id, name) VALUES ('{team_id}', 'Time de teste')"
+        ))
+        .execute(conn)
+        .await
+        .expect("criar time");
+        team_id
+    }
+
+    async fn limpar(conn: &mut AsyncPgConnection, team_id: Uuid) {
+        diesel::sql_query(format!("DELETE FROM teams WHERE id = '{team_id}'"))
+            .execute(conn)
+            .await
+            .expect("remover time");
+    }
+
+    #[tokio::test]
+    async fn o_cargo_criado_le_de_volta_os_bools_que_pediu() {
+        let Some(mut conn) = conexao().await else {
+            eprintln!("TEST_MIGRATION_DATABASE_URL ausente; teste pulado");
+            return;
+        };
+
+        let team_id = time(&mut conn).await;
+        let pedido = RolePermissions {
+            can_read: true,
+            can_write: true,
+            can_remove_users: true,
+            ..RolePermissions::default()
+        };
+
+        create_team_role(
+            &mut conn,
+            &NewTeamRole {
+                team_id,
+                name: "Editor".to_string(),
+            },
+            pedido,
+        )
+        .await
+        .expect("criar cargo");
+
+        let roles = find_roles_by_team(&mut conn, team_id)
+            .await
+            .expect("listar cargos");
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].permissions, pedido);
+
+        limpar(&mut conn, team_id).await;
+    }
+
+    #[tokio::test]
+    async fn editar_o_cargo_move_os_grants_e_nao_so_a_resposta() {
+        let Some(mut conn) = conexao().await else {
+            return;
+        };
+
+        let team_id = time(&mut conn).await;
+        let role = create_team_role(
+            &mut conn,
+            &NewTeamRole {
+                team_id,
+                name: "Leitor".to_string(),
+            },
+            RolePermissions::view_only(),
+        )
+        .await
+        .expect("criar cargo");
+
+        let atualizado = update_team_role(
+            &mut conn,
+            role.id,
+            &UpdateTeamRole {
+                id: role.id,
+                name: None,
+                can_read: None,
+                can_write: Some(true),
+                can_manage_privacy: None,
+                can_manage_clones: None,
+                can_invite_users: None,
+                can_remove_users: None,
+                can_manage_permissions: None,
+                can_manage_team: None,
+            },
+        )
+        .await
+        .expect("editar cargo");
+
+        assert!(atualizado.permissions.can_write);
+
+        let chaves = grant_keys_by_role(&mut conn, &[role.id])
+            .await
+            .expect("ler grants");
+        let chaves = chaves.get(&role.id).expect("grants do cargo");
+
+        assert!(chaves.contains("notebook.edit"));
+        assert!(chaves.contains("notebook.view"));
+
+        limpar(&mut conn, team_id).await;
     }
 }
