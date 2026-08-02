@@ -181,6 +181,37 @@ describe("resolve — para onde o dado vai", () => {
     expect(resolve("auth", "local").baseUrl).toBe(LOCAL_API);
   });
 
+  it("página https nunca resolve websocket inseguro", async () => {
+    const { resolve } = await loadRouter({
+      NEXT_PUBLIC_WS_URL: "http://ws.zeile.test/api",
+    });
+    vi.stubGlobal("window", {
+      location: { protocol: "https:", host: "zeile.test" },
+    });
+
+    expect(resolve("sync").wsSecure).toBe(true);
+  });
+
+  it("aceita o esquema wss:// na env do websocket", async () => {
+    const { resolve } = await loadRouter({
+      NEXT_PUBLIC_WS_URL: "wss://ws.zeile.test/api",
+    });
+
+    const target = resolve("sync");
+
+    expect(target.wsSecure).toBe(true);
+    expect(target.wsHost).toBe("ws.zeile.test/api");
+  });
+
+  it("sem env de websocket, cai no host da própria página", async () => {
+    const { resolve } = await loadRouter({ NEXT_PUBLIC_WS_URL: undefined });
+    vi.stubGlobal("window", {
+      location: { protocol: "https:", host: "zeile.test" },
+    });
+
+    expect(resolve("sync").wsHost).toBe("zeile.test");
+  });
+
   it("notebook público é capacidade de nuvem, não vai para 127.0.0.1", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("local");

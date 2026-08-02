@@ -1,14 +1,14 @@
+import { readStorage, removeStorage, writeStorage } from "@/lib/safe-storage";
+
 const STORAGE_KEY = "zeile:pending-import";
 
 export function setPendingImport(content: string): void {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(STORAGE_KEY, content);
+  writeStorage(STORAGE_KEY, content, "session");
 }
 
 export function consumePendingImport(): string | null {
-  if (typeof window === "undefined") return null;
-  const content = window.sessionStorage.getItem(STORAGE_KEY);
+  const content = readStorage(STORAGE_KEY, "session");
   if (content === null) return null;
-  window.sessionStorage.removeItem(STORAGE_KEY);
+  removeStorage(STORAGE_KEY, "session");
   return content;
 }

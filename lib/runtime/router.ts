@@ -36,16 +36,41 @@ export interface Target {
 
 const REMOTE_BASE_URL =
   process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";
-const REMOTE_WS_HOST =
-  process.env.NEXT_PUBLIC_WS_URL?.replace(/^https?:\/\//, "") || "";
-const REMOTE_WS_SECURE =
-  process.env.NEXT_PUBLIC_WS_URL?.startsWith("https://") ?? false;
+
+function parseWsEndpoint(raw: string | undefined): {
+  host: string;
+  secure: boolean | null;
+} {
+  if (!raw) return { host: "", secure: null };
+  const scheme = raw.match(/^(https?|wss?):\/\//)?.[1];
+  return {
+    host: raw.replace(/^(?:https?|wss?):\/\//, "").replace(/\/+$/, ""),
+    secure: scheme ? scheme === "https" || scheme === "wss" : null,
+  };
+}
+
+const REMOTE_WS = parseWsEndpoint(process.env.NEXT_PUBLIC_WS_URL);
 
 const LOCAL_BASE_URL =
   process.env.NEXT_PUBLIC_LOCAL_API || "http://127.0.0.1:3099/api";
 const LOCAL_WS_HOST =
-  process.env.NEXT_PUBLIC_LOCAL_WS?.replace(/^https?:\/\//, "") ||
-  "127.0.0.1:3099";
+  parseWsEndpoint(process.env.NEXT_PUBLIC_LOCAL_WS).host || "127.0.0.1:3099";
+
+function pageIsSecure(): boolean {
+  return (
+    typeof window !== "undefined" && window.location.protocol === "https:"
+  );
+}
+
+function remoteWsHost(): string {
+  if (REMOTE_WS.host) return REMOTE_WS.host;
+  return typeof window === "undefined" ? "" : window.location.host;
+}
+
+function remoteWsSecure(): boolean {
+  if (pageIsSecure()) return true;
+  return REMOTE_WS.secure ?? false;
+}
 
 const ACCOUNT_COOKIE = "zeile_account";
 const REMOTE_TOKEN_COOKIE = "auth_token";
@@ -148,8 +173,8 @@ export function resolve(
   return {
     kind: "remote",
     baseUrl: REMOTE_BASE_URL,
-    wsHost: REMOTE_WS_HOST,
-    wsSecure: REMOTE_WS_SECURE,
+    wsHost: remoteWsHost(),
+    wsSecure: remoteWsSecure(),
     token: tokenFor("remote"),
   };
 }
