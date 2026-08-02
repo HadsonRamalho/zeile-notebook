@@ -39,9 +39,12 @@ export type ChatMessage = {
   quotedMessageId: string | null;
 };
 
-const PRESENCE_HEARTBEAT_MS = 4000;
-const PRESENCE_STALE_MS = 12000;
-const PRESENCE_PRUNE_INTERVAL_MS = 3000;
+import {
+  PRESENCE_HEARTBEAT_MS,
+  PRESENCE_PRUNE_INTERVAL_MS,
+  isStale,
+  shouldSendCursor,
+} from "./presence-timing";
 
 const stringToColor = (str: string) => {
   if (str.includes("Hadson")) {
@@ -250,7 +253,7 @@ export function usePresence(
         let changed = false;
         const next = new Map(prev);
         for (const [id, seen] of lastSeenRef.current) {
-          if (now - seen > PRESENCE_STALE_MS) {
+          if (isStale(now, seen)) {
             next.delete(id);
             lastSeenRef.current.delete(id);
             changed = true;
@@ -339,7 +342,7 @@ export function usePresence(
     (x: number, y: number) => {
       myState.current.cursor = { x, y };
       const now = Date.now();
-      if (now - lastSendTime.current > 50) {
+      if (shouldSendCursor(now, lastSendTime.current)) {
         broadcastPresence();
         lastSendTime.current = now;
       }

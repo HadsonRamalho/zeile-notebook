@@ -13,7 +13,7 @@ use crate::routes::establish_connection;
 
 const DEFAULT_PORT: u16 = 3099;
 const DEFAULT_BIND_HOST: &str = "0.0.0.0";
-const DEFAULT_POOL_SIZE: usize = 50;
+const DEFAULT_POOL_SIZE: usize = 10;
 const DEFAULT_JUDGE_CONCURRENCY: usize = 2;
 
 #[derive(Debug, Error)]
@@ -56,7 +56,7 @@ pub fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,tower_http=debug".into()),
+                .unwrap_or_else(|_| "info,tower_http=warn".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
