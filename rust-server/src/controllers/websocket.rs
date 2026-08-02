@@ -16,7 +16,8 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 /// passo do flush de presença (coalescência de cursores)
-const PRESENCE_FLUSH_MS: u64 = 50;
+const DEFAULT_PRESENCE_FLUSH_MS: u64 = 200;
+const DEFAULT_CHECKPOINT_SECS: u64 = 60;
 
 use automerge::sync::{Message as SyncMessage, State as SyncState, SyncDoc};
 
@@ -38,11 +39,25 @@ use crate::{
 };
 
 fn checkpoint_interval_secs() -> u64 {
-    std::env::var("CHECKPOINT_SECS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .filter(|v| *v > 0)
-        .unwrap_or(15)
+    crate::bootstrap::parse_env_number(
+        "CHECKPOINT_SECS",
+        DEFAULT_CHECKPOINT_SECS,
+        "um inteiro maior que zero",
+        |n: &u64| *n > 0,
+    )
+    .unwrap_or(DEFAULT_CHECKPOINT_SECS)
+}
+
+fn presence_flush_interval() -> std::time::Duration {
+    let ms = crate::bootstrap::parse_env_number(
+        "PRESENCE_FLUSH_MS",
+        DEFAULT_PRESENCE_FLUSH_MS,
+        "um inteiro maior que zero",
+        |n: &u64| *n > 0,
+    )
+    .unwrap_or(DEFAULT_PRESENCE_FLUSH_MS);
+
+    std::time::Duration::from_millis(ms)
 }
 
 // persiste periodicamente os notebooks ativos que mudaram (sala movimentada nunca
@@ -629,7 +644,7 @@ async fn presence_flush_loop(
     notebook_id: Uuid,
     room: Arc<PresenceRoom>,
 ) {
-    let tick = std::time::Duration::from_millis(PRESENCE_FLUSH_MS);
+    let tick = presence_flush_interval();
     loop {
         tokio::time::sleep(tick).await;
 
@@ -1073,4 +1088,94 @@ async fn handle_combined_socket(
 
     room.subscribers.remove(&session_id);
     room.gone.lock().unwrap().push(session_id);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn with_env<T>(var: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let previous = std::env::var(var).ok();
+        unsafe {
+            match value {
+                Some(v) => std::env::set_var(var, v),
+                None => std::env::remove_var(var),
+            }
+        }
+        let out = f();
+        unsafe {
+            match previous {
+                Some(v) => std::env::set_var(var, v),
+                None => std::env::remove_var(var),
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn flush_de_presenca_sem_variavel_usa_o_default() {
+        with_env("PRESENCE_FLUSH_MS", None, || {
+            assert_eq!(
+                presence_flush_interval(),
+                std::time::Duration::from_millis(DEFAULT_PRESENCE_FLUSH_MS)
+            );
+        });
+    }
+
+    #[test]
+    fn flush_de_presenca_respeita_a_variavel() {
+        with_env("PRESENCE_FLUSH_MS", Some(" 500 "), || {
+            assert_eq!(
+                presence_flush_interval(),
+                std::time::Duration::from_millis(500)
+            );
+        });
+    }
+
+    #[test]
+    fn flush_de_presenca_com_zero_cai_no_default() {
+        with_env("PRESENCE_FLUSH_MS", Some("0"), || {
+            assert_eq!(
+                presence_flush_interval(),
+                std::time::Duration::from_millis(DEFAULT_PRESENCE_FLUSH_MS)
+            );
+        });
+    }
+
+    #[test]
+    fn flush_de_presenca_com_lixo_cai_no_default_sem_derrubar_a_sala() {
+        with_env("PRESENCE_FLUSH_MS", Some("abc"), || {
+            assert_eq!(
+                presence_flush_interval(),
+                std::time::Duration::from_millis(DEFAULT_PRESENCE_FLUSH_MS)
+            );
+        });
+    }
+
+    #[test]
+    fn checkpoint_sem_variavel_usa_o_default() {
+        with_env("CHECKPOINT_SECS", None, || {
+            assert_eq!(checkpoint_interval_secs(), DEFAULT_CHECKPOINT_SECS);
+        });
+    }
+
+    #[test]
+    fn checkpoint_respeita_a_variavel() {
+        with_env("CHECKPOINT_SECS", Some("45"), || {
+            assert_eq!(checkpoint_interval_secs(), 45);
+        });
+    }
+
+    #[test]
+    fn checkpoint_com_valor_invalido_cai_no_default() {
+        with_env("CHECKPOINT_SECS", Some("0"), || {
+            assert_eq!(checkpoint_interval_secs(), DEFAULT_CHECKPOINT_SECS);
+        });
+        with_env("CHECKPOINT_SECS", Some("abc"), || {
+            assert_eq!(checkpoint_interval_secs(), DEFAULT_CHECKPOINT_SECS);
+        });
+    }
 }
