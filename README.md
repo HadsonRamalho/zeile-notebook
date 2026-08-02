@@ -138,4 +138,4 @@ fork is welcome, calling it Zeile is not.
 
 Issues and pull requests go to [HadsonRamalho/zeile-notebook](https://github.com/HadsonRamalho/zeile-notebook).
 Pull requests follow the template in `.github/pull_request_template.md`; the code conventions
-that apply in review are the ones in `docs/padroes.md`.
+that apply in review are the ones in `docs/decisoes.md`.
