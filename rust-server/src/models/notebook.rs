@@ -1,10 +1,10 @@
+use crate::controllers::permissions::{NotebookCtx, TargetCtx, capabilities, resolve_capabilities};
 use crate::{models::error::ApiError, schema::blocks::dsl as blocks_dsl};
 use automerge::{AutoCommit, ObjType, ReadDoc, ROOT, ScalarValue, Value as AmValue};
 use chrono::{DateTime, Utc};
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    OptionalExtension, PgTextExpressionMethods, QueryDsl, QueryableByName, Selectable,
-    SelectableHelper,
+    PgTextExpressionMethods, QueryDsl, QueryableByName, Selectable, SelectableHelper,
     prelude::{Associations, Identifiable, Insertable, Queryable},
 };
 use diesel_async::{
@@ -854,28 +854,30 @@ pub async fn save_notebook_data(
 ) {
     use crate::schema::notebooks::dsl::*;
 
-    let notebook: Notebook = notebooks
+    let notebook: Notebook = match notebooks
         .filter(id.eq(notebook_id_param))
         .select(Notebook::as_select())
         .get_result(conn)
         .await
-        .unwrap();
-
-    if let Some(uid) = notebook.user_id
-        && uid != user_id_param
     {
-        return;
-    }
+        Ok(n) => n,
+        Err(_) => return,
+    };
 
-    if let Some(tid) = notebook.team_id {
-        match crate::models::team::find_team_member_with_role(conn, tid, user_id_param).await {
-            Ok(m) => {
-                if !m.1.can_write {
-                    return;
-                }
-            }
-            Err(_) => return,
-        }
+    let ctx = NotebookCtx {
+        notebook_id: notebook_id_param,
+        team_id: notebook.team_id,
+        owner_user_id: notebook.user_id,
+        is_public: notebook.is_public,
+    };
+
+    let caps = match resolve_capabilities(conn, ctx, Some(user_id_param)).await {
+        Ok(caps) => caps,
+        Err(_) => return,
+    };
+
+    if !caps.can("notebook.edit", &TargetCtx::default()) {
+        return;
     }
 
     diesel::update(notebooks)
@@ -990,51 +992,16 @@ pub async fn check_permission(
     user_id: Option<Uuid>,
     notebook_id: Uuid,
 ) -> Result<NotebookPermission, ApiError> {
-    use crate::schema::team_members;
-    use crate::schema::team_roles;
-
-    let mut conn = pool.get().await.unwrap();
-    let uid = match user_id {
-        Some(id) => id,
-        None => return Ok(NotebookPermission::Viewer),
-    };
-
-    let notebook = match notebooks::table
-        .filter(notebooks::id.eq(notebook_id))
-        .select(Notebook::as_select())
-        .first::<Notebook>(&mut conn)
-        .await
-        .optional()
-    {
-        Ok(Some(n)) => n,
-        _ => return Ok(NotebookPermission::Viewer),
-    };
-
-    if let Some(notebook_uid) = notebook.user_id
-        && notebook_uid == uid
-    {
-        return Ok(NotebookPermission::OwnerOrTeam);
+    if user_id.is_none() {
+        return Ok(NotebookPermission::Viewer);
     }
 
-    let has_team_write_permission = if let Some(team_id) = notebook.team_id {
-        let can_write_result = team_members::table
-            .inner_join(team_roles::table.on(team_members::role_id.eq(team_roles::id)))
-            .filter(team_members::team_id.eq(team_id))
-            .filter(team_members::user_id.eq(uid))
-            .select(team_roles::can_write)
-            .first::<bool>(&mut conn)
-            .await
-            .optional();
-
-        match can_write_result {
-            Ok(Some(true)) => true,
-            _ => false,
-        }
-    } else {
-        false
+    let caps = match capabilities(pool, user_id, notebook_id).await {
+        Ok(caps) => caps,
+        Err(_) => return Ok(NotebookPermission::Viewer),
     };
 
-    if has_team_write_permission {
+    if caps.can("notebook.edit", &TargetCtx::default()) {
         return Ok(NotebookPermission::OwnerOrTeam);
     }
 
