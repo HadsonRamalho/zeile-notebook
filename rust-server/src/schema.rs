@@ -357,15 +357,7 @@ diesel::table! {
         id -> Uuid,
         team_id -> Uuid,
         name -> Varchar,
-        can_read -> Bool,
-        can_write -> Bool,
-        can_manage_privacy -> Bool,
-        can_manage_clones -> Bool,
-        can_invite_users -> Bool,
-        can_remove_users -> Bool,
-        can_manage_permissions -> Bool,
         created_at -> Timestamp,
-        can_manage_team -> Bool,
     }
 }
 

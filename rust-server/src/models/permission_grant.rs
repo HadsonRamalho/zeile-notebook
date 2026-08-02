@@ -1,8 +1,11 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::models::error::ApiError;
 use crate::schema::permission_grants;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -106,6 +109,85 @@ pub async fn delete_grant_in_team(
             .filter(permission_grants::scope_team_id.eq(team_id)),
     )
     .execute(conn)
+    .await
+    .map_err(|e| ApiError::Database(e.to_string()))
+}
+
+// chaves de grant `allow` de cada role, agrupadas por role
+pub async fn grant_keys_by_role(
+    conn: &mut AsyncPgConnection,
+    role_ids: &[Uuid],
+) -> Result<HashMap<Uuid, HashSet<String>>, ApiError> {
+    if role_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let rows: Vec<(Option<Uuid>, String)> = permission_grants::table
+        .filter(permission_grants::subject_kind.eq(GrantSubjectKind::Role))
+        .filter(permission_grants::subject_id.eq_any(role_ids))
+        .filter(permission_grants::effect.eq(GrantEffect::Allow))
+        .select((
+            permission_grants::subject_id,
+            permission_grants::permission_key,
+        ))
+        .load(conn)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))?;
+
+    let mut out: HashMap<Uuid, HashSet<String>> = HashMap::new();
+    for (subject_id, key) in rows {
+        if let Some(role_id) = subject_id {
+            out.entry(role_id).or_default().insert(key);
+        }
+    }
+
+    Ok(out)
+}
+
+// troca o conjunto de grants do role de uma vez, sem deixar estado intermediario visivel
+pub async fn replace_team_role_grants(
+    conn: &mut AsyncPgConnection,
+    role_id: Uuid,
+    team_id: Uuid,
+    keys: &[&str],
+) -> Result<(), ApiError> {
+    let rows: Vec<NewPermissionGrant> = keys
+        .iter()
+        .map(|key| NewPermissionGrant {
+            subject_kind: GrantSubjectKind::Role,
+            subject_id: Some(role_id),
+            subject_principal: None,
+            scope_team_id: Some(team_id),
+            permission_key: key.to_string(),
+            target_kind: GrantTargetKind::Team,
+            target_id: None,
+            target_value: None,
+            effect: GrantEffect::Allow,
+        })
+        .collect();
+
+    conn.transaction::<_, diesel::result::Error, _>(|conn| {
+        async move {
+            diesel::delete(
+                permission_grants::table
+                    .filter(permission_grants::subject_kind.eq(GrantSubjectKind::Role))
+                    .filter(permission_grants::subject_id.eq(role_id))
+                    .filter(permission_grants::scope_team_id.eq(team_id)),
+            )
+            .execute(conn)
+            .await?;
+
+            if !rows.is_empty() {
+                diesel::insert_into(permission_grants::table)
+                    .values(&rows)
+                    .execute(conn)
+                    .await?;
+            }
+
+            Ok(())
+        }
+        .scope_boxed()
+    })
     .await
     .map_err(|e| ApiError::Database(e.to_string()))
 }

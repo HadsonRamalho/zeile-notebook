@@ -237,13 +237,17 @@ O catálogo Rust gera `permissions.generated.ts` (pipeline análogo ao
 
 1. **[FEITO] Catálogo**: `sec/catalog/` fracionado, macro `perm!`, validação no boot.
 2. **[FEITO] Storage**: migração `permission_grants` + backfill dos bools (up/down
-   validados em Postgres). Colunas booleanas de `team_roles` **mantidas** por ora
-   (drop é uma migração futura, após remover todo uso residual).
+   validados em Postgres). Colunas booleanas de `team_roles` **removidas** pela
+   migração `2026-08-02-140000-0000_drop_team_role_bools`: a tabela é
+   `(id, team_id, name, created_at)` e os grants são a única fonte de verdade. Os
+   oito bools continuam no contrato HTTP, derivados dos grants em `RolePermissions`.
 3. **[FEITO] Motor**: `capabilities()` / `can()` + testes de precedência.
 4. **[FEITO] Enforcement backend**: connect gate do websocket (view/edit) + endpoint
    `GET /notebook/{id}/capabilities` + revalidação em rename/visibility/delete.
-   Executor `/run*` ainda não é escopado por notebook (não recebe notebook/bloco);
-   enforcement de execução fica pendente de mudança de contrato do endpoint de run.
+   Executor `/run*` escopado por notebook: `enforce_execute` (`src/http/mod.rs`) exige
+   `notebook_id` no payload e checa `notebook.blocks.{lang}.execute` nas quatro
+   linguagens. Falta mirar bloco específico — o `TargetCtx` ainda vai com
+   `block_id: None`, então só o tipo de bloco é alvo.
 5. **[FEITO] Realtime**: sinal `capabilities_updated` via canal de presence +
    `broadcast_capability_change[_for_team]` in-memory, disparado em
    `update_team_role` e `remove_user_from_team`.
@@ -273,6 +277,13 @@ A migração `2026-07-10-120000-0000_add_permission_grants` precisa ser aplicada
 produção (`diesel migration run`). O backfill converte os cargos existentes em grants
 sem perda; notebooks públicos ganham baseline `notebook.view` implícito no motor
 (não dependem de grant explícito para continuar visíveis).
+
+A migração `2026-08-02-140000-0000_drop_team_role_bools` é destrutiva: antes de
+derrubar as colunas ela ressincroniza os grants de time a partir dos bools (até
+então a edição de um cargo escrevia só nas colunas, então cargos editados depois do
+backfill de julho têm grants defasados — é essa passada que recupera a intenção do
+admin). Rodar com backup do banco; o `down.sql` reconstrói as colunas a partir dos
+grants, mas grants criados depois do drop viram bools só se tiverem chave canônica.
 
 ## Questões em aberto
 
