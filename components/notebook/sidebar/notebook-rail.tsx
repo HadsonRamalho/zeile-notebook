@@ -29,6 +29,7 @@ import {
   fetchTeamFolders,
 } from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
+import { readStorage, writeStorage } from "@/lib/safe-storage";
 import type { NotebookMeta } from "@/lib/types";
 import type { Team, TeamRole } from "@/lib/types/team-types";
 import { cn } from "@/lib/utils";
@@ -273,19 +274,19 @@ export function NotebookRail() {
   );
 
   useEffect(() => {
-    setExpanded(localStorage.getItem(EXPANDED_STORAGE_KEY) === "1");
+    setExpanded(readStorage(EXPANDED_STORAGE_KEY) === "1");
     try {
-      const raw = localStorage.getItem(COLLAPSED_GROUPS_STORAGE_KEY);
+      const raw = readStorage(COLLAPSED_GROUPS_STORAGE_KEY);
       if (raw) setCollapsedGroups(new Set(JSON.parse(raw) as string[]));
     } catch {}
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(EXPANDED_STORAGE_KEY, expanded ? "1" : "0");
+    writeStorage(EXPANDED_STORAGE_KEY, expanded ? "1" : "0");
   }, [expanded]);
 
   useEffect(() => {
-    localStorage.setItem(
+    writeStorage(
       COLLAPSED_GROUPS_STORAGE_KEY,
       JSON.stringify([...collapsedGroups]),
     );

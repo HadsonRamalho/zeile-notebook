@@ -28,10 +28,21 @@ type Conn = {
 
 const conns = new Map<string, Conn>();
 
-function wsUrl(notebookId: string): string {
+function wsUrl(notebookId: string): string | null {
   const target = resolve("sync");
+  if (!target.wsHost) return null;
   const protocol = target.wsSecure ? "wss://" : "ws://";
   return `${protocol}${target.wsHost}/notebook/ws/combined/${notebookId}`;
+}
+
+function scheduleReconnect(notebookId: string, conn: Conn) {
+  if (conn.disposed) return;
+  const expo = Math.min(30000, 1000 * 2 ** conn.reconnectAttempt);
+  conn.reconnectAttempt += 1;
+  conn.reconnectTimer = setTimeout(
+    () => connect(notebookId, conn),
+    Math.random() * expo,
+  );
 }
 
 function connect(notebookId: string, conn: Conn) {
@@ -43,9 +54,26 @@ function connect(notebookId: string, conn: Conn) {
     return;
   }
 
+  const url = wsUrl(notebookId);
+  if (!url) {
+    scheduleReconnect(notebookId, conn);
+    return;
+  }
+
   const protocols =
     conn.token.length > 0 ? ["access_token", conn.token] : undefined;
-  const socket = new WebSocket(wsUrl(notebookId), protocols);
+
+  let socket: WebSocket;
+  try {
+    socket = new WebSocket(url, protocols);
+  } catch (err) {
+    console.error("Falha ao abrir o WebSocket do caderno:", err);
+    conn.socket = null;
+    for (const h of conn.handlers) h.onClose?.();
+    scheduleReconnect(notebookId, conn);
+    return;
+  }
+
   socket.binaryType = "arraybuffer";
   conn.socket = socket;
 
@@ -64,13 +92,7 @@ function connect(notebookId: string, conn: Conn) {
 
   socket.onclose = () => {
     for (const h of conn.handlers) h.onClose?.();
-    if (conn.disposed) return;
-    const expo = Math.min(30000, 1000 * 2 ** conn.reconnectAttempt);
-    conn.reconnectAttempt += 1;
-    conn.reconnectTimer = setTimeout(
-      () => connect(notebookId, conn),
-      Math.random() * expo,
-    );
+    scheduleReconnect(notebookId, conn);
   };
 }
 

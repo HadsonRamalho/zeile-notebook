@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { listActivity } from "@/lib/api/activity-service";
+import { readStorage, writeStorage } from "@/lib/safe-storage";
 import type { Activity } from "@/lib/types/activity-types";
 import { cn } from "@/lib/utils";
 
@@ -45,10 +46,8 @@ export function ActivityFeed({ notebookId }: { notebookId: string }) {
   }, [notebookId]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const raw = window.localStorage.getItem(seenKey(notebookId));
-      setLastSeen(raw ? Number(raw) : 0);
-    }
+    const raw = readStorage(seenKey(notebookId));
+    setLastSeen(raw ? Number(raw) : 0);
     load();
   }, [notebookId, load]);
 
@@ -60,9 +59,9 @@ export function ActivityFeed({ notebookId }: { notebookId: string }) {
     setOpen(next);
     if (next) {
       load();
-    } else if (typeof window !== "undefined") {
+    } else {
       const now = Date.now();
-      window.localStorage.setItem(seenKey(notebookId), String(now));
+      writeStorage(seenKey(notebookId), String(now));
       setLastSeen(now);
     }
   };
