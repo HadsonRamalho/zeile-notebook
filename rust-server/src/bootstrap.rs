@@ -19,36 +19,36 @@ const DEFAULT_JUDGE_CONCURRENCY: usize = 2;
 #[derive(Debug, Error)]
 pub enum BootError {
     #[error(
-        "não foi possível instalar o provedor de criptografia rustls; outro provedor já foi instalado no processo"
+        "could not install the rustls crypto provider; another provider is already installed in this process"
     )]
     CryptoProvider,
 
     #[error(
-        "DATABASE_URL não está definida; exporte a variável ou preencha rust-server/.env antes de subir o servidor"
+        "DATABASE_URL is not set; export the variable or fill in rust-server/.env before starting the server"
     )]
     MissingDatabaseUrl,
 
-    #[error("falha ao aplicar as migrações embutidas: {0}")]
+    #[error("failed to apply embedded migrations: {0}")]
     Migration(String),
 
-    #[error("falha ao criar o pool de conexões do Postgres: {0}")]
+    #[error("failed to build the Postgres connection pool: {0}")]
     Pool(String),
 
-    #[error("{var} tem valor inválido ({value}); esperado {expected}")]
+    #[error("{var} has an invalid value ({value}); expected {expected}")]
     InvalidEnv {
         var: &'static str,
         value: String,
         expected: &'static str,
     },
 
-    #[error("falha ao abrir o socket em {addr}: {source}")]
+    #[error("failed to open the socket at {addr}: {source}")]
     Bind {
         addr: String,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("o servidor encerrou com erro: {0}")]
+    #[error("the server exited with an error: {0}")]
     Serve(#[source] std::io::Error),
 }
 
@@ -104,26 +104,26 @@ pub fn parse_env_number<T: std::str::FromStr>(
 }
 
 pub fn port() -> Result<u16, BootError> {
-    parse_env_number("PORT", DEFAULT_PORT, "uma porta entre 1 e 65535", |p| {
+    parse_env_number("PORT", DEFAULT_PORT, "a port between 1 and 65535", |p| {
         *p > 0
     })
 }
 
 pub fn bind_host_from(raw: Option<String>) -> Result<String, BootError> {
-    let valor = raw.unwrap_or_default();
-    let valor = valor.trim();
+    let value = raw.unwrap_or_default();
+    let value = value.trim();
 
-    if valor.is_empty() {
+    if value.is_empty() {
         return Ok(DEFAULT_BIND_HOST.to_string());
     }
 
-    valor
+    value
         .parse::<std::net::IpAddr>()
         .map(|ip| ip.to_string())
         .map_err(|_| BootError::InvalidEnv {
             var: "BIND_ADDR",
-            value: valor.to_string(),
-            expected: "um endereço IP, como 127.0.0.1 ou 0.0.0.0",
+            value: value.to_string(),
+            expected: "an IP address, such as 127.0.0.1 or 0.0.0.0",
         })
 }
 
@@ -135,7 +135,7 @@ pub fn judge_concurrency() -> Result<usize, BootError> {
     parse_env_number(
         "JUDGE_CONCURRENCY",
         DEFAULT_JUDGE_CONCURRENCY,
-        "um inteiro maior que zero",
+        "an integer greater than zero",
         |n| *n > 0,
     )
 }
@@ -144,7 +144,7 @@ pub fn pool_size() -> Result<usize, BootError> {
     parse_env_number(
         "DATABASE_POOL_SIZE",
         DEFAULT_POOL_SIZE,
-        "um inteiro maior que zero",
+        "an integer greater than zero",
         |n| *n > 0,
     )
 }
@@ -172,7 +172,7 @@ pub fn build_state(pool: Pool<AsyncPgConnection>) -> Result<Arc<AppState>, BootE
         sync_registry,
         push: crate::controllers::push::load_push_state(),
         judge_semaphore: Arc::new(tokio::sync::Semaphore::new(judge_concurrency()?)),
-        sessoes: Arc::new(crate::controllers::session::CacheDeSessao::new()),
+        sessions: Arc::new(crate::controllers::session::SessionCache::new()),
         shutdown: crate::shutdown::Shutdown::new(),
     }))
 }
@@ -200,7 +200,7 @@ pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
         match crate::models::notebook::backfill_search_text(&pool).await {
             Ok(n) if n > 0 => tracing::info!("search_text backfill: {n} notebooks"),
             Ok(_) => {}
-            Err(e) => tracing::warn!("search_text backfill falhou: {e}"),
+            Err(e) => tracing::warn!("search_text backfill failed: {e}"),
         }
     });
 
@@ -250,27 +250,27 @@ mod tests {
     }
 
     #[test]
-    fn variavel_ausente_usa_o_default() {
+    fn missing_variable_uses_the_default() {
         with_env("ZEILE_TEST_NUM", None, || {
             let value =
-                parse_env_number("ZEILE_TEST_NUM", 7usize, "um inteiro positivo", |n| *n > 0);
+                parse_env_number("ZEILE_TEST_NUM", 7usize, "a positive integer", |n| *n > 0);
             assert_eq!(value.unwrap(), 7);
         });
     }
 
     #[test]
-    fn variavel_vazia_usa_o_default() {
+    fn empty_variable_uses_the_default() {
         with_env("ZEILE_TEST_NUM", Some("   "), || {
             let value =
-                parse_env_number("ZEILE_TEST_NUM", 7usize, "um inteiro positivo", |n| *n > 0);
+                parse_env_number("ZEILE_TEST_NUM", 7usize, "a positive integer", |n| *n > 0);
             assert_eq!(value.unwrap(), 7);
         });
     }
 
     #[test]
-    fn valor_ilegivel_falha_em_vez_de_cair_no_default() {
+    fn unparseable_value_fails_instead_of_falling_back_to_default() {
         with_env("ZEILE_TEST_NUM", Some("abc"), || {
-            let err = parse_env_number("ZEILE_TEST_NUM", 7usize, "um inteiro positivo", |n| *n > 0)
+            let err = parse_env_number("ZEILE_TEST_NUM", 7usize, "a positive integer", |n| *n > 0)
                 .unwrap_err();
 
             match err {
@@ -278,39 +278,39 @@ mod tests {
                     assert_eq!(var, "ZEILE_TEST_NUM");
                     assert_eq!(value, "abc");
                 }
-                other => panic!("erro inesperado: {other}"),
+                other => panic!("unexpected error: {other}"),
             }
         });
     }
 
     #[test]
-    fn valor_fora_da_faixa_falha() {
+    fn out_of_range_value_fails() {
         with_env("JUDGE_CONCURRENCY", Some("0"), || {
             assert!(judge_concurrency().is_err());
         });
     }
 
     #[test]
-    fn valor_valido_vence_o_default() {
+    fn valid_value_wins_over_the_default() {
         with_env("JUDGE_CONCURRENCY", Some(" 8 "), || {
             assert_eq!(judge_concurrency().unwrap(), 8);
         });
     }
 
     #[test]
-    fn database_url_vazia_conta_como_ausente() {
+    fn empty_database_url_counts_as_missing() {
         with_env("DATABASE_URL", Some(""), || {
             assert!(matches!(database_url(), Err(BootError::MissingDatabaseUrl)));
         });
     }
 
     #[test]
-    fn sem_bind_addr_o_servidor_escuta_em_todas_as_interfaces() {
+    fn without_bind_addr_the_server_listens_on_all_interfaces() {
         assert_eq!(bind_host_from(None).unwrap(), "0.0.0.0");
     }
 
     #[test]
-    fn bind_addr_de_loopback_e_respeitado() {
+    fn loopback_bind_addr_is_honored() {
         assert_eq!(
             bind_host_from(Some(" 127.0.0.1 ".to_string())).unwrap(),
             "127.0.0.1"
@@ -318,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    fn bind_addr_invalido_impede_o_boot() {
+    fn invalid_bind_addr_prevents_boot() {
         let err = bind_host_from(Some("localhost".to_string())).unwrap_err();
 
         assert!(matches!(
@@ -331,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn a_mensagem_de_erro_diz_o_que_fazer() {
+    fn error_message_says_what_to_do() {
         let msg = BootError::MissingDatabaseUrl.to_string();
         assert!(msg.contains("DATABASE_URL"));
         assert!(msg.contains("rust-server/.env"));

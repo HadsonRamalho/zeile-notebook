@@ -3,140 +3,140 @@ use axum::http::{Request, StatusCode, header};
 use tower::ServiceExt;
 
 use crate::middleware::rate_limit::{
-    DESLIGA_VAR, GLOBAL_ORIGEM, caminho_livre, limite_global_desligado,
+    GLOBAL_ORIGIN, OFF_VAR, exempt_path, global_limit_off,
 };
-use crate::routes::test_support::router_com_banco_inalcancavel;
+use crate::routes::test_support::router_with_unreachable_database;
 
-fn anonima(path: &str, peer: &str) -> Request<Body> {
-    let peer: std::net::SocketAddr = peer.parse().expect("endereço do peer");
+fn anonymous(path: &str, peer: &str) -> Request<Body> {
+    let peer: std::net::SocketAddr = peer.parse().expect("peer address");
 
     Request::builder()
         .method("GET")
         .uri(path)
         .extension(axum::extract::ConnectInfo(peer))
         .body(Body::empty())
-        .expect("requisição")
+        .expect("request")
 }
 
 #[test]
-fn a_saude_do_servico_nao_entra_na_cota() {
-    for livre in ["/health/live", "/health/ready", "/internal/shutdown"] {
-        assert!(caminho_livre(livre), "{livre} deveria ficar fora da cota");
+fn service_health_is_not_counted_against_the_quota() {
+    for exempt in ["/health/live", "/health/ready", "/internal/shutdown"] {
+        assert!(exempt_path(exempt), "{exempt} should be exempt from the quota");
     }
 
-    assert!(!caminho_livre("/api/notebook/create"));
+    assert!(!exempt_path("/api/notebook/create"));
 }
 
 #[test]
-fn o_teto_global_pode_ser_desligado_para_carga() {
-    unsafe { std::env::set_var(DESLIGA_VAR, "1") };
-    assert!(limite_global_desligado());
+fn the_global_ceiling_can_be_turned_off_for_load_testing() {
+    unsafe { std::env::set_var(OFF_VAR, "1") };
+    assert!(global_limit_off());
 
-    unsafe { std::env::set_var(DESLIGA_VAR, "off") };
-    assert!(!limite_global_desligado());
+    unsafe { std::env::set_var(OFF_VAR, "off") };
+    assert!(!global_limit_off());
 
-    unsafe { std::env::remove_var(DESLIGA_VAR) };
-    assert!(!limite_global_desligado());
+    unsafe { std::env::remove_var(OFF_VAR) };
+    assert!(!global_limit_off());
 }
 
 #[tokio::test]
-async fn trafego_anonimo_tem_teto_por_origem() {
-    let router = router_com_banco_inalcancavel().await;
+async fn anonymous_traffic_has_a_per_origin_ceiling() {
+    let router = router_with_unreachable_database().await;
     let peer = "203.0.113.10:5000";
 
-    for i in 0..GLOBAL_ORIGEM.max {
+    for i in 0..GLOBAL_ORIGIN.max {
         let response = router
             .clone()
-            .oneshot(anonima("/api/common", peer))
+            .oneshot(anonymous("/api/common", peer))
             .await
-            .expect("resposta");
+            .expect("response");
 
         assert_ne!(
             response.status(),
             StatusCode::TOO_MANY_REQUESTS,
-            "cortou na requisição {i}, antes do teto de {}",
-            GLOBAL_ORIGEM.max
+            "cut off at request {i}, before the ceiling of {}",
+            GLOBAL_ORIGIN.max
         );
     }
 
-    let excedente = router
-        .oneshot(anonima("/api/common", peer))
+    let over_the_limit = router
+        .oneshot(anonymous("/api/common", peer))
         .await
-        .expect("resposta");
+        .expect("response");
 
-    assert_eq!(excedente.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(over_the_limit.status(), StatusCode::TOO_MANY_REQUESTS);
 }
 
 #[tokio::test]
-async fn a_saude_continua_respondendo_depois_do_teto() {
-    let router = router_com_banco_inalcancavel().await;
+async fn health_keeps_responding_after_the_ceiling() {
+    let router = router_with_unreachable_database().await;
     let peer = "203.0.113.11:5000";
 
-    for _ in 0..GLOBAL_ORIGEM.max + 5 {
+    for _ in 0..GLOBAL_ORIGIN.max + 5 {
         let _ = router
             .clone()
-            .oneshot(anonima("/api/common", peer))
+            .oneshot(anonymous("/api/common", peer))
             .await
-            .expect("resposta");
+            .expect("response");
     }
 
-    let saude = router
-        .oneshot(anonima("/health/live", peer))
+    let health = router
+        .oneshot(anonymous("/health/live", peer))
         .await
-        .expect("resposta");
+        .expect("response");
 
     assert_ne!(
-        saude.status(),
+        health.status(),
         StatusCode::TOO_MANY_REQUESTS,
-        "o health check foi barrado pela cota; o orquestrador mataria o pod"
+        "the health check was blocked by the quota; the orchestrator would kill the pod"
     );
 }
 
 #[tokio::test]
-async fn uma_origem_esgotada_nao_afeta_outra() {
-    let router = router_com_banco_inalcancavel().await;
+async fn one_exhausted_origin_does_not_affect_another() {
+    let router = router_with_unreachable_database().await;
 
-    for _ in 0..GLOBAL_ORIGEM.max + 5 {
+    for _ in 0..GLOBAL_ORIGIN.max + 5 {
         let _ = router
             .clone()
-            .oneshot(anonima("/api/common", "203.0.113.12:5000"))
+            .oneshot(anonymous("/api/common", "203.0.113.12:5000"))
             .await
-            .expect("resposta");
+            .expect("response");
     }
 
-    let outra = router
-        .oneshot(anonima("/api/common", "203.0.113.13:5000"))
+    let other = router
+        .oneshot(anonymous("/api/common", "203.0.113.13:5000"))
         .await
-        .expect("resposta");
+        .expect("response");
 
-    assert_ne!(outra.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_ne!(other.status(), StatusCode::TOO_MANY_REQUESTS);
 }
 
 #[tokio::test]
-async fn cadastro_em_massa_e_barrado() {
-    let router = router_com_banco_inalcancavel().await;
+async fn mass_registration_is_blocked() {
+    let router = router_with_unreachable_database().await;
     let peer: std::net::SocketAddr = "203.0.113.20:5000".parse().expect("peer");
 
-    let cadastro = || {
+    let register = || {
         Request::builder()
             .method("POST")
             .uri("/api/user/register")
             .header(header::CONTENT_TYPE, "application/json")
             .extension(axum::extract::ConnectInfo(peer))
             .body(Body::from(br#"{}"#.to_vec()))
-            .expect("requisição")
+            .expect("request")
     };
 
-    let mut limitou = false;
+    let mut was_limited = false;
 
     for _ in 0..crate::middleware::rate_limit::REGISTER.max + 3 {
-        let response = router.clone().oneshot(cadastro()).await.expect("resposta");
+        let response = router.clone().oneshot(register()).await.expect("response");
 
         if response.status() == StatusCode::TOO_MANY_REQUESTS {
-            limitou = true;
+            was_limited = true;
             break;
         }
     }
 
-    assert!(limitou, "/register aceitou cadastro em massa sem cota");
+    assert!(was_limited, "/register accepted mass registration without a quota");
 }

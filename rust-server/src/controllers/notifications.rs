@@ -201,7 +201,7 @@ pub async fn api_upsert_preference(
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     if !matches!(payload.scope_kind.as_str(), "global" | "notebook" | "team") {
-        return Err(ApiError::Request("Escopo inválido".to_string()));
+        return Err(ApiError::Request("Invalid scope".to_string()));
     }
     let scope_id = if payload.scope_kind == "global" {
         None

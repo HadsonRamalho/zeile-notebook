@@ -26,7 +26,7 @@ pub fn get_smtp_data(credentials: (String, String)) -> Result<SmtpTransport, Api
     let smtp_credentials = Credentials::new(smtp_username.to_string(), smtp_password.to_string());
 
     let relay = SmtpTransport::starttls_relay(smtp_server).map_err(|e| {
-        tracing::error!("STARTTLS indisponível para {smtp_server}: {e}");
+        tracing::error!("STARTTLS unavailable for {smtp_server}: {e}");
         ApiError::SendingEmail
     })?;
 

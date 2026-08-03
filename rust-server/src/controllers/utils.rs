@@ -22,25 +22,25 @@ pub fn validate_cpf(cpf: &str) -> bool {
         return false;
     }
 
-    let soma1: u32 = cpf
+    let sum1: u32 = cpf
         .iter()
         .take(9)
         .enumerate()
         .map(|(i, &d)| (10 - i as u32) * d as u32)
         .sum();
 
-    let dig1 = if soma1 % 11 < 2 { 0 } else { 11 - (soma1 % 11) };
+    let digit1 = if sum1 % 11 < 2 { 0 } else { 11 - (sum1 % 11) };
 
-    let soma2: u32 = cpf
+    let sum2: u32 = cpf
         .iter()
         .take(10)
         .enumerate()
         .map(|(i, &d)| (11 - i as u32) * d as u32)
         .sum();
 
-    let dig2 = if soma2 % 11 < 2 { 0 } else { 11 - (soma2 % 11) };
+    let digit2 = if sum2 % 11 < 2 { 0 } else { 11 - (sum2 % 11) };
 
-    cpf[9] == dig1 as u8 && cpf[10] == dig2 as u8
+    cpf[9] == digit1 as u8 && cpf[10] == digit2 as u8
 }
 
 pub fn validate_cnpj(cnpj: &str) -> bool {
@@ -54,40 +54,40 @@ pub fn validate_cnpj(cnpj: &str) -> bool {
         return false;
     }
 
-    let calc_digito = |slice: &[u8], pesos: &[u8]| -> u8 {
-        let soma: u32 = slice
+    let calc_digit = |slice: &[u8], weights: &[u8]| -> u8 {
+        let sum: u32 = slice
             .iter()
-            .zip(pesos.iter())
-            .map(|(&d, &p)| (d as u32) * (p as u32))
+            .zip(weights.iter())
+            .map(|(&d, &w)| (d as u32) * (w as u32))
             .sum();
-        let resto = soma % 11;
-        if resto < 2 { 0 } else { (11 - resto) as u8 }
+        let remainder = sum % 11;
+        if remainder < 2 { 0 } else { (11 - remainder) as u8 }
     };
 
-    let pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    let pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
-    let d1 = calc_digito(&cnpj[0..12], &pesos1);
-    let d2 = calc_digito(&[&cnpj[0..12], &[d1]].concat(), &pesos2);
+    let d1 = calc_digit(&cnpj[0..12], &weights1);
+    let d2 = calc_digit(&[&cnpj[0..12], &[d1]].concat(), &weights2);
 
     cnpj[12] == d1 && cnpj[13] == d2
 }
 
 pub fn format_cnpj(cnpj: &str) -> Result<String, String> {
-    let cnpj_numeros: Vec<char> = cnpj.chars().filter(|c: &char| c.is_ascii_digit()).collect();
-    if cnpj_numeros.len() != 14 {
+    let cnpj_digits: Vec<char> = cnpj.chars().filter(|c: &char| c.is_ascii_digit()).collect();
+    if cnpj_digits.len() != 14 {
         return Err("Invalid CNPJ length".to_string());
     }
-    let mut cnpj: Vec<char> = cnpj_numeros;
+    let mut cnpj: Vec<char> = cnpj_digits;
     cnpj.insert(2, '.');
     cnpj.insert(6, '.');
     cnpj.insert(10, '/');
     cnpj.insert(15, '-');
-    let mut cnpjfinal: String = "".to_string();
+    let mut cnpj_final: String = "".to_string();
     for u in cnpj {
-        cnpjfinal.push(u);
+        cnpj_final.push(u);
     }
-    Ok(cnpjfinal)
+    Ok(cnpj_final)
 }
 
 pub fn format_cpf(cpf: &str) -> Result<String, String> {
@@ -99,18 +99,18 @@ pub fn format_cpf(cpf: &str) -> Result<String, String> {
     cpf.insert(3, '.');
     cpf.insert(7, '.');
     cpf.insert(11, '-');
-    let mut cpffinal: String = "".to_string();
+    let mut cpf_final: String = "".to_string();
     for u in cpf {
-        cpffinal.push(u);
+        cpf_final.push(u);
     }
-    Ok(cpffinal)
+    Ok(cpf_final)
 }
 
-pub fn format_document(documento_: &str) -> Result<String, String> {
-    if let Ok(cpf) = format_cpf(documento_) {
+pub fn format_document(document: &str) -> Result<String, String> {
+    if let Ok(cpf) = format_cpf(document) {
         return Ok(cpf);
     }
-    if let Ok(cnpj) = format_cnpj(documento_) {
+    if let Ok(cnpj) = format_cnpj(document) {
         return Ok(cnpj);
     }
     Err("Invalid document".to_string())
@@ -121,9 +121,9 @@ pub fn random_hash() -> String {
     bcrypt::hash(now).unwrap()
 }
 
-/// Prefixo PHC de um hash argon2. bcrypt usa `$2a$`/`$2b$`/`$2y$`, então o
-/// prefixo distingue hash novo de hash legado sem precisar de coluna extra.
-const PREFIXO_ARGON2: &str = "$argon2";
+/// PHC prefix of an argon2 hash. bcrypt uses `$2a$`/`$2b$`/`$2y$`, so the
+/// prefix distinguishes a new hash from a legacy one without an extra column.
+const ARGON2_PREFIX: &str = "$argon2";
 
 pub fn password_hash(input: &str) -> String {
     use argon2::password_hash::{SaltString, rand_core::OsRng};
@@ -134,34 +134,34 @@ pub fn password_hash(input: &str) -> String {
     match Argon2::default().hash_password(input.as_bytes(), &salt) {
         Ok(hash) => hash.to_string(),
         Err(e) => {
-            // Não há como seguir com um hash fraco: sem isso o cadastro
-            // gravaria credencial que não protege nada.
-            panic!("falha ao derivar hash de senha: {e}");
+            // There's no way to proceed with a weak hash: without this,
+            // signup would store a credential that protects nothing.
+            panic!("failed to derive password hash: {e}");
         }
     }
 }
 
-pub fn password_verify(senha: &str, hash: &str) -> bool {
-    if !hash.starts_with(PREFIXO_ARGON2) {
-        return bcrypt::verify(senha, hash);
+pub fn password_verify(password: &str, hash: &str) -> bool {
+    if !hash.starts_with(ARGON2_PREFIX) {
+        return bcrypt::verify(password, hash);
     }
 
     use argon2::password_hash::PasswordHash;
     use argon2::{Argon2, PasswordVerifier};
 
     PasswordHash::new(hash)
-        .map(|esperado| {
+        .map(|expected| {
             Argon2::default()
-                .verify_password(senha.as_bytes(), &esperado)
+                .verify_password(password.as_bytes(), &expected)
                 .is_ok()
         })
         .unwrap_or(false)
 }
 
-/// Hash legado que deve ser regravado em argon2id no próximo login bem-sucedido,
-/// que é o único momento em que a senha em claro está disponível.
-pub fn hash_precisa_migrar(hash: &str) -> bool {
-    !hash.starts_with(PREFIXO_ARGON2)
+/// Legacy hash that must be rewritten as argon2id on the next successful
+/// login, which is the only moment the plaintext password is available.
+pub fn hash_needs_migration(hash: &str) -> bool {
+    !hash.starts_with(ARGON2_PREFIX)
 }
 
 pub fn random_public_id() -> i32 {
@@ -241,32 +241,32 @@ pub fn extract_module_name(code: &str) -> Option<String> {
 
 pub async fn auto_delete_files() {
     let mins = ONE_MINUTE * 20;
-    let intervalo_verificacao = Duration::from_millis(mins);
-    let tempo_maximo_vida = Duration::from_millis(mins);
+    let check_interval = Duration::from_millis(mins);
+    let max_lifetime = Duration::from_millis(mins);
 
-    println!("LOG: Iniciando tarefa de limpeza automática");
+    println!("LOG: starting automatic cleanup task");
 
     loop {
-        tokio::time::sleep(intervalo_verificacao).await;
+        tokio::time::sleep(check_interval).await;
 
-        println!("LOG: [GC] Iniciando varredura de limpeza...");
+        println!("LOG: [GC] starting cleanup scan...");
 
-        let mut entradas = match tokio::fs::read_dir("files").await {
+        let mut entries = match tokio::fs::read_dir("files").await {
             Ok(e) => e,
             Err(_) => continue,
         };
 
-        while let Ok(Some(entry)) = entradas.next_entry().await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
 
             if path.is_dir() {
                 if let Ok(metadata) = tokio::fs::metadata(&path).await {
                     if let Ok(modified) = metadata.modified() {
-                        if let Ok(idade) = SystemTime::now().duration_since(modified) {
-                            if idade > tempo_maximo_vida {
-                                println!("LOG: [GC] Removendo pasta antiga: {:?}", path);
+                        if let Ok(age) = SystemTime::now().duration_since(modified) {
+                            if age > max_lifetime {
+                                println!("LOG: [GC] removing old folder: {:?}", path);
                                 if let Err(e) = tokio::fs::remove_dir_all(&path).await {
-                                    eprintln!("ERRO: [GC] Falha ao deletar {:?}: {}", path, e);
+                                    eprintln!("ERROR: [GC] failed to delete {:?}: {}", path, e);
                                 }
                             }
                         }
@@ -274,126 +274,126 @@ pub async fn auto_delete_files() {
                 }
             }
         }
-        println!("LOG: [GC] Varredura finalizada.");
+        println!("LOG: [GC] scan finished.");
     }
 }
 
 pub const LOG_DIR: &str = "logs";
 
-pub const RETENCAO_LOGS_DIAS_PADRAO: u64 = 3;
+pub const DEFAULT_LOG_RETENTION_DAYS: u64 = 3;
 
-const UM_DIA: Duration = Duration::from_secs(24 * 60 * 60);
+const ONE_DAY: Duration = Duration::from_secs(24 * 60 * 60);
 
-pub fn retencao_de_logs() -> Duration {
-    let dias = env::var("ZEILE_LOG_RETENTION_DAYS")
+pub fn log_retention() -> Duration {
+    let days = env::var("ZEILE_LOG_RETENTION_DAYS")
         .ok()
         .and_then(|v| v.trim().parse::<u64>().ok())
         .filter(|d| *d > 0)
-        .unwrap_or(RETENCAO_LOGS_DIAS_PADRAO);
+        .unwrap_or(DEFAULT_LOG_RETENTION_DAYS);
 
-    UM_DIA * dias as u32
+    ONE_DAY * days as u32
 }
 
-fn idade_de(metadata: &std::fs::Metadata) -> Option<Duration> {
+fn age_of(metadata: &std::fs::Metadata) -> Option<Duration> {
     metadata
         .modified()
         .ok()
         .and_then(|modified| SystemTime::now().duration_since(modified).ok())
 }
 
-/// Remove arquivos de log mais velhos que a retenção e depois as pastas de
-/// sessão que ficaram vazias. Varre por arquivo, e não por pasta: uma sessão
-/// ativa tem mtime recente na pasta mas pode guardar registros antigos dentro.
-pub async fn limpar_logs_antigos(raiz: &str, retencao: Duration) -> u64 {
-    let mut removidos = 0;
+/// Removes log files older than the retention period, then the session
+/// folders left empty. Scans by file, not by folder: an active session has a
+/// recent mtime on the folder but may hold old records inside it.
+pub async fn clean_old_logs(root: &str, retention: Duration) -> u64 {
+    let mut removed = 0;
 
-    let mut sessoes = match tokio::fs::read_dir(raiz).await {
-        Ok(entradas) => entradas,
+    let mut sessions = match tokio::fs::read_dir(root).await {
+        Ok(entries) => entries,
         Err(_) => return 0,
     };
 
-    while let Ok(Some(sessao)) = sessoes.next_entry().await {
-        let caminho = sessao.path();
+    while let Ok(Some(session)) = sessions.next_entry().await {
+        let path = session.path();
 
-        if !caminho.is_dir() {
-            if let Ok(metadata) = tokio::fs::metadata(&caminho).await {
-                if idade_de(&metadata).is_some_and(|idade| idade > retencao)
-                    && tokio::fs::remove_file(&caminho).await.is_ok()
+        if !path.is_dir() {
+            if let Ok(metadata) = tokio::fs::metadata(&path).await {
+                if age_of(&metadata).is_some_and(|age| age > retention)
+                    && tokio::fs::remove_file(&path).await.is_ok()
                 {
-                    removidos += 1;
+                    removed += 1;
                 }
             }
             continue;
         }
 
-        let mut registros = match tokio::fs::read_dir(&caminho).await {
-            Ok(entradas) => entradas,
+        let mut records = match tokio::fs::read_dir(&path).await {
+            Ok(entries) => entries,
             Err(_) => continue,
         };
 
-        let mut restantes = 0;
+        let mut remaining = 0;
 
-        while let Ok(Some(registro)) = registros.next_entry().await {
-            let arquivo = registro.path();
+        while let Ok(Some(record)) = records.next_entry().await {
+            let file = record.path();
 
-            let Ok(metadata) = tokio::fs::metadata(&arquivo).await else {
-                restantes += 1;
+            let Ok(metadata) = tokio::fs::metadata(&file).await else {
+                remaining += 1;
                 continue;
             };
 
-            if idade_de(&metadata).is_some_and(|idade| idade > retencao) {
-                match tokio::fs::remove_file(&arquivo).await {
-                    Ok(_) => removidos += 1,
+            if age_of(&metadata).is_some_and(|age| age > retention) {
+                match tokio::fs::remove_file(&file).await {
+                    Ok(_) => removed += 1,
                     Err(e) => {
-                        eprintln!("ERRO: [GC] Falha ao remover log {:?}: {}", arquivo, e);
-                        restantes += 1;
+                        eprintln!("ERROR: [GC] failed to remove log {:?}: {}", file, e);
+                        remaining += 1;
                     }
                 }
                 continue;
             }
 
-            restantes += 1;
+            remaining += 1;
         }
 
-        if restantes == 0 {
-            let _ = tokio::fs::remove_dir(&caminho).await;
+        if remaining == 0 {
+            let _ = tokio::fs::remove_dir(&path).await;
         }
     }
 
-    removidos
+    removed
 }
 
-/// Remove refresh tokens vencidos. Sem isso a tabela cresce para sempre com
-/// linhas que já não autorizam nada.
+/// Removes expired refresh tokens. Without this the table grows forever with
+/// rows that no longer authorize anything.
 pub async fn auto_delete_refresh_tokens(pool: diesel_async::pooled_connection::deadpool::Pool<AsyncPgConnection>) {
     loop {
-        tokio::time::sleep(UM_DIA).await;
+        tokio::time::sleep(ONE_DAY).await;
 
         let Ok(mut conn) = pool.get().await else {
             continue;
         };
 
-        match crate::models::refresh_token::limpar_expirados(&mut conn).await {
-            Ok(quantos) => println!("LOG: [GC] {quantos} refresh token(s) vencido(s) removido(s)."),
-            Err(e) => eprintln!("ERRO: [GC] falha ao limpar refresh tokens: {e}"),
+        match crate::models::refresh_token::delete_expired(&mut conn).await {
+            Ok(count) => println!("LOG: [GC] {count} expired refresh token(s) removed."),
+            Err(e) => eprintln!("ERROR: [GC] failed to clean refresh tokens: {e}"),
         }
     }
 }
 
 pub async fn auto_delete_logs() {
-    let retencao = retencao_de_logs();
+    let retention = log_retention();
 
     println!(
-        "LOG: Iniciando retenção de logs em {} dia(s)",
-        retencao.as_secs() / UM_DIA.as_secs()
+        "LOG: starting log retention at {} day(s)",
+        retention.as_secs() / ONE_DAY.as_secs()
     );
 
     loop {
-        tokio::time::sleep(UM_DIA).await;
+        tokio::time::sleep(ONE_DAY).await;
 
-        let removidos = limpar_logs_antigos(LOG_DIR, retencao).await;
+        let removed = clean_old_logs(LOG_DIR, retention).await;
 
-        println!("LOG: [GC] Retenção de logs concluída; {removidos} registro(s) removido(s).");
+        println!("LOG: [GC] log retention finished; {removed} record(s) removed.");
     }
 }
 
@@ -401,14 +401,14 @@ pub fn get_email_credentials() -> Result<(String, String), String> {
     dotenv().ok();
     let smtp_username = match env::var("SMTP_USERNAME") {
         Ok(username) => username,
-        Err(e) => return Err(format!("SMTP_USERNAME não definido no arquivo .env: {}", e)),
+        Err(e) => return Err(format!("SMTP_USERNAME not set in .env file: {}", e)),
     };
     let smtp_password = match env::var("SMTP_PASSWORD") {
         Ok(password) => password,
-        Err(e) => return Err(format!("SMTP_PASSWORD não definido no arquivo .env: {}", e)),
+        Err(e) => return Err(format!("SMTP_PASSWORD not set in .env file: {}", e)),
     };
-    let credenciais = (smtp_username, smtp_password);
-    Ok(credenciais)
+    let credentials = (smtp_username, smtp_password);
+    Ok(credentials)
 }
 
 #[cfg(test)]
@@ -416,140 +416,140 @@ mod tests {
     use super::*;
 
     #[test]
-    fn o_hash_novo_e_argon2id() {
-        let hash = password_hash("senha-do-usuario");
+    fn new_hash_is_argon2id() {
+        let hash = password_hash("user-password");
 
         assert!(hash.starts_with("$argon2id$"), "{hash}");
-        assert!(!hash_precisa_migrar(&hash));
+        assert!(!hash_needs_migration(&hash));
     }
 
     #[test]
-    fn dois_hashes_da_mesma_senha_diferem() {
-        let a = password_hash("mesma-senha");
-        let b = password_hash("mesma-senha");
+    fn two_hashes_of_the_same_password_differ() {
+        let a = password_hash("same-password");
+        let b = password_hash("same-password");
 
-        assert_ne!(a, b, "o salt deveria tornar cada hash único");
+        assert_ne!(a, b, "the salt should make each hash unique");
     }
 
     #[test]
-    fn verifica_a_senha_certa_e_recusa_a_errada() {
-        let hash = password_hash("senha-correta");
+    fn verifies_the_right_password_and_rejects_the_wrong_one() {
+        let hash = password_hash("correct-password");
 
-        assert!(password_verify("senha-correta", &hash));
-        assert!(!password_verify("senha-errada", &hash));
+        assert!(password_verify("correct-password", &hash));
+        assert!(!password_verify("wrong-password", &hash));
         assert!(!password_verify("", &hash));
     }
 
     #[test]
-    fn hash_bcrypt_legado_continua_validando() {
-        let legado = bcrypt::hash("senha-antiga").expect("hash bcrypt");
+    fn legacy_bcrypt_hash_still_validates() {
+        let legacy = bcrypt::hash("old-password").expect("bcrypt hash");
 
         assert!(
-            password_verify("senha-antiga", &legado),
-            "usuário antigo ficaria trancado fora da conta"
+            password_verify("old-password", &legacy),
+            "an old user would be locked out of their account"
         );
-        assert!(!password_verify("outra", &legado));
+        assert!(!password_verify("other", &legacy));
         assert!(
-            hash_precisa_migrar(&legado),
-            "hash bcrypt precisa ser marcado para migração"
+            hash_needs_migration(&legacy),
+            "bcrypt hash needs to be flagged for migration"
         );
     }
 
     #[test]
-    fn hash_corrompido_nao_valida_nada() {
-        assert!(!password_verify("qualquer", "$argon2id$lixo"));
-        assert!(!password_verify("qualquer", ""));
+    fn corrupted_hash_does_not_validate_anything() {
+        assert!(!password_verify("anything", "$argon2id$garbage"));
+        assert!(!password_verify("anything", ""));
     }
 
-    const CURTA: Duration = Duration::from_millis(150);
+    const SHORT: Duration = Duration::from_millis(150);
 
-    async fn raiz_temporaria(nome: &str) -> std::path::PathBuf {
-        let raiz = std::env::temp_dir().join(format!("zeile_logs_{}_{}", nome, uuid::Uuid::new_v4()));
-        tokio::fs::create_dir_all(&raiz).await.expect("criar raiz");
-        raiz
+    async fn temp_root(name: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!("zeile_logs_{}_{}", name, uuid::Uuid::new_v4()));
+        tokio::fs::create_dir_all(&root).await.expect("create root");
+        root
     }
 
     #[test]
-    fn a_retencao_padrao_e_de_tres_dias() {
+    fn default_retention_is_three_days() {
         unsafe { std::env::remove_var("ZEILE_LOG_RETENTION_DAYS") };
 
-        assert_eq!(retencao_de_logs(), UM_DIA * 3);
+        assert_eq!(log_retention(), ONE_DAY * 3);
     }
 
     #[test]
-    fn a_retencao_e_configuravel_e_ignora_valor_invalido() {
+    fn retention_is_configurable_and_ignores_invalid_value() {
         unsafe { std::env::set_var("ZEILE_LOG_RETENTION_DAYS", "7") };
-        assert_eq!(retencao_de_logs(), UM_DIA * 7);
+        assert_eq!(log_retention(), ONE_DAY * 7);
 
         unsafe { std::env::set_var("ZEILE_LOG_RETENTION_DAYS", "0") };
-        assert_eq!(retencao_de_logs(), UM_DIA * 3);
+        assert_eq!(log_retention(), ONE_DAY * 3);
 
         unsafe { std::env::set_var("ZEILE_LOG_RETENTION_DAYS", "abc") };
-        assert_eq!(retencao_de_logs(), UM_DIA * 3);
+        assert_eq!(log_retention(), ONE_DAY * 3);
 
         unsafe { std::env::remove_var("ZEILE_LOG_RETENTION_DAYS") };
     }
 
     #[tokio::test]
-    async fn remove_registro_antigo_e_preserva_o_recente() {
-        let raiz = raiz_temporaria("mistura").await;
-        let sessao = raiz.join("sessao_a");
-        tokio::fs::create_dir_all(&sessao).await.expect("sessão");
+    async fn removes_old_record_and_keeps_the_recent_one() {
+        let root = temp_root("mix").await;
+        let session = root.join("session_a");
+        tokio::fs::create_dir_all(&session).await.expect("session");
 
-        let antigo = sessao.join("antigo.log");
-        tokio::fs::write(&antigo, "código submetido antes").await.expect("escrever");
-
-        tokio::time::sleep(Duration::from_millis(300)).await;
-
-        let recente = sessao.join("recente.log");
-        tokio::fs::write(&recente, "código de agora").await.expect("escrever");
-
-        let removidos = limpar_logs_antigos(raiz.to_str().unwrap(), CURTA).await;
-
-        assert_eq!(removidos, 1, "deveria remover exatamente o registro velho");
-        assert!(!antigo.exists(), "registro além da retenção deveria sair");
-        assert!(recente.exists(), "registro dentro da retenção não pode sair");
-        assert!(sessao.exists(), "a pasta ainda tem registro vivo");
-
-        let _ = tokio::fs::remove_dir_all(&raiz).await;
-    }
-
-    #[tokio::test]
-    async fn a_pasta_da_sessao_some_quando_esvazia() {
-        let raiz = raiz_temporaria("vazia").await;
-        let sessao = raiz.join("sessao_b");
-        tokio::fs::create_dir_all(&sessao).await.expect("sessão");
-        tokio::fs::write(sessao.join("antigo.log"), "conteúdo").await.expect("escrever");
+        let old = session.join("old.log");
+        tokio::fs::write(&old, "code submitted earlier").await.expect("write");
 
         tokio::time::sleep(Duration::from_millis(300)).await;
 
-        limpar_logs_antigos(raiz.to_str().unwrap(), CURTA).await;
+        let recent = session.join("recent.log");
+        tokio::fs::write(&recent, "code from now").await.expect("write");
 
-        assert!(!sessao.exists(), "pasta de sessão vazia deveria ser removida");
+        let removed = clean_old_logs(root.to_str().unwrap(), SHORT).await;
 
-        let _ = tokio::fs::remove_dir_all(&raiz).await;
+        assert_eq!(removed, 1, "should remove exactly the old record");
+        assert!(!old.exists(), "record beyond retention should be gone");
+        assert!(recent.exists(), "record within retention should not be gone");
+        assert!(session.exists(), "the folder still has a live record");
+
+        let _ = tokio::fs::remove_dir_all(&root).await;
     }
 
     #[tokio::test]
-    async fn nada_e_removido_dentro_da_retencao() {
-        let raiz = raiz_temporaria("intacta").await;
-        let sessao = raiz.join("sessao_c");
-        tokio::fs::create_dir_all(&sessao).await.expect("sessão");
-        let registro = sessao.join("agora.log");
-        tokio::fs::write(&registro, "conteúdo").await.expect("escrever");
+    async fn session_folder_disappears_when_empty() {
+        let root = temp_root("empty").await;
+        let session = root.join("session_b");
+        tokio::fs::create_dir_all(&session).await.expect("session");
+        tokio::fs::write(session.join("old.log"), "content").await.expect("write");
 
-        let removidos = limpar_logs_antigos(raiz.to_str().unwrap(), UM_DIA * 3).await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
 
-        assert_eq!(removidos, 0);
-        assert!(registro.exists());
+        clean_old_logs(root.to_str().unwrap(), SHORT).await;
 
-        let _ = tokio::fs::remove_dir_all(&raiz).await;
+        assert!(!session.exists(), "empty session folder should be removed");
+
+        let _ = tokio::fs::remove_dir_all(&root).await;
     }
 
     #[tokio::test]
-    async fn uma_raiz_inexistente_nao_e_erro() {
-        let inexistente = std::env::temp_dir().join(format!("zeile_ausente_{}", uuid::Uuid::new_v4()));
+    async fn nothing_is_removed_within_retention() {
+        let root = temp_root("intact").await;
+        let session = root.join("session_c");
+        tokio::fs::create_dir_all(&session).await.expect("session");
+        let record = session.join("now.log");
+        tokio::fs::write(&record, "content").await.expect("write");
 
-        assert_eq!(limpar_logs_antigos(inexistente.to_str().unwrap(), CURTA).await, 0);
+        let removed = clean_old_logs(root.to_str().unwrap(), ONE_DAY * 3).await;
+
+        assert_eq!(removed, 0);
+        assert!(record.exists());
+
+        let _ = tokio::fs::remove_dir_all(&root).await;
+    }
+
+    #[tokio::test]
+    async fn a_nonexistent_root_is_not_an_error() {
+        let missing = std::env::temp_dir().join(format!("zeile_missing_{}", uuid::Uuid::new_v4()));
+
+        assert_eq!(clean_old_logs(missing.to_str().unwrap(), SHORT).await, 0);
     }
 }

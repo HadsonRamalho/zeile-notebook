@@ -81,8 +81,8 @@ pub struct NewChatMessageVersion {
 
 const CHAT_HISTORY_LIMIT: i64 = 500;
 
-/// Esconde o conteúdo de mensagens excluídas antes de sair do backend, para não
-/// vazar o texto original de uma mensagem soft-deletada.
+/// Hides the content of deleted messages before it leaves the backend, so the
+/// original text of a soft-deleted message doesn't leak.
 pub fn mask_deleted(mut message: ChatMessage) -> ChatMessage {
     if message.deleted_at.is_some() {
         message.content = String::new();
@@ -101,8 +101,8 @@ pub async fn create_message(
         .map_err(|e| ApiError::Database(e.to_string()))
 }
 
-/// Resolve o pai de uma resposta: valida escopo e reparenta para a raiz da
-/// thread (modelo Slack de um nível — resposta de resposta vira resposta da raiz).
+/// Resolves a reply's parent: validates scope and reparents to the thread
+/// root (Slack's one-level model — a reply to a reply becomes a reply to the root).
 pub async fn resolve_thread_parent(
     conn: &mut AsyncPgConnection,
     notebook_id: Option<Uuid>,

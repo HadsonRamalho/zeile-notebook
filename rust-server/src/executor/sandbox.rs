@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use tokio::process::Command;
 
-use crate::file::{RunLimits, prlimit_interno_args};
+use crate::file::{RunLimits, internal_prlimit_args};
 
 pub const MOUNT_POINT: &str = "/app";
 
@@ -19,7 +19,7 @@ pub fn shared_cache_dir() -> Option<String> {
         return None;
     }
 
-    caminho_absoluto(&dir).ok()
+    absolute_path(&dir).ok()
 }
 
 pub const COMPILE_LIMITS: RunLimits = RunLimits {
@@ -30,7 +30,7 @@ pub const COMPILE_LIMITS: RunLimits = RunLimits {
 
 pub const COMPILE_TMPFS_MB: u64 = 512;
 
-pub const COMPILE_MAX_PROCESSOS: u64 = 512;
+pub const COMPILE_MAX_PROCESSES: u64 = 512;
 
 #[derive(Clone)]
 pub struct CompileSandbox {
@@ -52,24 +52,24 @@ impl CompileSandbox {
         }
     }
 
-    pub fn com_cache_compartilhado(mut self) -> Self {
+    pub fn with_shared_cache(mut self) -> Self {
         self.cache = shared_cache_dir();
         self
     }
 
-    pub fn cache_path(&self, sufixo: &str) -> String {
+    pub fn cache_path(&self, suffix: &str) -> String {
         match self.cache {
-            Some(_) => format!("{CACHE_MOUNT}/{sufixo}"),
-            None => format!("{MOUNT_POINT}/.cache/{sufixo}"),
+            Some(_) => format!("{CACHE_MOUNT}/{suffix}"),
+            None => format!("{MOUNT_POINT}/.cache/{suffix}"),
         }
     }
 
-    pub fn com_toolchain(mut self, path: impl Into<String>) -> Self {
+    pub fn with_toolchain(mut self, path: impl Into<String>) -> Self {
         self.toolchain.push(path.into());
         self
     }
 
-    pub fn com_compilador(self, program: &str) -> Self {
+    pub fn with_compiler(self, program: &str) -> Self {
         let path = Path::new(program);
 
         if !path.is_absolute() {
@@ -77,13 +77,13 @@ impl CompileSandbox {
         }
 
         match path.parent().and_then(|p| p.to_str()) {
-            Some(dir) if dir != "/usr/bin" && dir != "/bin" => self.com_toolchain(dir),
+            Some(dir) if dir != "/usr/bin" && dir != "/bin" => self.with_toolchain(dir),
             _ => self,
         }
     }
 
-    pub fn com_env(mut self, chave: &str, valor: impl Into<String>) -> Self {
-        self.env.push((chave.to_string(), valor.into()));
+    pub fn with_env(mut self, key: &str, value: impl Into<String>) -> Self {
+        self.env.push((key.to_string(), value.into()));
         self
     }
 
@@ -138,7 +138,7 @@ impl CompileSandbox {
         args.push("--chdir".into());
         args.push(MOUNT_POINT.into());
 
-        args.extend(prlimit_interno_args(COMPILE_MAX_PROCESSOS));
+        args.extend(internal_prlimit_args(COMPILE_MAX_PROCESSES));
 
         args
     }
@@ -154,70 +154,70 @@ impl CompileSandbox {
         cmd.env("HOME", MOUNT_POINT);
         cmd.env("TMPDIR", "/tmp");
 
-        for (chave, valor) in &self.env {
-            cmd.env(chave, valor);
+        for (key, value) in &self.env {
+            cmd.env(key, value);
         }
 
         cmd
     }
 
-    pub async fn executar(
+    pub async fn run(
         &self,
         program: &str,
         program_args: &[&str],
     ) -> Result<std::process::Output, String> {
-        let execucao = self.command(program, program_args).output();
+        let execution = self.command(program, program_args).output();
 
-        match tokio::time::timeout(Duration::from_millis(self.limits.wall_ms), execucao).await {
+        match tokio::time::timeout(Duration::from_millis(self.limits.wall_ms), execution).await {
             Ok(Ok(output)) => Ok(output),
-            Ok(Err(e)) => Err(format!("Falha ao invocar {}: {}", program, e)),
+            Ok(Err(e)) => Err(format!("Failed to invoke {}: {}", program, e)),
             Err(_) => Err(format!(
-                "A compilação passou de {}s e foi interrompida.",
+                "Compilation exceeded {}s and was interrupted.",
                 self.limits.wall_ms / 1000
             )),
         }
     }
 }
 
-pub fn caminho_absoluto(dir: &str) -> Result<String, String> {
+pub fn absolute_path(dir: &str) -> Result<String, String> {
     std::fs::canonicalize(dir)
         .map(|p| p.to_string_lossy().to_string())
-        .map_err(|e| format!("Erro ao resolver o diretório da sessão: {}", e))
+        .map_err(|e| format!("Failed to resolve the session directory: {}", e))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn posicao(args: &[String], alvo: &str) -> usize {
+    fn position(args: &[String], target: &str) -> usize {
         args.iter()
-            .position(|a| a == alvo)
-            .unwrap_or_else(|| panic!("{alvo} ausente em {args:?}"))
+            .position(|a| a == target)
+            .unwrap_or_else(|| panic!("{target} missing from {args:?}"))
     }
 
     #[test]
-    fn o_envelope_isola_namespace_processo_e_sessao() {
+    fn the_envelope_isolates_namespace_process_and_session() {
         let args = CompileSandbox::new("/srv/files/go/abc").args();
 
         for flag in ["--unshare-all", "--die-with-parent", "--new-session"] {
-            assert!(args.contains(&flag.to_string()), "{flag} ausente: {args:?}");
+            assert!(args.contains(&flag.to_string()), "{flag} missing: {args:?}");
         }
     }
 
     #[test]
-    fn o_workspace_da_sessao_e_o_unico_ponto_de_escrita() {
+    fn the_session_workspace_is_the_only_write_point() {
         let args = CompileSandbox::new("/srv/files/go/abc").args();
 
-        let bind = posicao(&args, "--bind");
+        let bind = position(&args, "--bind");
         assert_eq!(args[bind + 1], "/srv/files/go/abc");
         assert_eq!(args[bind + 2], MOUNT_POINT);
 
-        let usr = posicao(&args, "/usr");
+        let usr = position(&args, "/usr");
         assert_eq!(args[usr - 1], "--ro-bind");
     }
 
     #[test]
-    fn o_limite_de_memoria_faz_parte_do_envelope() {
+    fn the_memory_limit_is_part_of_the_envelope() {
         let args = CompileSandbox::new("/srv/files/go/abc").args();
 
         assert_eq!(args[0], "--cpu=30");
@@ -227,22 +227,22 @@ mod tests {
     }
 
     #[test]
-    fn a_compilacao_tem_teto_de_processos_dentro_do_namespace() {
+    fn compilation_has_a_process_ceiling_inside_the_namespace() {
         let args = CompileSandbox::new("/srv/files/go/abc").args();
 
-        let bwrap = posicao(&args, "bwrap");
-        let nproc = posicao(&args, &format!("--nproc={COMPILE_MAX_PROCESSOS}"));
+        let bwrap = position(&args, "bwrap");
+        let nproc = position(&args, &format!("--nproc={COMPILE_MAX_PROCESSES}"));
 
-        assert!(nproc > bwrap, "--nproc precisa ficar dentro do user namespace");
+        assert!(nproc > bwrap, "--nproc must stay inside the user namespace");
         assert_eq!(args[nproc - 1], "/usr/bin/prlimit");
         assert_eq!(args.last().unwrap(), "--");
     }
 
     #[test]
-    fn a_compilacao_tem_tmpfs_com_teto() {
+    fn compilation_has_a_capped_tmpfs() {
         let args = CompileSandbox::new("/srv/files/go/abc").args();
 
-        let size = posicao(&args, "--size");
+        let size = position(&args, "--size");
 
         assert_eq!(args[size + 1], (COMPILE_TMPFS_MB * 1024 * 1024).to_string());
         assert_eq!(args[size + 2], "--tmpfs");
@@ -250,16 +250,16 @@ mod tests {
     }
 
     #[test]
-    fn a_compilacao_tem_watchdog_de_wall_clock() {
+    fn compilation_has_a_wall_clock_watchdog() {
         assert!(
             COMPILE_LIMITS.wall_ms > 0,
-            "sem wall_ms a compilação pode ficar presa para sempre"
+            "without wall_ms compilation could hang forever"
         );
     }
 
     #[tokio::test]
-    async fn a_compilacao_travada_e_interrompida_pelo_watchdog() {
-        let existe = |b: &str| {
+    async fn a_stuck_compilation_is_interrupted_by_the_watchdog() {
+        let exists = |b: &str| {
             std::process::Command::new("sh")
                 .args(["-c", &format!("command -v {b}")])
                 .output()
@@ -267,48 +267,48 @@ mod tests {
                 .unwrap_or(false)
         };
 
-        if !existe("bwrap") || !existe("prlimit") {
-            eprintln!("bwrap/prlimit ausente; teste pulado");
+        if !exists("bwrap") || !exists("prlimit") {
+            eprintln!("bwrap/prlimit missing; test skipped");
             return;
         }
 
-        let dir = "files/teste_watchdog";
-        std::fs::create_dir_all(dir).expect("diretório da sessão");
-        let abs = caminho_absoluto(dir).expect("caminho absoluto");
+        let dir = "files/watchdog_test";
+        std::fs::create_dir_all(dir).expect("session directory");
+        let abs = absolute_path(dir).expect("absolute path");
 
         let mut sandbox = CompileSandbox::new(abs);
         sandbox.limits.wall_ms = 1_000;
 
-        let erro = sandbox
-            .executar("sleep", &["30"])
+        let error = sandbox
+            .run("sleep", &["30"])
             .await
-            .expect_err("o watchdog deveria interromper");
+            .expect_err("the watchdog should interrupt");
 
         let _ = std::fs::remove_dir_all(dir);
 
-        assert!(erro.contains("interrompida"), "{erro}");
+        assert!(error.contains("interrupted"), "{error}");
     }
 
     #[test]
-    fn compilador_fora_de_usr_entra_como_bind_de_leitura() {
+    fn compiler_outside_usr_becomes_a_read_bind() {
         let args = CompileSandbox::new("/srv/files/zig/abc")
-            .com_compilador("/opt/zig-0.13/zig")
+            .with_compiler("/opt/zig-0.13/zig")
             .args();
 
-        let bind = posicao(&args, "/opt/zig-0.13");
+        let bind = position(&args, "/opt/zig-0.13");
         assert_eq!(args[bind - 1], "--ro-bind-try");
     }
 
     #[test]
-    fn compilador_do_path_nao_gera_bind_extra() {
-        let sandbox = CompileSandbox::new("/srv/files/go/abc").com_compilador("go");
+    fn compiler_from_path_does_not_generate_an_extra_bind() {
+        let sandbox = CompileSandbox::new("/srv/files/go/abc").with_compiler("go");
 
         assert!(sandbox.toolchain.is_empty());
     }
 
     #[test]
-    fn compilador_em_usr_bin_nao_gera_bind_redundante() {
-        let sandbox = CompileSandbox::new("/srv/files/go/abc").com_compilador("/usr/bin/go");
+    fn compiler_in_usr_bin_does_not_generate_a_redundant_bind() {
+        let sandbox = CompileSandbox::new("/srv/files/go/abc").with_compiler("/usr/bin/go");
 
         assert!(sandbox.toolchain.is_empty());
     }

@@ -1,77 +1,77 @@
 use axum::http::StatusCode;
 
-use crate::routes::test_support::{get, responder};
+use crate::routes::test_support::{get, respond};
 
-async fn destino(path: &str) -> (StatusCode, String) {
-    let response = responder(get(path)).await;
+async fn destination(path: &str) -> (StatusCode, String) {
+    let response = respond(get(path)).await;
     let status = response.status();
     let location = response
         .headers()
         .get("location")
-        .map(|valor| valor.to_str().unwrap_or_default().to_string())
+        .map(|value| value.to_str().unwrap_or_default().to_string())
         .unwrap_or_default();
 
     (status, location)
 }
 
 #[tokio::test]
-async fn as_rotas_do_github_continuam_no_mesmo_caminho() {
+async fn github_routes_stay_at_the_same_path() {
     for path in [
         "/api/user/login/github",
         "/api/user/link/github",
         "/api/user/link/github/callback?code=x&state=y",
         "/api/user/auth/callback/github?code=x&state=y",
     ] {
-        let (status, _) = destino(path).await;
+        let (status, _) = destination(path).await;
 
         assert_ne!(
             status,
             StatusCode::NOT_FOUND,
-            "callback registrado no GitHub App deixaria de existir: {path}"
+            "callback registered on the GitHub App would stop existing: {path}"
         );
     }
 }
 
 #[tokio::test]
-async fn provider_desconhecido_volta_para_o_login_com_erro() {
-    let (status, location) = destino("/api/user/login/gitlab").await;
+async fn unknown_provider_redirects_back_to_login_with_an_error() {
+    let (status, location) = destination("/api/user/login/gitlab").await;
 
     assert_eq!(status, StatusCode::SEE_OTHER);
     assert!(
         location.contains("auth_error=unknown_provider"),
-        "destino inesperado: {location}"
+        "unexpected destination: {location}"
     );
 }
 
 #[tokio::test]
-async fn callback_de_provider_desconhecido_nao_chega_no_banco() {
-    let (status, location) = destino("/api/user/auth/callback/gitlab?code=x&state=y").await;
+async fn callback_of_an_unknown_provider_never_reaches_the_database() {
+    let (status, location) = destination("/api/user/auth/callback/gitlab?code=x&state=y").await;
 
     assert_eq!(status, StatusCode::SEE_OTHER);
     assert!(
         location.contains("auth_error=unknown_provider"),
-        "destino inesperado: {location}"
+        "unexpected destination: {location}"
     );
 }
 
 #[tokio::test]
-async fn a_lista_de_providers_e_publica() {
-    let response = responder(get("/api/auth/providers")).await;
+async fn the_provider_list_is_public() {
+    let response = respond(get("/api/auth/providers")).await;
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    let corpo = crate::routes::test_support::corpo_em_texto(response).await;
-    assert!(corpo.contains("\"providers\""), "corpo inesperado: {corpo}");
+    let body = crate::routes::test_support::body_as_text(response).await;
+    assert!(body.contains("\"providers\""), "unexpected body: {body}");
 }
 
 #[tokio::test]
-async fn iniciar_vinculo_sem_sessao_nao_e_permitido() {
-    let response = responder(
+async fn starting_a_link_without_a_session_is_not_allowed() {
+    let response = respond(
         axum::http::Request::builder()
             .method("POST")
             .uri("/api/user/link/google")
             .body(axum::body::Body::empty())
-            .expect("requisição"),
+            .expect("request"),
     )
     .await;
 
@@ -80,13 +80,13 @@ async fn iniciar_vinculo_sem_sessao_nao_e_permitido() {
 }
 
 #[tokio::test]
-async fn desvincular_sem_sessao_nao_e_permitido() {
-    let response = responder(
+async fn unlinking_without_a_session_is_not_allowed() {
+    let response = respond(
         axum::http::Request::builder()
             .method("DELETE")
             .uri("/api/user/link/google")
             .body(axum::body::Body::empty())
-            .expect("requisição"),
+            .expect("request"),
     )
     .await;
 
@@ -94,25 +94,25 @@ async fn desvincular_sem_sessao_nao_e_permitido() {
 }
 
 #[tokio::test]
-async fn callback_sem_state_valido_nao_troca_o_codigo() {
-    let (status, location) = destino("/api/user/auth/callback/google?code=x&state=forjado").await;
+async fn callback_without_a_valid_state_does_not_exchange_the_code() {
+    let (status, location) = destination("/api/user/auth/callback/google?code=x&state=forged").await;
 
     assert_eq!(status, StatusCode::SEE_OTHER);
     assert!(
         location.contains("auth_error="),
-        "callback sem state deveria voltar com erro: {location}"
+        "callback without state should redirect back with an error: {location}"
     );
 }
 
 #[tokio::test]
-async fn a_rota_do_google_existe() {
+async fn the_google_route_exists() {
     for path in [
         "/api/user/login/google",
         "/api/user/link/google/callback?code=x&state=y",
         "/api/user/auth/callback/google?code=x&state=y",
     ] {
-        let (status, _) = destino(path).await;
+        let (status, _) = destination(path).await;
 
-        assert_ne!(status, StatusCode::NOT_FOUND, "rota ausente: {path}");
+        assert_ne!(status, StatusCode::NOT_FOUND, "missing route: {path}");
     }
 }

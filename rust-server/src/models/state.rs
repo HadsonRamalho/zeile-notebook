@@ -19,7 +19,7 @@ pub struct AppState {
     pub push: Option<PushState>,
     pub judge_semaphore: Arc<Semaphore>,
     pub shutdown: crate::shutdown::Shutdown,
-    pub sessoes: Arc<crate::controllers::session::CacheDeSessao>,
+    pub sessions: Arc<crate::controllers::session::SessionCache>,
 }
 
 impl FromRef<AppState> for Pool<AsyncPgConnection> {

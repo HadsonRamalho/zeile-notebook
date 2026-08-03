@@ -571,8 +571,8 @@ mod tests {
     }
 
     #[test]
-    fn os_bools_sobrevivem_a_ida_e_volta_pelos_grants() {
-        let casos = [
+    fn the_bools_survive_a_round_trip_through_the_grants() {
+        let cases = [
             RolePermissions::default(),
             RolePermissions::view_only(),
             RolePermissions::all(),
@@ -584,19 +584,19 @@ mod tests {
             },
         ];
 
-        for caso in casos {
-            assert_eq!(RolePermissions::from_grant_keys(&keys_of(caso)), caso);
+        for case in cases {
+            assert_eq!(RolePermissions::from_grant_keys(&keys_of(case)), case);
         }
     }
 
     #[test]
-    fn o_json_do_role_mantem_os_oito_bools_no_nivel_de_cima() {
+    fn the_role_json_keeps_the_eight_bools_at_the_top_level() {
         let role = TeamRoleView::synthetic("Owner", RolePermissions::view_only());
-        let json = serde_json::to_value(&role).expect("serializa");
+        let json = serde_json::to_value(&role).expect("serialize");
 
         assert_eq!(json["name"], "Owner");
         assert_eq!(json["can_read"], true);
-        for chave in [
+        for key in [
             "can_write",
             "can_manage_privacy",
             "can_manage_clones",
@@ -605,13 +605,13 @@ mod tests {
             "can_manage_permissions",
             "can_manage_team",
         ] {
-            assert_eq!(json[chave], false, "{chave} deveria vir como false");
+            assert_eq!(json[key], false, "{key} should come back as false");
         }
     }
 
     #[test]
-    fn a_edicao_parcial_preserva_o_que_nao_foi_enviado() {
-        let atual = RolePermissions::all();
+    fn a_partial_edit_preserves_what_was_not_sent() {
+        let current = RolePermissions::all();
         let payload = UpdateTeamRole {
             id: Uuid::new_v4(),
             name: None,
@@ -625,51 +625,51 @@ mod tests {
             can_manage_team: None,
         };
 
-        let resultado = payload.apply(atual);
+        let result = payload.apply(current);
 
-        assert!(!resultado.can_write);
-        assert!(resultado.can_read);
-        assert!(resultado.can_manage_team);
+        assert!(!result.can_write);
+        assert!(result.can_read);
+        assert!(result.can_manage_team);
     }
 }
 
 #[cfg(test)]
-mod tests_com_banco {
+mod tests_with_database {
     use super::*;
     use diesel_async::AsyncConnection;
 
-    async fn conexao() -> Option<AsyncPgConnection> {
+    async fn connection() -> Option<AsyncPgConnection> {
         let url = std::env::var("TEST_MIGRATION_DATABASE_URL").ok()?;
         AsyncPgConnection::establish(&url).await.ok()
     }
 
-    async fn time(conn: &mut AsyncPgConnection) -> Uuid {
+    async fn team(conn: &mut AsyncPgConnection) -> Uuid {
         let team_id = Uuid::new_v4();
         diesel::sql_query(format!(
-            "INSERT INTO teams (id, name) VALUES ('{team_id}', 'Time de teste')"
+            "INSERT INTO teams (id, name) VALUES ('{team_id}', 'Test team')"
         ))
         .execute(conn)
         .await
-        .expect("criar time");
+        .expect("create team");
         team_id
     }
 
-    async fn limpar(conn: &mut AsyncPgConnection, team_id: Uuid) {
+    async fn cleanup(conn: &mut AsyncPgConnection, team_id: Uuid) {
         diesel::sql_query(format!("DELETE FROM teams WHERE id = '{team_id}'"))
             .execute(conn)
             .await
-            .expect("remover time");
+            .expect("remove team");
     }
 
     #[tokio::test]
-    async fn o_cargo_criado_le_de_volta_os_bools_que_pediu() {
-        let Some(mut conn) = conexao().await else {
-            eprintln!("TEST_MIGRATION_DATABASE_URL ausente; teste pulado");
+    async fn the_created_role_reads_back_the_bools_it_requested() {
+        let Some(mut conn) = connection().await else {
+            eprintln!("TEST_MIGRATION_DATABASE_URL missing; test skipped");
             return;
         };
 
-        let team_id = time(&mut conn).await;
-        let pedido = RolePermissions {
+        let team_id = team(&mut conn).await;
+        let requested = RolePermissions {
             can_read: true,
             can_write: true,
             can_remove_users: true,
@@ -682,40 +682,40 @@ mod tests_com_banco {
                 team_id,
                 name: "Editor".to_string(),
             },
-            pedido,
+            requested,
         )
         .await
-        .expect("criar cargo");
+        .expect("create role");
 
         let roles = find_roles_by_team(&mut conn, team_id)
             .await
-            .expect("listar cargos");
+            .expect("list roles");
 
         assert_eq!(roles.len(), 1);
-        assert_eq!(roles[0].permissions, pedido);
+        assert_eq!(roles[0].permissions, requested);
 
-        limpar(&mut conn, team_id).await;
+        cleanup(&mut conn, team_id).await;
     }
 
     #[tokio::test]
-    async fn editar_o_cargo_move_os_grants_e_nao_so_a_resposta() {
-        let Some(mut conn) = conexao().await else {
+    async fn editing_the_role_moves_the_grants_and_not_just_the_response() {
+        let Some(mut conn) = connection().await else {
             return;
         };
 
-        let team_id = time(&mut conn).await;
+        let team_id = team(&mut conn).await;
         let role = create_team_role(
             &mut conn,
             &NewTeamRole {
                 team_id,
-                name: "Leitor".to_string(),
+                name: "Reader".to_string(),
             },
             RolePermissions::view_only(),
         )
         .await
-        .expect("criar cargo");
+        .expect("create role");
 
-        let atualizado = update_team_role(
+        let updated = update_team_role(
             &mut conn,
             role.id,
             &UpdateTeamRole {
@@ -732,18 +732,18 @@ mod tests_com_banco {
             },
         )
         .await
-        .expect("editar cargo");
+        .expect("edit role");
 
-        assert!(atualizado.permissions.can_write);
+        assert!(updated.permissions.can_write);
 
-        let chaves = grant_keys_by_role(&mut conn, &[role.id])
+        let keys = grant_keys_by_role(&mut conn, &[role.id])
             .await
-            .expect("ler grants");
-        let chaves = chaves.get(&role.id).expect("grants do cargo");
+            .expect("read grants");
+        let keys = keys.get(&role.id).expect("role grants");
 
-        assert!(chaves.contains("notebook.edit"));
-        assert!(chaves.contains("notebook.view"));
+        assert!(keys.contains("notebook.edit"));
+        assert!(keys.contains("notebook.view"));
 
-        limpar(&mut conn, team_id).await;
+        cleanup(&mut conn, team_id).await;
     }
 }

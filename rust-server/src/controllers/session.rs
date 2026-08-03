@@ -1,5 +1,6 @@
-//! validação de sessão contra o banco: um token assinado prova quem emitiu,
-//! não que a conta ainda existe, ainda está ativa ou não teve a senha trocada.
+//! Session validation against the database: a signed token proves who issued
+//! it, not that the account still exists, is still active, or hasn't had its
+//! password changed since.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -18,68 +19,70 @@ use crate::models::jwt::Claims;
 use crate::models::state::AppState;
 use crate::models::user::UserRole;
 
-/// Janela em que uma sessão já validada é aceita sem voltar ao banco. Sem isso,
-/// toda requisição autenticada tomaria uma conexão do pool. Cinco segundos é o
-/// atraso máximo para uma desativação passar a valer — contra os sete dias de
-/// validade do token, que era o estado anterior.
-const TTL_CACHE: Duration = Duration::from_secs(5);
+/// Window in which an already-validated session is accepted without going
+/// back to the database. Without this, every authenticated request would
+/// take a connection from the pool. Five seconds is the maximum delay for a
+/// deactivation to take effect — against the token's seven-day validity,
+/// which was the previous state.
+const CACHE_TTL: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Copy)]
-pub struct SessaoValida {
+pub struct ValidSession {
     pub role: UserRole,
 }
 
-struct Entrada {
+struct Entry {
     role: UserRole,
-    visto_em: Instant,
+    seen_at: Instant,
 }
 
 #[derive(Default)]
-pub struct CacheDeSessao {
-    entradas: DashMap<(Uuid, i64), Entrada>,
+pub struct SessionCache {
+    entries: DashMap<(Uuid, i64), Entry>,
 }
 
-impl CacheDeSessao {
+impl SessionCache {
     pub fn new() -> Self {
         Self::default()
     }
 
-    fn buscar(&self, user_id: Uuid, iat: i64, agora: Instant) -> Option<UserRole> {
-        let entrada = self.entradas.get(&(user_id, iat))?;
+    fn find(&self, user_id: Uuid, iat: i64, now: Instant) -> Option<UserRole> {
+        let entry = self.entries.get(&(user_id, iat))?;
 
-        if agora.saturating_duration_since(entrada.visto_em) >= TTL_CACHE {
+        if now.saturating_duration_since(entry.seen_at) >= CACHE_TTL {
             return None;
         }
 
-        Some(entrada.role)
+        Some(entry.role)
     }
 
-    fn guardar(&self, user_id: Uuid, iat: i64, role: UserRole, agora: Instant) {
-        if self.entradas.len() > 50_000 {
-            self.entradas
-                .retain(|_, e| agora.saturating_duration_since(e.visto_em) < TTL_CACHE);
+    fn store(&self, user_id: Uuid, iat: i64, role: UserRole, now: Instant) {
+        if self.entries.len() > 50_000 {
+            self.entries
+                .retain(|_, e| now.saturating_duration_since(e.seen_at) < CACHE_TTL);
         }
 
-        self.entradas.insert(
+        self.entries.insert(
             (user_id, iat),
-            Entrada {
+            Entry {
                 role,
-                visto_em: agora,
+                seen_at: now,
             },
         );
     }
 
-    pub fn invalidar(&self, user_id: Uuid) {
-        self.entradas.retain(|(id, _), _| *id != user_id);
+    pub fn invalidate(&self, user_id: Uuid) {
+        self.entries.retain(|(id, _), _| *id != user_id);
     }
 }
 
-/// Confere a conta no banco. O papel devolvido é o do banco, não o do token:
-/// um admin rebaixado mantinha privilégio até o token expirar.
-pub async fn validar_no_banco(
+/// Checks the account against the database. The role returned is the one in
+/// the database, not the token's: a demoted admin kept its privilege until
+/// the token expired.
+pub async fn validate_in_db(
     conn: &mut AsyncPgConnection,
     claims: &Claims,
-) -> Result<SessaoValida, ApiError> {
+) -> Result<ValidSession, ApiError> {
     let user = crate::models::user::find_user_by_id(conn, &claims.id)
         .await
         .map_err(|_| ApiError::InvalidAuthorizationToken)?;
@@ -88,48 +91,49 @@ pub async fn validar_no_banco(
         return Err(ApiError::NotActiveUser);
     }
 
-    if sessao_revogada(claims, user.password_changed_at) {
+    if session_revoked(claims, user.password_changed_at) {
         return Err(ApiError::InvalidAuthorizationToken);
     }
 
-    Ok(SessaoValida { role: user.role })
+    Ok(ValidSession { role: user.role })
 }
 
-/// Token emitido antes da última troca de senha não vale mais. Token antigo sem
-/// `iat` não pode ser datado, então sobrevive até expirar — o alcance disso
-/// termina quando os tokens emitidos antes desta versão caducam.
-pub fn sessao_revogada(claims: &Claims, password_changed_at: chrono::DateTime<chrono::Utc>) -> bool {
+/// A token issued before the last password change no longer counts. An old
+/// token without `iat` can't be dated, so it survives until it expires — the
+/// reach of that ends once tokens issued before this version expire.
+pub fn session_revoked(claims: &Claims, password_changed_at: chrono::DateTime<chrono::Utc>) -> bool {
     claims
         .iat
         .is_some_and(|iat| iat < password_changed_at.timestamp())
 }
 
-pub async fn validar_sessao(
+pub async fn validate_session(
     pool: &Pool<AsyncPgConnection>,
-    cache: &CacheDeSessao,
+    cache: &SessionCache,
     claims: &Claims,
-) -> Result<SessaoValida, ApiError> {
-    let agora = Instant::now();
+) -> Result<ValidSession, ApiError> {
+    let now = Instant::now();
     let iat = claims.iat.unwrap_or(0);
 
-    if let Some(role) = cache.buscar(claims.id, iat, agora) {
-        return Ok(SessaoValida { role });
+    if let Some(role) = cache.find(claims.id, iat, now) {
+        return Ok(ValidSession { role });
     }
 
     let mut conn = crate::controllers::utils::get_conn(pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let sessao = validar_no_banco(&mut conn, claims).await?;
+    let session = validate_in_db(&mut conn, claims).await?;
 
-    cache.guardar(claims.id, iat, sessao.role, agora);
+    cache.store(claims.id, iat, session.role, now);
 
-    Ok(sessao)
+    Ok(session)
 }
 
-/// Recusa um token que decodifica mas cuja conta não existe mais, está inativa
-/// ou teve a senha trocada. Requisição sem token, ou com token que nem
-/// decodifica, segue em frente: a rota decide se aceita anônimo.
+/// Rejects a token that decodes but whose account no longer exists, is
+/// inactive, or had its password changed. A request without a token, or
+/// with a token that doesn't even decode, passes through: the route decides
+/// whether to accept it as anonymous.
 pub async fn enforce_session(
     State(state): State<Arc<AppState>>,
     request: Request,
@@ -141,18 +145,18 @@ pub async fn enforce_session(
         return next.run(request).await;
     };
 
-    match validar_sessao(&state.pool, &state.sessoes, &claims).await {
+    match validate_session(&state.pool, &state.sessions, &claims).await {
         Ok(_) => next.run(request).await,
         Err(e) => {
-            tracing::warn!("sessão recusada para {}: {e}", claims.id);
+            tracing::warn!("session refused for {}: {e}", claims.id);
             (StatusCode::UNAUTHORIZED, axum::Json(e.to_string())).into_response()
         }
     }
 }
 
-/// Papel vindo do banco, para decisão de autorização. `claims.role` é uma foto
-/// do momento da emissão e não acompanha rebaixamento.
-pub async fn papel_no_banco(
+/// Role from the database, for authorization decisions. `claims.role` is a
+/// snapshot from issuance time and doesn't track demotion.
+pub async fn role_in_db(
     conn: &mut AsyncPgConnection,
     user_id: &Uuid,
 ) -> Result<UserRole, ApiError> {
@@ -165,98 +169,98 @@ pub async fn papel_no_banco(
 mod tests {
     use super::*;
 
-    fn claims_com_iat(iat: Option<i64>) -> Claims {
+    fn claims_with_iat(iat: Option<i64>) -> Claims {
         Claims {
             id: Uuid::new_v4(),
             public_id: 1234567,
             role: UserRole::Admin,
-            email: "pessoa@exemplo.test".to_string(),
+            email: "person@example.test".to_string(),
             exp: (chrono::Utc::now().timestamp() + 3600) as usize,
             iat,
         }
     }
 
     #[test]
-    fn token_emitido_antes_da_troca_de_senha_esta_revogado() {
-        let claims = claims_com_iat(Some(chrono::Utc::now().timestamp()));
-        let trocou_depois = chrono::Utc::now() + chrono::Duration::seconds(60);
+    fn token_issued_before_password_change_is_revoked() {
+        let claims = claims_with_iat(Some(chrono::Utc::now().timestamp()));
+        let changed_after = chrono::Utc::now() + chrono::Duration::seconds(60);
 
-        assert!(sessao_revogada(&claims, trocou_depois));
+        assert!(session_revoked(&claims, changed_after));
     }
 
     #[test]
-    fn token_emitido_depois_da_troca_continua_valendo() {
-        let claims = claims_com_iat(Some(chrono::Utc::now().timestamp()));
-        let trocou_antes = chrono::Utc::now() - chrono::Duration::days(2);
+    fn token_issued_after_the_change_still_counts() {
+        let claims = claims_with_iat(Some(chrono::Utc::now().timestamp()));
+        let changed_before = chrono::Utc::now() - chrono::Duration::days(2);
 
-        assert!(!sessao_revogada(&claims, trocou_antes));
+        assert!(!session_revoked(&claims, changed_before));
     }
 
     #[test]
-    fn token_antigo_sem_iat_nao_pode_ser_datado() {
-        let claims = claims_com_iat(None);
+    fn old_token_without_iat_cannot_be_dated() {
+        let claims = claims_with_iat(None);
 
         assert!(
-            !sessao_revogada(&claims, chrono::Utc::now()),
-            "sem iat não há como datar; o token sobrevive até expirar"
+            !session_revoked(&claims, chrono::Utc::now()),
+            "without iat there's no way to date it; the token survives until it expires"
         );
     }
 
     #[test]
-    fn o_cache_responde_dentro_da_janela_e_expira_depois() {
-        let cache = CacheDeSessao::new();
+    fn cache_responds_within_the_window_and_expires_after() {
+        let cache = SessionCache::new();
         let user = Uuid::new_v4();
-        let agora = Instant::now();
+        let now = Instant::now();
 
-        assert!(cache.buscar(user, 10, agora).is_none(), "cache começa vazio");
+        assert!(cache.find(user, 10, now).is_none(), "cache starts empty");
 
-        cache.guardar(user, 10, UserRole::User, agora);
+        cache.store(user, 10, UserRole::User, now);
 
-        assert_eq!(cache.buscar(user, 10, agora), Some(UserRole::User));
+        assert_eq!(cache.find(user, 10, now), Some(UserRole::User));
         assert_eq!(
-            cache.buscar(user, 10, agora + TTL_CACHE - Duration::from_millis(1)),
+            cache.find(user, 10, now + CACHE_TTL - Duration::from_millis(1)),
             Some(UserRole::User)
         );
         assert!(
-            cache.buscar(user, 10, agora + TTL_CACHE).is_none(),
-            "passada a janela, precisa voltar ao banco"
+            cache.find(user, 10, now + CACHE_TTL).is_none(),
+            "past the window, it must go back to the database"
         );
     }
 
     #[test]
-    fn o_cache_separa_emissoes_diferentes_do_mesmo_usuario() {
-        let cache = CacheDeSessao::new();
+    fn cache_separates_different_issuances_of_the_same_user() {
+        let cache = SessionCache::new();
         let user = Uuid::new_v4();
-        let agora = Instant::now();
+        let now = Instant::now();
 
-        cache.guardar(user, 100, UserRole::Admin, agora);
+        cache.store(user, 100, UserRole::Admin, now);
 
-        assert_eq!(cache.buscar(user, 100, agora), Some(UserRole::Admin));
+        assert_eq!(cache.find(user, 100, now), Some(UserRole::Admin));
         assert!(
-            cache.buscar(user, 200, agora).is_none(),
-            "token reemitido não pode herdar a validação do anterior"
+            cache.find(user, 200, now).is_none(),
+            "a reissued token cannot inherit the previous one's validation"
         );
     }
 
     #[test]
-    fn invalidar_derruba_todas_as_emissoes_do_usuario() {
-        let cache = CacheDeSessao::new();
+    fn invalidate_drops_all_issuances_of_the_user() {
+        let cache = SessionCache::new();
         let user = Uuid::new_v4();
-        let outro = Uuid::new_v4();
-        let agora = Instant::now();
+        let other = Uuid::new_v4();
+        let now = Instant::now();
 
-        cache.guardar(user, 1, UserRole::User, agora);
-        cache.guardar(user, 2, UserRole::User, agora);
-        cache.guardar(outro, 1, UserRole::User, agora);
+        cache.store(user, 1, UserRole::User, now);
+        cache.store(user, 2, UserRole::User, now);
+        cache.store(other, 1, UserRole::User, now);
 
-        cache.invalidar(user);
+        cache.invalidate(user);
 
-        assert!(cache.buscar(user, 1, agora).is_none());
-        assert!(cache.buscar(user, 2, agora).is_none());
+        assert!(cache.find(user, 1, now).is_none());
+        assert!(cache.find(user, 2, now).is_none());
         assert_eq!(
-            cache.buscar(outro, 1, agora),
+            cache.find(other, 1, now),
             Some(UserRole::User),
-            "invalidar um usuário não pode derrubar outro"
+            "invalidating one user cannot drop another"
         );
     }
 }

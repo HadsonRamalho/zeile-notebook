@@ -52,7 +52,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn provider_vinculado(&self, provider: AuthProvider) -> bool {
+    pub fn provider_linked(&self, provider: AuthProvider) -> bool {
         match provider {
             AuthProvider::Github => self.github_id.is_some(),
             AuthProvider::Google => self.google_id.is_some(),
@@ -60,19 +60,19 @@ impl User {
         }
     }
 
-    pub fn metodos_de_login(&self) -> usize {
+    pub fn login_methods(&self) -> usize {
         [
             self.password_hash.is_some(),
             self.github_id.is_some(),
             self.google_id.is_some(),
         ]
         .iter()
-        .filter(|tem| **tem)
+        .filter(|has| **has)
         .count()
     }
 
-    pub fn pode_desvincular(&self, provider: AuthProvider) -> bool {
-        self.provider_vinculado(provider) && self.metodos_de_login() > 1
+    pub fn can_unlink(&self, provider: AuthProvider) -> bool {
+        self.provider_linked(provider) && self.login_methods() > 1
     }
 }
 
@@ -357,9 +357,9 @@ pub async fn update_user_password(
     }
 }
 
-/// Regrava só o hash, sem mexer em `password_changed_at`. A senha não mudou —
-/// isso é a migração de algoritmo no login — então links de reset pendentes do
-/// usuário não devem ser invalidados por isso.
+/// Rewrites only the hash, without touching `password_changed_at`. The
+/// password didn't change — this is the algorithm migration on login — so
+/// the user's pending reset links must not be invalidated by it.
 pub async fn rehash_user_password(
     conn: &mut AsyncPgConnection,
     id_param: &Uuid,
@@ -388,17 +388,17 @@ pub async fn delete_user(conn: &mut AsyncPgConnection, id_param: &Uuid) -> Resul
 }
 
 #[cfg(test)]
-mod testes {
+mod tests {
     use super::*;
 
-    fn usuario(senha: bool, github: bool, google: bool) -> User {
+    fn user(password: bool, github: bool, google: bool) -> User {
         User {
             id: Uuid::new_v4(),
             public_id: 1,
             name: "Zeile".to_string(),
             email: "zeile@example.com".to_string(),
             avatar_url: None,
-            password_hash: senha.then(|| "hash".to_string()),
+            password_hash: password.then(|| "hash".to_string()),
             primary_provider: AuthProvider::Email,
             github_id: github.then(|| "1".to_string()),
             google_id: google.then(|| "2".to_string()),
@@ -412,35 +412,35 @@ mod testes {
     }
 
     #[test]
-    fn conta_com_senha_e_google_pode_desvincular_o_google() {
-        let user = usuario(true, false, true);
+    fn account_with_password_and_google_can_unlink_google() {
+        let u = user(true, false, true);
 
-        assert_eq!(user.metodos_de_login(), 2);
-        assert!(user.pode_desvincular(AuthProvider::Google));
+        assert_eq!(u.login_methods(), 2);
+        assert!(u.can_unlink(AuthProvider::Google));
     }
 
     #[test]
-    fn ultimo_metodo_nao_pode_ser_removido() {
-        let so_google = usuario(false, false, true);
-        let so_senha = usuario(true, false, false);
+    fn the_last_method_cannot_be_removed() {
+        let google_only = user(false, false, true);
+        let password_only = user(true, false, false);
 
-        assert!(!so_google.pode_desvincular(AuthProvider::Google));
-        assert!(!so_senha.pode_desvincular(AuthProvider::Email));
+        assert!(!google_only.can_unlink(AuthProvider::Google));
+        assert!(!password_only.can_unlink(AuthProvider::Email));
     }
 
     #[test]
-    fn provider_que_nao_esta_vinculado_nao_pode_ser_desvinculado() {
-        let user = usuario(true, true, false);
+    fn a_provider_that_is_not_linked_cannot_be_unlinked() {
+        let u = user(true, true, false);
 
-        assert!(!user.pode_desvincular(AuthProvider::Google));
-        assert!(user.pode_desvincular(AuthProvider::Github));
+        assert!(!u.can_unlink(AuthProvider::Google));
+        assert!(u.can_unlink(AuthProvider::Github));
     }
 
     #[test]
-    fn conta_com_dois_providers_e_sem_senha_ainda_pode_desvincular_um() {
-        let user = usuario(false, true, true);
+    fn account_with_two_providers_and_no_password_can_still_unlink_one() {
+        let u = user(false, true, true);
 
-        assert!(user.pode_desvincular(AuthProvider::Github));
-        assert!(user.pode_desvincular(AuthProvider::Google));
+        assert!(u.can_unlink(AuthProvider::Github));
+        assert!(u.can_unlink(AuthProvider::Google));
     }
 }

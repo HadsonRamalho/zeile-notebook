@@ -13,7 +13,7 @@ use crate::{
     controllers::{
         email::send_password_reset_email,
         jwt::{extract_claims_from_header, generate_jwt},
-        utils::{Sanitize, get_conn, hash_precisa_migrar, password_hash, password_verify},
+        utils::{Sanitize, get_conn, hash_needs_migration, password_hash, password_verify},
     },
     models::{
         self,
@@ -31,7 +31,7 @@ use crate::{
 pub async fn api_register_user(
     State(state): State<Arc<AppState>>,
     input: Json<NewUser>,
-) -> Result<(StatusCode, Json<SessaoResponse>), ApiError> {
+) -> Result<(StatusCode, Json<SessionResponse>), ApiError> {
     let mut user_input = input.0;
     user_input.sanitize();
 
@@ -54,11 +54,11 @@ pub async fn api_register_user(
 
     let user_id = user.id;
     let token = generate_jwt(UserAuthInfo::from(user))?;
-    let (_, refresh) = models::refresh_token::emitir(conn, user_id).await?;
+    let (_, refresh) = models::refresh_token::issue(conn, user_id).await?;
 
     Ok((
         StatusCode::CREATED,
-        Json(SessaoResponse {
+        Json(SessionResponse {
             access_token: token,
             refresh_token: refresh,
             expires_in_secs: crate::controllers::jwt::access_token_ttl_secs(),
@@ -67,7 +67,7 @@ pub async fn api_register_user(
 }
 
 #[derive(serde::Serialize)]
-pub struct SessaoResponse {
+pub struct SessionResponse {
     #[serde(rename = "accessToken")]
     pub access_token: String,
     #[serde(rename = "refreshToken")]
@@ -86,7 +86,7 @@ pub struct RefreshPayload {
 pub async fn api_login_user(
     State(state): State<Arc<AppState>>,
     Json(input): Json<LoginUser>,
-) -> Result<Json<SessaoResponse>, ApiError> {
+) -> Result<Json<SessionResponse>, ApiError> {
     let mut user_input = input;
     user_input.sanitize();
 
@@ -113,9 +113,9 @@ pub async fn api_login_user(
         )));
     }
 
-    let hash_atual = user.password_hash.clone();
+    let current_hash = user.password_hash.clone();
 
-    let password_valid = match &hash_atual {
+    let password_valid = match &current_hash {
         Some(hash) => password_verify(&user_input.password, hash),
         None => false,
     };
@@ -124,62 +124,62 @@ pub async fn api_login_user(
         return Err(ApiError::InvalidCredentials);
     }
 
-    if hash_atual.as_deref().is_some_and(hash_precisa_migrar) {
-        let novo_hash = password_hash(&user_input.password);
+    if current_hash.as_deref().is_some_and(hash_needs_migration) {
+        let new_hash = password_hash(&user_input.password);
 
-        if let Err(e) = models::user::rehash_user_password(conn, &user.id, novo_hash).await {
-            tracing::warn!("falha ao migrar hash de senha do usuário {}: {e}", user.id);
+        if let Err(e) = models::user::rehash_user_password(conn, &user.id, new_hash).await {
+            tracing::warn!("failed to migrate password hash for user {}: {e}", user.id);
         }
     }
 
     let user_id = user.id;
     let token = generate_jwt(UserAuthInfo::from(user))?;
-    let (_, refresh) = models::refresh_token::emitir(conn, user_id).await?;
+    let (_, refresh) = models::refresh_token::issue(conn, user_id).await?;
 
-    Ok(Json(SessaoResponse {
+    Ok(Json(SessionResponse {
         access_token: token,
         refresh_token: refresh,
         expires_in_secs: crate::controllers::jwt::access_token_ttl_secs(),
     }))
 }
 
-/// Troca um refresh token por um par novo. O token usado é revogado e aponta
-/// para o substituto, então reuso de token já rotacionado é detectável.
+/// Exchanges a refresh token for a new pair. The used token is revoked and
+/// points to its replacement, so reuse of an already-rotated token is detectable.
 pub async fn api_refresh_session(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<RefreshPayload>,
-) -> Result<Json<SessaoResponse>, ApiError> {
+) -> Result<Json<SessionResponse>, ApiError> {
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let atual = models::refresh_token::buscar_por_token(conn, &payload.refresh_token).await?;
+    let current = models::refresh_token::find_by_token(conn, &payload.refresh_token).await?;
 
-    if !atual.utilizavel(chrono::Utc::now()) {
-        // Reuso de um token já rotacionado é sinal de vazamento: derruba a
-        // familia inteira em vez de só recusar esta tentativa.
-        if atual.replaced_by.is_some() {
+    if !current.usable(chrono::Utc::now()) {
+        // Reuse of an already-rotated token is a sign of a leak: drop the
+        // whole family instead of just refusing this one attempt.
+        if current.replaced_by.is_some() {
             tracing::warn!(
-                "reuso de refresh token rotacionado do usuário {}; revogando sessões",
-                atual.user_id
+                "reuse of rotated refresh token for user {}; revoking sessions",
+                current.user_id
             );
-            let _ = models::refresh_token::revogar_do_usuario(conn, atual.user_id).await;
-            state.sessoes.invalidar(atual.user_id);
+            let _ = models::refresh_token::revoke_for_user(conn, current.user_id).await;
+            state.sessions.invalidate(current.user_id);
         }
 
         return Err(ApiError::InvalidAuthorizationToken);
     }
 
-    let user = models::user::find_user_by_id(conn, &atual.user_id).await?;
+    let user = models::user::find_user_by_id(conn, &current.user_id).await?;
 
     if !user.is_active || user.deleted_at.is_some() {
         return Err(ApiError::NotActiveUser);
     }
 
-    let (_, refresh) = models::refresh_token::rotacionar(conn, &atual).await?;
+    let (_, refresh) = models::refresh_token::rotate(conn, &current).await?;
     let token = generate_jwt(UserAuthInfo::from(user))?;
 
-    Ok(Json(SessaoResponse {
+    Ok(Json(SessionResponse {
         access_token: token,
         refresh_token: refresh,
         expires_in_secs: crate::controllers::jwt::access_token_ttl_secs(),
@@ -194,11 +194,11 @@ pub async fn api_logout(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    // Logout de token desconhecido responde OK: dizer que não existe entregaria
-    // um oráculo de tokens válidos.
-    if let Ok(atual) = models::refresh_token::buscar_por_token(conn, &payload.refresh_token).await {
-        models::refresh_token::revogar(conn, atual.id).await?;
-        state.sessoes.invalidar(atual.user_id);
+    // Logout of an unknown token responds OK: saying it doesn't exist would
+    // give an oracle for valid tokens.
+    if let Ok(current) = models::refresh_token::find_by_token(conn, &payload.refresh_token).await {
+        models::refresh_token::revoke(conn, current.id).await?;
+        state.sessions.invalidate(current.user_id);
     }
 
     Ok(StatusCode::OK)
@@ -307,10 +307,10 @@ pub async fn api_update_user_password(
 
     models::user::update_user_password(conn, &id, password_hash).await?;
 
-    let revogados = models::refresh_token::revogar_do_usuario(conn, id).await?;
-    state.sessoes.invalidar(id);
+    let revoked = models::refresh_token::revoke_for_user(conn, id).await?;
+    state.sessions.invalidate(id);
 
-    tracing::info!("senha trocada; {revogados} sessão(ões) revogada(s) do usuário {id}");
+    tracing::info!("password changed; {revoked} session(s) revoked for user {id}");
 
     Ok(StatusCode::OK)
 }
@@ -429,7 +429,7 @@ pub async fn api_execute_password_reset(
 
     let user = models::user::find_user_by_id(conn, &claims.sub).await?;
 
-    if crate::controllers::jwt::reset_token_foi_consumido(&claims, user.password_changed_at) {
+    if crate::controllers::jwt::reset_token_was_consumed(&claims, user.password_changed_at) {
         return Err(ApiError::InvalidAuthorizationToken);
     }
 
@@ -437,11 +437,11 @@ pub async fn api_execute_password_reset(
 
     models::user::update_user_password(conn, &claims.sub, hashed_password).await?;
 
-    let revogados = models::refresh_token::revogar_do_usuario(conn, claims.sub).await?;
-    state.sessoes.invalidar(claims.sub);
+    let revoked = models::refresh_token::revoke_for_user(conn, claims.sub).await?;
+    state.sessions.invalidate(claims.sub);
 
     tracing::info!(
-        "senha redefinida; {revogados} sessão(ões) revogada(s) do usuário {}",
+        "password reset; {revoked} session(s) revoked for user {}",
         claims.sub
     );
 

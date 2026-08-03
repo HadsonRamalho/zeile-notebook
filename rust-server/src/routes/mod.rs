@@ -92,11 +92,11 @@ pub fn establish_connection(config: &str) -> BoxFuture<'_, ConnectionResult<Asyn
     fut.boxed()
 }
 
-pub const BODY_LIMIT_PADRAO: usize = 1024 * 1024;
+pub const DEFAULT_BODY_LIMIT: usize = 1024 * 1024;
 
-/// Teto do corpo da rota de conteúdo. O `Json<T>` desserializa tudo em memória
-/// antes de qualquer validação, então o número que importa é este multiplicado
-/// pela concorrência esperada — não o tamanho de um notebook plausível.
+/// Ceiling for the content route's body. `Json<T>` deserializes everything
+/// into memory before any validation, so the number that matters is this one
+/// multiplied by expected concurrency — not the size of a plausible notebook.
 pub const BODY_LIMIT_CONTEUDO: usize = 1024 * 1024 * 20;
 
 pub async fn build_router(app_state: Arc<AppState>) -> Router {
@@ -146,7 +146,7 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
             crate::routes::docs::get_api_docs(),
         ))
         .with_state(app_state)
-        .layer(DefaultBodyLimit::max(BODY_LIMIT_PADRAO))
+        .layer(DefaultBodyLimit::max(DEFAULT_BODY_LIMIT))
         .layer(axum::middleware::from_fn_with_state(
             app_state_para_sessao,
             crate::controllers::session::enforce_session,

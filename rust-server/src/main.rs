@@ -35,7 +35,7 @@ pub struct CodeResponse {
 #[tokio::main]
 async fn main() {
     if let Err(error) = run().await {
-        eprintln!("zeile-server não subiu: {error}");
+        eprintln!("zeile-server failed to start: {error}");
         std::process::exit(1);
     }
 }

@@ -81,11 +81,12 @@ pub async fn delete_invitation(
     }
 }
 
-/// O convite é endereçado a um e-mail. Sem esta comparação, qualquer conta
-/// autenticada que obtenha o link entra no time com o papel concedido — e o
-/// link circula por e-mail encaminhado, push e histórico do navegador.
-pub fn email_corresponde(convidado: &str, usuario: &str) -> bool {
-    convidado.trim().eq_ignore_ascii_case(usuario.trim())
+/// The invite is addressed to an email. Without this comparison, any
+/// authenticated account that gets hold of the link would join the team with
+/// the granted role — and the link travels through forwarded email, push,
+/// and browser history.
+pub fn email_matches(invited: &str, user: &str) -> bool {
+    invited.trim().eq_ignore_ascii_case(user.trim())
 }
 
 #[cfg(test)]
@@ -93,123 +94,123 @@ mod tests {
     use super::*;
 
     #[test]
-    fn o_mesmo_email_corresponde() {
-        assert!(email_corresponde("pessoa@exemplo.test", "pessoa@exemplo.test"));
+    fn the_same_email_matches() {
+        assert!(email_matches("person@example.test", "person@example.test"));
     }
 
     #[test]
-    fn a_caixa_e_o_espaco_nao_impedem_a_correspondencia() {
-        assert!(email_corresponde("Pessoa@Exemplo.Test", "pessoa@exemplo.test"));
-        assert!(email_corresponde("  pessoa@exemplo.test  ", "pessoa@exemplo.test"));
-        assert!(email_corresponde("pessoa@exemplo.test", " PESSOA@exemplo.TEST "));
+    fn case_and_whitespace_do_not_prevent_a_match() {
+        assert!(email_matches("Person@Example.Test", "person@example.test"));
+        assert!(email_matches("  person@example.test  ", "person@example.test"));
+        assert!(email_matches("person@example.test", " PERSON@example.TEST "));
     }
 
     #[test]
-    fn email_diferente_nao_corresponde() {
-        assert!(!email_corresponde("convidado@exemplo.test", "intruso@exemplo.test"));
+    fn a_different_email_does_not_match() {
+        assert!(!email_matches("invited@example.test", "intruder@example.test"));
     }
 
     #[test]
-    fn um_prefixo_nao_passa_por_correspondencia() {
-        assert!(!email_corresponde("pessoa@exemplo.test", "pessoa@exemplo.test.br"));
-        assert!(!email_corresponde("pessoa@exemplo.test", "pessoa"));
-        assert!(!email_corresponde("", "pessoa@exemplo.test"));
+    fn a_prefix_does_not_count_as_a_match() {
+        assert!(!email_matches("person@example.test", "person@example.test.br"));
+        assert!(!email_matches("person@example.test", "person"));
+        assert!(!email_matches("", "person@example.test"));
     }
 }
 
-/// Fluxo de aceite contra Postgres real. Sem TEST_MIGRATION_DATABASE_URL o
-/// teste é pulado, como os demais que pedem banco.
+/// Accept flow against a real Postgres. Without TEST_MIGRATION_DATABASE_URL
+/// the test is skipped, like the others that need a database.
 #[cfg(test)]
-mod tests_com_banco {
+mod tests_with_database {
     use super::*;
     use diesel_async::AsyncConnection;
 
-    async fn conexao() -> Option<AsyncPgConnection> {
+    async fn connection() -> Option<AsyncPgConnection> {
         let url = std::env::var("TEST_MIGRATION_DATABASE_URL").ok()?;
         AsyncPgConnection::establish(&url).await.ok()
     }
 
-    /// Time e papel reais: as chaves estrangeiras recusam UUID solto.
-    async fn time_com_papel(conn: &mut AsyncPgConnection) -> (Uuid, Uuid) {
+    /// Real team and role: foreign keys reject a loose UUID.
+    async fn team_with_role(conn: &mut AsyncPgConnection) -> (Uuid, Uuid) {
         let team_id = Uuid::new_v4();
         let role_id = Uuid::new_v4();
 
         diesel::sql_query(format!(
-            "INSERT INTO teams (id, name) VALUES ('{team_id}', 'Time de teste')"
+            "INSERT INTO teams (id, name) VALUES ('{team_id}', 'Test team')"
         ))
         .execute(conn)
         .await
-        .expect("criar time");
+        .expect("create team");
 
         diesel::sql_query(format!(
-            "INSERT INTO team_roles (id, team_id, name) VALUES ('{role_id}', '{team_id}', 'Membro')"
+            "INSERT INTO team_roles (id, team_id, name) VALUES ('{role_id}', '{team_id}', 'Member')"
         ))
         .execute(conn)
         .await
-        .expect("criar papel");
+        .expect("create role");
 
         (team_id, role_id)
     }
 
-    async fn convite(conn: &mut AsyncPgConnection, email: &str, dias: i64) -> TeamInvitation {
-        let (team_id, role_id) = time_com_papel(conn).await;
+    async fn invitation(conn: &mut AsyncPgConnection, email: &str, days: i64) -> TeamInvitation {
+        let (team_id, role_id) = team_with_role(conn).await;
 
-        let dados = NewTeamInvitation {
+        let data = NewTeamInvitation {
             team_id,
             role_id,
             email: email.to_string(),
             token: Uuid::new_v4().to_string(),
-            expires_at: (chrono::Utc::now() + chrono::Duration::days(dias)).naive_utc(),
+            expires_at: (chrono::Utc::now() + chrono::Duration::days(days)).naive_utc(),
         };
 
-        create_invitation(conn, &dados)
+        create_invitation(conn, &data)
             .await
-            .expect("criar convite")
+            .expect("create invitation")
     }
 
     #[tokio::test]
-    async fn encontrar_nao_consome_o_convite() {
-        let Some(mut conn) = conexao().await else {
-            eprintln!("TEST_MIGRATION_DATABASE_URL ausente; teste pulado");
+    async fn finding_does_not_consume_the_invitation() {
+        let Some(mut conn) = connection().await else {
+            eprintln!("TEST_MIGRATION_DATABASE_URL missing; test skipped");
             return;
         };
 
-        let criado = convite(&mut conn, "convidado@exemplo.test", 7).await;
+        let created = invitation(&mut conn, "invited@example.test", 7).await;
 
-        let primeiro = find_invitation_by_token(&mut conn, &criado.token)
+        let first = find_invitation_by_token(&mut conn, &created.token)
             .await
-            .expect("primeira busca");
-        let segundo = find_invitation_by_token(&mut conn, &criado.token)
+            .expect("first lookup");
+        let second = find_invitation_by_token(&mut conn, &created.token)
             .await
-            .expect("o convite precisa sobreviver a uma busca");
+            .expect("the invitation must survive a lookup");
 
-        assert_eq!(primeiro.id, segundo.id);
-        assert_eq!(segundo.email, "convidado@exemplo.test");
+        assert_eq!(first.id, second.id);
+        assert_eq!(second.email, "invited@example.test");
     }
 
     #[tokio::test]
-    async fn deletar_consome_o_convite() {
-        let Some(mut conn) = conexao().await else {
+    async fn deleting_consumes_the_invitation() {
+        let Some(mut conn) = connection().await else {
             return;
         };
 
-        let criado = convite(&mut conn, "convidado@exemplo.test", 7).await;
+        let created = invitation(&mut conn, "invited@example.test", 7).await;
 
-        delete_invitation(&mut conn, criado.id)
+        delete_invitation(&mut conn, created.id)
             .await
-            .expect("deletar");
+            .expect("delete");
 
         assert!(
-            find_invitation_by_token(&mut conn, &criado.token)
+            find_invitation_by_token(&mut conn, &created.token)
                 .await
                 .is_err(),
-            "convite consumido não pode ser reutilizado"
+            "a consumed invitation cannot be reused"
         );
     }
 
     #[tokio::test]
-    async fn token_desconhecido_nao_encontra_convite() {
-        let Some(mut conn) = conexao().await else {
+    async fn unknown_token_finds_no_invitation() {
+        let Some(mut conn) = connection().await else {
             return;
         };
 

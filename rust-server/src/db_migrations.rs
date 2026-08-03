@@ -6,17 +6,17 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 pub fn run_pending_migrations(db_url: &str) -> Result<(), String> {
     let mut conn = PgConnection::establish(db_url)
-        .map_err(|e| format!("não foi possível conectar ao banco para migrar: {e}"))?;
+        .map_err(|e| format!("could not connect to the database to migrate: {e}"))?;
 
     let applied = conn
         .run_pending_migrations(MIGRATIONS)
-        .map_err(|e| format!("migração pendente falhou: {e}"))?;
+        .map_err(|e| format!("pending migration failed: {e}"))?;
 
     if applied.is_empty() {
-        tracing::info!("Nenhuma migração pendente");
+        tracing::info!("No pending migrations");
     } else {
         for migration in applied {
-            tracing::info!("Migração aplicada: {}", migration);
+            tracing::info!("Migration applied: {}", migration);
         }
     }
 
@@ -34,22 +34,22 @@ mod tests {
             Err(_) => return,
         };
 
-        let mut conn = PgConnection::establish(&db_url).expect("conexão de teste");
+        let mut conn = PgConnection::establish(&db_url).expect("test connection");
 
         let first = conn
             .run_pending_migrations(MIGRATIONS)
-            .expect("primeira aplicação");
+            .expect("first application");
         assert!(
             !first.is_empty(),
-            "esperava aplicar migrações em um banco vazio"
+            "expected to apply migrations on an empty database"
         );
 
         let second = conn
             .run_pending_migrations(MIGRATIONS)
-            .expect("segunda aplicação");
+            .expect("second application");
         assert!(
             second.is_empty(),
-            "segunda execução deveria ser idempotente (nada pendente)"
+            "second run should be idempotent (nothing pending)"
         );
     }
 }

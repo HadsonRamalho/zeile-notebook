@@ -15,7 +15,7 @@ use std::sync::atomic::Ordering;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-/// passo do flush de presença (coalescência de cursores)
+/// presence flush tick (cursor coalescing)
 const DEFAULT_PRESENCE_FLUSH_MS: u64 = 200;
 const DEFAULT_CHECKPOINT_SECS: u64 = 60;
 
@@ -42,7 +42,7 @@ fn checkpoint_interval_secs() -> u64 {
     crate::bootstrap::parse_env_number(
         "CHECKPOINT_SECS",
         DEFAULT_CHECKPOINT_SECS,
-        "um inteiro maior que zero",
+        "an integer greater than zero",
         |n: &u64| *n > 0,
     )
     .unwrap_or(DEFAULT_CHECKPOINT_SECS)
@@ -52,7 +52,7 @@ fn presence_flush_interval() -> std::time::Duration {
     let ms = crate::bootstrap::parse_env_number(
         "PRESENCE_FLUSH_MS",
         DEFAULT_PRESENCE_FLUSH_MS,
-        "um inteiro maior que zero",
+        "an integer greater than zero",
         |n: &u64| *n > 0,
     )
     .unwrap_or(DEFAULT_PRESENCE_FLUSH_MS);
@@ -60,14 +60,14 @@ fn presence_flush_interval() -> std::time::Duration {
     std::time::Duration::from_millis(ms)
 }
 
-// persiste periodicamente os notebooks ativos que mudaram (sala movimentada nunca
-// esvazia e, sem isto, nunca seria salva)
+// periodically persists active notebooks that changed (a busy room never goes
+// empty and, without this, would never be saved)
 pub async fn checkpoint_loop(registry: SyncRegistry, pool: Pool<AsyncPgConnection>) {
     let interval = std::time::Duration::from_secs(checkpoint_interval_secs());
     loop {
         tokio::time::sleep(interval).await;
 
-        // coleta os Arcs sem segurar refs do dashmap através dos awaits
+        // collect the Arcs without holding dashmap refs across the awaits
         let items: Vec<(Uuid, Arc<ActiveNotebook>)> = registry
             .iter()
             .map(|e| (*e.key(), e.value().clone()))
@@ -120,7 +120,7 @@ pub async fn websocket_handler(
     })
 }
 
-fn close_frame_de_shutdown() -> CloseFrame {
+fn shutdown_close_frame() -> CloseFrame {
     CloseFrame {
         code: 1001,
         reason: "server shutting down".into(),
@@ -135,7 +135,7 @@ async fn handle_socket(
     pool: Pool<AsyncPgConnection>,
     shutdown: Shutdown,
 ) {
-    // chave de peer por conexão, não por user_id (duas abas do mesmo usuário colidiam)
+    // peer key per connection, not per user_id (two tabs of the same user used to collide)
     let session_id = Uuid::new_v4();
 
     let permissions = match capabilities_cached(&pool, original_user_id, notebook_id).await {
@@ -149,7 +149,7 @@ async fn handle_socket(
 
     if !permissions.can("notebook.view", &TargetCtx::default()) {
         tracing::warn!(
-            "Acesso negado: Tentativa de leitura em notebook privado {}",
+            "Access denied: read attempt on private notebook {}",
             notebook_id
         );
         METRICS.ws_sync_connection_errors_total.inc();
@@ -157,14 +157,14 @@ async fn handle_socket(
         return;
     }
 
-    // adquire o notebook antes do split para poder fechar gracioso se o pool cair
+    // acquire the notebook before splitting so we can close gracefully if the pool goes down
     let notebook: Arc<ActiveNotebook> = if let Some(nb) = registry.get(&notebook_id) {
         nb.clone()
     } else {
         let mut conn = match pool.get().await {
             Ok(c) => c,
             Err(e) => {
-                tracing::error!("Pool indisponível ao abrir notebook {notebook_id}: {e}");
+                tracing::error!("Pool unavailable while opening notebook {notebook_id}: {e}");
                 METRICS.ws_sync_connection_errors_total.inc();
                 let _ = socket.close().await;
                 return;
@@ -215,14 +215,14 @@ async fn handle_socket(
                     None => break,
                 },
                 _ = shutdown_send.wait() => {
-                    let _ = sender.send(Message::Close(Some(close_frame_de_shutdown()))).await;
+                    let _ = sender.send(Message::Close(Some(shutdown_close_frame()))).await;
                     break;
                 }
             }
         }
     });
 
-    // gera o sync inicial do novo peer
+    // generate the new peer's initial sync
     trigger_broadcast(notebook.clone());
 
     let notebook_recv = notebook.clone();
@@ -285,18 +285,18 @@ async fn process_msg(
     notebook: &Arc<ActiveNotebook>,
     permission: &CapabilitySet,
 ) -> bool {
-    // decodifica fora do lock do doc
+    // decode outside the doc lock
     let msg = match SyncMessage::decode(&data) {
         Ok(m) => m,
         Err(_) => return true,
     };
 
     if !permission.can("notebook.edit", &TargetCtx::default()) && !msg.changes.is_empty() {
-        tracing::warn!("Usuário sem permissão tentou enviar alterações. Desconectando.");
+        tracing::warn!("User without permission tried to send changes. Disconnecting.");
         return false;
     }
 
-    // backpressure: se a fila acumulou demais, cede a cpu até drenar
+    // backpressure: if the queue built up too much, yield the cpu until it drains
     while notebook.inbound.lock().unwrap().len() >= INBOUND_SOFT_CAP {
         tokio::task::yield_now().await;
     }
@@ -307,8 +307,8 @@ async fn process_msg(
     true
 }
 
-// aplicador single-flight: as recv_tasks só enfileiram; um único aplicador drena e
-// aplica o lote sob um lock, sem N tasks disputando o mutex do doc
+// single-flight applier: recv_tasks only enqueue; a single applier drains and
+// applies the batch under one lock, instead of N tasks fighting over the doc mutex
 fn trigger_apply(notebook: Arc<ActiveNotebook>) {
     notebook.apply_dirty.store(true, Ordering::Release);
     if notebook
@@ -361,7 +361,7 @@ async fn apply_batch(notebook: &Arc<ActiveNotebook>) {
                             applied += 1;
                         }
                     }
-                    Err(e) => tracing::error!("Erro ao aplicar sync message: {:?}", e),
+                    Err(e) => tracing::error!("Error applying sync message: {:?}", e),
                 }
             }
         }
@@ -374,8 +374,8 @@ async fn apply_batch(notebook: &Arc<ActiveNotebook>) {
     trigger_broadcast(notebook.clone());
 }
 
-// broadcaster single-flight: coalesce rajadas de mutações de N clientes numa geração
-// por peer, em vez de O(N) aquisições do lock por mudança
+// single-flight broadcaster: coalesces bursts of mutations from N clients into
+// one generation per peer, instead of O(N) lock acquisitions per change
 fn trigger_broadcast(notebook: Arc<ActiveNotebook>) {
     notebook.dirty.store(true, Ordering::Release);
     if notebook
@@ -397,12 +397,12 @@ fn trigger_broadcast(notebook: Arc<ActiveNotebook>) {
                 continue;
             }
             if skipped {
-                // peer com canal cheio: retenta em breve sem busy-wait
+                // peer with a full channel: retry shortly without busy-waiting
                 tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                 continue;
             }
             notebook.broadcasting.store(false, Ordering::Release);
-            // recheca para não perder um `dirty` setado entre a passada e o store
+            // recheck so we don't miss a `dirty` set between the pass and the store
             if notebook.dirty.load(Ordering::Acquire)
                 && notebook
                     .broadcasting
@@ -416,9 +416,9 @@ fn trigger_broadcast(notebook: Arc<ActiveNotebook>) {
     });
 }
 
-// reserva o slot do canal ANTES de gerar: generate_sync_message muta o SyncState do
-// peer, então gerar e não conseguir enviar (canal cheio) causaria divergência; sem slot,
-// pula o peer sem tocar seu estado
+// reserve the channel slot BEFORE generating: generate_sync_message mutates the
+// peer's SyncState, so generating and failing to send (full channel) would cause
+// divergence; without a slot, skip the peer without touching its state
 async fn broadcast_pass(notebook: &Arc<ActiveNotebook>) -> (bool, bool) {
     METRICS.sync_broadcast_passes_total.inc();
     let mut progressed = false;
@@ -440,7 +440,7 @@ async fn broadcast_pass(notebook: &Arc<ActiveNotebook>) -> (bool, bool) {
                     }
                 }
             }
-            // canal cheio ou fechado: pula sem mutar o estado do peer
+            // full or closed channel: skip without mutating the peer's state
             Err(_) => skipped += 1,
         }
     }
@@ -512,7 +512,7 @@ async fn handle_presence_socket(
         can_view_chat: permissions.can("chat.view", &TargetCtx::default()),
     });
 
-    // insere sob o mesmo shard lock do dashmap para não correr com a remoção da sala vazia
+    // insert under the same dashmap shard lock to avoid racing the empty-room removal
     let room = {
         let entry = registry
             .entry(notebook_id)
@@ -544,7 +544,7 @@ async fn handle_presence_socket(
                     None => break,
                 },
                 _ = shutdown_send.wait() => {
-                    let _ = sender.send(Message::Close(Some(close_frame_de_shutdown()))).await;
+                    let _ = sender.send(Message::Close(Some(shutdown_close_frame()))).await;
                     break;
                 }
             }
@@ -564,7 +564,7 @@ async fn handle_presence_socket(
                 .and_then(|v| v.as_str());
 
             match msg_type {
-                // cursor: guarda o último estado; a task de flush difunde coalescido
+                // cursor: keep the latest state; the flush task broadcasts it coalesced
                 Some("presence") => {
                     if let Some(v) = parsed {
                         if let Some(name) = v.get("name").and_then(|n| n.as_str()) {
@@ -574,7 +574,7 @@ async fn handle_presence_socket(
                         member_for_recv.changed.store(true, Ordering::Release);
                     }
                 }
-                // chat: difunde imediatamente + push de menção
+                // chat: broadcasts immediately + mention push
                 Some("chat") => {
                     if !perm_for_recv.can("chat.messages.send", &TargetCtx::default()) {
                         continue;
@@ -637,8 +637,8 @@ async fn handle_presence_socket(
     room.gone.lock().unwrap().push(session_id);
 }
 
-// uma task por sala: a cada tick difunde um batch com o último estado dos membros que
-// mudaram + as saídas, em vez de propagar cada update para todos (O(N²))
+// one task per room: each tick broadcasts a batch with the latest state of members that
+// changed + the ones who left, instead of propagating every update to everyone (O(N²))
 async fn presence_flush_loop(
     registry: crate::controllers::sync::PresenceRegistry,
     notebook_id: Uuid,
@@ -659,7 +659,7 @@ async fn presence_flush_loop(
         let gone: Vec<Uuid> = std::mem::take(&mut *room.gone.lock().unwrap());
 
         if updates.is_empty() && gone.is_empty() {
-            // nada a difundir; se a sala esvaziou, encerra (remoção atômica no shard)
+            // nothing to broadcast; if the room emptied out, stop (atomic removal in the shard)
             if registry
                 .remove_if(&notebook_id, |_, r| r.subscribers.is_empty())
                 .is_some()
@@ -735,8 +735,8 @@ pub async fn restore_notebook_doc(state: &Arc<AppState>, notebook_id: Uuid, byte
     );
 }
 
-/// Difunde um evento de chat (JSON) para a sala de presença do notebook e dispara
-/// push de menção. Usado pelos endpoints REST de chat para propagar em tempo real.
+/// Broadcasts a chat event (JSON) to the notebook's presence room and fires a
+/// mention push. Used by the chat REST endpoints to propagate in real time.
 pub fn broadcast_chat_and_notify(
     state: &Arc<AppState>,
     notebook_id: Uuid,
@@ -781,8 +781,8 @@ pub fn broadcast_chat_and_notify(
     }
 }
 
-// socket combinado: sync (binário) + presença (texto) numa conexão, uma checagem de
-// permissão por cliente. os handlers separados acima seguem como fallback.
+// combined socket: sync (binary) + presence (text) on one connection, one permission
+// check per client. The separate handlers above remain as a fallback.
 
 fn join_presence_room(
     registry: &crate::controllers::sync::PresenceRegistry,
@@ -904,7 +904,7 @@ async fn handle_combined_socket(
 ) {
     let session_id = Uuid::new_v4();
 
-    // uma checagem de permissão para sync + presença
+    // a single permission check for sync + presence
     let permissions = match capabilities_cached(&state.pool, original_user_id, notebook_id).await {
         Ok(caps) => caps,
         Err(_) => {
@@ -953,7 +953,7 @@ async fn handle_combined_socket(
 
     let (mut sender, mut receiver) = socket.split();
 
-    // peer binário (sync) + membro texto (presença); um send task muxa os dois no socket
+    // binary peer (sync) + text member (presence); one send task muxes both onto the socket
     let (bin_tx, mut bin_rx) = mpsc::channel::<Vec<u8>>(PEER_CHANNEL_CAP);
     let (txt_tx, mut txt_rx) = mpsc::channel::<String>(PRESENCE_CHANNEL_CAP);
 
@@ -1002,7 +1002,7 @@ async fn handle_combined_socket(
                     None => break,
                 },
                 _ = shutdown_send.wait() => {
-                    let _ = sender.send(Message::Close(Some(close_frame_de_shutdown()))).await;
+                    let _ = sender.send(Message::Close(Some(shutdown_close_frame()))).await;
                     break;
                 }
             }
@@ -1116,7 +1116,7 @@ mod tests {
     }
 
     #[test]
-    fn flush_de_presenca_sem_variavel_usa_o_default() {
+    fn presence_flush_without_a_variable_uses_the_default() {
         with_env("PRESENCE_FLUSH_MS", None, || {
             assert_eq!(
                 presence_flush_interval(),
@@ -1126,7 +1126,7 @@ mod tests {
     }
 
     #[test]
-    fn flush_de_presenca_respeita_a_variavel() {
+    fn presence_flush_respects_the_variable() {
         with_env("PRESENCE_FLUSH_MS", Some(" 500 "), || {
             assert_eq!(
                 presence_flush_interval(),
@@ -1136,7 +1136,7 @@ mod tests {
     }
 
     #[test]
-    fn flush_de_presenca_com_zero_cai_no_default() {
+    fn presence_flush_with_zero_falls_back_to_the_default() {
         with_env("PRESENCE_FLUSH_MS", Some("0"), || {
             assert_eq!(
                 presence_flush_interval(),
@@ -1146,7 +1146,7 @@ mod tests {
     }
 
     #[test]
-    fn flush_de_presenca_com_lixo_cai_no_default_sem_derrubar_a_sala() {
+    fn presence_flush_with_garbage_falls_back_to_the_default_without_dropping_the_room() {
         with_env("PRESENCE_FLUSH_MS", Some("abc"), || {
             assert_eq!(
                 presence_flush_interval(),
@@ -1156,21 +1156,21 @@ mod tests {
     }
 
     #[test]
-    fn checkpoint_sem_variavel_usa_o_default() {
+    fn checkpoint_without_a_variable_uses_the_default() {
         with_env("CHECKPOINT_SECS", None, || {
             assert_eq!(checkpoint_interval_secs(), DEFAULT_CHECKPOINT_SECS);
         });
     }
 
     #[test]
-    fn checkpoint_respeita_a_variavel() {
+    fn checkpoint_respects_the_variable() {
         with_env("CHECKPOINT_SECS", Some("45"), || {
             assert_eq!(checkpoint_interval_secs(), 45);
         });
     }
 
     #[test]
-    fn checkpoint_com_valor_invalido_cai_no_default() {
+    fn checkpoint_with_an_invalid_value_falls_back_to_the_default() {
         with_env("CHECKPOINT_SECS", Some("0"), || {
             assert_eq!(checkpoint_interval_secs(), DEFAULT_CHECKPOINT_SECS);
         });

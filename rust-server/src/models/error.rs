@@ -147,7 +147,7 @@ impl IntoResponse for ApiError {
             ApiError::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
 
             _ => {
-                tracing::error!(error_code, "erro não classificado: {self}");
+                tracing::error!(error_code, "unclassified error: {self}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     INTERNAL_MESSAGE.to_string(),

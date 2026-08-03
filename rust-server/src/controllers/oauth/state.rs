@@ -29,16 +29,16 @@ pub struct StateClaims {
     pub exp: usize,
 }
 
-pub struct Desafio {
+pub struct Challenge {
     pub state: String,
     pub set_cookie: String,
 }
 
-pub fn emitir(
+pub fn issue(
     provider: Provider,
     purpose: Purpose,
     user_id: Option<Uuid>,
-) -> Result<Desafio, OAuthError> {
+) -> Result<Challenge, OAuthError> {
     let nonce = nonce();
 
     let claims = StateClaims {
@@ -57,17 +57,17 @@ pub fn emitir(
         &EncodingKey::from_secret(secret.as_ref()),
     )
     .map_err(|e| {
-        tracing::error!("falha ao assinar o state do OAuth: {e}");
+        tracing::error!("failed to sign the OAuth state: {e}");
         OAuthError::Unavailable
     })?;
 
-    Ok(Desafio {
+    Ok(Challenge {
         state,
         set_cookie: cookie(&nonce, TTL_SECS),
     })
 }
 
-pub fn validar(
+pub fn validate(
     state: &str,
     provider: Provider,
     purpose: Purpose,
@@ -91,8 +91,8 @@ pub fn validar(
         return Err(OAuthError::InvalidState);
     }
 
-    match nonce_do_cookie(headers) {
-        Some(esperado) if comparacao_constante(&esperado, &claims.nonce) => {}
+    match cookie_nonce(headers) {
+        Some(expected) if constant_time_compare(&expected, &claims.nonce) => {}
         Some(_) => return Err(OAuthError::InvalidState),
         None if purpose == Purpose::Login => return Err(OAuthError::InvalidState),
         None => {}
@@ -101,7 +101,7 @@ pub fn validar(
     Ok(claims.sub)
 }
 
-pub fn cookie_expirado() -> String {
+pub fn expired_cookie() -> String {
     cookie("", 0)
 }
 
@@ -118,15 +118,14 @@ fn cookie(nonce: &str, max_age: i64) -> String {
     cookie
 }
 
-fn nonce_do_cookie(headers: &HeaderMap) -> Option<String> {
-    let bruto = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
+fn cookie_nonce(headers: &HeaderMap) -> Option<String> {
+    let raw = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
 
-    bruto
-        .split(';')
-        .filter_map(|par| par.split_once('='))
-        .find(|(nome, _)| nome.trim() == COOKIE)
-        .map(|(_, valor)| valor.trim().to_string())
-        .filter(|valor| !valor.is_empty())
+    raw.split(';')
+        .filter_map(|pair| pair.split_once('='))
+        .find(|(name, _)| name.trim() == COOKIE)
+        .map(|(_, value)| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 fn nonce() -> String {
@@ -136,7 +135,7 @@ fn nonce() -> String {
     hex::encode(bytes)
 }
 
-fn comparacao_constante(a: &str, b: &str) -> bool {
+fn constant_time_compare(a: &str, b: &str) -> bool {
     if a.len() != b.len() {
         return false;
     }
@@ -148,101 +147,101 @@ fn comparacao_constante(a: &str, b: &str) -> bool {
 }
 
 #[cfg(test)]
-mod testes {
+mod tests {
     use super::*;
 
-    fn com_segredo<T>(corpo: impl FnOnce() -> T) -> T {
-        unsafe { std::env::set_var("JWT_SECRET", "segredo-de-teste-para-reset") };
-        corpo()
+    fn with_secret<T>(body: impl FnOnce() -> T) -> T {
+        unsafe { std::env::set_var("JWT_SECRET", "test-secret-for-reset") };
+        body()
     }
 
-    fn headers_com(nonce: &str) -> HeaderMap {
+    fn headers_with(nonce: &str) -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.insert(
             axum::http::header::COOKIE,
-            format!("outro=1; {COOKIE}={nonce}").parse().unwrap(),
+            format!("other=1; {COOKIE}={nonce}").parse().unwrap(),
         );
 
         headers
     }
 
-    fn nonce_emitido(desafio: &Desafio) -> String {
-        desafio
+    fn issued_nonce(challenge: &Challenge) -> String {
+        challenge
             .set_cookie
             .split(';')
             .next()
-            .and_then(|par| par.split_once('='))
-            .map(|(_, valor)| valor.to_string())
+            .and_then(|pair| pair.split_once('='))
+            .map(|(_, value)| value.to_string())
             .expect("cookie")
     }
 
     #[test]
-    fn state_valido_devolve_o_usuario_do_vinculo() {
-        com_segredo(|| {
+    fn valid_state_returns_the_link_user() {
+        with_secret(|| {
             let user = Uuid::new_v4();
-            let desafio = emitir(Provider::Google, Purpose::Link, Some(user)).expect("emitir");
-            let headers = headers_com(&nonce_emitido(&desafio));
+            let challenge = issue(Provider::Google, Purpose::Link, Some(user)).expect("issue");
+            let headers = headers_with(&issued_nonce(&challenge));
 
-            let sub = validar(&desafio.state, Provider::Google, Purpose::Link, &headers)
-                .expect("state válido");
+            let sub = validate(&challenge.state, Provider::Google, Purpose::Link, &headers)
+                .expect("valid state");
 
             assert_eq!(sub, Some(user));
         });
     }
 
     #[test]
-    fn state_sem_cookie_correspondente_e_recusado() {
-        com_segredo(|| {
-            let desafio = emitir(Provider::Google, Purpose::Login, None).expect("emitir");
+    fn state_without_a_matching_cookie_is_refused() {
+        with_secret(|| {
+            let challenge = issue(Provider::Google, Purpose::Login, None).expect("issue");
 
-            let sem_cookie = validar(
-                &desafio.state,
+            let no_cookie = validate(
+                &challenge.state,
                 Provider::Google,
                 Purpose::Login,
                 &HeaderMap::new(),
             );
-            let outro_nonce = validar(
-                &desafio.state,
+            let other_nonce = validate(
+                &challenge.state,
                 Provider::Google,
                 Purpose::Login,
-                &headers_com("00000000000000000000000000000000"),
+                &headers_with("00000000000000000000000000000000"),
             );
 
-            assert_eq!(sem_cookie, Err(OAuthError::InvalidState));
-            assert_eq!(outro_nonce, Err(OAuthError::InvalidState));
+            assert_eq!(no_cookie, Err(OAuthError::InvalidState));
+            assert_eq!(other_nonce, Err(OAuthError::InvalidState));
         });
     }
 
     #[test]
-    fn o_vinculo_dispensa_o_cookie_porque_o_dono_vem_assinado_no_state() {
-        com_segredo(|| {
+    fn linking_skips_the_cookie_because_the_owner_is_signed_into_the_state() {
+        with_secret(|| {
             let user = Uuid::new_v4();
-            let desafio = emitir(Provider::Google, Purpose::Link, Some(user)).expect("emitir");
+            let challenge = issue(Provider::Google, Purpose::Link, Some(user)).expect("issue");
 
-            let sub = validar(
-                &desafio.state,
+            let sub = validate(
+                &challenge.state,
                 Provider::Google,
                 Purpose::Link,
                 &HeaderMap::new(),
             )
-            .expect("vínculo cross-site não pode depender de cookie de terceira parte");
+            .expect("cross-site linking cannot depend on a third-party cookie");
 
             assert_eq!(sub, Some(user));
         });
     }
 
     #[test]
-    fn o_vinculo_com_cookie_divergente_continua_recusado() {
-        com_segredo(|| {
-            let desafio =
-                emitir(Provider::Google, Purpose::Link, Some(Uuid::new_v4())).expect("emitir");
+    fn linking_with_a_divergent_cookie_is_still_refused() {
+        with_secret(|| {
+            let challenge =
+                issue(Provider::Google, Purpose::Link, Some(Uuid::new_v4())).expect("issue");
 
             assert_eq!(
-                validar(
-                    &desafio.state,
+                validate(
+                    &challenge.state,
                     Provider::Google,
                     Purpose::Link,
-                    &headers_com("00000000000000000000000000000000"),
+                    &headers_with("00000000000000000000000000000000"),
                 ),
                 Err(OAuthError::InvalidState)
             );
@@ -250,50 +249,50 @@ mod testes {
     }
 
     #[test]
-    fn vinculo_sem_dono_no_state_e_recusado() {
-        com_segredo(|| {
-            let desafio = emitir(Provider::Google, Purpose::Link, None).expect("emitir");
-            let headers = headers_com(&nonce_emitido(&desafio));
+    fn linking_without_an_owner_in_the_state_is_refused() {
+        with_secret(|| {
+            let challenge = issue(Provider::Google, Purpose::Link, None).expect("issue");
+            let headers = headers_with(&issued_nonce(&challenge));
 
             assert_eq!(
-                validar(&desafio.state, Provider::Google, Purpose::Link, &headers),
+                validate(&challenge.state, Provider::Google, Purpose::Link, &headers),
                 Err(OAuthError::InvalidState)
             );
         });
     }
 
     #[test]
-    fn state_de_outro_provider_ou_proposito_e_recusado() {
-        com_segredo(|| {
-            let desafio = emitir(Provider::Google, Purpose::Login, None).expect("emitir");
-            let headers = headers_com(&nonce_emitido(&desafio));
+    fn state_from_another_provider_or_purpose_is_refused() {
+        with_secret(|| {
+            let challenge = issue(Provider::Google, Purpose::Login, None).expect("issue");
+            let headers = headers_with(&issued_nonce(&challenge));
 
             assert_eq!(
-                validar(&desafio.state, Provider::Github, Purpose::Login, &headers),
+                validate(&challenge.state, Provider::Github, Purpose::Login, &headers),
                 Err(OAuthError::InvalidState)
             );
             assert_eq!(
-                validar(&desafio.state, Provider::Google, Purpose::Link, &headers),
-                Err(OAuthError::InvalidState)
-            );
-        });
-    }
-
-    #[test]
-    fn state_forjado_sem_assinatura_e_recusado() {
-        com_segredo(|| {
-            let headers = headers_com("abc");
-
-            assert_eq!(
-                validar("nao-e-um-jwt", Provider::Google, Purpose::Login, &headers),
+                validate(&challenge.state, Provider::Google, Purpose::Link, &headers),
                 Err(OAuthError::InvalidState)
             );
         });
     }
 
     #[test]
-    fn cookie_expirado_zera_o_valor() {
-        assert!(cookie_expirado().starts_with(&format!("{COOKIE}=;")));
-        assert!(cookie_expirado().contains("Max-Age=0"));
+    fn forged_state_without_a_signature_is_refused() {
+        with_secret(|| {
+            let headers = headers_with("abc");
+
+            assert_eq!(
+                validate("not-a-jwt", Provider::Google, Purpose::Login, &headers),
+                Err(OAuthError::InvalidState)
+            );
+        });
+    }
+
+    #[test]
+    fn expired_cookie_zeroes_out_the_value() {
+        assert!(expired_cookie().starts_with(&format!("{COOKIE}=;")));
+        assert!(expired_cookie().contains("Max-Age=0"));
     }
 }

@@ -8,7 +8,7 @@ use crate::{
 
 const USER_AGENT: &str = "rust-notebook-app";
 
-pub async fn identidade(
+pub async fn identity(
     http_client: &ReqwestClient,
     access_token: &str,
 ) -> Result<OAuthIdentity, OAuthError> {
@@ -20,26 +20,26 @@ pub async fn identidade(
         .send()
         .await
         .map_err(|e| {
-            error!("falha ao chamar a API do GitHub: {e}");
+            error!("failed to call the GitHub API: {e}");
             OAuthError::RequestFailed
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
-        error!("Erro na API do GitHub: Status: {} | Body: {}", status, text);
+        error!("GitHub API error: Status: {} | Body: {}", status, text);
 
         return Err(OAuthError::ResponseError);
     }
 
     let user = response.json::<GithubUser>().await.map_err(|e| {
-        error!("Erro ao decodificar JSON: {:?}", e);
+        error!("Error decoding JSON: {:?}", e);
         OAuthError::DecodeError
     })?;
 
     let email = match user.email.clone() {
         Some(email) => email,
-        None => email_primario(http_client, access_token).await?,
+        None => primary_email(http_client, access_token).await?,
     };
 
     Ok(OAuthIdentity {
@@ -51,7 +51,7 @@ pub async fn identidade(
     })
 }
 
-async fn email_primario(
+async fn primary_email(
     http_client: &ReqwestClient,
     access_token: &str,
 ) -> Result<String, OAuthError> {
@@ -62,13 +62,13 @@ async fn email_primario(
         .send()
         .await
         .map_err(|e| {
-            error!("falha ao listar e-mails do GitHub: {e}");
+            error!("failed to list GitHub emails: {e}");
             OAuthError::RequestFailed
         })?
         .json()
         .await
         .map_err(|e| {
-            error!("falha ao decodificar e-mails do GitHub: {e}");
+            error!("failed to decode GitHub emails: {e}");
             OAuthError::EmailNotFound
         })?;
 

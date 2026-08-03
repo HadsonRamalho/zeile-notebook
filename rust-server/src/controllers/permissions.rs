@@ -364,7 +364,7 @@ pub async fn capabilities(
     resolve_capabilities(conn, ctx, user_id).await
 }
 
-// cache de capabilities no connect, por (user, notebook) com ttl + invalidação no fan-out
+// capabilities cache on connect, keyed by (user, notebook) with ttl + fan-out invalidation
 const CAPS_TTL: Duration = Duration::from_secs(30);
 const CAPS_CACHE_MAX: usize = 100_000;
 
@@ -385,7 +385,7 @@ pub async fn capabilities_cached(
 
     let caps = capabilities(pool, user_id, notebook_id).await?;
 
-    // limpa entradas velhas se estourar o teto
+    // clean up old entries if the ceiling is exceeded
     if CAPS_CACHE.len() >= CAPS_CACHE_MAX {
         CAPS_CACHE.retain(|_, v| v.1.elapsed() < CAPS_TTL);
     }
@@ -399,11 +399,11 @@ pub fn invalidate_caps_cache(notebook_id: Uuid) {
 
 pub const CAPABILITIES_UPDATED_SIGNAL: &str = r#"{"type":"capabilities_updated"}"#;
 
-// invalida o cache e empurra `capabilities_updated` aos rooms locais
+// invalidates the cache and pushes `capabilities_updated` to local rooms
 pub async fn broadcast_capability_change_local(presence: &PresenceRegistry, notebook_id: Uuid) {
     invalidate_caps_cache(notebook_id);
 
-    // coleta os canais antes de enviar, sem segurar ref do dashmap no await
+    // collect the channels before sending, without holding a dashmap ref across the await
     let txs: Vec<tokio::sync::mpsc::Sender<String>> = match presence.get(&notebook_id) {
         Some(room) => room
             .subscribers
@@ -425,7 +425,7 @@ pub async fn broadcast_capability_change(
 ) {
     broadcast_capability_change_local(presence, notebook_id).await;
 
-    // avisa outros nós (best-effort); notebook_id é uuid validado
+    // notify other nodes (best-effort); notebook_id is a validated uuid
     if let Ok(mut conn) = get_conn(pool).await {
         let _ = diesel::sql_query(format!(
             "SELECT pg_notify('zeile_caps', '{}')",
@@ -436,11 +436,11 @@ pub async fn broadcast_capability_change(
     }
 }
 
-// escuta NOTIFY zeile_caps e aplica o fan-out local; reconecta em caso de queda
+// listens for NOTIFY zeile_caps and applies the local fan-out; reconnects on drop
 pub async fn caps_listen_loop(db_url: String, presence: PresenceRegistry) {
     loop {
         if let Err(e) = run_caps_listener(&db_url, &presence).await {
-            tracing::warn!("listener de capabilities indisponível: {e}; retry em 5s");
+            tracing::warn!("capabilities listener unavailable: {e}; retrying in 5s");
         }
         tokio::time::sleep(Duration::from_secs(5)).await;
     }
@@ -450,7 +450,7 @@ async fn run_caps_listener(
     db_url: &str,
     presence: &PresenceRegistry,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // uma task dirige a conexão para poder ler as notificações
+    // one task drives the connection so we can read the notifications
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
     let (client, conn_task) = if crate::routes::database_tls_enabled() {
         let rustls_config = ClientConfig::with_platform_verifier()?;

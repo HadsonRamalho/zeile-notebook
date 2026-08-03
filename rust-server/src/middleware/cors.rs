@@ -38,7 +38,7 @@ pub fn cors_layer() -> CorsLayer {
     );
 
     if std::env::var(ORIGINS_VAR).is_err() {
-        tracing::warn!("{ORIGINS_VAR} não definida; liberando apenas {origins:?}");
+        tracing::warn!("{ORIGINS_VAR} not set; allowing only {origins:?}");
     }
 
     let valores: Vec<HeaderValue> = origins
@@ -46,7 +46,7 @@ pub fn cors_layer() -> CorsLayer {
         .filter_map(|origin| match HeaderValue::from_str(origin) {
             Ok(value) => Some(value),
             Err(_) => {
-                tracing::warn!("origem inválida em {ORIGINS_VAR}, ignorada: {origin}");
+                tracing::warn!("invalid origin in {ORIGINS_VAR}, ignored: {origin}");
                 None
             }
         })
@@ -77,7 +77,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lista_declarada_vence_o_fallback() {
+    fn declared_list_wins_over_the_fallback() {
         let origins = allowed_origins_from(
             Some("https://zeile.app, https://beta.zeile.app/".to_string()),
             Some("http://localhost:3000".to_string()),
@@ -87,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn sem_variavel_o_frontend_url_entra_no_fallback() {
+    fn without_a_variable_the_frontend_url_joins_the_fallback() {
         let origins = allowed_origins_from(None, Some("https://zeile.app/".to_string()));
 
         assert!(origins.contains(&"https://zeile.app".to_string()));
@@ -95,7 +95,7 @@ mod tests {
     }
 
     #[test]
-    fn nenhuma_origem_e_curinga() {
+    fn no_origin_is_a_wildcard() {
         let origins = allowed_origins_from(None, None);
 
         assert!(!origins.iter().any(|o| o == "*"));
@@ -103,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn entrada_vazia_nao_vira_origem() {
+    fn an_empty_entry_does_not_become_an_origin() {
         let origins = allowed_origins_from(Some(" , ,".to_string()), None);
 
         assert_eq!(origins.len(), FALLBACK_ORIGINS.len());

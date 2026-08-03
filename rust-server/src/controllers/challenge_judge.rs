@@ -99,7 +99,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let mut conn = match state.pool.get().await {
         Ok(c) => c,
         Err(e) => {
-            error!("judge: falha ao obter conexão: {}", e);
+            error!("judge: failed to obtain connection: {}", e);
             return;
         }
     };
@@ -107,7 +107,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let submission = match challenge::get_submission(&mut conn, submission_id).await {
         Ok(s) => s,
         Err(e) => {
-            error!("judge: submissão não encontrada: {}", e);
+            error!("judge: submission not found: {}", e);
             return;
         }
     };
@@ -115,7 +115,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let ch = match challenge::get_challenge_by_id(&mut conn, submission.challenge_id).await {
         Ok(c) => c,
         Err(e) => {
-            error!("judge: challenge não encontrado: {}", e);
+            error!("judge: challenge not found: {}", e);
             let _ = challenge::finalize_submission(
                 &mut conn,
                 submission_id,
@@ -138,7 +138,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let stored = match challenge::list_test_cases(&mut conn, ch.id).await {
         Ok(t) => t,
         Err(e) => {
-            error!("judge: falha ao carregar casos: {}", e);
+            error!("judge: failed to load cases: {}", e);
             let _ = challenge::finalize_submission(
                 &mut conn,
                 submission_id,
@@ -230,7 +230,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         match compile_code(&ref_lang, &ref_sol, &ref_session).await {
             Ok(path) => Some(path),
             Err(_) => {
-                error!("judge: solução de referência não compila");
+                error!("judge: reference solution does not compile");
                 let _ = challenge::finalize_submission(
                     &mut conn,
                     submission_id,
@@ -260,7 +260,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             } else {
                 let r = run_compiled(ref_path, Some(&case.input), limits).await;
                 if r.verdict != ExecVerdict::Ok {
-                    warn!("judge: referência falhou no caso {}", idx);
+                    warn!("judge: reference failed on case {}", idx);
                     let detail = truncate(&r.stderr, 400).unwrap_or_default();
                     let msg = format!(
                         "Falha ao executar a solução de referência no caso {}. \

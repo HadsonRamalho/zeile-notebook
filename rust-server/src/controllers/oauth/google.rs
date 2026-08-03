@@ -8,7 +8,7 @@ use crate::{
 
 const USERINFO_URL: &str = "https://openidconnect.googleapis.com/v1/userinfo";
 
-pub async fn identidade(
+pub async fn identity(
     http_client: &ReqwestClient,
     access_token: &str,
 ) -> Result<OAuthIdentity, OAuthError> {
@@ -19,20 +19,20 @@ pub async fn identidade(
         .send()
         .await
         .map_err(|e| {
-            error!("falha ao chamar o userinfo do Google: {e}");
+            error!("failed to call Google userinfo: {e}");
             OAuthError::RequestFailed
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
-        error!("Erro na API do Google: Status: {} | Body: {}", status, text);
+        error!("Google API error: Status: {} | Body: {}", status, text);
 
         return Err(OAuthError::ResponseError);
     }
 
     let user = response.json::<GoogleUser>().await.map_err(|e| {
-        error!("falha ao decodificar o userinfo do Google: {e:?}");
+        error!("failed to decode Google userinfo: {e:?}");
         OAuthError::DecodeError
     })?;
 

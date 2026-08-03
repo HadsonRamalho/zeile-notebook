@@ -7,18 +7,18 @@ use hyper::{HeaderMap, StatusCode};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode};
 use serde::{Deserialize, Serialize};
 
-/// Validade do access token. Curta de propósito: a revogação de verdade mora no
-/// refresh token, que é conferido no banco a cada rotação. Com sete dias, um
-/// token vazado valia uma semana e não havia como cortar.
+/// Access token validity. Short on purpose: real revocation lives in the
+/// refresh token, which is checked against the database on every rotation.
+/// At seven days, a leaked token was good for a week with no way to cut it off.
 const JWT_EXP_MINUTES: i64 = 15;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResetClaims {
     pub sub: uuid::Uuid,
     pub exp: usize,
-    /// Instante de emissão. É comparado com `users.password_changed_at` para que
-    /// o link deixe de valer assim que a senha muda — o que inclui a própria
-    /// troca feita por ele, tornando-o de uso único.
+    /// Issuance instant. Compared against `users.password_changed_at` so the
+    /// link stops working as soon as the password changes — including the
+    /// very change it performed, making it single-use.
     pub iat: i64,
 }
 
@@ -205,8 +205,8 @@ pub fn verify_reset_token(token: &str) -> Result<ResetClaims, ApiError> {
     Ok(decoded.claims)
 }
 
-/// Um link emitido antes da última troca de senha já foi gasto ou foi revogado.
-pub fn reset_token_foi_consumido(
+/// A link issued before the last password change has already been spent or revoked.
+pub fn reset_token_was_consumed(
     claims: &ResetClaims,
     password_changed_at: chrono::DateTime<chrono::Utc>,
 ) -> bool {
@@ -217,66 +217,66 @@ pub fn reset_token_foi_consumido(
 mod tests {
     use super::*;
 
-    fn com_segredo<T>(corpo: impl FnOnce() -> T) -> T {
-        unsafe { env::set_var("JWT_SECRET", "segredo-de-teste-para-reset") };
-        corpo()
+    fn with_secret<T>(body: impl FnOnce() -> T) -> T {
+        unsafe { env::set_var("JWT_SECRET", "test-secret-for-reset") };
+        body()
     }
 
-    fn agora() -> chrono::DateTime<Utc> {
+    fn now() -> chrono::DateTime<Utc> {
         chrono::Utc::now()
     }
 
     use chrono::Utc;
 
     #[test]
-    fn o_link_de_reset_carrega_o_instante_de_emissao() {
-        com_segredo(|| {
+    fn reset_link_carries_the_issuance_instant() {
+        with_secret(|| {
             let token = generate_reset_token(uuid::Uuid::new_v4()).expect("token");
-            let claims = verify_reset_token(&token).expect("verificar");
+            let claims = verify_reset_token(&token).expect("verify");
 
-            assert!(claims.iat > 0, "sem iat não há como revogar o link");
-            assert!(claims.exp as i64 > claims.iat, "expiração deve ser futura");
+            assert!(claims.iat > 0, "without iat there's no way to revoke the link");
+            assert!(claims.exp as i64 > claims.iat, "expiration must be in the future");
         });
     }
 
     #[test]
-    fn um_link_emitido_antes_da_troca_esta_consumido() {
-        com_segredo(|| {
+    fn a_link_issued_before_the_change_is_consumed() {
+        with_secret(|| {
             let token = generate_reset_token(uuid::Uuid::new_v4()).expect("token");
-            let claims = verify_reset_token(&token).expect("verificar");
+            let claims = verify_reset_token(&token).expect("verify");
 
-            let depois = agora() + chrono::Duration::seconds(30);
+            let after = now() + chrono::Duration::seconds(30);
 
             assert!(
-                reset_token_foi_consumido(&claims, depois),
-                "o mesmo link não pode servir duas vezes"
+                reset_token_was_consumed(&claims, after),
+                "the same link cannot be used twice"
             );
         });
     }
 
     #[test]
-    fn um_link_novo_vale_contra_senha_trocada_antes() {
-        com_segredo(|| {
-            let antes = agora() - chrono::Duration::days(30);
+    fn a_new_link_is_valid_against_a_password_changed_earlier() {
+        with_secret(|| {
+            let before = now() - chrono::Duration::days(30);
 
             let token = generate_reset_token(uuid::Uuid::new_v4()).expect("token");
-            let claims = verify_reset_token(&token).expect("verificar");
+            let claims = verify_reset_token(&token).expect("verify");
 
             assert!(
-                !reset_token_foi_consumido(&claims, antes),
-                "link recém-emitido deveria valer"
+                !reset_token_was_consumed(&claims, before),
+                "a freshly issued link should be valid"
             );
         });
     }
 
     #[test]
-    fn token_de_reset_adulterado_e_recusado() {
-        com_segredo(|| {
+    fn tampered_reset_token_is_rejected() {
+        with_secret(|| {
             let token = generate_reset_token(uuid::Uuid::new_v4()).expect("token");
-            let adulterado = format!("{}x", token);
+            let tampered = format!("{}x", token);
 
-            assert!(verify_reset_token(&adulterado).is_err());
-            assert!(verify_reset_token("nem-parece-jwt").is_err());
+            assert!(verify_reset_token(&tampered).is_err());
+            assert!(verify_reset_token("does-not-even-look-like-a-jwt").is_err());
         });
     }
 }

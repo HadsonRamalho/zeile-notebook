@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use tracing::info;
 
-use crate::executor::sandbox::{CompileSandbox, caminho_absoluto};
+use crate::executor::sandbox::{CompileSandbox, absolute_path};
 use crate::file::{RunLimits, RunOutcome, run_safe_bin, setup_user_env};
 use crate::sec::{verify_code, verify_cpp_code, verify_go_code, verify_zig_code};
 
@@ -61,7 +61,7 @@ pub async fn compile_code(language: &str, code: &str, session: &str) -> Result<S
         "go" => compile_go(code, &safe_session).await,
         "cpp" => compile_cpp(code, &safe_session).await,
         "zig" => compile_zig(code, &safe_session).await,
-        other => Err(format!("Linguagem não suportada: {}", other)),
+        other => Err(format!("Unsupported language: {}", other)),
     }
 }
 
@@ -82,7 +82,7 @@ pub async fn execute_code(
     }
 }
 
-pub fn caminho_absoluto_do_projeto(project_path: &Path) -> String {
+pub fn project_absolute_path(project_path: &Path) -> String {
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
     std::fs::canonicalize(project_path)
@@ -98,21 +98,21 @@ pub fn sandbox_rust(abs_project_path: String) -> CompileSandbox {
     let cargo_dir = std::env::var("CARGO_HOME").unwrap_or_else(|_| format!("{}/.cargo", home_dir));
 
     CompileSandbox::new(abs_project_path)
-        .com_toolchain(rustup_dir.clone())
-        .com_toolchain(cargo_dir.clone())
-        .com_env("HOME", home_dir)
-        .com_env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir))
-        .com_env("RUSTUP_HOME", rustup_dir)
-        .com_env("CARGO_HOME", cargo_dir)
+        .with_toolchain(rustup_dir.clone())
+        .with_toolchain(cargo_dir.clone())
+        .with_env("HOME", home_dir)
+        .with_env("PATH", format!("{}/bin:/usr/bin:/bin", cargo_dir))
+        .with_env("RUSTUP_HOME", rustup_dir)
+        .with_env("CARGO_HOME", cargo_dir)
 }
 
 async fn compile_rust(code: &str, safe_session: &str) -> Result<String, String> {
-    compile_rust_com_avisos(code, safe_session)
+    compile_rust_with_warnings(code, safe_session)
         .await
-        .map(|(caminho, _)| caminho)
+        .map(|(path, _)| path)
 }
 
-pub async fn compile_rust_com_avisos(
+pub async fn compile_rust_with_warnings(
     code: &str,
     safe_session: &str,
 ) -> Result<(String, String), String> {
@@ -125,10 +125,10 @@ pub async fn compile_rust_com_avisos(
     let safe_code = format!("#![forbid(unsafe_code)]\n{}", code);
     tokio::fs::write(&file_path, &safe_code)
         .await
-        .map_err(|e| format!("Erro ao salvar arquivo: {}", e))?;
+        .map_err(|e| format!("Error saving file: {}", e))?;
 
-    let compile_output = sandbox_rust(caminho_absoluto_do_projeto(&project_path))
-        .executar(
+    let compile_output = sandbox_rust(project_absolute_path(&project_path))
+        .run(
             "cargo",
             &[
                 "build",
@@ -169,7 +169,7 @@ pub async fn compile_rust_com_avisos(
         } else {
             String::from_utf8_lossy(&compile_output.stderr).to_string()
         };
-        return Err(format!("Erro de Compilação:\n{}", final_stderr));
+        return Err(format!("Compile error:\n{}", final_stderr));
     }
 
     let path = exe_path.unwrap_or_else(|| {
@@ -180,7 +180,7 @@ pub async fn compile_rust_com_avisos(
             .to_string()
     });
 
-    info!("Submissão Rust compilada: {}", path);
+    info!("Rust submission compiled: {}", path);
     Ok((path, formatted_errors))
 }
 
@@ -199,18 +199,18 @@ async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
 
     let go_path = std::env::var("GO_PATH").unwrap_or_else(|_| "go".to_string());
-    let sandbox = CompileSandbox::new(caminho_absoluto(&user_dir)?)
-        .com_compilador(&go_path)
-        .com_cache_compartilhado();
+    let sandbox = CompileSandbox::new(absolute_path(&user_dir)?)
+        .with_compiler(&go_path)
+        .with_shared_cache();
 
     let compile_output = sandbox
         .clone()
-        .com_env("GOCACHE", sandbox.cache_path("go-build"))
-        .com_env("GOMODCACHE", sandbox.cache_path("go-mod"))
-        .com_env("GOPATH", "/app/.go")
-        .com_env("CGO_ENABLED", "0")
-        .com_env("GOTOOLCHAIN", "local")
-        .executar(&go_path, &["build", "-o", &bin_name, "main.go"])
+        .with_env("GOCACHE", sandbox.cache_path("go-build"))
+        .with_env("GOMODCACHE", sandbox.cache_path("go-mod"))
+        .with_env("GOPATH", "/app/.go")
+        .with_env("CGO_ENABLED", "0")
+        .with_env("GOTOOLCHAIN", "local")
+        .run(&go_path, &["build", "-o", &bin_name, "main.go"])
         .await?;
 
     if compile_output.status.success() {
@@ -218,7 +218,7 @@ async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
     }
 
     Err(format!(
-        "Erro de Compilação Go:\n{}",
+        "Go compile error:\n{}",
         String::from_utf8_lossy(&compile_output.stderr)
     ))
 }
@@ -238,9 +238,9 @@ async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
 
     let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
-    let compile_output = CompileSandbox::new(caminho_absoluto(&user_dir)?)
-        .com_compilador(&cpp_path)
-        .executar(
+    let compile_output = CompileSandbox::new(absolute_path(&user_dir)?)
+        .with_compiler(&cpp_path)
+        .run(
             &cpp_path,
             &["-O2", "-std=c++20", "-o", &bin_name, "main.cpp"],
         )
@@ -251,7 +251,7 @@ async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
     }
 
     Err(format!(
-        "Erro de Compilação C++:\n{}",
+        "C++ compile error:\n{}",
         String::from_utf8_lossy(&compile_output.stderr)
     ))
 }
@@ -271,14 +271,14 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
 
     let zig_path = std::env::var("ZIG_PATH").unwrap_or_else(|_| "zig".to_string());
-    let sandbox = CompileSandbox::new(caminho_absoluto(&user_dir)?)
-        .com_compilador(&zig_path)
-        .com_cache_compartilhado();
+    let sandbox = CompileSandbox::new(absolute_path(&user_dir)?)
+        .with_compiler(&zig_path)
+        .with_shared_cache();
 
-    let cache_global = sandbox.cache_path("zig");
+    let global_cache = sandbox.cache_path("zig");
 
     let compile_output = sandbox
-        .executar(
+        .run(
             &zig_path,
             &[
                 "build-exe",
@@ -287,7 +287,7 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
                 "--cache-dir",
                 "/app/.zig-cache",
                 "--global-cache-dir",
-                &cache_global,
+                &global_cache,
                 "--name",
                 &bin_name,
                 "main.zig",
@@ -300,7 +300,7 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
     }
 
     Err(format!(
-        "Erro de Compilação Zig:\n{}",
+        "Zig compile error:\n{}",
         String::from_utf8_lossy(&compile_output.stderr)
     ))
 }
@@ -313,110 +313,110 @@ mod tests {
 
 import "fmt"
 
-func main() { fmt.Println("ola do sandbox") }
+func main() { fmt.Println("hello from the sandbox") }
 "#;
 
     const HELLO_CPP: &str = r#"#include <iostream>
-int main() { std::cout << "ola do sandbox" << std::endl; }
+int main() { std::cout << "hello from the sandbox" << std::endl; }
 "#;
 
-    fn existe(binario: &str) -> bool {
+    fn exists(binary: &str) -> bool {
         std::process::Command::new("sh")
-            .args(["-c", &format!("command -v {binario}")])
+            .args(["-c", &format!("command -v {binary}")])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
     }
 
-    fn tem_sandbox() -> bool {
-        existe("bwrap") && existe("prlimit")
+    fn has_sandbox() -> bool {
+        exists("bwrap") && exists("prlimit")
     }
 
-    struct Sessao(String);
+    struct Session(String);
 
-    impl Sessao {
-        fn nova(nome: &str) -> Self {
-            Self(format!("teste_{nome}"))
+    impl Session {
+        fn new(name: &str) -> Self {
+            Self(format!("test_{name}"))
         }
 
-        fn dir(&self, linguagem: &str) -> String {
-            format!("files/{linguagem}/{}", self.0)
+        fn dir(&self, language: &str) -> String {
+            format!("files/{language}/{}", self.0)
         }
     }
 
-    impl Drop for Sessao {
+    impl Drop for Session {
         fn drop(&mut self) {
-            for linguagem in ["go", "cpp", "zig"] {
-                let _ = std::fs::remove_dir_all(self.dir(linguagem));
+            for language in ["go", "cpp", "zig"] {
+                let _ = std::fs::remove_dir_all(self.dir(language));
             }
         }
     }
 
-    async fn envelope_de_teste(comando: &str, args: &[&str]) -> std::process::Output {
-        let dir = "files/teste_envelope";
-        std::fs::create_dir_all(dir).expect("diretório da sessão");
-        let abs = caminho_absoluto(dir).expect("caminho absoluto");
+    async fn test_envelope(command: &str, args: &[&str]) -> std::process::Output {
+        let dir = "files/test_envelope";
+        std::fs::create_dir_all(dir).expect("session directory");
+        let abs = absolute_path(dir).expect("absolute path");
 
         CompileSandbox::new(abs)
-            .command(comando, args)
+            .command(command, args)
             .output()
             .await
-            .expect("envelope deveria executar")
+            .expect("envelope should run")
     }
 
     #[tokio::test]
-    async fn o_envelope_de_compilacao_nao_enxerga_o_host() {
-        if !tem_sandbox() {
-            eprintln!("bwrap/prlimit ausente; teste pulado");
+    async fn the_compile_envelope_cannot_see_the_host() {
+        if !has_sandbox() {
+            eprintln!("bwrap/prlimit missing; test skipped");
             return;
         }
 
-        let saida = envelope_de_teste("ls", &["/etc"]).await;
+        let output = test_envelope("ls", &["/etc"]).await;
 
         assert!(
-            !saida.status.success(),
-            "/etc do host ficou visível para o compilador: {}",
-            String::from_utf8_lossy(&saida.stdout)
+            !output.status.success(),
+            "host's /etc was visible to the compiler: {}",
+            String::from_utf8_lossy(&output.stdout)
         );
     }
 
     #[tokio::test]
-    async fn o_envelope_de_compilacao_so_escreve_no_workspace_da_sessao() {
-        if !tem_sandbox() {
-            eprintln!("bwrap/prlimit ausente; teste pulado");
+    async fn the_compile_envelope_only_writes_to_the_session_workspace() {
+        if !has_sandbox() {
+            eprintln!("bwrap/prlimit missing; test skipped");
             return;
         }
 
-        let dentro = envelope_de_teste("touch", &["/app/permitido"]).await;
-        assert!(dentro.status.success(), "escrita em /app deveria funcionar");
+        let inside = test_envelope("touch", &["/app/allowed"]).await;
+        assert!(inside.status.success(), "write to /app should work");
 
-        let fora = envelope_de_teste("touch", &["/usr/invasao"]).await;
-        assert!(!fora.status.success(), "/usr deveria estar somente-leitura");
+        let outside = test_envelope("touch", &["/usr/breach"]).await;
+        assert!(!outside.status.success(), "/usr should be read-only");
 
-        let _ = std::fs::remove_file("files/teste_envelope/permitido");
-        let _ = std::fs::remove_dir_all("files/teste_envelope");
+        let _ = std::fs::remove_file("files/test_envelope/allowed");
+        let _ = std::fs::remove_dir_all("files/test_envelope");
     }
 
     #[tokio::test]
-    async fn go_compila_dentro_do_sandbox_e_o_binario_roda() {
-        if !tem_sandbox() || !existe("go") {
-            eprintln!("go/bwrap ausente; teste pulado");
+    async fn go_compiles_inside_the_sandbox_and_the_binary_runs() {
+        if !has_sandbox() || !exists("go") {
+            eprintln!("go/bwrap missing; test skipped");
             return;
         }
 
-        let sessao = Sessao::nova("go_hello");
-        let bin = compile_code("go", HELLO_GO, &sessao.0)
+        let session = Session::new("go_hello");
+        let bin = compile_code("go", HELLO_GO, &session.0)
             .await
-            .expect("go deveria compilar dentro do sandbox");
+            .expect("go should compile inside the sandbox");
 
-        let resultado = run_compiled(&bin, None, RunLimits::default()).await;
+        let result = run_compiled(&bin, None, RunLimits::default()).await;
 
-        assert_eq!(resultado.verdict, ExecVerdict::Ok, "{resultado:?}");
-        assert!(resultado.stdout.contains("ola do sandbox"), "{resultado:?}");
+        assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
+        assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
     }
 
     #[test]
-    fn o_envelope_do_rust_carrega_prlimit_e_a_toolchain() {
+    fn the_rust_envelope_carries_prlimit_and_the_toolchain() {
         let sandbox = sandbox_rust("/srv/files/u_1_n_2".to_string());
         let args = sandbox.args();
 
@@ -425,56 +425,56 @@ int main() { std::cout << "ola do sandbox" << std::endl; }
         assert_eq!(
             sandbox.toolchain.len(),
             2,
-            "rustup e cargo precisam entrar como bind de leitura"
+            "rustup and cargo must be included as read binds"
         );
     }
 
     #[tokio::test]
-    async fn rust_continua_compilando_com_o_envelope_completo() {
-        if !tem_sandbox() || !existe("cargo") {
-            eprintln!("cargo/bwrap ausente; teste pulado");
+    async fn rust_still_compiles_with_the_full_envelope() {
+        if !has_sandbox() || !exists("cargo") {
+            eprintln!("cargo/bwrap missing; test skipped");
             return;
         }
 
-        let alvo_instalado = std::process::Command::new("rustup")
+        let target_installed = std::process::Command::new("rustup")
             .args(["target", "list", "--installed"])
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).contains("wasm32-wasip1"))
             .unwrap_or(false);
 
-        if !alvo_instalado {
-            eprintln!("alvo wasm32-wasip1 ausente; teste pulado");
+        if !target_installed {
+            eprintln!("wasm32-wasip1 target missing; test skipped");
             return;
         }
 
-        let sessao = "teste_rust_hello";
+        let session = "rust_hello_test";
         let bin = compile_code(
             "rust",
-            "fn main() { println!(\"ola do sandbox\"); }",
-            sessao,
+            "fn main() { println!(\"hello from the sandbox\"); }",
+            session,
         )
         .await;
 
-        let _ = std::fs::remove_dir_all(format!("files/{sessao}"));
+        let _ = std::fs::remove_dir_all(format!("files/{session}"));
 
-        assert!(bin.is_ok(), "rust deveria compilar: {bin:?}");
+        assert!(bin.is_ok(), "rust should compile: {bin:?}");
     }
 
     #[tokio::test]
-    async fn cpp_compila_dentro_do_sandbox_e_o_binario_roda() {
-        if !tem_sandbox() || !(existe("clang++") || existe("g++")) {
-            eprintln!("clang++/g++/bwrap ausente; teste pulado");
+    async fn cpp_compiles_inside_the_sandbox_and_the_binary_runs() {
+        if !has_sandbox() || !(exists("clang++") || exists("g++")) {
+            eprintln!("clang++/g++/bwrap missing; test skipped");
             return;
         }
 
-        let sessao = Sessao::nova("cpp_hello");
-        let bin = compile_code("cpp", HELLO_CPP, &sessao.0)
+        let session = Session::new("cpp_hello");
+        let bin = compile_code("cpp", HELLO_CPP, &session.0)
             .await
-            .expect("c++ deveria compilar dentro do sandbox");
+            .expect("c++ should compile inside the sandbox");
 
-        let resultado = run_compiled(&bin, None, RunLimits::default()).await;
+        let result = run_compiled(&bin, None, RunLimits::default()).await;
 
-        assert_eq!(resultado.verdict, ExecVerdict::Ok, "{resultado:?}");
-        assert!(resultado.stdout.contains("ola do sandbox"), "{resultado:?}");
+        assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
+        assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
     }
 }

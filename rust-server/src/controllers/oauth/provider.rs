@@ -71,7 +71,7 @@ impl Provider {
             .all(|key| get_var_from_env(key).is_ok())
     }
 
-    pub fn configurados() -> Vec<Provider> {
+    pub fn configured() -> Vec<Provider> {
         Provider::ALL
             .iter()
             .copied()
@@ -122,24 +122,24 @@ impl OAuthError {
 }
 
 #[cfg(test)]
-mod testes {
+mod tests {
     use super::*;
 
     #[test]
-    fn slug_ida_e_volta() {
+    fn slug_round_trip() {
         for provider in Provider::ALL {
             assert_eq!(Provider::from_slug(provider.slug()), Some(*provider));
         }
     }
 
     #[test]
-    fn slug_desconhecido_nao_resolve() {
+    fn unknown_slug_does_not_resolve() {
         assert_eq!(Provider::from_slug("gitlab"), None);
         assert_eq!(Provider::from_slug(""), None);
     }
 
     #[test]
-    fn codigos_de_erro_do_github_sao_os_que_o_front_ja_traduz() {
+    fn github_error_codes_are_the_ones_the_front_already_translates() {
         let github = Some(Provider::Github);
 
         assert_eq!(OAuthError::TokenExchange.code(github), "token_failed");
@@ -161,7 +161,7 @@ mod testes {
     }
 
     #[test]
-    fn google_tem_codigo_proprio_de_email_nao_verificado() {
+    fn google_has_its_own_code_for_unverified_email() {
         let google = Some(Provider::Google);
 
         assert_eq!(
@@ -176,12 +176,12 @@ mod testes {
     }
 
     #[test]
-    fn google_pede_o_minimo_de_escopo() {
+    fn google_requests_the_minimum_scope() {
         assert_eq!(Provider::Google.scopes(), &["openid", "email", "profile"]);
     }
 
     #[test]
-    fn erro_sem_provider_nao_vaza_slug_vazio() {
+    fn error_without_a_provider_does_not_leak_an_empty_slug() {
         assert_eq!(
             OAuthError::RequestFailed.code(None),
             "oauth_response_failed"

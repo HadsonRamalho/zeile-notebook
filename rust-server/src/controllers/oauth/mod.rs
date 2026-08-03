@@ -84,12 +84,12 @@ fn link_callback_url(provider: Provider) -> Result<String, OAuthError> {
     ))
 }
 
-fn resolver(slug: &str) -> Result<Provider, OAuthError> {
+fn resolve(slug: &str) -> Result<Provider, OAuthError> {
     let provider = Provider::from_slug(slug).ok_or(OAuthError::UnknownProvider)?;
 
     if !provider.is_configured() {
         tracing::warn!(
-            "OAuth de {} indisponível: API_URL/{}/{} ausentes",
+            "OAuth for {} unavailable: missing API_URL/{}/{}",
             provider.slug(),
             provider.client_id_var(),
             provider.client_secret_var()
@@ -100,38 +100,38 @@ fn resolver(slug: &str) -> Result<Provider, OAuthError> {
     Ok(provider)
 }
 
-fn com_cookie(mut response: Response, cookie: &str) -> Response {
+fn with_cookie(mut response: Response, cookie: &str) -> Response {
     match HeaderValue::from_str(cookie) {
-        Ok(valor) => {
-            response.headers_mut().append(SET_COOKIE, valor);
+        Ok(value) => {
+            response.headers_mut().append(SET_COOKIE, value);
         }
-        Err(e) => error!("cookie de state inválido: {e}"),
+        Err(e) => error!("invalid state cookie: {e}"),
     }
 
     response
 }
 
-fn redirect_de_erro(provider: Option<Provider>, erro: OAuthError) -> Response {
-    let destino = format!(
+fn error_redirect(provider: Option<Provider>, error: OAuthError) -> Response {
+    let destination = format!(
         "{}/login?auth_error={}",
         frontend_url(),
-        erro.code(provider)
+        error.code(provider)
     );
 
-    com_cookie(
-        Redirect::to(&destino).into_response(),
-        &state::cookie_expirado(),
+    with_cookie(
+        Redirect::to(&destination).into_response(),
+        &state::expired_cookie(),
     )
 }
 
-fn autorizar(
+fn authorize(
     provider: Provider,
     redirect_url: String,
-    desafio: &str,
+    challenge: &str,
 ) -> Result<String, OAuthError> {
     let client = oauth_client!(provider, redirect_url);
 
-    let mut request = client.authorize_url(|| CsrfToken::new(desafio.to_string()));
+    let mut request = client.authorize_url(|| CsrfToken::new(challenge.to_string()));
     for scope in provider.scopes() {
         request = request.add_scope(Scope::new(scope.to_string()));
     }
@@ -141,7 +141,7 @@ fn autorizar(
     Ok(auth_url.to_string())
 }
 
-async fn identidade(
+async fn identity(
     provider: Provider,
     code: String,
     redirect_url: String,
@@ -153,7 +153,7 @@ async fn identidade(
         .request_async(&crate::outbound::http_client())
         .await
         .map_err(|e| {
-            error!("Erro ao validar o token: {e}");
+            error!("Error validating token: {e}");
             OAuthError::TokenExchange
         })?;
 
@@ -161,13 +161,13 @@ async fn identidade(
     let access_token = token.access_token().secret();
 
     let identity = match provider {
-        Provider::Github => github::identidade(&http_client, access_token).await?,
-        Provider::Google => google::identidade(&http_client, access_token).await?,
+        Provider::Github => github::identity(&http_client, access_token).await?,
+        Provider::Google => google::identity(&http_client, access_token).await?,
     };
 
     if !identity.email_verified {
         tracing::warn!(
-            "login de {} recusado: e-mail não verificado no provider",
+            "login for {} refused: unverified email at the provider",
             provider.slug()
         );
         return Err(OAuthError::EmailNotVerified);
@@ -176,20 +176,20 @@ async fn identidade(
     Ok(identity)
 }
 
-fn ids_externos(provider: Provider, external_id: &str) -> (Option<String>, Option<String>) {
+fn external_ids(provider: Provider, external_id: &str) -> (Option<String>, Option<String>) {
     match provider {
         Provider::Github => (Some(external_id.to_string()), None),
         Provider::Google => (None, Some(external_id.to_string())),
     }
 }
 
-/// Redireciona para o front com o par de tokens. O access token de 15 minutos
-/// sozinho deixaria a sessão do OAuth cair em 15 minutos, sem como renovar.
+/// Redirects to the front with the token pair. The 15-minute access token
+/// alone would let the OAuth session drop after 15 minutes, with no way to renew.
 ///
-/// O refresh viaja na query como o access token já viajava — o que significa que
-/// ambos passam pelo histórico do navegador. É a fraqueza que este fluxo já
-/// tinha; trocar por um código de troca de uso único é a evolução natural.
-async fn redirect_com_sessao(
+/// The refresh travels in the query the same way the access token already
+/// did — meaning both pass through browser history. That's the weakness this
+/// flow already had; swapping it for a single-use exchange code is the natural evolution.
+async fn redirect_with_session(
     conn: &mut diesel_async::AsyncPgConnection,
     user: User,
     provider: Provider,
@@ -197,42 +197,42 @@ async fn redirect_com_sessao(
     let user_id = user.id;
 
     let Ok(token) = generate_jwt(UserAuthInfo::from(user)) else {
-        return redirect_de_erro(Some(provider), OAuthError::Session);
+        return error_redirect(Some(provider), OAuthError::Session);
     };
 
-    let refresh = match models::refresh_token::emitir(conn, user_id).await {
+    let refresh = match models::refresh_token::issue(conn, user_id).await {
         Ok((_, refresh)) => refresh,
         Err(e) => {
-            error!("falha ao emitir refresh token no OAuth: {e}");
-            return redirect_de_erro(Some(provider), OAuthError::Session);
+            error!("failed to issue refresh token in OAuth: {e}");
+            return error_redirect(Some(provider), OAuthError::Session);
         }
     };
 
-    let destino = format!(
+    let destination = format!(
         "{}/auth-callback?token={}&refresh={}",
         frontend_url(),
         token,
         refresh
     );
 
-    com_cookie(
-        Redirect::to(&destino).into_response(),
-        &state::cookie_expirado(),
+    with_cookie(
+        Redirect::to(&destination).into_response(),
+        &state::expired_cookie(),
     )
 }
 
 pub async fn api_oauth_login(Path(slug): Path<String>) -> Response {
-    let inicio = resolver(&slug).and_then(|provider| {
+    let start = resolve(&slug).and_then(|provider| {
         let redirect_url = login_callback_url(provider)?;
-        let desafio = state::emitir(provider, Purpose::Login, None)?;
-        let url = autorizar(provider, redirect_url, &desafio.state)?;
+        let challenge = state::issue(provider, Purpose::Login, None)?;
+        let url = authorize(provider, redirect_url, &challenge.state)?;
 
-        Ok((url, desafio.set_cookie))
+        Ok((url, challenge.set_cookie))
     });
 
-    match inicio {
-        Ok((url, cookie)) => com_cookie(Redirect::to(&url).into_response(), &cookie),
-        Err(erro) => redirect_de_erro(Provider::from_slug(&slug), erro),
+    match start {
+        Ok((url, cookie)) => with_cookie(Redirect::to(&url).into_response(), &cookie),
+        Err(error) => error_redirect(Provider::from_slug(&slug), error),
     }
 }
 
@@ -247,7 +247,7 @@ pub async fn api_link_start(
 ) -> Result<Response, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
-    let provider = resolver(&slug).map_err(|erro| match erro {
+    let provider = resolve(&slug).map_err(|error| match error {
         OAuthError::UnknownProvider => ApiError::Request("provider desconhecido".to_string()),
         _ => ApiError::MissingEnv("OAUTH_PROVIDER".to_string()),
     })?;
@@ -255,15 +255,15 @@ pub async fn api_link_start(
     let redirect_url =
         link_callback_url(provider).map_err(|_| ApiError::MissingEnv("API_URL".to_string()))?;
 
-    let desafio = state::emitir(provider, Purpose::Link, Some(user_id))
+    let challenge = state::issue(provider, Purpose::Link, Some(user_id))
         .map_err(|_| ApiError::CreateToken("state do OAuth".to_string()))?;
 
-    let url = autorizar(provider, redirect_url, &desafio.state)
+    let url = authorize(provider, redirect_url, &challenge.state)
         .map_err(|_| ApiError::MissingEnv("OAUTH_PROVIDER".to_string()))?;
 
-    Ok(com_cookie(
+    Ok(with_cookie(
         Json(LinkStartResponse { url }).into_response(),
-        &desafio.set_cookie,
+        &challenge.set_cookie,
     ))
 }
 
@@ -273,42 +273,42 @@ pub async fn api_oauth_callback(
     Query(params): Query<AuthRequest>,
     headers: HeaderMap,
 ) -> Response {
-    let provider = match resolver(&slug) {
+    let provider = match resolve(&slug) {
         Ok(provider) => provider,
-        Err(erro) => return redirect_de_erro(Provider::from_slug(&slug), erro),
+        Err(error) => return error_redirect(Provider::from_slug(&slug), error),
     };
 
-    if let Err(erro) = state::validar(&params.state, provider, Purpose::Login, &headers) {
-        return redirect_de_erro(Some(provider), erro);
+    if let Err(error) = state::validate(&params.state, provider, Purpose::Login, &headers) {
+        return error_redirect(Some(provider), error);
     }
 
     let redirect_url = match login_callback_url(provider) {
         Ok(url) => url,
-        Err(erro) => return redirect_de_erro(Some(provider), erro),
+        Err(error) => return error_redirect(Some(provider), error),
     };
 
-    let identity = match identidade(provider, params.code, redirect_url).await {
+    let identity = match identity(provider, params.code, redirect_url).await {
         Ok(identity) => identity,
-        Err(erro) => return redirect_de_erro(Some(provider), erro),
+        Err(error) => return error_redirect(Some(provider), error),
     };
 
     let conn = &mut match get_conn(&state_app.pool).await {
         Ok(conn) => conn,
         Err(e) => {
-            error!("falha ao obter conexão no OAuth: {}", e.1.0);
-            return redirect_de_erro(Some(provider), OAuthError::Session);
+            error!("failed to obtain connection in OAuth: {}", e.1.0);
+            return error_redirect(Some(provider), OAuthError::Session);
         }
     };
 
-    let por_id = models::user::find_user_by_provider_id(
+    let by_id = models::user::find_user_by_provider_id(
         conn,
         provider.auth_provider(),
         &identity.external_id,
     )
     .await;
 
-    if let Ok(user) = por_id {
-        return redirect_com_sessao(conn, user, provider).await;
+    if let Ok(user) = by_id {
+        return redirect_with_session(conn, user, provider).await;
     }
 
     if let Ok(user) = models::user::find_user_by_email(conn, &identity.email).await {
@@ -321,16 +321,16 @@ pub async fn api_oauth_callback(
         )
         .await
         {
-            error!("falha ao vincular provider a conta existente: {e:?}");
-            return redirect_de_erro(Some(provider), OAuthError::Session);
+            error!("failed to link provider to existing account: {e:?}");
+            return error_redirect(Some(provider), OAuthError::Session);
         }
 
-        return redirect_com_sessao(conn, user, provider).await;
+        return redirect_with_session(conn, user, provider).await;
     }
 
-    let (github_id, google_id) = ids_externos(provider, &identity.external_id);
+    let (github_id, google_id) = external_ids(provider, &identity.external_id);
 
-    let registro = api_register_user(
+    let registration = api_register_user(
         State(state_app),
         Json(NewUser {
             name: identity.name,
@@ -344,14 +344,14 @@ pub async fn api_oauth_callback(
     )
     .await;
 
-    if let Err(e) = registro {
-        error!("falha ao registrar usuário vindo do OAuth: {e:?}");
-        return redirect_de_erro(Some(provider), OAuthError::Session);
+    if let Err(e) = registration {
+        error!("failed to register user coming from OAuth: {e:?}");
+        return error_redirect(Some(provider), OAuthError::Session);
     }
 
     match models::user::find_user_by_email(conn, &identity.email).await {
-        Ok(user) => redirect_com_sessao(conn, user, provider).await,
-        Err(_) => redirect_de_erro(Some(provider), OAuthError::Session),
+        Ok(user) => redirect_with_session(conn, user, provider).await,
+        Err(_) => error_redirect(Some(provider), OAuthError::Session),
     }
 }
 
@@ -361,44 +361,44 @@ pub async fn api_link_callback(
     Query(params): Query<AuthRequest>,
     headers: HeaderMap,
 ) -> Response {
-    let provider = match resolver(&slug) {
+    let provider = match resolve(&slug) {
         Ok(provider) => provider,
-        Err(erro) => return redirect_de_erro(Provider::from_slug(&slug), erro),
+        Err(error) => return error_redirect(Provider::from_slug(&slug), error),
     };
 
-    let user_id = match state::validar(&params.state, provider, Purpose::Link, &headers) {
+    let user_id = match state::validate(&params.state, provider, Purpose::Link, &headers) {
         Ok(Some(user_id)) => user_id,
-        Ok(None) => return redirect_de_erro(Some(provider), OAuthError::InvalidState),
-        Err(erro) => return redirect_de_erro(Some(provider), erro),
+        Ok(None) => return error_redirect(Some(provider), OAuthError::InvalidState),
+        Err(error) => return error_redirect(Some(provider), error),
     };
 
     let redirect_url = match link_callback_url(provider) {
         Ok(url) => url,
-        Err(erro) => return redirect_de_erro(Some(provider), erro),
+        Err(error) => return error_redirect(Some(provider), error),
     };
 
-    let identity = match identidade(provider, params.code, redirect_url).await {
+    let identity = match identity(provider, params.code, redirect_url).await {
         Ok(identity) => identity,
-        Err(erro) => return redirect_de_erro(Some(provider), erro),
+        Err(error) => return error_redirect(Some(provider), error),
     };
 
     let conn = &mut match get_conn(&state_app.pool).await {
         Ok(conn) => conn,
         Err(e) => {
-            error!("falha ao obter conexão no OAuth: {}", e.1.0);
-            return redirect_de_erro(Some(provider), OAuthError::Session);
+            error!("failed to obtain connection in OAuth: {}", e.1.0);
+            return error_redirect(Some(provider), OAuthError::Session);
         }
     };
 
-    if let Ok(dono) = models::user::find_user_by_provider_id(
+    if let Ok(owner) = models::user::find_user_by_provider_id(
         conn,
         provider.auth_provider(),
         &identity.external_id,
     )
     .await
-        && dono.id != user_id
+        && owner.id != user_id
     {
-        return redirect_de_vinculo(provider, "already_linked");
+        return link_redirect(provider, "already_linked");
     }
 
     if let Err(e) = models::user::link_provider_account(
@@ -410,31 +410,31 @@ pub async fn api_link_callback(
     )
     .await
     {
-        error!("falha ao vincular provider ao usuário: {e:?}");
-        return redirect_de_vinculo(provider, "link_failed");
+        error!("failed to link provider to user: {e:?}");
+        return link_redirect(provider, "link_failed");
     }
 
-    com_cookie(
+    with_cookie(
         Redirect::to(&format!(
             "{}/profile?linked={}",
             frontend_url(),
             provider.slug()
         ))
         .into_response(),
-        &state::cookie_expirado(),
+        &state::expired_cookie(),
     )
 }
 
-fn redirect_de_vinculo(provider: Provider, erro: &str) -> Response {
-    com_cookie(
+fn link_redirect(provider: Provider, error: &str) -> Response {
+    with_cookie(
         Redirect::to(&format!(
             "{}/profile?link_error={}&provider={}",
             frontend_url(),
-            erro,
+            error,
             provider.slug()
         ))
         .into_response(),
-        &state::cookie_expirado(),
+        &state::expired_cookie(),
     )
 }
 
@@ -454,11 +454,11 @@ pub async fn api_unlink(
 
     let user = models::user::find_user_by_id(conn, &user_id).await?;
 
-    if !user.provider_vinculado(provider.auth_provider()) {
+    if !user.provider_linked(provider.auth_provider()) {
         return Ok(StatusCode::NO_CONTENT);
     }
 
-    if !user.pode_desvincular(provider.auth_provider()) {
+    if !user.can_unlink(provider.auth_provider()) {
         return Err(ApiError::LastLoginMethod);
     }
 
@@ -490,7 +490,7 @@ pub async fn api_auth_methods(
         password: user.password_hash.is_some(),
         providers: Provider::ALL
             .iter()
-            .filter(|provider| user.provider_vinculado(provider.auth_provider()))
+            .filter(|provider| user.provider_linked(provider.auth_provider()))
             .map(|provider| provider.slug())
             .collect(),
         primary_provider: user.primary_provider,
@@ -504,7 +504,7 @@ pub struct ProvidersResponse {
 
 pub async fn api_auth_providers() -> Json<ProvidersResponse> {
     Json(ProvidersResponse {
-        providers: Provider::configurados()
+        providers: Provider::configured()
             .into_iter()
             .map(Provider::slug)
             .collect(),

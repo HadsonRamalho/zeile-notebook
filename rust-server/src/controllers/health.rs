@@ -34,7 +34,7 @@ pub async fn ready(State(state): State<Arc<AppState>>) -> impl IntoResponse {
             }),
         ),
         Err(error) => {
-            tracing::warn!("health/ready: banco indisponível: {error}");
+            tracing::warn!("health/ready: database unavailable: {error}");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(HealthStatus {

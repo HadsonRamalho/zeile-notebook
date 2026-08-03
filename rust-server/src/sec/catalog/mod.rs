@@ -89,27 +89,27 @@ impl Catalog {
         let mut index = HashMap::new();
         for (i, perm) in permissions.iter().enumerate() {
             if index.insert(perm.key.clone(), i).is_some() {
-                panic!("Catálogo de permissões: chave duplicada '{}'", perm.key);
+                panic!("Permission catalog: duplicate key '{}'", perm.key);
             }
         }
 
         for perm in &permissions {
             if perm.key.ends_with(".view") && perm.view.is_none() {
                 panic!(
-                    "Catálogo de permissões: permissão de leitura '{}' precisa de marca Cosmetic|Confidential",
+                    "Permission catalog: read permission '{}' needs a Cosmetic|Confidential mark",
                     perm.key
                 );
             }
             if !perm.key.ends_with(".view") && perm.view.is_some() {
                 panic!(
-                    "Catálogo de permissões: permissão '{}' não é de leitura mas tem marca de view",
+                    "Permission catalog: permission '{}' is not a read permission but has a view mark",
                     perm.key
                 );
             }
             for parent in &perm.implied_by {
                 if !index.contains_key(parent) {
                     panic!(
-                        "Catálogo de permissões: '{}' implied_by chave inexistente '{}'",
+                        "Permission catalog: '{}' implied_by nonexistent key '{}'",
                         perm.key, parent
                     );
                 }
@@ -222,24 +222,24 @@ mod tests {
 
     #[test]
     fn snapshot_matches_committed_catalog() {
-        let current = serde_json::to_value(catalog()).expect("serializar catálogo");
+        let current = serde_json::to_value(catalog()).expect("serialize catalog");
 
         if std::env::var("UPDATE_PERMISSION_CATALOG_SNAPSHOT").is_ok() {
-            let pretty = serde_json::to_string_pretty(&current).expect("formatar snapshot");
-            std::fs::write(SNAPSHOT_PATH, format!("{pretty}\n")).expect("escrever snapshot");
+            let pretty = serde_json::to_string_pretty(&current).expect("format snapshot");
+            std::fs::write(SNAPSHOT_PATH, format!("{pretty}\n")).expect("write snapshot");
             return;
         }
 
         let raw = std::fs::read_to_string(SNAPSHOT_PATH).unwrap_or_else(|e| {
             panic!(
-                "não foi possível ler {SNAPSHOT_PATH}: {e}. Rode com UPDATE_PERMISSION_CATALOG_SNAPSHOT=1 para gerar."
+                "could not read {SNAPSHOT_PATH}: {e}. Run with UPDATE_PERMISSION_CATALOG_SNAPSHOT=1 to generate it."
             )
         });
-        let committed: serde_json::Value = serde_json::from_str(&raw).expect("snapshot inválido");
+        let committed: serde_json::Value = serde_json::from_str(&raw).expect("invalid snapshot");
 
         assert_eq!(
             committed, current,
-            "o catálogo mudou e o snapshot não: rode `UPDATE_PERMISSION_CATALOG_SNAPSHOT=1 cargo test snapshot_matches_committed_catalog` e commite o resultado"
+            "the catalog changed but the snapshot didn't: run `UPDATE_PERMISSION_CATALOG_SNAPSHOT=1 cargo test snapshot_matches_committed_catalog` and commit the result"
         );
     }
 }
