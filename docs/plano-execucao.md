@@ -145,7 +145,7 @@ branch local `tauri` (`aa268ac`) é ancestral de `main`; nada pendente para mesc
 
 #### 10 · Enum e casing — destrava os geradores
 
-- [ ] Migration: `ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS` × 10 + enum Rust completo (Q30)
+- [x] Migration: `ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS` × 10 + enum Rust completo (Q30). `BlockType` ganhou `FreeDrawing`, `DatabaseSchema`, `Latex`, `Sql`, `Typst`, `Challenge`, `NotebookRef`, `TemplateRef`, `Chart`, `Mermaid` — os mesmos 14 valores que `lib/types.ts` já usava. **Achado**: `#[serde(rename_all = "lowercase")]` não insere `_` em variante de duas palavras (`FreeDrawing` virava `"freedrawing"`, não `"free_drawing"`); trocado para `"snake_case"`, idêntico para as 4 variantes antigas e correto para as novas. `diesel-derive-enum` mapeia pro Postgres por `snake_case` por padrão, independente do atributo serde — os dois lados já batiam por baixo, só o serde estava errado
 - [ ] `#[serde(rename_all = "camelCase")]` em todos os structs serializados (Q29)
 - [ ] `#[serde(alias = "<snake>")]` só na entrada, com data de remoção em ADR
 - [ ] Aplicar "um conceito, uma grafia": remover `#[serde(rename)]` campo a campo, reconciliar `permission_grant.rs` com o resto
