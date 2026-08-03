@@ -20,3 +20,12 @@ pub struct GithubEmail {
     pub primary: bool,
     pub verified: bool,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct GoogleUser {
+    pub sub: String,
+    pub email: Option<String>,
+    pub email_verified: Option<bool>,
+    pub name: Option<String>,
+    pub picture: Option<String>,
+}

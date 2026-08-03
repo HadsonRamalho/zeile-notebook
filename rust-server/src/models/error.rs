@@ -68,6 +68,9 @@ pub enum ApiError {
 
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
+
+    #[error("This is the last login method on the account")]
+    LastLoginMethod,
 }
 
 impl ApiError {
@@ -91,6 +94,7 @@ impl ApiError {
             ApiError::PasswordsDoNotMatch => "PASSWORDS_DO_NOT_MATCH",
             ApiError::SendingEmail => "ERROR_SENDING_EMAIL",
             ApiError::PermissionDenied(_) => "PERMISSION_DENIED",
+            ApiError::LastLoginMethod => "LAST_LOGIN_METHOD",
         }
     }
 
@@ -135,6 +139,7 @@ impl IntoResponse for ApiError {
                 "User account is inactive".to_string(),
             ),
             ApiError::PermissionDenied(_) => (StatusCode::FORBIDDEN, self.to_string()),
+            ApiError::LastLoginMethod => (StatusCode::CONFLICT, self.to_string()),
             ApiError::WrongProvider(p) => {
                 (StatusCode::BAD_REQUEST, format!("Please log in with {}", p))
             }

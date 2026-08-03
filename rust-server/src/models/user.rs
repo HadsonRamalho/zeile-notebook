@@ -51,6 +51,31 @@ pub struct User {
     pub password_changed_at: DateTime<Utc>,
 }
 
+impl User {
+    pub fn provider_vinculado(&self, provider: AuthProvider) -> bool {
+        match provider {
+            AuthProvider::Github => self.github_id.is_some(),
+            AuthProvider::Google => self.google_id.is_some(),
+            AuthProvider::Email => self.password_hash.is_some(),
+        }
+    }
+
+    pub fn metodos_de_login(&self) -> usize {
+        [
+            self.password_hash.is_some(),
+            self.github_id.is_some(),
+            self.google_id.is_some(),
+        ]
+        .iter()
+        .filter(|tem| **tem)
+        .count()
+    }
+
+    pub fn pode_desvincular(&self, provider: AuthProvider) -> bool {
+        self.provider_vinculado(provider) && self.metodos_de_login() > 1
+    }
+}
+
 #[derive(Clone)]
 pub struct UserAuthInfo {
     pub id: Uuid,
@@ -213,23 +238,101 @@ pub async fn update_user_data(
     }
 }
 
-pub async fn update_user_provider(
+pub async fn find_user_by_provider_id(
+    conn: &mut AsyncPgConnection,
+    provider: AuthProvider,
+    external_id: &str,
+) -> Result<User, ApiError> {
+    let resultado = match provider {
+        AuthProvider::Github => {
+            users
+                .filter(github_id.eq(external_id))
+                .get_result(conn)
+                .await
+        }
+        AuthProvider::Google => {
+            users
+                .filter(google_id.eq(external_id))
+                .get_result(conn)
+                .await
+        }
+        AuthProvider::Email => return Err(ApiError::UserNotFound),
+    };
+
+    match resultado {
+        Ok(user) => Ok(user),
+        Err(diesel::result::Error::NotFound) => Err(ApiError::UserNotFound),
+        Err(e) => Err(ApiError::Database(e.to_string())),
+    }
+}
+
+pub async fn link_provider_account(
     conn: &mut AsyncPgConnection,
     id_param: &Uuid,
     provider: AuthProvider,
+    external_id: &str,
     avatar: Option<String>,
 ) -> Result<(), ApiError> {
-    let null_password: Option<String> = None;
-    match diesel::update(users)
-        .filter(id.eq(id_param))
-        .set((
-            password_hash.eq(null_password),
-            primary_provider.eq(provider),
-            avatar_url.eq(avatar),
-        ))
-        .execute(conn)
-        .await
-    {
+    let resultado = match provider {
+        AuthProvider::Github => {
+            diesel::update(users)
+                .filter(id.eq(id_param))
+                .set(github_id.eq(external_id))
+                .execute(conn)
+                .await
+        }
+        AuthProvider::Google => {
+            diesel::update(users)
+                .filter(id.eq(id_param))
+                .set(google_id.eq(external_id))
+                .execute(conn)
+                .await
+        }
+        AuthProvider::Email => return Err(ApiError::InvalidData),
+    };
+
+    if let Err(e) = resultado {
+        return Err(ApiError::Database(e.to_string()));
+    }
+
+    if let Some(avatar) = avatar {
+        let _ = diesel::update(users)
+            .filter(id.eq(id_param))
+            .filter(avatar_url.is_null())
+            .set(avatar_url.eq(avatar))
+            .execute(conn)
+            .await;
+    }
+
+    Ok(())
+}
+
+pub async fn unlink_provider_account(
+    conn: &mut AsyncPgConnection,
+    id_param: &Uuid,
+    provider: AuthProvider,
+) -> Result<(), ApiError> {
+    let vazio: Option<String> = None;
+
+    let resultado = match provider {
+        AuthProvider::Github => {
+            diesel::update(users)
+                .filter(id.eq(id_param))
+                .set(github_id.eq(&vazio))
+                .execute(conn)
+                .await
+        }
+        AuthProvider::Google => {
+            diesel::update(users)
+                .filter(id.eq(id_param))
+                .set(google_id.eq(&vazio))
+                .execute(conn)
+                .await
+        }
+        AuthProvider::Email => return Err(ApiError::InvalidData),
+    };
+
+    match resultado {
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::Database(e.to_string())),
     }
@@ -281,5 +384,63 @@ pub async fn delete_user(conn: &mut AsyncPgConnection, id_param: &Uuid) -> Resul
     {
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::Database(e.to_string())),
+    }
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    fn usuario(senha: bool, github: bool, google: bool) -> User {
+        User {
+            id: Uuid::new_v4(),
+            public_id: 1,
+            name: "Zeile".to_string(),
+            email: "zeile@example.com".to_string(),
+            avatar_url: None,
+            password_hash: senha.then(|| "hash".to_string()),
+            primary_provider: AuthProvider::Email,
+            github_id: github.then(|| "1".to_string()),
+            google_id: google.then(|| "2".to_string()),
+            role: UserRole::User,
+            is_active: true,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            deleted_at: None,
+            password_changed_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn conta_com_senha_e_google_pode_desvincular_o_google() {
+        let user = usuario(true, false, true);
+
+        assert_eq!(user.metodos_de_login(), 2);
+        assert!(user.pode_desvincular(AuthProvider::Google));
+    }
+
+    #[test]
+    fn ultimo_metodo_nao_pode_ser_removido() {
+        let so_google = usuario(false, false, true);
+        let so_senha = usuario(true, false, false);
+
+        assert!(!so_google.pode_desvincular(AuthProvider::Google));
+        assert!(!so_senha.pode_desvincular(AuthProvider::Email));
+    }
+
+    #[test]
+    fn provider_que_nao_esta_vinculado_nao_pode_ser_desvinculado() {
+        let user = usuario(true, true, false);
+
+        assert!(!user.pode_desvincular(AuthProvider::Google));
+        assert!(user.pode_desvincular(AuthProvider::Github));
+    }
+
+    #[test]
+    fn conta_com_dois_providers_e_sem_senha_ainda_pode_desvincular_um() {
+        let user = usuario(false, true, true);
+
+        assert!(user.pode_desvincular(AuthProvider::Github));
+        assert!(user.pode_desvincular(AuthProvider::Google));
     }
 }

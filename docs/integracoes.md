@@ -72,29 +72,51 @@ O que já existe no repositório e condiciona o plano:
 Refactor puro, sem mudança de comportamento observável. Existe para que o Google não seja um
 segundo `oauth.rs` copiado, e porque o ClickUp da Fase 2 consome a mesma abstração.
 
-- [ ] Extrair de `controllers/oauth.rs` um provider abstrato com: `client_id`/`client_secret` por env, `auth_url`, `token_url`, escopos, parsing do userinfo e resolução do e-mail primário verificado
-- [ ] GitHub vira a primeira implementação, com o passo extra de `GET /user/emails` que só ele precisa
-- [ ] `oauth_configured()` passa a ser por provider; `oauth_unavailable()` passa a citar qual provider faltou
-- [ ] Rotas parametrizadas: `/api/user/auth/callback/{provider}` e `/api/user/link/{provider}/callback`, no lugar dos caminhos com `github` literal
-- [ ] Manter as rotas antigas do GitHub respondendo, para não invalidar callback já registrado no GitHub App
-- [ ] Testes do fluxo GitHub antes do refactor, para provar que ele não mudou
+- [x] Extrair de `controllers/oauth.rs` um provider abstrato com: `client_id`/`client_secret` por env, `auth_url`, `token_url`, escopos, parsing do userinfo e resolução do e-mail primário verificado
+- [x] GitHub vira a primeira implementação, com o passo extra de `GET /user/emails` que só ele precisa
+- [x] `oauth_configured()` passa a ser por provider; `oauth_unavailable()` passa a citar qual provider faltou
+- [x] Rotas parametrizadas: `/api/user/auth/callback/{provider}` e `/api/user/link/{provider}/callback`, no lugar dos caminhos com `github` literal
+- [x] Manter as rotas antigas do GitHub respondendo — os caminhos são idênticos aos de antes, então o callback registrado no GitHub App continua válido, e um teste guarda isso
+- [x] Testes do fluxo GitHub antes do refactor, para provar que ele não mudou
+
+**Dois defeitos corrigidos no caminho**, ambos visíveis ao extrair: a troca de código usava
+sempre o `redirect_uri` do login, o que quebraria o fluxo de vínculo assim que o provider
+validasse a igualdade; e `FRONTEND_URL`/`API_URL`/conexão eram `.unwrap()`, ou seja, 500 em vez
+de redirect de erro.
 
 **Sai daqui**: o GitHub continua funcionando idêntico, e adicionar provider passa a ser escrever uma
 implementação, não um arquivo.
 
 ## Fase 1 · Google — **PR 1**
 
-- [ ] Implementação Google do provider: `accounts.google.com/o/oauth2/v2/auth`, token endpoint, userinfo com `sub`, `email`, `email_verified`, `name`, `picture`
-- [ ] Escopos `openid email profile` (G8); o access token não é persistido
-- [ ] Login/cadastro: `sub` → `users.google_id`; conta nova nasce com `primary_provider = Google`
-- [ ] **Resolução de conflito de e-mail (G2/G3)**: `email_verified: false` → recusa com erro próprio; verificado e e-mail já existente → vincula `google_id` à conta e loga; verificado e inexistente → cria conta
-- [ ] Link de conta: `/api/user/link/google` + callback, espelhando o par que o GitHub já tem
-- [ ] Desvincular provider (G6): recusa quando é o último meio de login e não há `password_hash`; a UI oferece "definir senha" no mesmo fluxo
-- [ ] `primary_provider` **não muda** ao vincular um segundo método — é histórico do cadastro
-- [ ] `GET /api/auth/providers` (G7) devolve a lista de providers configurados; a tela de login e a de perfil consomem
-- [ ] Front: botão do Google no login e card de conta vinculada no perfil, com strings em pt-br e en
-- [ ] Env novas documentadas: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- [x] Implementação Google do provider: `accounts.google.com/o/oauth2/v2/auth`, token endpoint, userinfo com `sub`, `email`, `email_verified`, `name`, `picture`
+- [x] Escopos `openid email profile` (G8); o access token não é persistido
+- [x] Login/cadastro: `sub` → `users.google_id`; conta nova nasce com `primary_provider = Google`
+- [x] **Resolução de conflito de e-mail (G2/G3)**: `email_verified: false` → recusa com `{provider}_email_not_verified`; verificado e e-mail já existente → vincula o id externo à conta e loga; verificado e inexistente → cria conta. A regra vale para os dois providers, então o antigo `wrong_login_method` do GitHub deixa de existir
+- [x] Login por id externo antes do e-mail — quem troca o e-mail no provider continua entrando na mesma conta
+- [x] Link de conta: `POST /api/user/link/{provider}` (autenticado, devolve a URL) + callback
+- [x] Desvincular provider (G6): `DELETE /api/user/link/{provider}` recusa com 409 `LAST_LOGIN_METHOD` quando é o último meio de login
+- [x] `primary_provider` **não muda** ao vincular um segundo método — é histórico do cadastro
+- [x] `GET /api/auth/providers` (G7) devolve a lista de providers configurados
+- [x] `GET /api/user/auth/methods` diz à UI o que a conta tem hoje: senha, providers vinculados e o primário
+- [x] Env novas documentadas: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- [ ] Front: botão do Google no login e card de conexões no perfil, com strings em pt-br e en
 - [ ] Tela de consentimento do Google publicada e domínio verificado — bloqueia o uso em produção fora do modo de teste
+
+**Três correções de segurança que não estavam no plano** e que o trabalho tornou obrigatórias:
+
+1. **`state` passa a ser validado.** O `CsrfToken` era gerado e descartado — qualquer callback
+   forjado era aceito. Agora o `state` é um JWT assinado (provider + propósito + nonce + validade
+   de 10 min) e o nonce é conferido contra um cookie `HttpOnly`/`SameSite=Lax` emitido no início
+   do fluxo. Sem isso, o Google entraria com o mesmo furo que o GitHub tinha.
+2. **O vínculo passa a exigir sessão.** `api_link_github_callback` descobria de quem era a conta
+   pelo e-mail que o provider devolvia, sem olhar quem estava logado. Agora o dono vem do `state`
+   assinado, emitido por um endpoint autenticado, e vincular a um id externo já usado por outra
+   conta é recusado.
+3. **Vincular deixou de apagar a senha.** `update_user_provider` gravava `password_hash = NULL` e
+   trocava o `primary_provider`. Quem vinculasse o GitHub perdia o login por senha sem ser avisado
+   — o oposto de G6. Foi substituída por `link_provider_account`, que só grava a coluna do id
+   externo (e o avatar, se a conta não tiver um).
 
 **Verificação**: conta nova por Google · conta existente por senha vinculando Google · conta existente
 por GitHub vinculando Google · e-mail não verificado recusado · tentativa de desvincular o único método.
@@ -177,7 +199,7 @@ Não bloqueiam o início; fecham durante a implementação.
 
 | Fase | Aberto |
 |---|---|
-| 0 | Se o provider abstrato vira `trait` com objetos ou `enum` com `match` — decidir ao ver quanto de estado cada provider carrega |
+| — | Contas que vincularam o GitHub antes desta mudança tiveram a senha apagada por `update_user_provider`; nada as recupera além do fluxo de "esqueci minha senha" |
 | 2 | Rotação de `INTEGRATIONS_ENC_KEY`: reconexão manual de todos, ou versionar a chave por registro |
 | 2 | Se `scope: team` entra na tabela desde já (só `user` é usado hoje) ou fica de fora até existir um caso |
 | 4 | Se a resolução em lote entra já na v1 ou só quando houver medição de custo |
