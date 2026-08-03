@@ -109,6 +109,15 @@ implementação, não um arquivo.
    forjado era aceito. Agora o `state` é um JWT assinado (provider + propósito + nonce + validade
    de 10 min) e o nonce é conferido contra um cookie `HttpOnly`/`SameSite=Lax` emitido no início
    do fluxo. Sem isso, o Google entraria com o mesmo furo que o GitHub tinha.
+
+   **O cookie é exigido no login e opcional no vínculo**, por uma razão de implantação: em
+   produção o front (`vercel.app`) e a API (`duckdns.org`) estão em domínios registráveis
+   diferentes. O login é navegação de topo do começo ao fim, então o cookie é de primeira parte e
+   funciona; o vínculo começa num `fetch` cross-site, onde o cookie é bloqueado ou particionado
+   pelo navegador. O que o cookie protegia ali — um atacante completar o fluxo no lugar da vítima
+   — já é impedido pelo `sub` assinado dentro do `state`, que só é emitido a quem está
+   autenticado. Quando o cookie chega, ele continua sendo conferido; um `state` de vínculo sem
+   `sub` é recusado.
 2. **O vínculo passa a exigir sessão.** `api_link_github_callback` descobria de quem era a conta
    pelo e-mail que o provider devolvia, sem olhar quem estava logado. Agora o dono vem do `state`
    assinado, emitido por um endpoint autenticado, e vincular a um id externo já usado por outra

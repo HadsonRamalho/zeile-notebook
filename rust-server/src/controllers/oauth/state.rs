@@ -87,10 +87,15 @@ pub fn validar(
         return Err(OAuthError::InvalidState);
     }
 
-    let esperado = nonce_do_cookie(headers).ok_or(OAuthError::InvalidState)?;
-
-    if !comparacao_constante(&esperado, &claims.nonce) {
+    if purpose == Purpose::Link && claims.sub.is_none() {
         return Err(OAuthError::InvalidState);
+    }
+
+    match nonce_do_cookie(headers) {
+        Some(esperado) if comparacao_constante(&esperado, &claims.nonce) => {}
+        Some(_) => return Err(OAuthError::InvalidState),
+        None if purpose == Purpose::Login => return Err(OAuthError::InvalidState),
+        None => {}
     }
 
     Ok(claims.sub)
@@ -205,6 +210,55 @@ mod testes {
 
             assert_eq!(sem_cookie, Err(OAuthError::InvalidState));
             assert_eq!(outro_nonce, Err(OAuthError::InvalidState));
+        });
+    }
+
+    #[test]
+    fn o_vinculo_dispensa_o_cookie_porque_o_dono_vem_assinado_no_state() {
+        com_segredo(|| {
+            let user = Uuid::new_v4();
+            let desafio = emitir(Provider::Google, Purpose::Link, Some(user)).expect("emitir");
+
+            let sub = validar(
+                &desafio.state,
+                Provider::Google,
+                Purpose::Link,
+                &HeaderMap::new(),
+            )
+            .expect("vínculo cross-site não pode depender de cookie de terceira parte");
+
+            assert_eq!(sub, Some(user));
+        });
+    }
+
+    #[test]
+    fn o_vinculo_com_cookie_divergente_continua_recusado() {
+        com_segredo(|| {
+            let desafio =
+                emitir(Provider::Google, Purpose::Link, Some(Uuid::new_v4())).expect("emitir");
+
+            assert_eq!(
+                validar(
+                    &desafio.state,
+                    Provider::Google,
+                    Purpose::Link,
+                    &headers_com("00000000000000000000000000000000"),
+                ),
+                Err(OAuthError::InvalidState)
+            );
+        });
+    }
+
+    #[test]
+    fn vinculo_sem_dono_no_state_e_recusado() {
+        com_segredo(|| {
+            let desafio = emitir(Provider::Google, Purpose::Link, None).expect("emitir");
+            let headers = headers_com(&nonce_emitido(&desafio));
+
+            assert_eq!(
+                validar(&desafio.state, Provider::Google, Purpose::Link, &headers),
+                Err(OAuthError::InvalidState)
+            );
         });
     }
 
