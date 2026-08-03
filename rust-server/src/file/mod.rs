@@ -11,6 +11,19 @@ use tracing::{error, info, warn};
 
 pub const MAX_PROCESSOS: u64 = 64;
 
+/// Espaço virtual que o wasmtime reserva por memória linear. O padrão do
+/// wasmtime é 4 GiB (o teto de um módulo wasm32), e ele reserva isso de uma vez
+/// via mmap PROT_NONE. Sob o `prlimit --as` de 1 GiB do envelope de execução, a
+/// reserva de 4 GiB é negada com ENOMEM e NENHUM programa roda. Cortar a reserva
+/// para 64 MiB cabe folgado no --as; `memory-may-move` continua deixando a
+/// memória crescer por remapeamento se o programa precisar de mais.
+pub const WASM_MEMORY_RESERVATION: u64 = 64 * 1024 * 1024;
+
+/// Guard page zerada: com a reserva pequena não há espaço virtual para as guard
+/// pages padrão (32 MiB) somarem sem estourar o --as; sem elas o wasmtime usa
+/// verificação de limites explícita, que é correta e barata para este uso.
+pub const WASM_MEMORY_GUARD: u64 = 0;
+
 pub const MAX_ARQUIVO_KB: u64 = 32 * 1024;
 
 pub const MAX_DESCRITORES: u64 = 64;
@@ -148,7 +161,15 @@ pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String
 
         args.extend(prlimit_interno_args(MAX_PROCESSOS));
 
-        for arg in ["/app/wasmtime", "run", "/app/main.wasm"] {
+        for arg in [
+            "/app/wasmtime",
+            "run",
+            "-O",
+            &format!("memory-reservation={}", WASM_MEMORY_RESERVATION),
+            "-O",
+            &format!("memory-guard-size={}", WASM_MEMORY_GUARD),
+            "/app/main.wasm",
+        ] {
             args.push(arg.into());
         }
 
@@ -446,6 +467,48 @@ mod tests {
         assert_eq!(args[size + 1], (TMPFS_MB * 1024 * 1024).to_string());
         assert_eq!(args[size + 2], "--tmpfs");
         assert_eq!(args[size + 3], "/tmp");
+    }
+
+    #[test]
+    fn o_envelope_wasm_limita_a_reserva_de_memoria_do_wasmtime() {
+        let args = run_envelope_args("/app/prog.wasm", RunLimits::default());
+
+        let run = args
+            .iter()
+            .position(|a| a == "run")
+            .expect("subcomando run ausente");
+        // `/app/main.wasm` aparece duas vezes: como alvo do --ro-bind e como
+        // módulo do `run`. O que importa é o último, depois do subcomando.
+        let modulo = args
+            .iter()
+            .rposition(|a| a == "/app/main.wasm")
+            .expect("módulo ausente");
+
+        let reserva = format!("memory-reservation={}", WASM_MEMORY_RESERVATION);
+        let guard = format!("memory-guard-size={}", WASM_MEMORY_GUARD);
+
+        assert!(args.contains(&reserva), "reserva ausente: {args:?}");
+        assert!(args.contains(&guard), "guard ausente: {args:?}");
+        let pos_reserva = args.iter().position(|a| a == &reserva).unwrap();
+        assert!(
+            run < pos_reserva && pos_reserva < modulo,
+            "a reserva precisa ser passada como opção do run, antes do módulo: {args:?}"
+        );
+        assert_eq!(
+            WASM_MEMORY_RESERVATION,
+            64 * 1024 * 1024,
+            "a reserva precisa caber no prlimit --as do envelope de execução"
+        );
+    }
+
+    #[test]
+    fn binario_nativo_nao_recebe_flags_de_wasm() {
+        let args = run_envelope_args("/app/bin", RunLimits::default());
+
+        assert!(
+            !args.iter().any(|a| a.starts_with("memory-reservation=")),
+            "flags de wasm vazaram para o envelope nativo: {args:?}"
+        );
     }
 
     #[tokio::test]
