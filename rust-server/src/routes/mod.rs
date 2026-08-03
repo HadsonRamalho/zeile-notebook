@@ -1,6 +1,7 @@
 use crate::models::error::ApiError;
 use crate::models::state::AppState;
 use crate::routes::admin::admin_routes;
+use crate::routes::auth::auth_routes;
 use crate::routes::challenge::challenge_routes;
 use crate::routes::notebook::notebook_routes;
 use crate::routes::run_rust::run_rust_routes;
@@ -23,6 +24,7 @@ use tower_http::services::ServeDir;
 use utoipa_axum::router::OpenApiRouter;
 
 pub mod admin;
+pub mod auth;
 pub mod challenge;
 pub mod docs;
 #[cfg(test)]
@@ -118,6 +120,7 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
         .nest("/api", app.into())
         .nest("/api", run_rust_routes().await.into())
         .nest("/api/user", user_routes().await.into())
+        .nest("/api/auth", auth_routes().await.into())
         .nest("/api/notebook", notebook_routes().await.into())
         .nest("/api/team", team_routes().await.into())
         .nest(
