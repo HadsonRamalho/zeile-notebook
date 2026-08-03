@@ -32,7 +32,7 @@ export async function getSharedPyodide() {
 
   const loadPyodide = (window as any).loadPyodide;
   if (!loadPyodide) {
-    throw new Error("Pyodide script não encontrado no Window.");
+    throw new Error("Pyodide script not found on Window.");
   }
 
   pyodidePromise = loadPyodide({

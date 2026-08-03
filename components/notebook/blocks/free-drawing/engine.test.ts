@@ -94,17 +94,17 @@ describe("defaultCanvasSettings", () => {
     expect(defaultCanvasSettings()).toEqual(defaultCanvasSettings());
   });
 
-  it("DEFAULT_CAMERA começa na origem com zoom 1", () => {
+  it("DEFAULT_CAMERA starts at the origin with zoom 1", () => {
     expect(DEFAULT_CAMERA).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 });
 
 describe("strokeMaxWidth", () => {
-  it("sem shape, é o size", () => {
+  it("without a shape, it is the size", () => {
     expect(strokeMaxWidth(stroke("s", { size: 7 }))).toBe(7);
   });
 
-  it("com shape, é o maior entre sizeStart e sizeEnd", () => {
+  it("with a shape, it is the larger of sizeStart and sizeEnd", () => {
     const s = stroke("s", {
       shape: "pencil",
       size: 4,
@@ -145,7 +145,7 @@ describe("geoShapePoints", () => {
     expect([pts[0]?.x, pts[0]?.y]).toEqual([pts[4]?.x, pts[4]?.y]);
   });
 
-  it("triangle fecha no ápice, no meio da base superior", () => {
+  it("triangle closes at the apex, in the middle of the top base", () => {
     const pts = geoShapePoints("triangle", 0, 0, 10, 8);
 
     expect(pts).toHaveLength(4);
@@ -153,7 +153,7 @@ describe("geoShapePoints", () => {
     expect([pts[3]?.x, pts[3]?.y]).toEqual([5, 0]);
   });
 
-  it("ellipse fecha o laço e fica dentro da caixa", () => {
+  it("ellipse closes the loop and stays inside the box", () => {
     const pts = geoShapePoints("ellipse", 0, 0, 10, 4);
 
     expect(pts).toHaveLength(57);
@@ -176,7 +176,7 @@ describe("geoShapePoints", () => {
     expect(pts[4]?.x).toBeLessThan(100);
   });
 
-  it("arrow de comprimento zero não gera NaN", () => {
+  it("zero-length arrow does not produce NaN", () => {
     const pts = geoShapePoints("arrow", 5, 5, 5, 5);
 
     for (const p of pts) {
@@ -185,7 +185,7 @@ describe("geoShapePoints", () => {
     }
   });
 
-  it("toda GEO_SHAPES devolve pelo menos 2 pontos com pressão fixa", () => {
+  it("every GEO_SHAPES returns at least 2 points with fixed pressure", () => {
     for (const kind of GEO_SHAPES) {
       const pts = geoShapePoints(kind, 0, 0, 10, 10);
       expect(pts.length, kind).toBeGreaterThanOrEqual(2);
@@ -205,11 +205,11 @@ describe("geoShapePoints", () => {
 });
 
 describe("computeContentBounds", () => {
-  it("devolve null sem traços", () => {
+  it("returns null without strokes", () => {
     expect(computeContentBounds([])).toBeNull();
   });
 
-  it("devolve null quando os traços não têm ponto", () => {
+  it("returns null when the strokes have no point", () => {
     expect(computeContentBounds([stroke("s", { points: [] })])).toBeNull();
   });
 
@@ -227,7 +227,7 @@ describe("computeContentBounds", () => {
     });
   });
 
-  it("cobre a união de vários traços", () => {
+  it("covers the union of several strokes", () => {
     const a = stroke("a", { size: 0, points: [{ x: 0, y: 0, pressure: 1 }] });
     const b = stroke("b", {
       size: 0,
@@ -242,7 +242,7 @@ describe("computeContentBounds", () => {
     });
   });
 
-  it("usa a espessura do shape, não só o size", () => {
+  it("uses the shape's thickness, not just the size", () => {
     const s = stroke("s", {
       shape: "pencil",
       size: 2,
@@ -314,11 +314,11 @@ describe("findTopStrokeAt", () => {
     );
   }
 
-  it("devolve null quando nada é atingido", () => {
+  it("returns null when nothing is hit", () => {
     expect(escolher([layer("l1")], [stroke("s1")], [])).toBeNull();
   });
 
-  it("devolve o traço atingido", () => {
+  it("returns the hit stroke", () => {
     expect(escolher([layer("l1")], [stroke("s1")], ["s1"])?.id).toBe("s1");
   });
 
@@ -334,7 +334,7 @@ describe("findTopStrokeAt", () => {
     );
   });
 
-  it("dentro da camada, prefere o traço de order maior", () => {
+  it("within the layer, prefers the stroke with the higher order", () => {
     const strokes = [
       stroke("antigo", { order: 1 }),
       stroke("recente", { order: 9 }),
@@ -345,7 +345,7 @@ describe("findTopStrokeAt", () => {
     );
   });
 
-  it("ignora camada invisível", () => {
+  it("ignores an invisible layer", () => {
     const layers = [layer("oculta", { visible: false })];
     const strokes = [stroke("s1", { layerId: "oculta" })];
 
@@ -359,13 +359,13 @@ describe("findTopStrokeAt", () => {
     expect(escolher(layers, strokes, ["s1"])).toBeNull();
   });
 
-  it("ignora traço de camada que não está na lista", () => {
+  it("ignores a stroke from a layer that is not in the list", () => {
     const strokes = [stroke("orfao", { layerId: "sumiu" })];
 
     expect(escolher([layer("l1")], strokes, ["orfao"])).toBeNull();
   });
 
-  it("cai para a camada de baixo quando a de cima não é atingida", () => {
+  it("falls back to the layer below when the one above is not hit", () => {
     const layers = [layer("baixa", { order: 0 }), layer("alta", { order: 5 })];
     const strokes = [
       stroke("na-baixa", { layerId: "baixa" }),
@@ -375,7 +375,7 @@ describe("findTopStrokeAt", () => {
     expect(escolher(layers, strokes, ["na-baixa"])?.id).toBe("na-baixa");
   });
 
-  it("traço sem ponto nenhum nunca é atingido", () => {
+  it("a stroke with no points at all is never hit", () => {
     const strokes = [stroke("vazio", { points: [] })];
 
     expect(escolher([layer("l1")], strokes, ["vazio"])).toBeNull();

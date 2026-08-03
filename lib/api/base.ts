@@ -1,5 +1,5 @@
+import { renewSession } from "@/lib/api/session";
 import { queueRequest } from "@/lib/backgroundSync";
-import { renovarSessao } from "@/lib/api/session";
 import { type Capability, resolve } from "@/lib/runtime/router";
 
 interface FetchOptions extends RequestInit {
@@ -23,14 +23,19 @@ export class ApiClientError extends Error {
   }
 }
 
-// Rotas do próprio ciclo de sessão: renovar em cima de um 401 delas geraria laço.
-const ROTAS_DE_SESSAO = ["/user/login", "/user/register", "/user/refresh", "/user/logout"];
+// Routes belonging to the session cycle itself: renewing on top of a 401 from them would loop.
+const SESSION_ROUTES = [
+  "/user/login",
+  "/user/register",
+  "/user/refresh",
+  "/user/logout",
+];
 
 async function http<T>(
   path: string,
   capability: Capability,
   config?: FetchOptions,
-  jaRenovou = false,
+  alreadyRenewed = false,
 ): Promise<T> {
   const { capability: override, ...rest } = config ?? {};
   const target = resolve(override ?? capability);
@@ -62,12 +67,12 @@ async function http<T>(
 
   if (
     response.status === 401 &&
-    !jaRenovou &&
-    !ROTAS_DE_SESSAO.some((rota) => path.startsWith(rota))
+    !alreadyRenewed &&
+    !SESSION_ROUTES.some((route) => path.startsWith(route))
   ) {
-    const novoToken = await renovarSessao();
+    const newToken = await renewSession();
 
-    if (novoToken) {
+    if (newToken) {
       return http<T>(path, capability, config, true);
     }
   }

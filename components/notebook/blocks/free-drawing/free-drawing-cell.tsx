@@ -44,9 +44,6 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
-import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
-import type { DrawingElement, Notebook } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +57,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
+import type { DrawingElement, Notebook } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { BrushPicker } from "./brush-picker";
+import {
+  type Brush,
+  BUILTIN_BRUSHES,
+  brushSize,
+  loadCustomBrushes,
+  saveCustomBrushes,
+  scaleBrushSize,
+} from "./brushes";
 import {
   type Camera,
   type CanvasSettingsElement,
@@ -69,8 +78,8 @@ import {
   defaultLayer,
   drawLaser,
   exportSceneToCanvas,
-  findTopStrokeAt,
   type FreeDrawingElement,
+  findTopStrokeAt,
   GEO_SHAPE_LABELS,
   GEO_SHAPES,
   type GeoShape,
@@ -87,15 +96,6 @@ import {
   type StrokePoint,
   upsertCanvasSettings,
 } from "./engine";
-import {
-  type Brush,
-  BUILTIN_BRUSHES,
-  brushSize,
-  loadCustomBrushes,
-  saveCustomBrushes,
-  scaleBrushSize,
-} from "./brushes";
-import { BrushPicker } from "./brush-picker";
 
 type ToolKind = "draw" | "eraser" | "bucket" | "hand" | "laser" | "shapes";
 
@@ -127,10 +127,24 @@ const TOOL_LABELS: Record<ToolKind, string> = {
   shapes: "Formas",
 };
 
-// Atalhos de teclado por idioma (letra sobreposta ao ícone da ferramenta).
+// Keyboard shortcuts by language (letter overlaid on the tool icon).
 const TOOL_SHORTCUTS: Record<string, Partial<Record<ToolKind, string>>> = {
-  "pt-br": { draw: "P", eraser: "B", bucket: "T", hand: "M", laser: "L", shapes: "F" },
-  en: { draw: "P", eraser: "E", bucket: "F", hand: "H", laser: "L", shapes: "S" },
+  "pt-br": {
+    draw: "P",
+    eraser: "B",
+    bucket: "T",
+    hand: "M",
+    laser: "L",
+    shapes: "F",
+  },
+  en: {
+    draw: "P",
+    eraser: "E",
+    bucket: "F",
+    hand: "H",
+    laser: "L",
+    shapes: "S",
+  },
 };
 
 const shortcutsFor = (locale: string): Partial<Record<ToolKind, string>> =>
@@ -177,8 +191,8 @@ const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 8;
 const EXPORT_PADDING = 10;
 
-// Compacta o slider de arrasto (o base-ui aplica min-w-44 por padrão, largo
-// demais para as pílulas estreitas da toolbar aqui).
+// Shrinks the drag slider (base-ui applies min-w-44 by default, too wide
+// for the narrow toolbar pills here).
 const COMPACT_SLIDER = "[&_[data-slot=slider-control]]:min-w-0";
 
 interface FreeDrawingCellProps {
@@ -225,9 +239,9 @@ export function FreeDrawingCell({
   const [gesturesOpen, setGesturesOpen] = useState(false);
   const locale = useLocale();
   const shortcuts = shortcutsFor(locale);
-  // Vive aqui (não dentro de LayersPanel) porque o painel desmonta ao entrar
-  // em modo foco (só é renderizado quando `!focusMode`) — um `useState`
-  // local perderia o estado de minimizado a cada entrada/saída do foco.
+  // Lives here (not inside LayersPanel) because the panel unmounts on
+  // entering focus mode (only rendered when `!focusMode`) — a local
+  // `useState` would lose the minimized state on every focus enter/exit.
   const [layersMinimized, setLayersMinimized] = useState(false);
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
   const panState = useRef<{
@@ -268,7 +282,8 @@ export function FreeDrawingCell({
   const gesturesRef = useRef(gestures);
   gesturesRef.current = gestures;
 
-  const activeBrush = brushes.find((b) => b.id === activeBrushId) ?? brushes[0]!;
+  const activeBrush =
+    brushes.find((b) => b.id === activeBrushId) ?? brushes[0]!;
 
   useEffect(() => {
     const custom = loadCustomBrushes();
@@ -304,8 +319,8 @@ export function FreeDrawingCell({
     });
   };
 
-  // Reconcilia mudanças remotas (outros peers) na cena, com a mesma
-  // detecção de eco por assinatura de conteúdo usada no bloco de Excalidraw.
+  // Reconciles remote changes (other peers) into the scene, with the same
+  // content-signature echo detection used in the Excalidraw block.
   useEffect(() => {
     if (localDirty.current || pendingStroke.current) return;
     const remote = readSceneElements(
@@ -362,8 +377,8 @@ export function FreeDrawingCell({
     [elements],
   );
 
-  // Canvas fora da tela usado só como "régua" geométrica para o balde de
-  // tinta (isPointInPath/isPointInStroke não precisam de pixels desenhados).
+  // Offscreen canvas used only as a geometric "ruler" for the paint
+  // bucket (isPointInPath/isPointInStroke don't need drawn pixels).
   if (!hitCtxRef.current && typeof document !== "undefined") {
     hitCtxRef.current = document.createElement("canvas").getContext("2d");
   }
@@ -384,9 +399,9 @@ export function FreeDrawingCell({
   }, []);
 
   // Impede que o scroll (vertical ou horizontal) dentro do bloco vaze para a
-  // página do notebook — em vez disso, vira pan do canvas infinito. Precisa
-  // ser um listener nativo com passive:false (o onWheel do React é anexado
-  // como passivo e não consegue preventDefault). Ctrl/Cmd+wheel dá zoom
+  // the notebook page — instead it becomes a pan of the infinite canvas. Needs
+  // to be a native listener with passive:false (React's onWheel is attached
+  // as passive and can't preventDefault). Ctrl/Cmd+wheel zooms
   // centrado no cursor, igual Excalidraw/Figma.
   useEffect(() => {
     const el = containerRef.current;
@@ -489,8 +504,8 @@ export function FreeDrawingCell({
     };
   }, []);
 
-  // Converte um ponto de tela (relativo ao canvas) para o espaço-mundo do
-  // canvas infinito, desfazendo o pan/zoom atual da câmera.
+  // Converts a screen point (relative to the canvas) to the infinite
+  // canvas's world-space, undoing the camera's current pan/zoom.
   const screenToWorld = useCallback(
     (clientX: number, clientY: number, rect: DOMRect) => ({
       x: (clientX - rect.left - camera.x) / camera.zoom,
@@ -647,7 +662,12 @@ export function FreeDrawingCell({
       activeLaserId.current = id;
       laserStrokes.current = [
         ...laserStrokes.current,
-        { id, points: [{ x: p.x, y: p.y }], bornAt: Date.now(), releasedAt: null },
+        {
+          id,
+          points: [{ x: p.x, y: p.y }],
+          bornAt: Date.now(),
+          releasedAt: null,
+        },
       ];
       tickLaser();
       return;
@@ -806,8 +826,8 @@ export function FreeDrawingCell({
     );
   };
 
-  // Slider de opacidade dispara onValueChange a cada pixel arrastado; só
-  // registra 1 entrada de undo por arraste (baseline capturado no início,
+  // Opacity slider fires onValueChange on every pixel dragged; only
+  // registers 1 undo entry per drag (baseline captured at the start,
   // consolidado em onLayerOpacityCommit ao soltar).
   const onLayerOpacityChange = (id: string, opacity: number) => {
     if (opacityBaseline.current === null) opacityBaseline.current = elements;
@@ -824,9 +844,9 @@ export function FreeDrawingCell({
     }
   };
 
-  // `visualTopToBottom` é a lista exibida no painel (camada do topo primeiro).
-  // framer-motion chama onReorder a cada troca de posição durante o arraste;
-  // só registra 1 entrada de undo por arraste inteiro (mesmo padrão do slider
+  // `visualTopToBottom` is the list shown in the panel (top layer first).
+  // framer-motion calls onReorder on every position swap during the drag;
+  // only registers 1 undo entry per whole drag (same pattern as the slider
   // de opacidade), consolidada em onReorderLayersCommit ao soltar.
   const onReorderLayers = (visualTopToBottom: LayerElement[]) => {
     if (reorderBaseline.current === null) reorderBaseline.current = elements;
@@ -886,8 +906,8 @@ export function FreeDrawingCell({
   };
 
   // Ctrl+Z desfaz, Ctrl+Shift+Z ou Ctrl+Y refaz (ou Cmd no mac); letras soltas
-  // selecionam ferramentas (atalhos por idioma). Só quando o cursor está sobre
-  // este bloco, pra não roubar o atalho de outros blocos/editores da página.
+  // select tools (language-specific shortcuts). Only when the cursor is over
+  // this block, so it doesn't steal the shortcut from other blocks/editors on the page.
   useEffect(() => {
     if (!canWrite || !isHovered) return;
     const sc = shortcutsFor(locale);
@@ -942,7 +962,7 @@ export function FreeDrawingCell({
     });
   };
 
-  // Gestos multitoque (customizáveis): toque com N dedos dispara a ação mapeada.
+  // Multi-touch gestures (customizable): touching with N fingers fires the mapped action.
   useEffect(() => {
     if (!canWrite) return;
     const el = containerRef.current;
@@ -1039,8 +1059,8 @@ export function FreeDrawingCell({
             focusMode
               ? "bg-foreground/[0.1] text-foreground"
               : "bg-card/85 text-foreground/70",
-            // Em tela cheia no mobile, o botão de foco sai daqui e aparece
-            // centralizado embaixo (ver bloco fixed abaixo) — mais alcançável
+            // In fullscreen on mobile, the focus button moves from here and appears
+            // centered at the bottom (see the fixed block below) — more reachable
             // com o polegar do que o canto superior.
             fullscreen && "max-md:hidden",
           )}
@@ -1140,9 +1160,7 @@ export function FreeDrawingCell({
             {(tool === "draw" || tool === "eraser") && (
               <BrushSizePopover
                 label={tool === "eraser" ? "Borracha" : activeBrush.name}
-                size={
-                  tool === "eraser" ? eraserSize : brushSize(activeBrush)
-                }
+                size={tool === "eraser" ? eraserSize : brushSize(activeBrush)}
                 onSize={(v) =>
                   tool === "eraser" ? setEraserSize(v) : setActiveBrushSize(v)
                 }
@@ -1238,10 +1256,11 @@ function GestureConfigDialog({
         </DialogHeader>
         <div className="flex flex-col gap-3">
           {GESTURE_FINGERS.map((fingers) => (
-            <div key={fingers} className="flex items-center justify-between gap-3">
-              <span className="text-sm text-foreground">
-                {fingers} dedos
-              </span>
+            <div
+              key={fingers}
+              className="flex items-center justify-between gap-3"
+            >
+              <span className="text-sm text-foreground">{fingers} dedos</span>
               <div className="flex flex-wrap justify-end gap-1">
                 {(Object.keys(GESTURE_ACTION_LABELS) as GestureAction[]).map(
                   (action) => (
@@ -1394,7 +1413,9 @@ function BrushPalette({
             <BrushIcon className="size-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">Pincéis — {activeBrush.name}</TooltipContent>
+        <TooltipContent side="right">
+          Pincéis — {activeBrush.name}
+        </TooltipContent>
       </Tooltip>
       <ToolButton
         id="eraser"
@@ -1490,10 +1511,10 @@ function ColorPicker({
   );
 }
 
-// Tamanho da ferramenta ativa (pincel ou borracha), com slider e input numérico
-// para escolher um valor exato. No desktop fica inline no topo; no mobile vira um
-// botão compacto que abre o slider para baixo, evitando conflito com a paleta e o
-// seletor de cor centralizado.
+// Size of the active tool (brush or eraser), with a slider and numeric input
+// to choose an exact value. On desktop it's inline at the top; on mobile it becomes a
+// compact button that opens the slider downward, avoiding conflict with the palette and the
+// centered color picker.
 function BrushSizePopover({
   label,
   size,
@@ -1858,9 +1879,7 @@ function LayerRow({
       onClick={() => onSelect(layer.id)}
       className={cn(
         "flex w-full cursor-pointer flex-col gap-1 rounded-md bg-card px-2 py-1.5 text-left text-[11px] transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "hover:bg-foreground/5",
+        isActive ? "bg-primary/10 text-primary" : "hover:bg-foreground/5",
       )}
     >
       <div className="flex items-center gap-2">

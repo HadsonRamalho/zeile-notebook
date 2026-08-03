@@ -4,7 +4,7 @@ let sqlJsPromise: Promise<SqlJsStatic> | null = null;
 
 export async function getSqlJs(): Promise<SqlJsStatic> {
   if (typeof window === "undefined") {
-    throw new Error("sql.js só pode ser carregado no navegador.");
+    throw new Error("sql.js can only be loaded in the browser.");
   }
 
   if (!sqlJsPromise) {

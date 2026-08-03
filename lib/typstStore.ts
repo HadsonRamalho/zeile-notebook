@@ -15,8 +15,8 @@ const TYPST_COMPILER_WASM_URL = `https://cdn.jsdelivr.net/npm/@myriaddreamin/typ
 
 const TYPST_RENDERER_WASM_URL = `https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer@${TYPST_VERSION}/pkg/typst_ts_renderer_bg.wasm`;
 
-// import() dinâmico via Function evita que o bundler tente resolver a URL do
-// CDN em tempo de build — o pacote só é buscado quando um bloco Typst existe.
+// dynamic import() via Function keeps the bundler from trying to resolve the
+// CDN URL at build time — the package is only fetched when a Typst block exists.
 const dynamicImport = new Function("specifier", "return import(specifier)") as (
   specifier: string,
 ) => Promise<{ $typst: TypstSnippet }>;
@@ -25,7 +25,7 @@ let typstPromise: Promise<TypstSnippet> | null = null;
 
 export async function getTypst(): Promise<TypstSnippet> {
   if (typeof window === "undefined") {
-    throw new Error("Typst só pode ser carregado no navegador.");
+    throw new Error("Typst can only be loaded in the browser.");
   }
 
   if (!typstPromise) {

@@ -119,7 +119,7 @@ function splitMentions(text: string, names: string[]) {
 
 interface CollabBarProps {
   canWriteHistory: boolean;
-  /** Histórico Automerge completo já reconstruído (não paginado) — a exibição é fatiada por `automergeHistoryVisibleCount`. */
+  /** Full rebuilt Automerge history (not paginated) — the display is sliced by `automergeHistoryVisibleCount`. */
   automergeHistory: AutomergeHistoryEntry[];
   automergeHistoryVisibleCount: number;
   isLoadingAutomergeHistory: boolean;
@@ -186,10 +186,10 @@ function HistoryPanel({
   );
 }
 
-// Histórico real do Automerge (um snapshot por change já aplicado ao
-// documento) — reconstruído em fatias (ver `buildAutomergeHistory`) e
-// paginado aqui de 50 em 50 pra não travar a aba nem renderizar milhares de
-// linhas de uma vez.
+// Real Automerge history (one snapshot per change already applied to the
+// document) — rebuilt in slices (see `buildAutomergeHistory`) and paginated
+// here 50 at a time so it doesn't freeze the tab or render thousands of
+// rows at once.
 function HistoryTabContent({
   automergeHistory,
   automergeHistoryVisibleCount,

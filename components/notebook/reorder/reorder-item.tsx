@@ -13,7 +13,7 @@ import { BlockContent, useBlockPermissions } from "../blocks/block-content";
 interface ReorderItemProps {
   block: Block;
   isDragging: boolean;
-  // biome-ignore lint/suspicious/noExplicitAny: <Necessário pra gerenciar os arquivos>
+  // biome-ignore lint/suspicious/noExplicitAny: <needed to manage the files>
   pageFiles: Record<string, any>;
   pageBlocks: Block[];
   setBlocks: (b: Block[]) => void;

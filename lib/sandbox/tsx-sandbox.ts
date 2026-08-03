@@ -2,11 +2,11 @@ import type { Block } from "@/lib/types";
 
 export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
   if (typeof window === "undefined") {
-    console.error("Window não foi definida");
+    console.error("Window is not defined");
     return null;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <Necessário pra acessar a window>
+  // biome-ignore lint/suspicious/noExplicitAny: <needed to access window>
   const babel = (window as any).Babel;
 
   if (!babel) {

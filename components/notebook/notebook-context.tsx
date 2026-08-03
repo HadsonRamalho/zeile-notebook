@@ -90,7 +90,7 @@ export function NotebookProvider({
     if (pageId) {
       getCurrentNotebookWithBlocks(pageId).then((data) => {
         if (data) {
-          // biome-ignore lint/suspicious/noExplicitAny: <necessário para compatibilidade de tipos legados>
+          // biome-ignore lint/suspicious/noExplicitAny: <needed for legacy type compatibility>
           setVisibility((data as any).isPublic ?? (data as any).is_public);
           setNotebook(data);
         }
@@ -130,7 +130,7 @@ export function NotebookProvider({
 export function useNotebook() {
   const context = useContext(NotebookContext);
   if (!context) {
-    throw new Error("useNotebook deve ser usado dentro de um NotebookProvider");
+    throw new Error("useNotebook must be used within a NotebookProvider");
   }
   return context;
 }

@@ -61,7 +61,7 @@ export function TeamNotebookManagerProvider({
           [teamId]: data,
         }));
       } catch (err) {
-        console.error(`Erro ao buscar páginas do time ${teamId}:`, err);
+        console.error(`Error fetching pages for team ${teamId}:`, err);
       }
     },
     [user],

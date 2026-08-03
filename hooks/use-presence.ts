@@ -1,5 +1,4 @@
 import { getCookie } from "cookies-next";
-import { tokenCookieName } from "@/lib/runtime/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type ChatMessageDTO,
@@ -12,6 +11,7 @@ import {
   type NotebookSocketHandle,
   subscribeNotebookSocket,
 } from "@/lib/notebook-socket";
+import { tokenCookieName } from "@/lib/runtime/router";
 import type { User } from "@/lib/types/user-types";
 
 export type Collaborator = {
@@ -40,9 +40,9 @@ export type ChatMessage = {
 };
 
 import {
+  isStale,
   PRESENCE_HEARTBEAT_MS,
   PRESENCE_PRUNE_INTERVAL_MS,
-  isStale,
   shouldSendCursor,
 } from "./presence-timing";
 
@@ -146,7 +146,7 @@ export function usePresence(
   );
 
   useEffect(() => {
-    // presença divide o mesmo socket do sync (mensagens chegam como texto)
+    // presence shares the same socket as sync (messages arrive as text)
     const token = getCookie(tokenCookieName())?.toString() || "";
     const handle = subscribeNotebookSocket(pageId, token, {
       onText: (raw) => {
@@ -158,7 +158,7 @@ export function usePresence(
             return;
           }
 
-          // o servidor coalesce a presença num batch periódico (updates + gone)
+          // the server coalesces presence into a periodic batch (updates + gone)
           if (data.type === "presence_batch") {
             setCollaborators((prev) => {
               const next = new Map(prev);

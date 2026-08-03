@@ -61,7 +61,7 @@ describe("buildImpliedIndex", () => {
     expect(index.get("b.view")).toEqual(["b", "a"]);
   });
 
-  it("devolve mapa vazio para catálogo vazio", () => {
+  it("returns an empty map for an empty catalog", () => {
     expect(buildImpliedIndex(catalog()).size).toBe(0);
   });
 });
@@ -69,22 +69,22 @@ describe("buildImpliedIndex", () => {
 describe("can — default deny", () => {
   const implied = buildImpliedIndex(catalog(perm("notebook.view")));
 
-  it("nega quando não há grant nenhum", () => {
+  it("denies when there is no grant at all", () => {
     expect(can(snapshot([]), implied, "notebook.view", target)).toBe(false);
   });
 
-  it("nega quando o grant é de outra permissão", () => {
+  it("denies when the grant is for another permission", () => {
     const snap = snapshot([grant("notebook.edit", "allow", "team")]);
     expect(can(snap, implied, "notebook.view", target)).toBe(false);
   });
 
-  it("nega com catálogo vazio, porque a chave não expande para nada", () => {
+  it("denies with an empty catalog, because the key doesn't expand into anything", () => {
     const vazio = buildImpliedIndex(catalog());
     const snap = snapshot([grant("notebook.blocks.view", "allow", "team")]);
     expect(can(snap, vazio, "notebook.view", target)).toBe(false);
   });
 
-  it("permite com catálogo vazio quando o grant é da própria chave", () => {
+  it("allows with an empty catalog when the grant is for the key itself", () => {
     const vazio = buildImpliedIndex(catalog());
     const snap = snapshot([grant("notebook.view", "allow", "team")]);
     expect(can(snap, vazio, "notebook.view", target)).toBe(true);
@@ -100,13 +100,13 @@ describe("can — snapshot.all curto-circuita", () => {
     );
   });
 
-  it("permite mesmo havendo deny explícito", () => {
+  it("allows even when there is an explicit deny", () => {
     const snap = snapshot([grant("notebook.delete", "deny", "team")], true);
     expect(can(snap, implied, "notebook.delete", target)).toBe(true);
   });
 });
 
-describe("can — precedência de nível", () => {
+describe("can — level precedence", () => {
   const implied = buildImpliedIndex(
     catalog(perm("b.view", ["a.view"]), perm("a.view")),
   );
@@ -151,7 +151,7 @@ describe("can — precedência de nível", () => {
     ).toBe(true);
   });
 
-  it("a ordem dos grants na lista não altera o resultado", () => {
+  it("the order of grants in the list does not change the result", () => {
     const grants = [
       grant("a.view", "allow", "notebook", { targetId: NOTEBOOK }),
       grant("a.view", "deny", "team"),
@@ -169,7 +169,7 @@ describe("can — precedência de nível", () => {
   });
 });
 
-describe("can — deny vence allow no mesmo nível", () => {
+describe("can — deny beats allow at the same level", () => {
   const implied = buildImpliedIndex(catalog(perm("a.view")));
 
   it("nega com allow e deny ambos em team", () => {
@@ -188,7 +188,7 @@ describe("can — deny vence allow no mesmo nível", () => {
     expect(can(snap, implied, "a.view", target)).toBe(false);
   });
 
-  it("nega quando o deny vem da chave geral e o allow da granular, no mesmo nível", () => {
+  it("denies when the deny comes from the general key and the allow from the granular one, at the same level", () => {
     const idx = buildImpliedIndex(
       catalog(perm("a.rust.view", ["a.view"]), perm("a.view")),
     );
@@ -201,7 +201,7 @@ describe("can — deny vence allow no mesmo nível", () => {
 });
 
 describe("can — implied_by", () => {
-  it("resolve cadeia transitiva de três níveis", () => {
+  it("resolves a three-level transitive chain", () => {
     const implied = buildImpliedIndex(
       catalog(perm("c", ["b"]), perm("b", ["a"]), perm("a")),
     );
@@ -210,7 +210,7 @@ describe("can — implied_by", () => {
     expect(can(snap, implied, "c", target)).toBe(true);
   });
 
-  it("não caminha na direção contrária: grant granular não concede o geral", () => {
+  it("does not walk the opposite direction: a granular grant does not grant the general one", () => {
     const implied = buildImpliedIndex(catalog(perm("c", ["b"]), perm("b")));
     const snap = snapshot([grant("c", "allow", "team")]);
 
@@ -226,7 +226,7 @@ describe("can — implied_by", () => {
     expect(can(snap, implied, "a", target)).toBe(true);
   });
 
-  it("termina em ciclo de três e ainda nega o que não foi concedido", () => {
+  it("terminates on a three-cycle and still denies what wasn't granted", () => {
     const implied = buildImpliedIndex(
       catalog(perm("a", ["b"]), perm("b", ["c"]), perm("c", ["a"])),
     );
@@ -235,14 +235,14 @@ describe("can — implied_by", () => {
     expect(can(snap, implied, "a", target)).toBe(false);
   });
 
-  it("termina quando a permissão implica a si mesma", () => {
+  it("terminates when the permission implies itself", () => {
     const implied = buildImpliedIndex(catalog(perm("a", ["a"])));
     const snap = snapshot([grant("a", "allow", "team")]);
 
     expect(can(snap, implied, "a", target)).toBe(true);
   });
 
-  it("ignora pai ausente do catálogo", () => {
+  it("ignores a parent missing from the catalog", () => {
     const implied = buildImpliedIndex(catalog(perm("a", ["fantasma"])));
     const snap = snapshot([grant("fantasma", "allow", "team")]);
 
@@ -265,7 +265,7 @@ describe("can — alvo tem de casar", () => {
     expect(can(snap, implied, "a.view", target)).toBe(false);
   });
 
-  it("ignora grant de block_type quando o alvo não declara blockType", () => {
+  it("ignores a block_type grant when the target does not declare blockType", () => {
     const snap = snapshot([
       grant("a.view", "allow", "block_type", { targetValue: "rust" }),
     ]);
@@ -290,12 +290,12 @@ describe("can — alvo tem de casar", () => {
     ).toBe(false);
   });
 
-  it("ignora grant de kind chat, que não tem nível", () => {
+  it("ignores a chat-kind grant, which has no level", () => {
     const snap = snapshot([grant("a.view", "allow", "chat")]);
     expect(can(snap, implied, "a.view", target)).toBe(false);
   });
 
-  it("deny de kind chat não bloqueia allow de team", () => {
+  it("a chat-kind deny does not block a team allow", () => {
     const snap = snapshot([
       grant("a.view", "deny", "chat"),
       grant("a.view", "allow", "team"),

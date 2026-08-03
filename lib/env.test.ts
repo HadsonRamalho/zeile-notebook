@@ -62,8 +62,8 @@ function variaveisPublicas(): Map<string, string[]> {
   return encontradas;
 }
 
-describe("variáveis expostas ao cliente", () => {
-  it("o scanner enxerga as variáveis que existem hoje", () => {
+describe("variables exposed to the client", () => {
+  it("the scanner sees the variables that exist today", () => {
     const nomes = [...variaveisPublicas().keys()];
 
     expect(nomes).toContain("NEXT_PUBLIC_API");
@@ -72,7 +72,8 @@ describe("variáveis expostas ao cliente", () => {
 
   it("nenhuma NEXT_PUBLIC_ carrega nome de segredo", () => {
     const suspeitas = [...variaveisPublicas().entries()].filter(
-      ([nome]) => CHEIRO_DE_SEGREDO.test(nome) && !PUBLICAS_POR_DESIGN.has(nome),
+      ([nome]) =>
+        CHEIRO_DE_SEGREDO.test(nome) && !PUBLICAS_POR_DESIGN.has(nome),
     );
 
     expect(
@@ -80,7 +81,7 @@ describe("variáveis expostas ao cliente", () => {
     ).toEqual([]);
   });
 
-  it("GITHUB_TOKEN não tem prefixo público em lugar nenhum", () => {
+  it("GITHUB_TOKEN has no public prefix anywhere", () => {
     expect([...variaveisPublicas().keys()]).not.toContain(
       "NEXT_PUBLIC_GITHUB_TOKEN",
     );

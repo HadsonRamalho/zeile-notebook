@@ -80,7 +80,7 @@ async function renderExcalidraw(
   if (els.length === 0) return null;
   const { exportToBlob } = await import("@excalidraw/excalidraw");
   const blob = await exportToBlob({
-    // biome-ignore lint/suspicious/noExplicitAny: elementos vêm do CRDT sem tipos do excalidraw
+    // biome-ignore lint/suspicious/noExplicitAny: elements come from the CRDT without excalidraw types
     elements: els as any,
     files: null,
     mimeType: "image/png",

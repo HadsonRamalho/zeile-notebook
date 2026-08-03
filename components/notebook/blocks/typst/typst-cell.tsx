@@ -220,7 +220,7 @@ export function TypstCell({
           ) : svgHtml ? (
             <div
               className="typst-preview [&_svg]:h-auto [&_svg]:w-full"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: saída confiável do compilador Typst
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted output from the Typst compiler
               dangerouslySetInnerHTML={{ __html: svgHtml }}
             />
           ) : (

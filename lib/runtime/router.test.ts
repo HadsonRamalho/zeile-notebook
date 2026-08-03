@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 describe("isDesktopRuntime", () => {
-  it("é true quando a env declara desktop", async () => {
+  it("is true when the env declares desktop", async () => {
     const { isDesktopRuntime } = await loadRouter({
       NEXT_PUBLIC_RUNTIME: "desktop",
     });
@@ -52,7 +52,7 @@ describe("isDesktopRuntime", () => {
     expect(isDesktopRuntime()).toBe(true);
   });
 
-  it("é false no servidor, sem window e sem env", async () => {
+  it("is false on the server, without window and without env", async () => {
     const { isDesktopRuntime } = await loadRouter();
 
     expect(isDesktopRuntime()).toBe(false);
@@ -72,7 +72,7 @@ describe("isDesktopRuntime", () => {
     expect(isDesktopRuntime()).toBe(true);
   });
 
-  it("é false quando há window sem marca do Tauri", async () => {
+  it("is false when there is a window without the Tauri mark", async () => {
     const { isDesktopRuntime } = await loadRouter();
     vi.stubGlobal("window", {});
 
@@ -81,7 +81,7 @@ describe("isDesktopRuntime", () => {
 });
 
 describe("conta ativa", () => {
-  it("o default é cloud quando não há cookie", async () => {
+  it("the default is cloud when there is no cookie", async () => {
     const { getActiveAccount } = await loadRouter();
 
     expect(getActiveAccount()).toBe("cloud");
@@ -94,7 +94,7 @@ describe("conta ativa", () => {
     expect(getActiveAccount()).toBe("cloud");
   });
 
-  it("setActiveAccount grava e getActiveAccount lê", async () => {
+  it("setActiveAccount writes and getActiveAccount reads", async () => {
     const { getActiveAccount, setActiveAccount } = await loadRouter();
 
     setActiveAccount("local");
@@ -119,7 +119,7 @@ describe("conta ativa", () => {
 });
 
 describe("resolve — para onde o dado vai", () => {
-  it("no navegador (não desktop) tudo é remoto, mesmo com conta local", async () => {
+  it("in the browser (not desktop) everything is remote, even with a local account", async () => {
     const { resolve } = await loadRouter();
     setAccount("local");
 
@@ -129,7 +129,7 @@ describe("resolve — para onde o dado vai", () => {
     expect(target.baseUrl).toBe(REMOTE_API);
   });
 
-  it("no desktop com conta cloud tudo é remoto", async () => {
+  it("on desktop with a cloud account everything is remote", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("cloud");
 
@@ -158,7 +158,7 @@ describe("resolve — para onde o dado vai", () => {
     }
   });
 
-  it("cada alvo carrega o token do seu próprio cookie", async () => {
+  it("each target loads the token from its own cookie", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("local");
 
@@ -166,7 +166,7 @@ describe("resolve — para onde o dado vai", () => {
     expect(resolve("teams").token).toBe("token-remoto");
   });
 
-  it("token vazio quando o cookie não existe", async () => {
+  it("empty token when the cookie does not exist", async () => {
     const { resolve } = await loadRouter();
     cookies.delete("auth_token");
 
@@ -181,7 +181,7 @@ describe("resolve — para onde o dado vai", () => {
     expect(resolve("auth", "local").baseUrl).toBe(LOCAL_API);
   });
 
-  it("página https nunca resolve websocket inseguro", async () => {
+  it("an https page never resolves to an insecure websocket", async () => {
     const { resolve } = await loadRouter({
       NEXT_PUBLIC_WS_URL: "http://ws.zeile.test/api",
     });
@@ -203,7 +203,7 @@ describe("resolve — para onde o dado vai", () => {
     expect(target.wsHost).toBe("ws.zeile.test/api");
   });
 
-  it("sem env de websocket, cai no host da própria página", async () => {
+  it("without a websocket env, falls back to the page's own host", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_WS_URL: undefined });
     vi.stubGlobal("window", {
       location: { protocol: "https:", host: "zeile.test" },
@@ -212,7 +212,7 @@ describe("resolve — para onde o dado vai", () => {
     expect(resolve("sync").wsHost).toBe("zeile.test");
   });
 
-  it("notebook público é capacidade de nuvem, não vai para 127.0.0.1", async () => {
+  it("public notebook is a cloud capability, does not go to 127.0.0.1", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("local");
 
@@ -220,8 +220,8 @@ describe("resolve — para onde o dado vai", () => {
   });
 });
 
-describe("partição das capacidades", () => {
-  it("no desktop com conta local, exatamente estas capacidades ficam na máquina", async () => {
+describe("capability partitioning", () => {
+  it("on desktop with a local account, exactly these capabilities stay on the machine", async () => {
     const { resolve } = await loadRouter({ NEXT_PUBLIC_RUNTIME: "desktop" });
     setAccount("local");
 
@@ -244,7 +244,7 @@ describe("partição das capacidades", () => {
     );
   });
 
-  it("capacidade de nuvem no desktop local continua indisponível offline", async () => {
+  it("a cloud capability on local desktop stays unavailable offline", async () => {
     const { isCapabilityAvailable, resolve } = await loadRouter({
       NEXT_PUBLIC_RUNTIME: "desktop",
     });
@@ -259,7 +259,7 @@ describe("partição das capacidades", () => {
 });
 
 describe("isCapabilityAvailable", () => {
-  it("capacidade local está disponível offline", async () => {
+  it("a local capability is available offline", async () => {
     const { isCapabilityAvailable } = await loadRouter();
 
     expect(isCapabilityAvailable("notebook-crud", false)).toBe(true);
@@ -281,7 +281,7 @@ describe("isCapabilityAvailable", () => {
     expect(isCapabilityAvailable("teams", true)).toBe(false);
   });
 
-  it("usa navigator.onLine quando o argumento é omitido", async () => {
+  it("uses navigator.onLine when the argument is omitted", async () => {
     const { isCapabilityAvailable } = await loadRouter();
     setAccount("cloud");
 

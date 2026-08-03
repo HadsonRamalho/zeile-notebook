@@ -153,7 +153,7 @@ export function MarkdownToolbar({
         if (action === "divider") {
           return (
             <span
-              // biome-ignore lint/suspicious/noArrayIndexKey: divisores estáticos
+              // biome-ignore lint/suspicious/noArrayIndexKey: static dividers
               key={`divider-${i}`}
               className="mx-0.5 h-5 w-px bg-border"
             />
