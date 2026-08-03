@@ -51,6 +51,8 @@ async fn run() -> Result<(), BootError> {
 
     let db_url = crate::bootstrap::database_url()?;
 
+    crate::db_migrations::guard_against_migration_downgrade(&db_url)
+        .map_err(BootError::MigrationDowngrade)?;
     crate::db_migrations::run_pending_migrations(&db_url).map_err(BootError::Migration)?;
 
     let pool = crate::bootstrap::build_pool(db_url.clone())?;

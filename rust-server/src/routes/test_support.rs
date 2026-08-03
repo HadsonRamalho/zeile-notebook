@@ -53,6 +53,16 @@ pub fn get(path: &str) -> Request<Body> {
         .expect("request")
 }
 
+pub fn get_with_headers(path: &str, headers: &[(&str, &str)]) -> Request<Body> {
+    let mut builder = Request::builder().uri(path);
+
+    for (name, value) in headers {
+        builder = builder.header(*name, *value);
+    }
+
+    builder.body(Body::empty()).expect("request")
+}
+
 pub fn post_from(path: &str, peer: &str, headers: &[(&str, &str)]) -> Request<Body> {
     let peer: std::net::SocketAddr = peer.parse().expect("peer address");
 
