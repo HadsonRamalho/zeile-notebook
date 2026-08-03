@@ -4,6 +4,9 @@
 # generated content
 .source
 content/docs/api-reference/*/endpoints/
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker*.js
 
 # test & build
 /coverage
@@ -28,8 +31,7 @@ yarn-error.log*
 .env.production
 .vercel
 next-env.d.ts
-rust-server/target
+/target
 rust-server/logs
 rust-server/files
-rust-server/Cargo.lock
 rust-server/.compilers
