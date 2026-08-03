@@ -5,9 +5,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     controllers::{
-        oauth::{
-            api_github_callback, api_github_login, api_link_github_callback, api_link_github_init,
-        },
+        oauth::{api_link_callback, api_link_init, api_oauth_callback, api_oauth_login},
         user::{
             api_delete_user, api_execute_password_reset, api_get_logged_user, api_login_user,
             api_logout, api_refresh_session, api_register_user, api_request_password_reset,
@@ -59,10 +57,10 @@ pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
                 crate::middleware::rate_limit::PASSWORD_RESET
             )),
         )
-        .route("/login/github", get(api_github_login))
-        .route("/link/github", get(api_link_github_init))
-        .route("/link/github/callback", get(api_link_github_callback))
-        .route("/auth/callback/github", get(api_github_callback));
+        .route("/login/{provider}", get(api_oauth_login))
+        .route("/link/{provider}", get(api_link_init))
+        .route("/link/{provider}/callback", get(api_link_callback))
+        .route("/auth/callback/{provider}", get(api_oauth_callback));
 
     routes
 }
