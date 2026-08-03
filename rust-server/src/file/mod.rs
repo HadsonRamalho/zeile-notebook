@@ -11,17 +11,8 @@ use tracing::{error, info, warn};
 
 pub const MAX_PROCESSOS: u64 = 64;
 
-/// Espaço virtual que o wasmtime reserva por memória linear. O padrão do
-/// wasmtime é 4 GiB (o teto de um módulo wasm32), e ele reserva isso de uma vez
-/// via mmap PROT_NONE. Sob o `prlimit --as` de 1 GiB do envelope de execução, a
-/// reserva de 4 GiB é negada com ENOMEM e NENHUM programa roda. Cortar a reserva
-/// para 64 MiB cabe folgado no --as; `memory-may-move` continua deixando a
-/// memória crescer por remapeamento se o programa precisar de mais.
 pub const WASM_MEMORY_RESERVATION: u64 = 64 * 1024 * 1024;
 
-/// Guard page zerada: com a reserva pequena não há espaço virtual para as guard
-/// pages padrão (32 MiB) somarem sem estourar o --as; sem elas o wasmtime usa
-/// verificação de limites explícita, que é correta e barata para este uso.
 pub const WASM_MEMORY_GUARD: u64 = 0;
 
 pub const MAX_ARQUIVO_KB: u64 = 32 * 1024;
@@ -477,8 +468,6 @@ mod tests {
             .iter()
             .position(|a| a == "run")
             .expect("subcomando run ausente");
-        // `/app/main.wasm` aparece duas vezes: como alvo do --ro-bind e como
-        // módulo do `run`. O que importa é o último, depois do subcomando.
         let modulo = args
             .iter()
             .rposition(|a| a == "/app/main.wasm")
