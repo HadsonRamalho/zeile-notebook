@@ -136,11 +136,12 @@ tema de shutdown; são a dívida que a escrita do diagrama de isolamento do READ
 - [x] **Achado durante a etapa**: `public/sw.js` (gerado pelo build do serwist a partir de `app/sw.ts`) estava commitado por engano e inflava o lint sozinho com centenas de achados — removido do controle de versão e ignorado. `/target` também passou a ser ignorado na raiz, já que agora é o diretório de build único do workspace (antes só `rust-server/target` e `src-tauri/target`, individuais, estavam no `.gitignore`)
 - [x] **`pnpm audit` do frontend, fora do escopo original do Q101 mas resolvido junto**: 79 vulnerabilidades (34 altas, 36 moderadas, 9 baixas) reportadas pelo GitHub. `next` foi de `16.1.6` para `16.2.12` (fecha a maioria: DoS, SSRF, bypass de middleware, XSS); `nanoid`, `lodash-es`, `immutable`, `dompurify`, `esbuild`, `brace-expansion`, `postcss` e `sharp` — todos transitivos, vindos de dentro de `@excalidraw/excalidraw`, `@serwist/*` e do próprio `next` — via `overrides` em `pnpm-workspace.yaml` (não mais em `package.json`: nesta versão do pnpm o campo `pnpm.*` do `package.json` foi descontinuado). `pnpm audit` zerado; `pnpm build`, `pnpm test` e `pnpm types:check` confirmados depois do bump
 
-#### 9 · ⚠ MERGE da `tauri` na `main`
+#### 9 · ⚠ MERGE da `tauri` na `main` — [x] concluída
 
-Precisa acontecer **aqui**: depois das decisões 🔴 do desktop (4, 5, 6, 7, 8) e **antes** da etapa 15,
-que move 189 componentes. A branch toca `lib/api/base.ts`, `auth-context.tsx`, `login-form.tsx`,
-`signup-form.tsx`, `use-presence.ts` e os 15 `*-service.ts` — conflito sem resolução mecânica.
+Já aconteceu antes desta sessão: commit `761d999` ("Merge branch 'tauri'", 2026-07-29), 72 arquivos,
+7002 inserções. Cobre `src-tauri/` inteiro e os pontos de conflito previstos — `lib/api/base.ts`,
+`auth-context.tsx`, `login-form.tsx`, `signup-form.tsx`, `use-presence.ts` e os `*-service.ts`. A
+branch local `tauri` (`aa268ac`) é ancestral de `main`; nada pendente para mesclar.
 
 #### 10 · Enum e casing — destrava os geradores
 
