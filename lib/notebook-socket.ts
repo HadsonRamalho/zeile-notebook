@@ -1,5 +1,5 @@
-// conexão websocket única por notebook, compartilhada por sync (binário) e presença
-// (texto) via endpoint /notebook/ws/combined/:id. reconexão com backoff+jitter aqui.
+// single websocket connection per notebook, shared by sync (binary) and presence
+// (text) via the /notebook/ws/combined/:id endpoint. Reconnection with backoff+jitter lives here.
 
 import { resolve } from "@/lib/runtime/router";
 
@@ -120,7 +120,7 @@ export function subscribeNotebookSocket(
 
   const activeConn = conn;
 
-  // se já aberto, dispara o onOpen do novo inscrito em microtask (para ele já ter o handle)
+  // if already open, fire the new subscriber's onOpen in a microtask (so it already has the handle)
   queueMicrotask(() => {
     if (
       !activeConn.disposed &&

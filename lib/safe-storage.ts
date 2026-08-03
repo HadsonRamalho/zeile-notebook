@@ -1,6 +1,6 @@
-// Acesso a Web Storage que nunca lança. Firefox emite SecurityError
-// ("The operation is insecure") quando o site está sem permissão de storage,
-// e um throw dentro de um efeito derruba a rota inteira.
+// Web Storage access that never throws. Firefox raises a SecurityError
+// ("The operation is insecure") when the site lacks storage permission,
+// and a throw inside an effect crashes the whole route.
 
 type StorageKind = "local" | "session";
 

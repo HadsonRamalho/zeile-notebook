@@ -87,7 +87,7 @@ function TextDiff({ before, after }: { before: string; after: string }) {
     <pre className="whitespace-pre-wrap break-words rounded-md bg-background p-3 font-mono text-xs leading-relaxed">
       {parts.map(([type, text], index) => (
         <span
-          // biome-ignore lint/suspicious/noArrayIndexKey: partes de diff não têm identidade estável
+          // biome-ignore lint/suspicious/noArrayIndexKey: diff parts have no stable identity
           key={index}
           className={cn(
             type === 1 &&

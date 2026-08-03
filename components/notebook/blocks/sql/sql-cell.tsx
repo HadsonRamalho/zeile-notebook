@@ -167,7 +167,7 @@ export function SqlCell({
 
       {results?.map((result, resultIndex) => (
         <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: resultados não têm identidade estável entre execuções
+          // biome-ignore lint/suspicious/noArrayIndexKey: results have no stable identity across runs
           key={resultIndex}
           className="overflow-x-auto border-t border-border"
         >
@@ -187,13 +187,13 @@ export function SqlCell({
             <tbody>
               {result.values.map((row, rowIndex) => (
                 <tr
-                  // biome-ignore lint/suspicious/noArrayIndexKey: linhas não têm identidade estável entre execuções
+                  // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable identity across runs
                   key={rowIndex}
                   className="border-t border-border"
                 >
                   {row.map((cell, cellIndex) => (
                     <td
-                      // biome-ignore lint/suspicious/noArrayIndexKey: células não têm identidade estável entre execuções
+                      // biome-ignore lint/suspicious/noArrayIndexKey: cells have no stable identity across runs
                       key={cellIndex}
                       className="whitespace-nowrap px-3 py-1.5"
                     >

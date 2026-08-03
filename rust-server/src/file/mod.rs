@@ -9,15 +9,15 @@ use tokio::process::Command;
 use tokio::time::{Duration, timeout};
 use tracing::{error, info, warn};
 
-pub const MAX_PROCESSOS: u64 = 64;
+pub const MAX_PROCESSES: u64 = 64;
 
 pub const WASM_MEMORY_RESERVATION: u64 = 64 * 1024 * 1024;
 
 pub const WASM_MEMORY_GUARD: u64 = 0;
 
-pub const MAX_ARQUIVO_KB: u64 = 32 * 1024;
+pub const MAX_FILE_KB: u64 = 32 * 1024;
 
-pub const MAX_DESCRITORES: u64 = 64;
+pub const MAX_DESCRIPTORS: u64 = 64;
 
 pub const TMPFS_MB: u64 = 64;
 
@@ -46,15 +46,15 @@ impl RunLimits {
         ]
     }
 
-    pub fn prlimit_args_execucao(&self) -> Vec<String> {
+    pub fn run_prlimit_args(&self) -> Vec<String> {
         let mut args = self.prlimit_args();
-        args.push(format!("--fsize={}", MAX_ARQUIVO_KB.saturating_mul(1024)));
-        args.push(format!("--nofile={}", MAX_DESCRITORES));
+        args.push(format!("--fsize={}", MAX_FILE_KB.saturating_mul(1024)));
+        args.push(format!("--nofile={}", MAX_DESCRIPTORS));
         args
     }
 }
 
-pub fn prlimit_interno_args(max_processos: u64) -> Vec<String> {
+pub fn internal_prlimit_args(max_processos: u64) -> Vec<String> {
     vec![
         "/usr/bin/prlimit".to_string(),
         format!("--nproc={}", max_processos),
@@ -88,13 +88,13 @@ fn wasmtime_path() -> String {
         .into_iter()
         .find(|p| Path::new(p).exists())
         .unwrap_or_else(|| {
-            warn!("AVISO: wasmtime não encontrado nos caminhos padrões. Usando fallback cego.");
+            warn!("WARNING: wasmtime not found in the default paths. Using a blind fallback.");
             "wasmtime".to_string()
         })
 }
 
-pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String> {
-    let mut args = limits.prlimit_args_execucao();
+pub fn run_envelope_args(binary_path: &str, limits: RunLimits) -> Vec<String> {
+    let mut args = limits.run_prlimit_args();
     args.push("--".into());
     args.push("bwrap".into());
 
@@ -138,19 +138,19 @@ pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String
         args.push(flag.into());
     }
 
-    if caminho_binario.ends_with(".wasm") {
+    if binary_path.ends_with(".wasm") {
         for arg in [
             "--ro-bind-try",
             &wasmtime_path(),
             "/app/wasmtime",
             "--ro-bind",
-            caminho_binario,
+            binary_path,
             "/app/main.wasm",
         ] {
             args.push(arg.into());
         }
 
-        args.extend(prlimit_interno_args(MAX_PROCESSOS));
+        args.extend(internal_prlimit_args(MAX_PROCESSES));
 
         for arg in [
             "/app/wasmtime",
@@ -175,26 +175,26 @@ pub fn run_envelope_args(caminho_binario: &str, limits: RunLimits) -> Vec<String
         "CGO_ENABLED",
         "0",
         "--ro-bind",
-        caminho_binario,
+        binary_path,
         "/app/main",
     ] {
         args.push(arg.into());
     }
 
-    args.extend(prlimit_interno_args(MAX_PROCESSOS));
+    args.extend(internal_prlimit_args(MAX_PROCESSES));
     args.push("/app/main".into());
 
     args
 }
 
 pub async fn run_safe_bin(
-    caminho_binario: &str,
+    binary_path: &str,
     stdin: Option<&str>,
     limits: RunLimits,
 ) -> RunOutcome {
-    let path_obj = Path::new(caminho_binario);
+    let path_obj = Path::new(binary_path);
     if !path_obj.exists() {
-        error!("ERRO: Binário não existe: {}", caminho_binario);
+        error!("ERROR: Binary does not exist: {}", binary_path);
         return RunOutcome {
             stdout: "".into(),
             stderr: "Erro interno: Binário não encontrado.".into(),
@@ -205,7 +205,7 @@ pub async fn run_safe_bin(
     }
 
     let mut cmd = Command::new("prlimit");
-    cmd.args(run_envelope_args(caminho_binario, limits));
+    cmd.args(run_envelope_args(binary_path, limits));
 
     cmd.env_clear();
     cmd.env("PATH", "/usr/bin:/bin");
@@ -313,7 +313,7 @@ pub async fn run_safe_bin(
                 .output();
 
             if let Err(e) = kill_cmd {
-                error!("FALHA CRÍTICA AO MATAR PROCESSOS: {}", e);
+                error!("CRITICAL FAILURE KILLING PROCESSES: {}", e);
             }
 
             RunOutcome {
@@ -332,11 +332,11 @@ pub async fn setup_user_env(ip_safe: &str) -> PathBuf {
     let src_dir = format!("{}/src", user_dir);
 
     if let Err(e) = tokio::fs::create_dir_all(&src_dir).await {
-        error!("ERRO: Falha ao criar diretórios {}: {}", src_dir, e);
+        error!("ERROR: Failed to create directories {}: {}", src_dir, e);
     }
 
     if !Path::new(&format!("{}/Cargo.toml", user_dir)).exists() {
-        info!("LOG: Iniciando novo projeto Cargo em {}", user_dir);
+        info!("LOG: Starting new Cargo project at {}", user_dir);
 
         let package_name = format!("app_{}", ip_safe);
 
@@ -353,12 +353,12 @@ pub async fn setup_user_env(ip_safe: &str) -> PathBuf {
             Ok(o) => {
                 if !o.status.success() {
                     error!(
-                        "ERRO: Cargo init falhou: {}",
+                        "ERROR: Cargo init failed: {}",
                         String::from_utf8_lossy(&o.stderr)
                     );
                 }
             }
-            Err(e) => error!("ERRO: Falha ao executar cargo init: {}", e),
+            Err(e) => error!("ERROR: Failed to run cargo init: {}", e),
         }
     }
 
@@ -366,7 +366,7 @@ pub async fn setup_user_env(ip_safe: &str) -> PathBuf {
 }
 
 pub async fn register_log(
-    codigo: &str,
+    code: &str,
     safe_ip: &str,
     real_ip: &str,
     user_agent: &str,
@@ -385,13 +385,13 @@ pub async fn register_log(
     let file_path = format!("{}/{}/{}.log", log_dir, safe_ip, timestamp);
 
     let log_content = format!(
-        "--- REQUISIÇÃO EM {} ---\n\
+        "--- REQUEST AT {} ---\n\
          IP: {}\n\
          USER-AGENT: {}\n\
          ---------------------------\n\
-         CÓDIGO RECEBIDO:\n\n\
+         CODE RECEIVED:\n\n\
          {}\n",
-        timestamp, real_ip, user_agent, codigo
+        timestamp, real_ip, user_agent, code
     );
 
     let mut file = OpenOptions::new()
@@ -410,7 +410,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn o_envelope_carrega_cpu_e_memoria() {
+    fn the_envelope_carries_cpu_and_memory() {
         let limits = RunLimits {
             cpu_secs: 3,
             mem_kb: 4096,
@@ -424,33 +424,33 @@ mod tests {
     }
 
     #[test]
-    fn o_envelope_limita_escrita_em_disco_e_descritores() {
-        let args = RunLimits::default().prlimit_args_execucao();
+    fn the_envelope_limits_disk_writes_and_descriptors() {
+        let args = RunLimits::default().run_prlimit_args();
 
         assert!(args.contains(&"--fsize=33554432".to_string()), "{args:?}");
         assert!(args.contains(&"--nofile=64".to_string()), "{args:?}");
     }
 
     #[test]
-    fn o_limite_de_processos_e_aplicado_dentro_do_namespace() {
+    fn the_process_limit_is_applied_inside_the_namespace() {
         let args = run_envelope_args("/app/bin", RunLimits::default());
 
         let bwrap = args.iter().position(|a| a == "bwrap").expect("bwrap");
         let nproc = args
             .iter()
             .position(|a| a == "--nproc=64")
-            .expect("--nproc ausente");
+            .expect("--nproc missing");
 
         assert!(
             nproc > bwrap,
-            "--nproc precisa ficar depois do bwrap: fora do user namespace o clone falha com EAGAIN"
+            "--nproc must come after bwrap: outside the user namespace, clone fails with EAGAIN"
         );
         assert_eq!(args[nproc - 1], "/usr/bin/prlimit");
         assert_eq!(args[nproc + 1], "--");
     }
 
     #[test]
-    fn o_tmpfs_da_execucao_tem_teto_de_tamanho() {
+    fn the_execution_tmpfs_has_a_size_ceiling() {
         let args = run_envelope_args("/app/bin", RunLimits::default());
 
         let size = args.iter().position(|a| a == "--size").expect("--size");
@@ -461,53 +461,53 @@ mod tests {
     }
 
     #[test]
-    fn o_envelope_wasm_limita_a_reserva_de_memoria_do_wasmtime() {
+    fn the_wasm_envelope_limits_wasmtimes_memory_reservation() {
         let args = run_envelope_args("/app/prog.wasm", RunLimits::default());
 
         let run = args
             .iter()
             .position(|a| a == "run")
-            .expect("subcomando run ausente");
-        let modulo = args
+            .expect("run subcommand missing");
+        let module = args
             .iter()
             .rposition(|a| a == "/app/main.wasm")
-            .expect("módulo ausente");
+            .expect("module missing");
 
-        let reserva = format!("memory-reservation={}", WASM_MEMORY_RESERVATION);
+        let reservation = format!("memory-reservation={}", WASM_MEMORY_RESERVATION);
         let guard = format!("memory-guard-size={}", WASM_MEMORY_GUARD);
 
-        assert!(args.contains(&reserva), "reserva ausente: {args:?}");
-        assert!(args.contains(&guard), "guard ausente: {args:?}");
-        let pos_reserva = args.iter().position(|a| a == &reserva).unwrap();
+        assert!(args.contains(&reservation), "reservation missing: {args:?}");
+        assert!(args.contains(&guard), "guard missing: {args:?}");
+        let reservation_pos = args.iter().position(|a| a == &reservation).unwrap();
         assert!(
-            run < pos_reserva && pos_reserva < modulo,
-            "a reserva precisa ser passada como opção do run, antes do módulo: {args:?}"
+            run < reservation_pos && reservation_pos < module,
+            "the reservation must be passed as a run option, before the module: {args:?}"
         );
         assert_eq!(
             WASM_MEMORY_RESERVATION,
             64 * 1024 * 1024,
-            "a reserva precisa caber no prlimit --as do envelope de execução"
+            "the reservation must fit inside the run envelope's prlimit --as"
         );
     }
 
     #[test]
-    fn binario_nativo_nao_recebe_flags_de_wasm() {
+    fn native_binary_does_not_get_wasm_flags() {
         let args = run_envelope_args("/app/bin", RunLimits::default());
 
         assert!(
             !args.iter().any(|a| a.starts_with("memory-reservation=")),
-            "flags de wasm vazaram para o envelope nativo: {args:?}"
+            "wasm flags leaked into the native envelope: {args:?}"
         );
     }
 
     #[tokio::test]
-    async fn uma_fork_bomb_nao_escapa_do_sandbox() {
-        if !existe("bwrap") || !existe("prlimit") || !existe("sh") {
-            eprintln!("bwrap/prlimit/sh ausente; teste pulado");
+    async fn a_fork_bomb_does_not_escape_the_sandbox() {
+        if !exists("bwrap") || !exists("prlimit") || !exists("sh") {
+            eprintln!("bwrap/prlimit/sh missing; test skipped");
             return;
         }
 
-        let antes = contagem_de_processos();
+        let before = process_count();
 
         let limits = RunLimits {
             cpu_secs: 5,
@@ -517,15 +517,15 @@ mod tests {
 
         let _ = run_safe_bin("/usr/bin/sh", None, limits).await;
 
-        let depois = contagem_de_processos();
+        let after = process_count();
 
         assert!(
-            depois < antes + 200,
-            "o host ganhou processos demais durante a execução: {antes} -> {depois}"
+            after < before + 200,
+            "the host gained too many processes during execution: {before} -> {after}"
         );
     }
 
-    fn contagem_de_processos() -> usize {
+    fn process_count() -> usize {
         std::fs::read_dir("/proc")
             .map(|d| {
                 d.filter_map(|e| e.ok())
@@ -541,35 +541,35 @@ mod tests {
     }
 
     #[test]
-    fn o_default_declara_1_gib_de_memoria() {
+    fn the_default_declares_1_gib_of_memory() {
         let args = RunLimits::default().prlimit_args();
 
         assert!(args.contains(&"--as=1073741824".to_string()), "{args:?}");
     }
 
-    fn existe(binario: &str) -> bool {
+    fn exists(binary: &str) -> bool {
         std::process::Command::new("sh")
-            .args(["-c", &format!("command -v {binario}")])
+            .args(["-c", &format!("command -v {binary}")])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
     }
 
     #[test]
-    fn o_envelope_de_execucao_limpa_o_ambiente_do_servidor() {
+    fn the_execution_envelope_clears_the_servers_environment() {
         let args = run_envelope_args("/app/bin", RunLimits::default());
 
         assert!(
             args.contains(&"--clearenv".to_string()),
-            "--clearenv ausente: {args:?}"
+            "--clearenv missing: {args:?}"
         );
     }
 
     #[test]
-    fn o_envelope_declara_apenas_variaveis_neutras() {
+    fn the_envelope_declares_only_neutral_variables() {
         let args = run_envelope_args("/app/bin", RunLimits::default());
 
-        let declaradas: Vec<&String> = args
+        let declared: Vec<&String> = args
             .iter()
             .enumerate()
             .filter(|(i, _)| *i > 0 && args[i - 1] == "--setenv")
@@ -577,40 +577,40 @@ mod tests {
             .collect();
 
         assert_eq!(
-            declaradas,
+            declared,
             vec!["PATH", "HOME", "TMPDIR", "GOMAXPROCS", "CGO_ENABLED"],
-            "o envelope declarou variáveis inesperadas"
+            "the envelope declared unexpected variables"
         );
     }
 
     #[tokio::test]
-    async fn o_ambiente_do_servidor_nao_vaza_para_o_codigo_do_usuario() {
-        if !existe("bwrap") || !existe("prlimit") {
-            eprintln!("bwrap/prlimit ausente; teste pulado");
+    async fn the_servers_environment_does_not_leak_into_user_code() {
+        if !exists("bwrap") || !exists("prlimit") {
+            eprintln!("bwrap/prlimit missing; test skipped");
             return;
         }
 
         unsafe {
-            std::env::set_var("ZEILE_SEGREDO_DE_TESTE", "jwt-secret-nao-deve-vazar");
+            std::env::set_var("ZEILE_TEST_SECRET", "jwt-secret-must-not-leak");
         }
 
-        let saida = run_safe_bin("/usr/bin/env", None, RunLimits::default()).await;
+        let output = run_safe_bin("/usr/bin/env", None, RunLimits::default()).await;
 
         unsafe {
-            std::env::remove_var("ZEILE_SEGREDO_DE_TESTE");
+            std::env::remove_var("ZEILE_TEST_SECRET");
         }
 
         assert!(
-            !saida.stdout.contains("jwt-secret-nao-deve-vazar"),
-            "o ambiente do servidor vazou para dentro do sandbox:\n{}",
-            saida.stdout
+            !output.stdout.contains("jwt-secret-must-not-leak"),
+            "the server's environment leaked into the sandbox:\n{}",
+            output.stdout
         );
     }
 
     #[test]
-    fn os_limites_chegam_ao_processo_filho() {
-        if !existe("prlimit") || !existe("sh") {
-            eprintln!("prlimit ou sh ausente; teste pulado");
+    fn the_limits_reach_the_child_process() {
+        if !exists("prlimit") || !exists("sh") {
+            eprintln!("prlimit or sh missing; test skipped");
             return;
         }
 
@@ -620,16 +620,16 @@ mod tests {
             wall_ms: 1000,
         };
 
-        let saida = std::process::Command::new("prlimit")
+        let output = std::process::Command::new("prlimit")
             .args(limits.prlimit_args())
             .args(["--", "sh", "-c", "ulimit -v; ulimit -t"])
             .output()
-            .expect("prlimit deveria executar");
+            .expect("prlimit should run");
 
-        let texto = String::from_utf8_lossy(&saida.stdout);
-        let mut linhas = texto.split_whitespace();
+        let text = String::from_utf8_lossy(&output.stdout);
+        let mut lines = text.split_whitespace();
 
-        assert_eq!(linhas.next(), Some("262144"), "memória: {texto}");
-        assert_eq!(linhas.next(), Some("7"), "cpu: {texto}");
+        assert_eq!(lines.next(), Some("262144"), "memory: {text}");
+        assert_eq!(lines.next(), Some("7"), "cpu: {text}");
     }
 }

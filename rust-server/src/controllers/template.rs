@@ -118,7 +118,7 @@ pub async fn api_create_template(
     let kind = payload.kind.trim().to_lowercase();
     if !ALLOWED_KINDS.contains(&kind.as_str()) {
         return Err(ApiError::Request(format!(
-            "Tipo de template não suportado: '{kind}'"
+            "Unsupported template type: '{kind}'"
         )));
     }
     let name = payload.name.trim().to_string();

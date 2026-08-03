@@ -125,7 +125,7 @@ export function defaultCanvasSettings(): CanvasSettingsElement {
   };
 }
 
-/** Traço tipo caneta/pincel: contorno suave via perfect-freehand, largura reage à pressão. */
+/** Pen/brush-style stroke: smooth outline via perfect-freehand, width reacts to pressure. */
 function penPath(stroke: StrokeElement): Path2D {
   const outline = getStroke(
     stroke.points.map((p) => [p.x, p.y, p.pressure]),
@@ -145,7 +145,7 @@ function penPath(stroke: StrokeElement): Path2D {
   return path;
 }
 
-/** Marcador: ponta reta, largura constante (sem afinar pela pressão), traço simples. */
+/** Marker: flat tip, constant width (does not taper with pressure), simple stroke. */
 function marketPath(stroke: StrokeElement): {
   path: Path2D;
   lineWidth: number;
@@ -160,9 +160,9 @@ function marketPath(stroke: StrokeElement): {
 }
 
 /**
- * Caligráfico: bico fixo em 45°, largura do traço varia com o ângulo de
- * movimento em relação ao bico (perpendicular = mais largo, paralelo = fino).
- * Renderizado como retângulos rotacionados carimbados ao longo do trajeto.
+ * Calligraphy: fixed 45° nib, stroke width varies with the movement angle
+ * relative to the nib (perpendicular = wider, parallel = thinner).
+ * Rendered as rotated rectangles stamped along the path.
  */
 function calligraphyQuads(
   stroke: StrokeElement,
@@ -183,7 +183,9 @@ function calligraphyQuads(
       0.25,
       Math.abs(Math.sin(moveAngle - NIB_ANGLE)),
     );
-    const pressure = stroke.pressureSensitive ? (a.pressure + b.pressure) / 2 : 0.6;
+    const pressure = stroke.pressureSensitive
+      ? (a.pressure + b.pressure) / 2
+      : 0.6;
     const width = stroke.size * widthFactor * (0.5 + pressure);
     quads.push({
       x: (a.x + b.x) / 2,
@@ -327,15 +329,14 @@ function stampAlong(
       for (let g = 0; g < grain; g++) {
         const jx = (opts.rng() - 0.5) * width * opts.jitter;
         const jy = (opts.rng() - 0.5) * width * opts.jitter;
-        const r =
-          (width / 2) * opts.radiusScale * (0.5 + opts.rng() * 0.7);
+        const r = (width / 2) * opts.radiusScale * (0.5 + opts.rng() * 0.7);
         ctx.globalAlpha = alpha * (0.4 + opts.rng() * 0.5);
         ctx.beginPath();
         ctx.arc(cx + jx, cy + jy, Math.max(0.25, r), 0, Math.PI * 2);
         ctx.fill();
       }
     }
-    carry = ((carry - segLen) % step + step) % step;
+    carry = (((carry - segLen) % step) + step) % step;
   }
 }
 
@@ -404,7 +405,8 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
     }
     case "watercolor": {
       for (let pass = 0; pass < 3; pass++) {
-        const off = pass === 0 ? 0 : (rng() - 0.5) * (t.sizeStart + t.sizeEnd) * 0.15;
+        const off =
+          pass === 0 ? 0 : (rng() - 0.5) * (t.sizeStart + t.sizeEnd) * 0.15;
         ctx.save();
         ctx.translate(off, (rng() - 0.5) * off);
         ctx.globalAlpha = ((t.opStart + t.opEnd) / 2) * 0.35;
@@ -482,7 +484,7 @@ export const GEO_SHAPES: GeoShape[] = [
   "arrow",
 ];
 
-/** Gera os pontos que traçam uma forma geométrica entre (x0,y0) e (x1,y1). */
+/** Generates the points that trace a geometric shape between (x0,y0) and (x1,y1). */
 export function geoShapePoints(
   kind: GeoShape,
   x0: number,
@@ -543,8 +545,11 @@ function drawGeoStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
   ctx.restore();
 }
 
-/** Renderiza um traço em um contexto 2D já configurado (globalAlpha/composite). */
-export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeElement) {
+/** Renders a stroke on an already-configured 2D context (globalAlpha/composite). */
+export function drawStroke(
+  ctx: CanvasRenderingContext2D,
+  stroke: StrokeElement,
+) {
   if (stroke.points.length === 0) return;
   if (stroke.geo) {
     drawGeoStroke(ctx, stroke);
@@ -602,9 +607,9 @@ function calligraphyHitPath(stroke: StrokeElement): Path2D {
 }
 
 /**
- * Testa se o ponto (em espaço CSS, mesma origem dos pontos do traço) cai
- * sobre o traço. Usado pela ferramenta de balde de tinta. O `ctx` só serve
- * de "régua" geométrica (isPointInPath/isPointInStroke) — precisa ter a
+ * Tests whether the point (in CSS space, same origin as the stroke's points)
+ * falls on the stroke. Used by the paint-bucket tool. The `ctx` only serves
+ * as a geometric "ruler" (isPointInPath/isPointInStroke) — it needs the
  * transform resetada para identidade antes de chamar.
  */
 export function hitTestStroke(
@@ -637,7 +642,7 @@ export function hitTestStroke(
 }
 
 /**
- * Traço visível mais ao topo (camada mais alta primeiro, depois ordem dentro
+ * Topmost visible stroke (highest layer first, then order within
  * da camada) sob o ponto — ignora camadas ocultas/travadas.
  */
 export function findTopStrokeAt(
@@ -661,7 +666,7 @@ export function findTopStrokeAt(
   return null;
 }
 
-/** Posição/zoom da câmera sobre o canvas infinito (espaço-mundo -> tela). */
+/** Camera position/zoom over the infinite canvas (world-space -> screen). */
 export interface Camera {
   x: number;
   y: number;
@@ -671,12 +676,12 @@ export interface Camera {
 export const DEFAULT_CAMERA: Camera = { x: 0, y: 0, zoom: 1 };
 
 /**
- * Desenha as camadas visíveis (bottom-to-top) em `destCtx`, cada uma primeiro
- * renderizada isolada num canvas de rascunho (pro `globalCompositeOperation`
- * da borracha não vazar entre camadas) e depois composta com sua opacidade.
- * `setLayerTransform` decide o mapeamento espaço-mundo -> pixel de destino —
- * é o único ponto que difere entre a renderização ao vivo (câmera) e a
- * exportação (bounding box do conteúdo).
+ * Draws the visible layers (bottom-to-top) onto `destCtx`, each one first
+ * rendered in isolation on a scratch canvas (so the eraser's
+ * `globalCompositeOperation` doesn't bleed between layers) and then composited with its opacity.
+ * `setLayerTransform` decides the world-space -> destination-pixel mapping —
+ * it's the only point that differs between live rendering (camera) and
+ * export (content bounding box).
  */
 function compositeVisibleLayers(
   destCtx: CanvasRenderingContext2D,
@@ -726,10 +731,10 @@ function compositeVisibleLayers(
 }
 
 /**
- * Renderiza a cena ao vivo no canvas principal. `cssWidth`/`cssHeight` são o
+ * Renders the live scene onto the main canvas. `cssWidth`/`cssHeight` are the
  * tamanho em pixels CSS do viewport; `dpr` escala o backing store para
  * nitidez em telas de alta densidade; `camera` mapeia o canvas infinito
- * (espaço-mundo, onde os pontos dos traços vivem) para a tela.
+ * (world-space, where the stroke points live) to the screen.
  */
 export function renderScene(
   mainCtx: CanvasRenderingContext2D,
@@ -770,7 +775,7 @@ export interface ContentBounds {
   maxY: number;
 }
 
-/** Bounding box (espaço-mundo) do conteúdo dos traços, expandida pela espessura de cada um. */
+/** Bounding box (world-space) of the strokes' content, expanded by each one's thickness. */
 export function computeContentBounds(
   strokes: StrokeElement[],
 ): ContentBounds | null {
@@ -792,9 +797,9 @@ export function computeContentBounds(
 }
 
 /**
- * Renderiza só o conteúdo (camadas visíveis) recortado no bounding box + a
- * folga (`padding`, em unidades do canvas), escalado por `scale` (resolução
- * de exportação). Fundo "theme" fica transparente — só "custom" é pintado.
+ * Renders only the content (visible layers) clipped to the bounding box + the
+ * margin (`padding`, in canvas units), scaled by `scale` (export
+ * resolution). "theme" background stays transparent — only "custom" is painted.
  */
 export function exportSceneToCanvas(
   layers: LayerElement[],
@@ -921,7 +926,7 @@ export function drawLaser(
   return anyAlive;
 }
 
-/** Substitui (ou insere, se ainda não existir) o registro singleton de configuração do canvas. */
+/** Replaces (or inserts, if it doesn't exist yet) the canvas config singleton record. */
 export function upsertCanvasSettings(
   elements: FreeDrawingElement[],
   settings: CanvasSettingsElement,

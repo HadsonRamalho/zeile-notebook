@@ -7,13 +7,13 @@ import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { createApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
-import { deleteAccount } from "@/lib/api/user-service";
 import {
-  encerrarSessaoNoServidor,
-  guardarSessao,
-  limparSessao,
-  type Sessao,
+  clearSession,
+  endSessionOnServer,
+  type Session,
+  storeSession,
 } from "@/lib/api/session";
+import { deleteAccount } from "@/lib/api/user-service";
 import {
   type AccountType,
   getActiveAccount,
@@ -78,7 +78,7 @@ export function AuthProvider({
     setActiveAccount("cloud");
     setAccount("cloud");
 
-    guardarSessao(
+    storeSession(
       {
         accessToken: token,
         refreshToken: refreshToken ?? "",
@@ -98,9 +98,9 @@ export function AuthProvider({
     setActiveAccount(target);
     setAccount(target);
 
-    const sessao = await authApi.post<Sessao>("/user/login", data);
+    const session = await authApi.post<Session>("/user/login", data);
 
-    guardarSessao(sessao, target);
+    storeSession(session, target);
 
     const profile = await authApi.get<User>("/user/me");
 
@@ -109,16 +109,19 @@ export function AuthProvider({
     router.refresh();
   };
 
-  const register = async (data: RegisterUser, target: AccountType = account) => {
+  const register = async (
+    data: RegisterUser,
+    target: AccountType = account,
+  ) => {
     setActiveAccount(target);
     setAccount(target);
 
-    const sessao = await authApi.post<Sessao>("/user/register", {
+    const session = await authApi.post<Session>("/user/register", {
       ...data,
       primary_provider: "Email",
     });
 
-    guardarSessao(sessao, target);
+    storeSession(session, target);
 
     const profile = await authApi.get<User>("/user/me");
 
@@ -130,17 +133,17 @@ export function AuthProvider({
   const deleteProfile = async () => {
     await deleteAccount();
 
-    limparSessao(account);
+    clearSession(account);
     setUser(null);
     router.push("/");
   };
 
   const signOut = async () => {
-    // Revoga no servidor antes de esquecer localmente: sem isso o refresh token
-    // seguiria válido por trinta dias em quem tiver uma copia dele.
-    await encerrarSessaoNoServidor(account);
+    // Revoke on the server before forgetting locally: without this the refresh
+    // token would stay valid for thirty days for anyone holding a copy of it.
+    await endSessionOnServer(account);
 
-    limparSessao(account);
+    clearSession(account);
     setUser(null);
   };
 
@@ -166,7 +169,7 @@ export function AuthProvider({
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

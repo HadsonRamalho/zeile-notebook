@@ -99,7 +99,7 @@ pub async fn get_snapshot(
         ))
         .first::<(Uuid, Vec<u8>)>(conn)
         .await
-        .map_err(|_| ApiError::Request("Versão não encontrada".to_string()))
+        .map_err(|_| ApiError::Request("Version not found".to_string()))
 }
 
 pub async fn delete_snapshot(

@@ -20,11 +20,11 @@ pub fn incoming_request_id(headers: &HeaderMap) -> Option<String> {
         return None;
     }
 
-    let aceitavel = raw
+    let acceptable = raw
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
 
-    aceitavel.then(|| raw.to_string())
+    acceptable.then(|| raw.to_string())
 }
 
 pub async fn propagate(mut request: Request, next: Next) -> Response {
@@ -50,23 +50,23 @@ pub async fn propagate(mut request: Request, next: Next) -> Response {
 mod tests {
     use super::*;
 
-    fn headers_com(valor: &str) -> HeaderMap {
+    fn headers_with(value: &str) -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.insert(
             REQUEST_ID_HEADER,
-            HeaderValue::from_str(valor).expect("valor de header"),
+            HeaderValue::from_str(value).expect("header value"),
         );
         headers
     }
 
     #[test]
-    fn sem_header_nao_ha_id_de_entrada() {
+    fn without_a_header_there_is_no_incoming_id() {
         assert_eq!(incoming_request_id(&HeaderMap::new()), None);
     }
 
     #[test]
-    fn id_bem_formado_e_reaproveitado() {
-        let headers = headers_com("abc-123_DEF");
+    fn a_well_formed_id_is_reused() {
+        let headers = headers_with("abc-123_DEF");
 
         assert_eq!(
             incoming_request_id(&headers),
@@ -75,22 +75,22 @@ mod tests {
     }
 
     #[test]
-    fn id_longo_demais_e_descartado() {
-        let headers = headers_com(&"a".repeat(MAX_LEN + 1));
+    fn an_id_that_is_too_long_is_discarded() {
+        let headers = headers_with(&"a".repeat(MAX_LEN + 1));
 
         assert_eq!(incoming_request_id(&headers), None);
     }
 
     #[test]
-    fn id_com_caractere_fora_do_alfabeto_e_descartado() {
-        let headers = headers_com("id com espaco");
+    fn an_id_with_a_character_outside_the_alphabet_is_discarded() {
+        let headers = headers_with("id with space");
 
         assert_eq!(incoming_request_id(&headers), None);
     }
 
     #[test]
-    fn id_vazio_e_descartado() {
-        let headers = headers_com("   ");
+    fn an_empty_id_is_discarded() {
+        let headers = headers_with("   ");
 
         assert_eq!(incoming_request_id(&headers), None);
     }

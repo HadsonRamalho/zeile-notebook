@@ -119,7 +119,7 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/search/ranked/", get(api_search_notebooks_ranked))
         .route("/ws/{notebook_id}", get(websocket_handler))
         .route("/ws/presence/{id}", get(websocket_presence_handler))
-        // socket combinado: sync + presença numa conexão
+        // combined socket: sync + presence on a single connection
         .route("/ws/combined/{notebook_id}", get(websocket_combined_handler))
         .route("/all", get(api_get_notebooks))
         .route("/all/public", get(api_get_public_notebooks))

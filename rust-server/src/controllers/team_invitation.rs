@@ -105,9 +105,9 @@ pub async fn api_accept_invite(
 
     let user = models::user::find_user_by_id(conn, &id).await?;
 
-    // O convite é encontrado, e não consumido de saída: se a validação falhar
-    // depois de consumir, quem tem o link derruba o convite de quem foi
-    // convidado de verdade.
+    // The invite is found, but not consumed on the way in: if it were consumed
+    // first, whoever has the link would burn the invite for the person who
+    // was actually invited.
     let invitation = match crate::models::team_invitation::find_invitation_by_token(
         &mut conn,
         payload.token.trim(),
@@ -123,9 +123,9 @@ pub async fn api_accept_invite(
         return Err(ApiError::InvalidData);
     }
 
-    if !crate::models::team_invitation::email_corresponde(&invitation.email, &user.email) {
+    if !crate::models::team_invitation::email_matches(&invitation.email, &user.email) {
         tracing::warn!(
-            "convite do time {} recusado: aceito por conta diferente da convidada",
+            "team {} invite refused: accepted by an account other than the one invited",
             invitation.team_id
         );
         return Err(ApiError::PermissionDenied(
@@ -143,8 +143,8 @@ pub async fn api_accept_invite(
         return Err(ApiError::Database(e.to_string()));
     }
 
-    // Consome só depois de entrar no time: se a inserção falhar, o convite
-    // continua valendo para uma nova tentativa.
+    // Only consumed after joining the team: if the insert fails, the invite
+    // is still valid for a new attempt.
     let _ = crate::models::team_invitation::delete_invitation(&mut conn, invitation.id).await;
 
     Ok(StatusCode::OK)

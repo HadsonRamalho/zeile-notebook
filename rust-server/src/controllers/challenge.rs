@@ -591,9 +591,9 @@ pub async fn api_get_submission(
     let submission = challenge::get_submission(&mut conn, submission_id).await?;
 
     let is_owner = submission.user_id == Some(claims.id);
-    let papel = crate::controllers::session::papel_no_banco(&mut conn, &claims.id).await?;
+    let role = crate::controllers::session::role_in_db(&mut conn, &claims.id).await?;
 
-    if !is_owner && papel != UserRole::Admin {
+    if !is_owner && role != UserRole::Admin {
         let ch = challenge::get_challenge_by_id(&mut conn, submission.challenge_id).await?;
         require_notebook(
             &state,

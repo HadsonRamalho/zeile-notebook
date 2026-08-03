@@ -19,7 +19,7 @@ import { EditorHeader } from "../default/editor-header";
 import { SandpackManager } from "./sandpack-manager";
 
 interface TsxEditorProps {
-  // biome-ignore lint/suspicious/noExplicitAny: <necessário para armazenar os arquivos>
+  // biome-ignore lint/suspicious/noExplicitAny: <needed to store the files>
   pageFiles: Record<string, any>;
   block: Block;
   pageBlocks: Block[];
@@ -103,7 +103,7 @@ export function TsxEditor({
     document.body.appendChild(script);
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <loadBabel não precisa estar no array de dependências>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <loadBabel does not need to be in the dependency array>
   useEffect(() => {
     if (!babelReady && mode === "simple") {
       loadBabel();

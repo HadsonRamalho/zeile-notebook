@@ -72,7 +72,7 @@ export async function restoreFullBackup(jsonString: string): Promise<boolean> {
     const backup: FullBackup = JSON.parse(jsonString);
 
     if (!backup.index || !backup.notebooks) {
-      throw new Error("Formato de backup inválido");
+      throw new Error("Invalid backup format");
     }
 
     for (const [id, notebook] of Object.entries(backup.notebooks)) {

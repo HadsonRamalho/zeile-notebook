@@ -3,12 +3,12 @@ use axum::http::{Request, StatusCode, header};
 use tower::ServiceExt;
 
 use crate::middleware::rate_limit::JUDGE;
-use crate::routes::test_support::{corpo_em_texto, responder, router_com_banco_inalcancavel};
+use crate::routes::test_support::{body_as_text, respond, router_with_unreachable_database};
 
-const ROTAS: [&str; 4] = ["/api/run", "/api/run/go", "/api/run/cpp", "/api/run/zig"];
+const ROUTES: [&str; 4] = ["/api/run", "/api/run/go", "/api/run/cpp", "/api/run/zig"];
 
-fn submissao(path: &str, peer: &str) -> Request<Body> {
-    let peer: std::net::SocketAddr = peer.parse().expect("endereço do peer");
+fn submission(path: &str, peer: &str) -> Request<Body> {
+    let peer: std::net::SocketAddr = peer.parse().expect("peer address");
 
     Request::builder()
         .method("POST")
@@ -16,143 +16,143 @@ fn submissao(path: &str, peer: &str) -> Request<Body> {
         .header(header::CONTENT_TYPE, "application/json")
         .extension(axum::extract::ConnectInfo(peer))
         .body(Body::from(br#"{"code":"fn main(){}"}"#.to_vec()))
-        .expect("requisição")
+        .expect("request")
 }
 
 #[tokio::test]
-async fn a_sessao_e_derivada_do_usuario_e_do_notebook() {
+async fn the_session_is_derived_from_the_user_and_the_notebook() {
     let user = uuid::Uuid::new_v4();
     let notebook = uuid::Uuid::new_v4();
 
-    let sessao = crate::http::sessao_de_execucao(user, notebook);
+    let session = crate::http::execution_session(user, notebook);
 
     assert!(
-        sessao.chars().all(|c| c.is_alphanumeric() || c == '_'),
-        "sessão precisa ser segura como nome de diretório: {sessao}"
+        session.chars().all(|c| c.is_alphanumeric() || c == '_'),
+        "session must be safe as a directory name: {session}"
     );
     assert_eq!(
-        sessao,
-        crate::http::sessao_de_execucao(user, notebook),
-        "a sessão precisa ser estável para o módulo Rust persistir entre requisições"
+        session,
+        crate::http::execution_session(user, notebook),
+        "the session must be stable for the Rust module to persist across requests"
     );
     assert_ne!(
-        sessao,
-        crate::http::sessao_de_execucao(user, uuid::Uuid::new_v4()),
-        "notebooks diferentes não podem compartilhar workspace"
+        session,
+        crate::http::execution_session(user, uuid::Uuid::new_v4()),
+        "different notebooks cannot share a workspace"
     );
     assert_ne!(
-        sessao,
-        crate::http::sessao_de_execucao(uuid::Uuid::new_v4(), notebook),
-        "usuários diferentes não podem compartilhar workspace"
+        session,
+        crate::http::execution_session(uuid::Uuid::new_v4(), notebook),
+        "different users cannot share a workspace"
     );
 }
 
 #[tokio::test]
-async fn a_sessao_nunca_colide_com_o_workspace_do_juiz() {
-    let sessao = crate::http::sessao_de_execucao(uuid::Uuid::new_v4(), uuid::Uuid::new_v4());
+async fn the_session_never_collides_with_the_judges_workspace() {
+    let session = crate::http::execution_session(uuid::Uuid::new_v4(), uuid::Uuid::new_v4());
 
-    for prefixo in ["judge_ref_", "judge_sub_", "run_"] {
+    for prefix in ["judge_ref_", "judge_sub_", "run_"] {
         assert!(
-            !sessao.starts_with(prefixo),
-            "a sessão de /api/run invadiu o espaço do juiz ({prefixo}): {sessao}"
+            !session.starts_with(prefix),
+            "the /api/run session invaded the judge's space ({prefix}): {session}"
         );
     }
 }
 
 #[tokio::test]
-async fn execucao_anonima_e_recusada_em_todas_as_linguagens() {
-    for rota in ROTAS {
-        let response = responder(submissao(rota, "10.0.0.1:5000")).await;
-        let corpo = corpo_em_texto(response).await;
+async fn anonymous_execution_is_refused_in_every_language() {
+    for route in ROUTES {
+        let response = respond(submission(route, "10.0.0.1:5000")).await;
+        let body = body_as_text(response).await;
 
         assert!(
-            corpo.contains("autenticado"),
-            "{rota} aceitou execução anônima: {corpo}"
+            body.contains("autenticado"),
+            "{route} accepted anonymous execution: {body}"
         );
     }
 }
 
 #[tokio::test]
-async fn execucao_sem_notebook_e_recusada() {
+async fn execution_without_a_notebook_is_refused() {
     let peer: std::net::SocketAddr = "10.0.0.2:5000".parse().expect("peer");
 
     let request = Request::builder()
         .method("POST")
         .uri("/api/run")
         .header(header::CONTENT_TYPE, "application/json")
-        .header(header::AUTHORIZATION, "Bearer token-invalido")
+        .header(header::AUTHORIZATION, "Bearer invalid-token")
         .extension(axum::extract::ConnectInfo(peer))
         .body(Body::from(br#"{"code":"fn main(){}"}"#.to_vec()))
-        .expect("requisição");
+        .expect("request");
 
-    let corpo = corpo_em_texto(responder(request).await).await;
+    let body = body_as_text(respond(request).await).await;
 
     assert!(
-        corpo.contains("autenticado") || corpo.contains("notebook"),
-        "execução sem notebook não foi barrada: {corpo}"
+        body.contains("autenticado") || body.contains("notebook"),
+        "execution without a notebook was not blocked: {body}"
     );
 }
 
 #[tokio::test]
-async fn as_rotas_de_execucao_tem_rate_limit() {
-    let router = router_com_banco_inalcancavel().await;
+async fn execution_routes_have_a_rate_limit() {
+    let router = router_with_unreachable_database().await;
     let peer = "10.0.0.3:5000";
 
     for _ in 0..JUDGE.max {
         let response = router
             .clone()
-            .oneshot(submissao("/api/run/go", peer))
+            .oneshot(submission("/api/run/go", peer))
             .await
-            .expect("resposta");
+            .expect("response");
 
         assert_ne!(
             response.status(),
             StatusCode::TOO_MANY_REQUESTS,
-            "o rate limit disparou antes do teto de {} requisições",
+            "the rate limit fired before the ceiling of {} requests",
             JUDGE.max
         );
     }
 
-    let excedente = router
-        .oneshot(submissao("/api/run/go", peer))
+    let over_the_limit = router
+        .oneshot(submission("/api/run/go", peer))
         .await
-        .expect("resposta");
+        .expect("response");
 
-    assert_eq!(excedente.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(over_the_limit.status(), StatusCode::TOO_MANY_REQUESTS);
 }
 
 #[tokio::test]
-async fn o_rate_limit_de_execucao_e_por_linguagem_e_por_origem() {
-    let router = router_com_banco_inalcancavel().await;
+async fn execution_rate_limit_is_per_language_and_per_origin() {
+    let router = router_with_unreachable_database().await;
 
     for _ in 0..JUDGE.max {
         let _ = router
             .clone()
-            .oneshot(submissao("/api/run/cpp", "10.0.0.4:5000"))
+            .oneshot(submission("/api/run/cpp", "10.0.0.4:5000"))
             .await
-            .expect("resposta");
+            .expect("response");
     }
 
-    let outra_origem = router
+    let other_origin = router
         .clone()
-        .oneshot(submissao("/api/run/cpp", "10.0.0.5:5000"))
+        .oneshot(submission("/api/run/cpp", "10.0.0.5:5000"))
         .await
-        .expect("resposta");
+        .expect("response");
 
     assert_ne!(
-        outra_origem.status(),
+        other_origin.status(),
         StatusCode::TOO_MANY_REQUESTS,
-        "o limite de uma origem vazou para outra"
+        "one origin's limit leaked into another"
     );
 
-    let outra_rota = router
-        .oneshot(submissao("/api/run/zig", "10.0.0.4:5000"))
+    let other_route = router
+        .oneshot(submission("/api/run/zig", "10.0.0.4:5000"))
         .await
-        .expect("resposta");
+        .expect("response");
 
     assert_ne!(
-        outra_rota.status(),
+        other_route.status(),
         StatusCode::TOO_MANY_REQUESTS,
-        "o limite de uma linguagem vazou para outra"
+        "one language's limit leaked into another"
     );
 }

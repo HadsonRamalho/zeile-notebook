@@ -1,4 +1,4 @@
-//! métricas do realtime em formato prometheus por `GET /api/metrics`
+//! realtime metrics in Prometheus format via `GET /api/metrics`
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -63,7 +63,7 @@ pub struct Metrics {
     pub active_notebooks: Gauge,
     pub presence_rooms: Gauge,
     pub sync_changes_applied_total: Counter,
-    // passadas << changes indica coalescência do broadcaster
+    // passes << changes indicates broadcaster coalescing
     pub sync_peer_notifications_total: Counter,
     pub sync_channel_send_errors_total: Counter,
     pub sync_broadcast_passes_total: Counter,
@@ -108,85 +108,85 @@ impl Metrics {
         counter(
             &mut out,
             "ws_sync_connections_total",
-            "Conexoes de sync aceitas.",
+            "Accepted sync connections.",
             self.ws_sync_connections_total.get(),
         );
         counter(
             &mut out,
             "ws_sync_connection_errors_total",
-            "Conexoes de sync recusadas no connect.",
+            "Sync connections refused at connect time.",
             self.ws_sync_connection_errors_total.get(),
         );
         gauge(
             &mut out,
             "ws_sync_active",
-            "Conexoes de sync abertas.",
+            "Open sync connections.",
             self.ws_sync_active.get(),
         );
         counter(
             &mut out,
             "ws_presence_connections_total",
-            "Conexoes de presenca aceitas.",
+            "Accepted presence connections.",
             self.ws_presence_connections_total.get(),
         );
         counter(
             &mut out,
             "ws_presence_connection_errors_total",
-            "Conexoes de presenca recusadas no connect.",
+            "Presence connections refused at connect time.",
             self.ws_presence_connection_errors_total.get(),
         );
         gauge(
             &mut out,
             "ws_presence_active",
-            "Conexoes de presenca abertas.",
+            "Open presence connections.",
             self.ws_presence_active.get(),
         );
         gauge(
             &mut out,
             "active_notebooks",
-            "Notebooks com peers de sync ativos.",
+            "Notebooks with active sync peers.",
             self.active_notebooks.get(),
         );
         gauge(
             &mut out,
             "presence_rooms",
-            "Salas de presenca ativas.",
+            "Active presence rooms.",
             self.presence_rooms.get(),
         );
         counter(
             &mut out,
             "sync_changes_applied_total",
-            "Mensagens de sync que avancaram o documento.",
+            "Sync messages that advanced the document.",
             self.sync_changes_applied_total.get(),
         );
         counter(
             &mut out,
             "sync_peer_notifications_total",
-            "Notificacoes de fan-out disparadas para peers.",
+            "Fan-out notifications sent to peers.",
             self.sync_peer_notifications_total.get(),
         );
         counter(
             &mut out,
             "sync_channel_send_errors_total",
-            "Falhas de envio no canal bounded do peer (cliente lento).",
+            "Send failures on the peer's bounded channel (slow client).",
             self.sync_channel_send_errors_total.get(),
         );
         counter(
             &mut out,
             "sync_broadcast_passes_total",
-            "Passadas do broadcaster single-flight.",
+            "Single-flight broadcaster passes.",
             self.sync_broadcast_passes_total.get(),
         );
         counter(
             &mut out,
             "sync_broadcast_skips_total",
-            "Peers pulados por backpressure numa passada do broadcaster.",
+            "Peers skipped due to backpressure in a broadcaster pass.",
             self.sync_broadcast_skips_total.get(),
         );
         counter(
             &mut out,
             "notebook_saves_total",
-            "Persistencias de documento concluidas.",
+            "Completed document persistences.",
             self.notebook_saves_total.get(),
         );
 
@@ -207,26 +207,26 @@ pub fn scrape_token() -> Option<String> {
         .filter(|token| !token.is_empty())
 }
 
-/// Quem pode raspar as métricas. Loopback entra sem credencial pelo mesmo
-/// motivo do /internal/shutdown: é onde rodam os coletores locais, e um
-/// Prometheus não carrega JWT — para ele existe o token de scrape.
-pub async fn autorizado_a_raspar(
+/// Who can scrape the metrics. Loopback gets in without a credential for the
+/// same reason as /internal/shutdown: that's where local collectors run, and
+/// a Prometheus doesn't carry a JWT — the scrape token exists for it.
+pub async fn authorized_to_scrape(
     pool: &Pool<AsyncPgConnection>,
     headers: &HeaderMap,
     peer: Option<&SocketAddr>,
-    esperado: Option<&str>,
+    expected: Option<&str>,
 ) -> bool {
     if peer.is_some_and(|addr| addr.ip().is_loopback()) {
         return true;
     }
 
-    if let Some(esperado) = esperado {
-        let recebido = headers
+    if let Some(expected) = expected {
+        let received = headers
             .get(TOKEN_HEADER)
             .and_then(|value| value.to_str().ok())
             .unwrap_or_default();
 
-        if crate::controllers::shutdown::tokens_match(esperado, recebido) {
+        if crate::controllers::shutdown::tokens_match(expected, received) {
             return true;
         }
     }
@@ -250,9 +250,9 @@ pub async fn metrics_handler(
         .get::<ConnectInfo<SocketAddr>>()
         .map(|info| info.0);
 
-    if !autorizado_a_raspar(&state.pool, &headers, peer.as_ref(), scrape_token().as_deref()).await
+    if !authorized_to_scrape(&state.pool, &headers, peer.as_ref(), scrape_token().as_deref()).await
     {
-        tracing::warn!("scrape de métricas recusado");
+        tracing::warn!("metrics scrape refused");
         return StatusCode::NOT_FOUND.into_response();
     }
 
@@ -267,108 +267,108 @@ pub async fn metrics_handler(
 mod tests {
     use super::*;
 
-    fn headers_com_token(valor: &str) -> HeaderMap {
+    fn headers_with_token(value: &str) -> HeaderMap {
         let mut headers = HeaderMap::new();
-        headers.insert(TOKEN_HEADER, valor.parse().expect("header"));
+        headers.insert(TOKEN_HEADER, value.parse().expect("header"));
         headers
     }
 
     fn peer(addr: &str) -> SocketAddr {
-        addr.parse().expect("endereço")
+        addr.parse().expect("address")
     }
 
     #[test]
-    fn o_token_de_scrape_ignora_vazio_e_espaco() {
+    fn scrape_token_ignores_blank_and_whitespace() {
         unsafe { std::env::set_var(TOKEN_VAR, "   ") };
         assert!(scrape_token().is_none());
 
-        unsafe { std::env::set_var(TOKEN_VAR, "  segredo  ") };
-        assert_eq!(scrape_token().as_deref(), Some("segredo"));
+        unsafe { std::env::set_var(TOKEN_VAR, "  secret  ") };
+        assert_eq!(scrape_token().as_deref(), Some("secret"));
 
         unsafe { std::env::remove_var(TOKEN_VAR) };
         assert!(scrape_token().is_none());
     }
 
     #[test]
-    fn o_render_nao_carrega_dado_de_usuario() {
-        let saida = METRICS.render_prometheus();
+    fn render_does_not_carry_user_data() {
+        let output = METRICS.render_prometheus();
 
-        for suspeito in ["@", "user_id", "email", "notebook_id"] {
+        for suspect in ["@", "user_id", "email", "notebook_id"] {
             assert!(
-                !saida.contains(suspeito),
-                "métrica expôs '{suspeito}': o endpoint deve ser só agregado"
+                !output.contains(suspect),
+                "metric exposed '{suspect}': the endpoint must be aggregate-only"
             );
         }
     }
 
     #[tokio::test]
-    async fn loopback_raspa_sem_credencial() {
-        let (_router, state) = crate::routes::test_support::router_e_estado().await;
+    async fn loopback_scrapes_without_credential() {
+        let (_router, state) = crate::routes::test_support::router_and_state().await;
 
         assert!(
-            autorizado_a_raspar(
+            authorized_to_scrape(
                 &state.pool,
                 &HeaderMap::new(),
                 Some(&peer("127.0.0.1:9100")),
                 None
             )
             .await,
-            "coletor local deveria passar sem token"
+            "local collector should pass without a token"
         );
     }
 
     #[tokio::test]
-    async fn origem_externa_sem_token_e_recusada() {
-        let (_router, state) = crate::routes::test_support::router_e_estado().await;
+    async fn external_origin_without_token_is_refused() {
+        let (_router, state) = crate::routes::test_support::router_and_state().await;
 
         assert!(
-            !autorizado_a_raspar(
+            !authorized_to_scrape(
                 &state.pool,
                 &HeaderMap::new(),
                 Some(&peer("203.0.113.7:9100")),
                 None
             )
             .await,
-            "origem externa sem credencial não pode raspar"
+            "external origin without a credential cannot scrape"
         );
 
         assert!(
-            !autorizado_a_raspar(
+            !authorized_to_scrape(
                 &state.pool,
-                &headers_com_token("token-de-scrape"),
+                &headers_with_token("scrape-token"),
                 Some(&peer("203.0.113.7:9100")),
                 None
             )
             .await,
-            "sem ZEILE_METRICS_TOKEN configurado, header nao deve abrir a porta"
+            "without ZEILE_METRICS_TOKEN configured, the header must not open the door"
         );
     }
 
     #[tokio::test]
-    async fn origem_externa_depende_do_token_correto() {
-        let (_router, state) = crate::routes::test_support::router_e_estado().await;
-        let de_fora = peer("203.0.113.7:9100");
+    async fn external_origin_depends_on_the_correct_token() {
+        let (_router, state) = crate::routes::test_support::router_and_state().await;
+        let outside = peer("203.0.113.7:9100");
 
         assert!(
-            autorizado_a_raspar(
+            authorized_to_scrape(
                 &state.pool,
-                &headers_com_token("token-de-scrape"),
-                Some(&de_fora),
-                Some("token-de-scrape")
+                &headers_with_token("scrape-token"),
+                Some(&outside),
+                Some("scrape-token")
             )
             .await,
-            "Prometheus com token deveria raspar"
+            "Prometheus with the token should scrape"
         );
 
         assert!(
-            !autorizado_a_raspar(
+            !authorized_to_scrape(
                 &state.pool,
-                &headers_com_token("token-errado"),
-                Some(&de_fora),
-                Some("token-de-scrape")
+                &headers_with_token("wrong-token"),
+                Some(&outside),
+                Some("scrape-token")
             )
             .await,
-            "token errado não pode passar"
+            "wrong token cannot pass"
         );
     }
 }

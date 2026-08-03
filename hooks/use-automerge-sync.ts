@@ -3,6 +3,11 @@ import diff from "fast-diff";
 import { get, set } from "idb-keyval";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { writeSceneElements } from "@/lib/drawing-scene";
+import {
+  type NotebookSocketHandle,
+  subscribeNotebookSocket,
+} from "@/lib/notebook-socket";
 import type {
   Block,
   BlockMetadata,
@@ -11,11 +16,6 @@ import type {
   Language,
   Notebook,
 } from "@/lib/types";
-import { writeSceneElements } from "@/lib/drawing-scene";
-import {
-  type NotebookSocketHandle,
-  subscribeNotebookSocket,
-} from "@/lib/notebook-socket";
 
 type AutomergeLib = typeof AutomergeType;
 
@@ -83,11 +83,11 @@ export function useAutomergeSync(notebookId: string, token: string) {
   useEffect(() => {
     if (!notebookId || !automerge.current || !docRef.current) return;
 
-    // socket único compartilhado; reconexão/backoff no gerenciador notebook-socket
+    // single shared socket; reconnection/backoff lives in the notebook-socket manager
     const handle = subscribeNotebookSocket(notebookId, token, {
       onOpen: () => {
         setIsConnected(true);
-        // novo estado de sync a cada (re)conexão
+        // new sync state on every (re)connection
         syncState.current = automerge.current!.initSyncState();
         if (automerge.current && docRef.current) {
           const [nextSyncState, message] =
@@ -248,9 +248,9 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
-  // Reinsere um bloco removido na mesma posição, preservando id/conteúdo —
-  // usado pelo toast de "Desfazer" após deletar, para não gerar um bloco
-  // novo (id trocado) no lugar do original.
+  // Reinserts a removed block at the same position, preserving id/content —
+  // used by the "Undo" toast after deleting, so it doesn't generate a new
+  // block (different id) in place of the original.
   const restoreBlock = (index: number, block: Block) => {
     updateDoc((d) => {
       if (!d.blocks) d.blocks = [];
@@ -266,21 +266,21 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
-  // Histórico real derivado do log de changes do Automerge — fonte única de
-  // versionamento (o polling in-memory por intervalo, `useLocalHistory`, foi
-  // removido: ele reiniciava o próprio timer a cada mudança de `doc`, então
-  // edições contínuas e rápidas — como desenhar — nunca deixavam o intervalo
-  // de 5s completar, e o histórico de sessão ficava cego a esses blocos).
+  // Real history derived from Automerge's change log — the single source of
+  // truth for versioning (the interval-based in-memory polling,
+  // `useLocalHistory`, was removed: it restarted its own timer on every
+  // `doc` change, so continuous, fast edits — like drawing — never let the
+  // 5s interval complete, and session history stayed blind to those blocks).
   //
-  // O `automerge.getHistory()` nativo é O(n²): cada entrada tem um getter
-  // preguiçoso que reconstrói o snapshot do ZERO (`applyChanges(init(),
-  // history.slice(0, index+1))`), então pedir o snapshot de todas as n
-  // entradas custa 1+2+...+n aplicações — era isso que travava a aba em
-  // documentos com muitas alterações. Aqui reconstruímos incrementalmente
-  // (aplica 1 change de cada vez sobre o acumulador, O(n) no total) e
-  // cedemos a thread principal a cada fatia via `setTimeout`, então mesmo um
-  // histórico grande não bloqueia a UI de uma vez só. O resultado fica em
-  // cache (por referência do doc) pra não recalcular à toa.
+  // Native `automerge.getHistory()` is O(n²): each entry has a lazy getter
+  // that rebuilds the snapshot from SCRATCH (`applyChanges(init(),
+  // history.slice(0, index+1))`), so requesting the snapshot for all n
+  // entries costs 1+2+...+n applications — that's what froze the tab on
+  // documents with many changes. Here we rebuild incrementally
+  // (applying 1 change at a time onto the accumulator, O(n) total) and
+  // yield the main thread on every slice via `setTimeout`, so even a
+  // large history doesn't block the UI all at once. The result is
+  // cached (by doc reference) to avoid recomputing for nothing.
   const automergeHistoryCache = useRef<{
     forDoc: Notebook;
     entries: AutomergeHistoryEntry[];

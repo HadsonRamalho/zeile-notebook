@@ -67,10 +67,10 @@ export const defaultDatabaseSchemaContent = JSON.stringify({
   ],
 } satisfies DatabaseSchemaGraph);
 
-// conteúdo salvo antes dos campos terem `id` próprio usava o nome do campo
-// como handle id; aqui cada campo sem `id` estável recebe um, preservando
-// as conexões existentes ao usar o handle antigo (nome do campo) como
-// referência de migração.
+// content saved before fields had their own `id` used the field's name as
+// the handle id; here every field without a stable `id` gets one, preserving
+// existing connections by using the old handle (the field's name) as the
+// migration reference.
 function withStableFieldIds(graph: DatabaseSchemaGraph): DatabaseSchemaGraph {
   let changed = false;
   const idByOldHandle = new Map<string, string>();
@@ -113,7 +113,7 @@ function parseGraph(content: string): DatabaseSchemaGraph {
       return withStableFieldIds(parsed);
     }
   } catch {
-    // conteúdo antigo/inválido: começa de um schema vazio
+    // old/invalid content: start from an empty schema
   }
   return emptyGraph;
 }
@@ -200,7 +200,13 @@ export function DatabaseSchemaCell({
       style={
         fullscreen
           ? undefined
-          : { height: 480, minHeight: 480, maxHeight: 960, resize: "vertical", overflow: "auto" }
+          : {
+              height: 480,
+              minHeight: 480,
+              maxHeight: 960,
+              resize: "vertical",
+              overflow: "auto",
+            }
       }
       className={cn(
         "print:!h-auto print:!max-h-none print:!overflow-visible",
@@ -209,7 +215,12 @@ export function DatabaseSchemaCell({
           : "relative w-full overflow-hidden rounded-lg border bg-card",
       )}
     >
-      <div className={cn("print:hidden absolute right-2 top-2 flex gap-2", fullscreen ? "z-overlay-controls" : "z-10")}>
+      <div
+        className={cn(
+          "print:hidden absolute right-2 top-2 flex gap-2",
+          fullscreen ? "z-overlay-controls" : "z-10",
+        )}
+      >
         {canWrite && (
           <button
             type="button"
@@ -241,7 +252,8 @@ export function DatabaseSchemaCell({
             "--xy-node-border": "var(--border)",
             "--xy-node-background-color": "var(--card)",
             "--xy-node-color": "var(--foreground)",
-            "--xy-selection-background-color": "color-mix(in oklab, var(--primary) 10%, transparent)",
+            "--xy-selection-background-color":
+              "color-mix(in oklab, var(--primary) 10%, transparent)",
             "--xy-selection-border": "1px solid var(--primary)",
             "--xy-handle-background-color": "var(--primary)",
             "--xy-handle-border-color": "var(--background)",

@@ -83,7 +83,7 @@ export function LatexCell({ content, onChange, canWrite }: LatexCellProps) {
           ) : html ? (
             <div
               className="katex-preview"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: saída confiável do katex.renderToString
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted output from katex.renderToString
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ) : (

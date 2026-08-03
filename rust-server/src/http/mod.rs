@@ -22,7 +22,7 @@ use crate::models::state::AppState;
 use crate::controllers::utils::extract_module_name;
 use crate::executor::sanitize_session;
 use crate::executor::{
-    caminho_absoluto_do_projeto, compile_rust_com_avisos, run_compiled, sandbox_rust,
+    compile_rust_with_warnings, project_absolute_path, run_compiled, sandbox_rust,
 };
 use crate::file::RunLimits;
 use crate::file::register_log;
@@ -33,14 +33,14 @@ use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
 use crate::sec::verify_zig_code;
 
-fn execucao_negada(motivo: &str) -> CodeResponse {
+fn execution_denied(reason: &str) -> CodeResponse {
     CodeResponse {
         stdout: String::new(),
-        stderr: motivo.to_string(),
+        stderr: reason.to_string(),
     }
 }
 
-pub fn sessao_de_execucao(user_id: Uuid, notebook_id: Uuid) -> String {
+pub fn execution_session(user_id: Uuid, notebook_id: Uuid) -> String {
     sanitize_session(&format!("u_{}_n_{}", user_id, notebook_id))
 }
 
@@ -53,7 +53,7 @@ async fn enforce_execute(
     let user_id = match extract_claims_from_header(headers).await {
         Ok(claims) => claims.1.id,
         Err(_) => {
-            return Err(execucao_negada(
+            return Err(execution_denied(
                 "É necessário estar autenticado para executar código.",
             ));
         }
@@ -62,7 +62,7 @@ async fn enforce_execute(
     let notebook_id = match notebook_id {
         Some(id) => id,
         None => {
-            return Err(execucao_negada(
+            return Err(execution_denied(
                 "É necessário informar o notebook do bloco que está sendo executado.",
             ));
         }
@@ -75,8 +75,8 @@ async fn enforce_execute(
     };
 
     match require(pool, Some(user_id), notebook_id, &key, &target).await {
-        Ok(_) => Ok(sessao_de_execucao(user_id, notebook_id)),
-        Err(_) => Err(execucao_negada(
+        Ok(_) => Ok(execution_session(user_id, notebook_id)),
+        Err(_) => Err(execution_denied(
             "Você não tem permissão para executar este tipo de bloco.",
         )),
     }
@@ -107,7 +107,7 @@ pub async fn verify_request(
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
         Err(_) => {
-            return Json(execucao_negada(
+            return Json(execution_denied(
                 "O servidor está encerrando e não aceita novas execuções.",
             ));
         }
@@ -126,10 +126,10 @@ pub async fn verify_request(
         .unwrap_or("Unknown Agent")
         .to_string();
 
-    info!("Nova requisição de IP: {}", ip);
+    info!("New request from IP: {}", ip);
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
-        error!("Falha no log de arquivo: {}", e);
+        error!("File log failure: {}", e);
     }
 
     if let Err(msg) = verify_code(&payload.code) {
@@ -168,9 +168,9 @@ pub async fn verify_request(
             });
         }
 
-        let sandbox = sandbox_rust(caminho_absoluto_do_projeto(&project_path));
+        let sandbox = sandbox_rust(project_absolute_path(&project_path));
 
-        return match sandbox.executar("cargo", &["check"]).await {
+        return match sandbox.run("cargo", &["check"]).await {
             Ok(out) => Json(CodeResponse {
                 stdout: format!(
                     "Módulo '{}' salvo.\nStdOut Check: {}",
@@ -186,12 +186,12 @@ pub async fn verify_request(
         };
     }
 
-    info!("Iniciando build isolado da sessão {}", safe_session);
+    info!("Starting isolated build for session {}", safe_session);
 
-    let (bin_path, avisos) = match compile_rust_com_avisos(&payload.code, &safe_session).await {
-        Ok(compilado) => compilado,
+    let (bin_path, warnings) = match compile_rust_with_warnings(&payload.code, &safe_session).await {
+        Ok(compiled) => compiled,
         Err(msg) => {
-            error!("Compilação falhou.");
+            error!("Compilation failed.");
             return Json(CodeResponse {
                 stdout: "".into(),
                 stderr: msg,
@@ -203,7 +203,7 @@ pub async fn verify_request(
 
     Json(CodeResponse {
         stdout: out.stdout,
-        stderr: avisos + &out.stderr,
+        stderr: warnings + &out.stderr,
     })
 }
 
@@ -225,7 +225,7 @@ pub async fn verify_go_request(
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
         Err(_) => {
-            return Json(execucao_negada(
+            return Json(execution_denied(
                 "O servidor está encerrando e não aceita novas execuções.",
             ));
         }
@@ -243,10 +243,10 @@ pub async fn verify_go_request(
         .unwrap_or("Unknown Agent")
         .to_string();
 
-    info!("Nova requisição de IP: {}", ip);
+    info!("New request from IP: {}", ip);
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
-        error!("Falha no log de arquivo: {}", e);
+        error!("File log failure: {}", e);
     }
 
     if let Err(msg) = verify_go_code(&payload.code) {
@@ -275,7 +275,7 @@ pub async fn verify_go_request(
         });
     }
 
-    info!("Compilando Go...");
+    info!("Compiling Go...");
 
     let go_path = std::env::var("GO_PATH").unwrap_or_else(|_| "go".to_string());
 
@@ -329,7 +329,7 @@ pub async fn verify_cpp_request(
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
         Err(_) => {
-            return Json(execucao_negada(
+            return Json(execution_denied(
                 "O servidor está encerrando e não aceita novas execuções.",
             ));
         }
@@ -347,10 +347,10 @@ pub async fn verify_cpp_request(
         .unwrap_or("Unknown Agent")
         .to_string();
 
-    info!("Nova requisição C++ de IP: {}", ip);
+    info!("New C++ request from IP: {}", ip);
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
-        error!("Falha no log de arquivo: {}", e);
+        error!("File log failure: {}", e);
     }
 
     if let Err(msg) = verify_cpp_code(&payload.code) {
@@ -379,7 +379,7 @@ pub async fn verify_cpp_request(
         });
     }
 
-    info!("Compilando C++...");
+    info!("Compiling C++...");
 
     let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
 
@@ -467,7 +467,7 @@ pub async fn verify_zig_request(
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
         Err(_) => {
-            return Json(execucao_negada(
+            return Json(execution_denied(
                 "O servidor está encerrando e não aceita novas execuções.",
             ));
         }
@@ -485,10 +485,10 @@ pub async fn verify_zig_request(
         .unwrap_or("Unknown Agent")
         .to_string();
 
-    info!("Nova requisição Zig de IP: {}", ip);
+    info!("New Zig request from IP: {}", ip);
 
     if let Err(e) = register_log(&payload.code, &safe_session, &ip, &user_agent).await {
-        error!("Falha no log de arquivo: {}", e);
+        error!("File log failure: {}", e);
     }
 
     if let Err(msg) = verify_zig_code(&payload.code) {
@@ -517,7 +517,7 @@ pub async fn verify_zig_request(
         });
     }
 
-    info!("Compilando Zig...");
+    info!("Compiling Zig...");
 
     let zig_path = std::env::var("ZIG_PATH").unwrap_or_else(|_| "zig".to_string());
 

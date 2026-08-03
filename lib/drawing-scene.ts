@@ -1,8 +1,8 @@
 import type { DrawingElement, Notebook } from "@/lib/types";
 
-// Campos voláteis do Excalidraw: mudam a cada reconciliação/render mesmo sem
-// alteração visual. Incluí-los na assinatura causaria escalada de versão entre
-// peers (loop de eco). São ignorados na comparação de conteúdo.
+// Excalidraw's volatile fields: change on every reconciliation/render even
+// without a visual change. Including them in the signature would cause a
+// version-bump escalation between peers (echo loop). Ignored in content comparison.
 const VOLATILE_KEYS = new Set(["version", "versionNonce", "updated", "seed"]);
 
 function stableStringify(value: unknown): string {
@@ -47,17 +47,17 @@ export function writeSceneElements(
   }
   for (const el of elements) {
     const cur = scene[el.id];
-    // Só reescreve quando o conteúdo (excluindo campos voláteis) muda, para
-    // não difundir bumps de versão sem alteração real.
+    // Only rewrites when the content (excluding volatile fields) changes, to
+    // avoid broadcasting version bumps without a real change.
     if (!cur || stableStringify(cur) !== stableStringify(el)) {
       scene[el.id] = JSON.parse(JSON.stringify(el));
     }
   }
 }
 
-// Assinatura baseada em conteúdo (independe de version/versionNonce/updated/seed
-// e da ordem de chaves após o round-trip no CRDT). Inclui isDeleted, então uma
-// remoção conta como mudança.
+// Content-based signature (independent of version/versionNonce/updated/seed
+// and of key order after the CRDT round-trip). Includes isDeleted, so a
+// removal counts as a change.
 export function sceneSignature(els: readonly DrawingElement[]): string {
   return els
     .map((e) => stableStringify(e))

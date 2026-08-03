@@ -1,63 +1,63 @@
 import { deleteCookie, getCookie, setCookie } from "cookies-next";
 import {
   type AccountType,
-  REFRESH_COOKIE_MAX_AGE,
   getActiveAccount,
+  REFRESH_COOKIE_MAX_AGE,
   refreshCookieName,
   resolve,
   tokenCookieName,
 } from "@/lib/runtime/router";
 
-export interface Sessao {
+export interface Session {
   accessToken: string;
   refreshToken: string;
   expiresInSecs: number;
 }
 
-/// Margem para renovar antes do fim: o cookie do access token expira um pouco
-/// antes do token em si, então o cliente não chega a mandar um token vencido.
-const MARGEM_SEGS = 30;
+/// Margin to renew before expiry: the access token cookie expires a bit
+/// before the token itself, so the client never gets to send an expired token.
+const MARGIN_SECS = 30;
 
-export function guardarSessao(
-  sessao: Sessao,
+export function storeSession(
+  session: Session,
   account: AccountType = getActiveAccount(),
 ) {
-  const maxAge = Math.max(sessao.expiresInSecs - MARGEM_SEGS, 60);
+  const maxAge = Math.max(session.expiresInSecs - MARGIN_SECS, 60);
 
-  setCookie(tokenCookieName(account), sessao.accessToken, { maxAge });
-  setCookie(refreshCookieName(account), sessao.refreshToken, {
+  setCookie(tokenCookieName(account), session.accessToken, { maxAge });
+  setCookie(refreshCookieName(account), session.refreshToken, {
     maxAge: REFRESH_COOKIE_MAX_AGE,
   });
 }
 
-export function limparSessao(account: AccountType = getActiveAccount()) {
+export function clearSession(account: AccountType = getActiveAccount()) {
   deleteCookie(tokenCookieName(account));
   deleteCookie(refreshCookieName(account));
 }
 
-export function refreshTokenGuardado(
+export function storedRefreshToken(
   account: AccountType = getActiveAccount(),
 ): string | undefined {
   return getCookie(refreshCookieName(account)) as string | undefined;
 }
 
-// Uma renovação por vez. Sem isso, um surto de requisições expiradas renovaria
-// em paralelo: a primeira rotação invalida o refresh das outras, o servidor lê
-// isso como reuso de token vazado e derruba todas as sessões do usuário.
-let renovacaoEmCurso: Promise<string | null> | null = null;
+// One renewal at a time. Without this, a burst of expired requests would
+// renew in parallel: the first rotation invalidates the others' refresh, the
+// server reads that as reuse of a leaked token, and drops all of the user's sessions.
+let renewalInProgress: Promise<string | null> | null = null;
 
-export function renovarSessao(
+export function renewSession(
   account: AccountType = getActiveAccount(),
 ): Promise<string | null> {
-  renovacaoEmCurso ??= executarRenovacao(account).finally(() => {
-    renovacaoEmCurso = null;
+  renewalInProgress ??= performRenewal(account).finally(() => {
+    renewalInProgress = null;
   });
 
-  return renovacaoEmCurso;
+  return renewalInProgress;
 }
 
-async function executarRenovacao(account: AccountType): Promise<string | null> {
-  const refreshToken = refreshTokenGuardado(account);
+async function performRenewal(account: AccountType): Promise<string | null> {
+  const refreshToken = storedRefreshToken(account);
 
   if (!refreshToken) {
     return null;
@@ -73,25 +73,25 @@ async function executarRenovacao(account: AccountType): Promise<string | null> {
     });
 
     if (!response.ok) {
-      limparSessao(account);
+      clearSession(account);
       return null;
     }
 
-    const sessao: Sessao = await response.json();
-    guardarSessao(sessao, account);
+    const session: Session = await response.json();
+    storeSession(session, account);
 
-    return sessao.accessToken;
+    return session.accessToken;
   } catch {
-    // Falha de rede não é sessão inválida: manter o refresh permite tentar de
-    // novo quando a conexão voltar.
+    // A network failure is not an invalid session: keeping the refresh
+    // allows retrying once the connection comes back.
     return null;
   }
 }
 
-export async function encerrarSessaoNoServidor(
+export async function endSessionOnServer(
   account: AccountType = getActiveAccount(),
 ) {
-  const refreshToken = refreshTokenGuardado(account);
+  const refreshToken = storedRefreshToken(account);
 
   if (!refreshToken) {
     return;
@@ -106,6 +106,6 @@ export async function encerrarSessaoNoServidor(
       body: JSON.stringify({ refreshToken }),
     });
   } catch {
-    // Logout local acontece de qualquer forma.
+    // Local logout happens either way.
   }
 }

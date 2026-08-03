@@ -145,32 +145,32 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn quem_espera_antes_do_disparo_acorda() {
+    async fn a_waiter_before_the_trigger_wakes_up() {
         let shutdown = Shutdown::new();
-        let esperando = shutdown.clone();
+        let waiting = shutdown.clone();
 
-        let task = tokio::spawn(async move { esperando.wait().await });
+        let task = tokio::spawn(async move { waiting.wait().await });
 
         assert!(shutdown.trigger(Reason::Signal));
 
         tokio::time::timeout(std::time::Duration::from_secs(1), task)
             .await
-            .expect("wait deveria retornar após o disparo")
-            .expect("task não deveria falhar");
+            .expect("wait should return after the trigger")
+            .expect("task should not fail");
     }
 
     #[tokio::test]
-    async fn quem_espera_depois_do_disparo_nao_fica_pendurado() {
+    async fn a_waiter_after_the_trigger_does_not_hang() {
         let shutdown = Shutdown::new();
         shutdown.trigger(Reason::Signal);
 
         tokio::time::timeout(std::time::Duration::from_secs(1), shutdown.wait())
             .await
-            .expect("wait deveria retornar imediatamente");
+            .expect("wait should return immediately");
     }
 
     #[tokio::test]
-    async fn o_segundo_disparo_e_ignorado() {
+    async fn the_second_trigger_is_ignored() {
         let shutdown = Shutdown::new();
 
         assert!(shutdown.trigger(Reason::Signal));
@@ -179,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn sem_variavel_o_periodo_de_graca_tem_default() {
+    fn without_a_variable_the_grace_period_has_a_default() {
         unsafe { std::env::remove_var("SHUTDOWN_GRACE_SECS") };
 
         assert_eq!(grace_period(), std::time::Duration::from_secs(5));

@@ -17,20 +17,20 @@ const SUPPORTED_SERVICES: ServiceConfig[] = [
 const envSchema = z.object({
   NEXT_PUBLIC_API_JSON_PATH: z
     .string()
-    .min(1, "NEXT_PUBLIC_API_JSON_PATH deve ser uma string válida")
+    .min(1, "NEXT_PUBLIC_API_JSON_PATH must be a valid string")
     .optional(),
   NEXT_PUBLIC_API: z
     .url({
-      error: "NEXT_PUBLIC_API deve ser uma URL válida",
+      error: "NEXT_PUBLIC_API must be a valid URL",
     })
     .optional(),
   NEXT_PUBLIC_MODE: z.enum(["JSON", "API", "NO_ENDPOINTS"]),
   NEXT_PUBLIC_RUST_NOTEBOOK_API: z.url({
-    error: "NEXT_PUBLIC_RUST_NOTEBOOK_API é obrigatório",
+    error: "NEXT_PUBLIC_RUST_NOTEBOOK_API is required",
   }),
 });
 
-const envError = "Não é possível acessar o ENV antes de carregá-lo";
+const envError = "Cannot access ENV before loading it";
 
 type env = z.infer<typeof envSchema>;
 
@@ -55,9 +55,7 @@ class Env {
       console.error(errorMsg);
 
       if (typeof window === "undefined") {
-        throw new Error(
-          `Falha na validação das variáveis de ambiente: ${errorMsg}`,
-        );
+        throw new Error(`Environment variable validation failed: ${errorMsg}`);
       }
     } else {
       this.env = result.data;
@@ -82,10 +80,10 @@ class Env {
       const jsonPath = this.get(service.jsonEnvKey);
 
       if (mode === "API" && !apiURL) {
-        throw new Error(`${service.envKey} é obrigatório no modo API`);
+        throw new Error(`${service.envKey} is required in API mode`);
       }
       if (mode === "JSON" && !jsonPath) {
-        throw new Error(`${service.jsonEnvKey} é obrigatório no modo JSON`);
+        throw new Error(`${service.jsonEnvKey} is required in JSON mode`);
       }
 
       const source =

@@ -81,28 +81,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn token_de_tamanho_diferente_nao_casa() {
-        assert!(!tokens_match("segredo", "segred"));
-        assert!(!tokens_match("segredo", "segredoo"));
+    fn tokens_of_different_length_do_not_match() {
+        assert!(!tokens_match("secret", "secre"));
+        assert!(!tokens_match("secret", "secrett"));
     }
 
     #[test]
-    fn token_identico_casa() {
-        assert!(tokens_match("segredo", "segredo"));
+    fn identical_tokens_match() {
+        assert!(tokens_match("secret", "secret"));
     }
 
     #[test]
-    fn token_com_prefixo_correto_nao_casa() {
-        assert!(!tokens_match("segredo", "segredx"));
+    fn token_with_correct_prefix_does_not_match() {
+        assert!(!tokens_match("secret", "secreu"));
     }
 
     #[test]
-    fn peer_ausente_nao_conta_como_loopback() {
+    fn missing_peer_does_not_count_as_loopback() {
         assert!(!is_loopback(None));
     }
 
     #[test]
-    fn so_loopback_e_aceito() {
+    fn only_loopback_is_accepted() {
         let local: SocketAddr = "127.0.0.1:52000".parse().unwrap();
         let local_v6: SocketAddr = "[::1]:52000".parse().unwrap();
         let lan: SocketAddr = "192.168.0.10:52000".parse().unwrap();

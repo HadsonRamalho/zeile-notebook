@@ -2,7 +2,6 @@
 
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
-import { tokenCookieName } from "@/lib/runtime/router";
 import {
   Check,
   ChevronDown,
@@ -36,6 +35,7 @@ import { recordEditActivity } from "@/lib/api/activity-service";
 import { useBlockAnchor } from "@/lib/notebook-anchor";
 import { subscribeNotebookSocket } from "@/lib/notebook-socket";
 import { consumePendingImport } from "@/lib/pendingImport";
+import { tokenCookieName } from "@/lib/runtime/router";
 import type {
   Block,
   BlockMetadata,
@@ -196,8 +196,8 @@ export default function RustInteractivePage({
     }
   };
 
-  // automergeHistory[0] é a versão mais recente; índices crescem para
-  // versões mais antigas (ver buildAutomergeHistory).
+  // automergeHistory[0] is the most recent version; indices grow toward
+  // older versions (see buildAutomergeHistory).
   const previewIndex = automergeHistory.findIndex(
     (entry) => entry.doc === previewDoc,
   );
@@ -345,9 +345,9 @@ export default function RustInteractivePage({
     pingEdit();
   };
 
-  // Deletar um bloco não pede confirmação (fricção alta demais para uma ação
-  // do dia a dia), mas também não é definitivo: um toast com "Desfazer"
-  // reinsere o bloco exato (mesmo id/conteúdo) na mesma posição.
+  // Deleting a block doesn't ask for confirmation (too much friction for an
+  // everyday action), but it isn't final either: a toast with "Undo"
+  // reinserts the exact block (same id/content) at the same position.
   const blocksRootRef = useRef<HTMLDivElement>(null);
 
   const focusBlockAt = useCallback((index: number) => {

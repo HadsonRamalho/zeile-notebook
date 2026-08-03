@@ -1,8 +1,8 @@
 "use client";
 
 import "@excalidraw/excalidraw/index.css";
-import dynamic from "next/dynamic";
 import { Maximize2, Minimize2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readSceneElements, sceneSignature } from "@/lib/drawing-scene";
@@ -88,9 +88,9 @@ export function DrawingCell({
   const [fullscreen, setFullscreen] = useState(false);
   const apiRef = useRef<ExcalidrawApi | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // Assinatura de conteúdo do último estado sincronizado (aplicado ou enviado).
-  // É a única fonte de verdade para detectar eco e quebrar o loop, sem depender
-  // de timing entre updateScene e onChange.
+  // Content signature of the last synced state (applied or sent).
+  // It's the sole source of truth for detecting echo and breaking the loop,
+  // without depending on timing between updateScene and onChange.
   const lastSyncedSig = useRef<string>("");
   const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -121,7 +121,7 @@ export function DrawingCell({
     (elements: readonly DrawingElement[]) => {
       if (!canWrite) return;
       const sig = sceneSignature(elements);
-      // Sem mudança real de conteúdo (ou eco do que acabamos de aplicar).
+      // No real content change (or echo of what we just applied).
       if (sig === lastSyncedSig.current) return;
       lastSyncedSig.current = sig;
       if (commitTimer.current) clearTimeout(commitTimer.current);
@@ -140,7 +140,13 @@ export function DrawingCell({
       style={
         fullscreen
           ? undefined
-          : { height: 480, minHeight: 480, maxHeight: 960, resize: "vertical", overflow: "auto" }
+          : {
+              height: 480,
+              minHeight: 480,
+              maxHeight: 960,
+              resize: "vertical",
+              overflow: "auto",
+            }
       }
       className={cn(
         "print:!h-auto print:!max-h-none print:!overflow-visible",
@@ -164,7 +170,7 @@ export function DrawingCell({
       <ExcalidrawCanvas
         excalidrawAPI={(api) => {
           apiRef.current = api;
-          // Estado inicial já reflete o doc: não deve gerar commit de eco.
+          // Initial state already reflects the doc: should not generate an echo commit.
           lastSyncedSig.current = sceneSignature(initial);
         }}
         initialData={{ elements: initial as never }}

@@ -71,7 +71,7 @@ describe("readSceneElements", () => {
 });
 
 describe("writeSceneElements", () => {
-  it("cria scene quando o bloco ainda não tem", () => {
+  it("creates a scene when the block does not have one yet", () => {
     const doc = notebook([drawingBlock("b1", undefined)]);
 
     writeSceneElements(doc, "b1", [element("e1")]);
@@ -79,7 +79,7 @@ describe("writeSceneElements", () => {
     expect(Object.keys(doc.blocks[0]?.scene?.elements ?? {})).toEqual(["e1"]);
   });
 
-  it("não faz nada quando o bloco não existe", () => {
+  it("does nothing when the block does not exist", () => {
     const doc = notebook([drawingBlock("b1")]);
 
     expect(() =>
@@ -98,7 +98,7 @@ describe("writeSceneElements", () => {
     expect(Object.keys(doc.blocks[0]?.scene?.elements ?? {})).toEqual(["e1"]);
   });
 
-  it("grava cópia profunda, não referência ao objeto de entrada", () => {
+  it("writes a deep copy, not a reference to the input object", () => {
     const doc = notebook([drawingBlock("b1")]);
     const entrada = element("e1", { points: [[0, 0]] });
 
@@ -109,7 +109,7 @@ describe("writeSceneElements", () => {
     expect(gravado).toEqual(entrada);
   });
 
-  it("reescreve quando o conteúdo muda de verdade", () => {
+  it("rewrites when the content actually changes", () => {
     const doc = notebook([drawingBlock("b1", { e1: element("e1") })]);
     const antes = doc.blocks[0]?.scene?.elements.e1;
 
@@ -120,7 +120,7 @@ describe("writeSceneElements", () => {
     expect(depois?.width).toBe(999);
   });
 
-  it("invariante do loop de eco: não reescreve quando só campos voláteis mudam", () => {
+  it("echo-loop invariant: does not rewrite when only volatile fields change", () => {
     const doc = notebook([
       drawingBlock("b1", {
         e1: element("e1", {
@@ -140,7 +140,7 @@ describe("writeSceneElements", () => {
     expect(doc.blocks[0]?.scene?.elements.e1).toBe(antes);
   });
 
-  it("invariante do loop de eco: chamada repetida com o mesmo conteúdo é no-op", () => {
+  it("echo-loop invariant: a repeated call with the same content is a no-op", () => {
     const doc = notebook([drawingBlock("b1")]);
     writeSceneElements(doc, "b1", [element("e1")]);
     const antes = doc.blocks[0]?.scene?.elements.e1;
@@ -150,7 +150,7 @@ describe("writeSceneElements", () => {
     expect(doc.blocks[0]?.scene?.elements.e1).toBe(antes);
   });
 
-  it("reescreve quando um campo não volátil muda junto com os voláteis", () => {
+  it("rewrites when a non-volatile field changes together with volatile ones", () => {
     const doc = notebook([
       drawingBlock("b1", { e1: element("e1", { version: 1, x: 0 }) }),
     ]);
@@ -161,7 +161,7 @@ describe("writeSceneElements", () => {
     expect(doc.blocks[0]?.scene?.elements.e1).not.toBe(antes);
   });
 
-  it("trata isDeleted como conteúdo, não como campo volátil", () => {
+  it("treats isDeleted as content, not as a volatile field", () => {
     const doc = notebook([
       drawingBlock("b1", { e1: element("e1", { isDeleted: false }) }),
     ]);
@@ -188,7 +188,7 @@ describe("sceneSignature", () => {
     expect(sceneSignature([a])).toBe(sceneSignature([b]));
   });
 
-  it("ignora campos voláteis", () => {
+  it("ignores volatile fields", () => {
     const antes = element("a", {
       version: 1,
       versionNonce: 1,
@@ -205,25 +205,25 @@ describe("sceneSignature", () => {
     expect(sceneSignature([antes])).toBe(sceneSignature([depois]));
   });
 
-  it("muda quando o conteúdo muda", () => {
+  it("changes when the content changes", () => {
     expect(sceneSignature([element("a", { x: 0 })])).not.toBe(
       sceneSignature([element("a", { x: 1 })]),
     );
   });
 
-  it("muda quando um elemento é removido", () => {
+  it("changes when an element is removed", () => {
     expect(sceneSignature([element("a"), element("b")])).not.toBe(
       sceneSignature([element("a")]),
     );
   });
 
-  it("muda quando um elemento é marcado como deletado", () => {
+  it("changes when an element is marked as deleted", () => {
     expect(sceneSignature([element("a", { isDeleted: false })])).not.toBe(
       sceneSignature([element("a", { isDeleted: true })]),
     );
   });
 
-  it("é estável para cena vazia", () => {
+  it("is stable for an empty scene", () => {
     expect(sceneSignature([])).toBe("");
   });
 

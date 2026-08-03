@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const cookies = new Map<string, string>();
 
 vi.mock("cookies-next", () => ({
-  getCookie: (nome: string) => cookies.get(nome),
-  setCookie: (nome: string, valor: string) => {
-    cookies.set(nome, valor);
+  getCookie: (name: string) => cookies.get(name),
+  setCookie: (name: string, value: string) => {
+    cookies.set(name, value);
   },
-  deleteCookie: (nome: string) => {
-    cookies.delete(nome);
+  deleteCookie: (name: string) => {
+    cookies.delete(name);
   },
 }));
 
@@ -21,115 +21,118 @@ vi.mock("@/lib/runtime/router", () => ({
 }));
 
 const {
-  guardarSessao,
-  limparSessao,
-  refreshTokenGuardado,
-  renovarSessao,
-  encerrarSessaoNoServidor,
+  storeSession,
+  clearSession,
+  storedRefreshToken,
+  renewSession,
+  endSessionOnServer,
 } = await import("./session");
 
-function sessao(sufixo: string) {
+function session(suffix: string) {
   return {
-    accessToken: `access-${sufixo}`,
-    refreshToken: `refresh-${sufixo}`,
+    accessToken: `access-${suffix}`,
+    refreshToken: `refresh-${suffix}`,
     expiresInSecs: 900,
   };
 }
 
-describe("sessão do cliente", () => {
+describe("client session", () => {
   beforeEach(() => {
     cookies.clear();
     vi.restoreAllMocks();
   });
 
-  it("guarda e limpa os dois tokens", () => {
-    guardarSessao(sessao("um"));
+  it("stores and clears both tokens", () => {
+    storeSession(session("one"));
 
-    expect(cookies.get("auth_token")).toBe("access-um");
-    expect(refreshTokenGuardado()).toBe("refresh-um");
+    expect(cookies.get("auth_token")).toBe("access-one");
+    expect(storedRefreshToken()).toBe("refresh-one");
 
-    limparSessao();
+    clearSession();
 
     expect(cookies.get("auth_token")).toBeUndefined();
-    expect(refreshTokenGuardado()).toBeUndefined();
+    expect(storedRefreshToken()).toBeUndefined();
   });
 
-  it("não tenta renovar sem refresh token guardado", async () => {
+  it("does not try to renew without a stored refresh token", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    await expect(renovarSessao()).resolves.toBeNull();
+    await expect(renewSession()).resolves.toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("renova e passa a usar o par novo", async () => {
-    guardarSessao(sessao("velho"));
+  it("renews and starts using the new pair", async () => {
+    storeSession(session("old"));
 
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
         ok: true,
-        json: async () => sessao("novo"),
+        json: async () => session("new"),
       })),
     );
 
-    await expect(renovarSessao()).resolves.toBe("access-novo");
-    expect(cookies.get("auth_token")).toBe("access-novo");
-    expect(refreshTokenGuardado()).toBe("refresh-novo");
+    await expect(renewSession()).resolves.toBe("access-new");
+    expect(cookies.get("auth_token")).toBe("access-new");
+    expect(storedRefreshToken()).toBe("refresh-new");
   });
 
-  it("colapsa renovações concorrentes numa só chamada", async () => {
-    guardarSessao(sessao("velho"));
+  it("collapses concurrent renewals into a single call", async () => {
+    storeSession(session("old"));
 
-    let chamadas = 0;
+    let calls = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
-        chamadas += 1;
+        calls += 1;
         await new Promise((r) => setTimeout(r, 10));
-        return { ok: true, json: async () => sessao("novo") };
+        return { ok: true, json: async () => session("new") };
       }),
     );
 
-    const resultados = await Promise.all([
-      renovarSessao(),
-      renovarSessao(),
-      renovarSessao(),
+    const results = await Promise.all([
+      renewSession(),
+      renewSession(),
+      renewSession(),
     ]);
 
-    expect(chamadas).toBe(1);
-    expect(resultados).toEqual(["access-novo", "access-novo", "access-novo"]);
+    expect(calls).toBe(1);
+    expect(results).toEqual(["access-new", "access-new", "access-new"]);
   });
 
-  it("libera a próxima renovação depois de terminar", async () => {
-    guardarSessao(sessao("velho"));
+  it("releases the next renewal after finishing", async () => {
+    storeSession(session("old"));
 
-    let chamadas = 0;
+    let calls = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
-        chamadas += 1;
-        return { ok: true, json: async () => sessao(`n${chamadas}`) };
+        calls += 1;
+        return { ok: true, json: async () => session(`n${calls}`) };
       }),
     );
 
-    await renovarSessao();
-    await renovarSessao();
+    await renewSession();
+    await renewSession();
 
-    expect(chamadas).toBe(2);
+    expect(calls).toBe(2);
   });
 
-  it("apaga a sessão quando o servidor recusa o refresh", async () => {
-    guardarSessao(sessao("gasto"));
+  it("clears the session when the server refuses the refresh", async () => {
+    storeSession(session("spent"));
 
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 401 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 401 })),
+    );
 
-    await expect(renovarSessao()).resolves.toBeNull();
-    expect(refreshTokenGuardado()).toBeUndefined();
+    await expect(renewSession()).resolves.toBeNull();
+    expect(storedRefreshToken()).toBeUndefined();
   });
 
-  it("preserva o refresh token quando a rede falha", async () => {
-    guardarSessao(sessao("vivo"));
+  it("preserves the refresh token when the network fails", async () => {
+    storeSession(session("alive"));
 
     vi.stubGlobal(
       "fetch",
@@ -138,26 +141,26 @@ describe("sessão do cliente", () => {
       }),
     );
 
-    await expect(renovarSessao()).resolves.toBeNull();
+    await expect(renewSession()).resolves.toBeNull();
 
-    // Queda de rede não é sessão inválida: descartar aqui deslogaria quem
-    // apenas perdeu conexão.
-    expect(refreshTokenGuardado()).toBe("refresh-vivo");
+    // A network drop is not an invalid session: discarding it here would
+    // log out someone who merely lost connection.
+    expect(storedRefreshToken()).toBe("refresh-alive");
   });
 
-  it("avisa o servidor no logout", async () => {
-    guardarSessao(sessao("aberta"));
+  it("notifies the server on logout", async () => {
+    storeSession(session("open"));
 
     const fetchSpy = vi.fn(async (_url: string, _init: RequestInit) => ({
       ok: true,
     }));
     vi.stubGlobal("fetch", fetchSpy);
 
-    await encerrarSessaoNoServidor();
+    await endSessionOnServer();
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toContain("/user/logout");
-    expect(String(init.body)).toContain("refresh-aberta");
+    expect(String(init.body)).toContain("refresh-open");
   });
 });

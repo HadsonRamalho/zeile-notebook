@@ -137,7 +137,7 @@ pub async fn get_thread(
         .select(CommentThread::as_select())
         .first::<CommentThread>(conn)
         .await
-        .map_err(|_| ApiError::Request("Thread não encontrada".to_string()))
+        .map_err(|_| ApiError::Request("Thread not found".to_string()))
 }
 
 pub async fn get_comment(
@@ -149,7 +149,7 @@ pub async fn get_comment(
         .select(Comment::as_select())
         .first::<Comment>(conn)
         .await
-        .map_err(|_| ApiError::Request("Comentário não encontrado".to_string()))
+        .map_err(|_| ApiError::Request("Comment not found".to_string()))
 }
 
 pub async fn update_thread_status(

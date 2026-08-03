@@ -56,12 +56,13 @@ type ToolButtonConfig = {
   permType?: string;
 };
 
-// Divisor sempre presente entre blocos (e no fim da lista) — antes o gatilho
-// só existia via hover, o que não funciona em touch e fazia o toque cair no
-// bloco por trás (nada estava de fato montado ali até o hover disparar).
-// Agora o botão "+" sempre existe no layout (não é absolutamente posicionado
-// sobre outro conteúdo) e abre/fecha por clique/toque em ambos os casos —
-// hover só aumenta a opacidade no desktop, não é requisito funcional.
+// Divider always present between blocks (and at the end of the list) —
+// previously the trigger only existed via hover, which doesn't work on
+// touch and made the tap land on the block behind it (nothing was actually
+// mounted there until hover fired). Now the "+" button always exists in the
+// layout (not absolutely positioned over other content) and opens/closes on
+// click/tap in both cases — hover only increases opacity on desktop, it's
+// not a functional requirement.
 export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
   const can = useCan();
   const canAddButton = (btn: ToolButtonConfig) => {
@@ -365,11 +366,11 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
         aria-label="Adicionar bloco"
         aria-expanded={open}
         className={cn(
-          // Em mobile o gatilho fica sempre alcançável (sem hover em touch),
-          // mas só ganha o "chip" (borda/fundo/sombra) quando aberto — por
-          // padrão é só o glifo "+", pra não empilhar um círculo cheio entre
-          // cada bloco. A partir de md, o hover já resolve a descoberta, então
-          // o chip só aparece no hover/foco.
+          // On mobile the trigger is always reachable (no hover on touch),
+          // but only gets the "chip" (border/background/shadow) when open —
+          // by default it's just the "+" glyph, so as not to stack a full
+          // circle between every block. From md up, hover already handles
+          // discovery, so the chip only appears on hover/focus.
           "z-floating grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground/70 transition-all hover:text-foreground",
           "md:border md:border-border md:bg-card md:text-muted-foreground md:opacity-0 md:shadow-sm md:group-hover:opacity-100 md:focus-visible:opacity-100",
           open &&

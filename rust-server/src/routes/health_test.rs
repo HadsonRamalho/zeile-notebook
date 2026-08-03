@@ -1,33 +1,33 @@
 use axum::http::StatusCode;
 
-use crate::routes::test_support::{corpo_em_texto, get, responder};
+use crate::routes::test_support::{body_as_text, get, respond};
 
-async fn resposta(path: &str) -> (StatusCode, String) {
-    let response = responder(get(path)).await;
+async fn response_of(path: &str) -> (StatusCode, String) {
+    let response = respond(get(path)).await;
     let status = response.status();
 
-    (status, corpo_em_texto(response).await)
+    (status, body_as_text(response).await)
 }
 
 #[tokio::test]
-async fn live_responde_ok_sem_depender_do_banco() {
-    let (status, corpo) = resposta("/health/live").await;
+async fn live_responds_ok_without_depending_on_the_database() {
+    let (status, body) = response_of("/health/live").await;
 
     assert_eq!(status, StatusCode::OK);
-    assert!(corpo.contains("live"), "corpo inesperado: {corpo}");
+    assert!(body.contains("live"), "unexpected body: {body}");
 }
 
 #[tokio::test]
-async fn ready_responde_503_quando_o_banco_nao_responde() {
-    let (status, corpo) = resposta("/health/ready").await;
+async fn ready_responds_503_when_the_database_does_not_respond() {
+    let (status, body) = response_of("/health/ready").await;
 
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-    assert!(corpo.contains("not_ready"), "corpo inesperado: {corpo}");
+    assert!(body.contains("not_ready"), "unexpected body: {body}");
 }
 
 #[tokio::test]
-async fn health_fica_fora_do_prefixo_api() {
-    let (status, _) = resposta("/api/health/live").await;
+async fn health_stays_outside_the_api_prefix() {
+    let (status, _) = response_of("/api/health/live").await;
 
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
