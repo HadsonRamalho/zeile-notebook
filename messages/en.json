@@ -72,6 +72,7 @@
   },
   "login": {
     "title": "Welcome",
+    "authenticating": "Authenticating",
     "description": "Log in with your GitHub or Google account",
     "account_cloud": "Zeile account",
     "account_local": "Local account",
@@ -193,6 +194,47 @@
       }
     }
   },
+  "admin_notify": {
+    "kind_users": "Users",
+    "kind_teams": "Teams",
+    "kind_notebooks": "Notebooks",
+    "search_placeholder": "Search {kind}...",
+    "searching": "Searching...",
+    "no_results": "No results.",
+    "type_to_search": "Type to search.",
+    "message_heading": "Message",
+    "remove_target_aria": "Remove target",
+    "title_placeholder": "Title",
+    "body_placeholder": "Notification body",
+    "url_placeholder": "Link (optional) — e.g.: /notebook/123",
+    "send_button": "Send notification",
+    "select_target_hint": "Select a target from the search on the side.",
+    "sent_success": "Notification sent",
+    "sent_error": "Failed to send notification"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_read": "Mark all as read",
+    "preferences_aria": "Notification preferences",
+    "empty_title": "All caught up",
+    "empty_description": "Mentions, chat messages, and platform announcements will show up here.",
+    "mark_read_aria": "Mark as read",
+    "remove_aria": "Remove",
+    "time_now": "now",
+    "time_minutes": "min",
+    "time_hours": "h",
+    "time_days": "d",
+    "preferences": {
+      "title": "Preferences",
+      "description": "Control which notifications you receive, globally.",
+      "inapp_label": "In-app notifications",
+      "inapp_hint": "Show up in your notification center.",
+      "push_label": "Push notifications",
+      "push_hint": "Device alerts, even when the app is closed.",
+      "chat_label": "Chat messages",
+      "chat_hint": "Alerts for messages in notebooks and teams."
+    }
+  },
   "settings": {
     "title": "Settings",
     "description": "Manage your appearance and editor preferences.",
@@ -219,6 +261,11 @@
       "editor_font_size": {
         "label": "Code editor font size",
         "description": "Affects every code block across the app."
+      },
+      "push_notifications": {
+        "label": "Push notifications",
+        "denied": "Blocked in your browser settings.",
+        "description": "Get notified when someone mentions you in a notebook chat."
       }
     }
   },
@@ -266,12 +313,16 @@
   "team_settings": {
     "team_form": {
       "team_not_found": "Team not found.",
+      "load_error": "Error loading team data.",
       "back_to_home": "Back to home",
       "description": "Manage team settings, members, and permissions.",
       "general_tab": "General",
       "member_tab": "Members",
       "role_tab": "Roles",
       "chat_tab": "Chat"
+    },
+    "team_chat": {
+      "empty_hint": "Chat with the team — messages are saved."
     },
     "team_data": {
       "team_updated": "Team settings updated successfully.",
@@ -311,6 +362,7 @@
       "confirm_remove_button": "Remove Member",
       "you": "You",
       "role_updated": "Role updated.",
+      "remove_member_success": "Member removed successfully.",
       "member_actions": "Member actions",
       "change_role": "Change role",
       "edit_member_permissions": "Member permissions",

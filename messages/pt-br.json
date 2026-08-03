@@ -72,6 +72,7 @@
   },
   "login": {
     "title": "Bem-vindo",
+    "authenticating": "Autenticando",
     "description": "Faça login com sua conta GitHub ou Google",
     "account_cloud": "Conta Zeile",
     "account_local": "Conta local",
@@ -193,6 +194,47 @@
       }
     }
   },
+  "admin_notify": {
+    "kind_users": "Usuários",
+    "kind_teams": "Times",
+    "kind_notebooks": "Cadernos",
+    "search_placeholder": "Buscar {kind}...",
+    "searching": "Buscando...",
+    "no_results": "Nenhum resultado.",
+    "type_to_search": "Digite para buscar.",
+    "message_heading": "Mensagem",
+    "remove_target_aria": "Remover alvo",
+    "title_placeholder": "Título",
+    "body_placeholder": "Corpo da notificação",
+    "url_placeholder": "Link (opcional) — ex.: /notebook/123",
+    "send_button": "Enviar notificação",
+    "select_target_hint": "Selecione um alvo na busca ao lado.",
+    "sent_success": "Notificação enviada",
+    "sent_error": "Falha ao enviar notificação"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "mark_all_read": "Marcar todas como lidas",
+    "preferences_aria": "Preferências de notificação",
+    "empty_title": "Tudo em dia",
+    "empty_description": "Você verá aqui menções, mensagens de chat e avisos da plataforma.",
+    "mark_read_aria": "Marcar como lida",
+    "remove_aria": "Remover",
+    "time_now": "agora",
+    "time_minutes": "min",
+    "time_hours": "h",
+    "time_days": "d",
+    "preferences": {
+      "title": "Preferências",
+      "description": "Controle globalmente quais notificações você recebe.",
+      "inapp_label": "Notificações no app",
+      "inapp_hint": "Aparecem na sua central de notificações.",
+      "push_label": "Notificações push",
+      "push_hint": "Alertas no dispositivo, mesmo com o app fechado.",
+      "chat_label": "Mensagens de chat",
+      "chat_hint": "Avisos de mensagens em notebooks e times."
+    }
+  },
   "settings": {
     "title": "Configurações",
     "description": "Gerencie suas preferências de aparência e do editor.",
@@ -219,6 +261,11 @@
       "editor_font_size": {
         "label": "Tamanho da fonte no editor de código",
         "description": "Afeta todos os blocos de código da aplicação."
+      },
+      "push_notifications": {
+        "label": "Notificações push",
+        "denied": "Bloqueadas nas configurações do navegador.",
+        "description": "Receba um aviso quando alguém te mencionar no chat de um caderno."
       }
     }
   },
@@ -266,12 +313,16 @@
   "team_settings": {
     "team_form": {
       "team_not_found": "Time não encontrado.",
+      "load_error": "Erro ao carregar dados do time.",
       "back_to_home": "Voltar para o início",
       "description": "Gerencie configurações, membros e permissões do time.",
       "general_tab": "Geral",
       "member_tab": "Membros",
       "role_tab": "Cargos",
       "chat_tab": "Chat"
+    },
+    "team_chat": {
+      "empty_hint": "Converse com o time — as mensagens ficam salvas."
     },
     "team_data": {
       "team_updated": "Configurações do time atualizadas com sucesso.",
@@ -311,6 +362,7 @@
       "confirm_remove_button": "Remover Membro",
       "you": "Você",
       "role_updated": "Cargo atualizado.",
+      "remove_member_success": "Membro removido com sucesso.",
       "member_actions": "Ações do membro",
       "change_role": "Trocar cargo",
       "edit_member_permissions": "Permissões do membro",

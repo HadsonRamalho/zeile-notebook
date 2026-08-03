@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { BackButton } from "@/components/interface/back-button";
 import { NotificationPreferences } from "@/components/interface/notifications/notification-preferences";
@@ -23,19 +24,20 @@ function iconFor(kind: string) {
   return Bell;
 }
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, t: (key: string) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "agora";
-  if (min < 60) return `${min}min`;
+  if (min < 1) return t("time_now");
+  if (min < 60) return `${min}${t("time_minutes")}`;
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h`;
+  if (h < 24) return `${h}${t("time_hours")}`;
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
+  if (d < 7) return `${d}${t("time_days")}`;
   return new Date(iso).toLocaleDateString();
 }
 
 export default function NotificationsPage() {
+  const t = useTranslations("notifications");
   const router = useRouter();
   const [showPrefs, setShowPrefs] = useState(false);
   const { items, unreadCount, loading, markRead, markAllRead, remove } =
@@ -52,7 +54,7 @@ export default function NotificationsPage() {
         <div className="space-y-2">
           <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
             <Bell className="size-6 text-primary" />
-            Notificações
+            {t("title")}
             {unreadCount > 0 && (
               <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground tabular-nums">
                 {unreadCount}
@@ -65,14 +67,14 @@ export default function NotificationsPage() {
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={markAllRead}>
               <CheckCheck className="size-4" />
-              Marcar todas como lidas
+              {t("mark_all_read")}
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon-sm"
             aria-pressed={showPrefs}
-            aria-label="Preferências de notificação"
+            aria-label={t("preferences_aria")}
             onClick={() => setShowPrefs((v) => !v)}
             className={cn(showPrefs && "bg-accent text-foreground")}
           >
@@ -86,7 +88,10 @@ export default function NotificationsPage() {
       {loading ? (
         <div className="space-y-2" aria-hidden>
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-muted/50" />
+            <div
+              key={i}
+              className="h-16 animate-pulse rounded-xl bg-muted/50"
+            />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -94,9 +99,9 @@ export default function NotificationsPage() {
           <div className="grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
             <Bell className="size-6" />
           </div>
-          <h3 className="text-lg font-semibold">Tudo em dia</h3>
+          <h3 className="text-lg font-semibold">{t("empty_title")}</h3>
           <p className="max-w-xs text-sm text-muted-foreground">
-            Você verá aqui menções, mensagens de chat e avisos da plataforma.
+            {t("empty_description")}
           </p>
         </div>
       ) : (
@@ -142,7 +147,7 @@ export default function NotificationsPage() {
                         dateTime={n.createdAt}
                         title={new Date(n.createdAt).toLocaleString()}
                       >
-                        {timeAgo(n.createdAt)}
+                        {timeAgo(n.createdAt, t)}
                       </time>
                     </div>
                     <p className="mt-0.5 line-clamp-2 break-words text-sm text-muted-foreground">
@@ -154,7 +159,7 @@ export default function NotificationsPage() {
                     {unread && (
                       <button
                         type="button"
-                        aria-label="Marcar como lida"
+                        aria-label={t("mark_read_aria")}
                         onClick={() => markRead(n.id)}
                         className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
@@ -163,7 +168,7 @@ export default function NotificationsPage() {
                     )}
                     <button
                       type="button"
-                      aria-label="Remover"
+                      aria-label={t("remove_aria")}
                       onClick={() => remove(n.id)}
                       className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >

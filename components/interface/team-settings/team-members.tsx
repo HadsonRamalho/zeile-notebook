@@ -154,7 +154,7 @@ export function TeamMembers({
     try {
       await removeMember(teamId, memberToRemove.id);
 
-      toast.success("Membro removido com sucesso.");
+      toast.success(a("remove_member_success"));
       onUpdate();
       setMemberToRemove(null);
     } catch (err) {

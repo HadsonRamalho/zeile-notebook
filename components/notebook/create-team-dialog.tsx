@@ -80,10 +80,9 @@ export function CreateTeamDialog({
       <AlertDialogContent className="sm:max-w-md">
         <form onSubmit={handleCreateTeam}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Criar Novo Time</AlertDialogTitle>
+            <AlertDialogTitle>{a("new_team_title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Preencha os detalhes para criar um novo espaço de trabalho
-              colaborativo.
+              {a("new_team_description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
