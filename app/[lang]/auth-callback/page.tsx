@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Suspense, useEffect } from "react";
 import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
 import { useAuth } from "@/context/auth-context";
 
 function AuthContent() {
+  const t = useTranslations("login");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { githubSignIn } = useAuth();
@@ -30,19 +32,24 @@ function AuthContent() {
 
   return (
     <div className="flex h-screen w-full items-center justify-center flex-col gap-4">
-      <HelixPercentLoader label="Autenticando" />
-      <p className="text-muted-foreground animate-pulse">Autenticando...</p>
+      <HelixPercentLoader label={t("authenticating")} />
+      <p className="text-muted-foreground animate-pulse">
+        {t("authenticating")}...
+      </p>
     </div>
   );
 }
 
 export default function AuthCallbackPage() {
+  const tLoading = useTranslations();
   return (
     <Suspense
       fallback={
         <div className="flex h-screen w-full items-center justify-center flex-col gap-4">
-          <HelixPercentLoader label="Carregando" />
-          <p className="text-muted-foreground animate-pulse">Carregando...</p>
+          <HelixPercentLoader label={tLoading("loading")} />
+          <p className="text-muted-foreground animate-pulse">
+            {tLoading("loading")}
+          </p>
         </div>
       }
     >

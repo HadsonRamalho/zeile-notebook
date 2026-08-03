@@ -1,6 +1,7 @@
 "use client";
 
 import { BellRing, Inbox, MessagesSquare } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -20,35 +21,36 @@ const DEFAULTS: Prefs = {
   chatEnabled: true,
 };
 
-const ROWS: {
-  key: keyof Prefs;
-  label: string;
-  hint: string;
-  icon: typeof BellRing;
-}[] = [
-  {
-    key: "inappEnabled",
-    label: "Notificações no app",
-    hint: "Aparecem na sua central de notificações.",
-    icon: Inbox,
-  },
-  {
-    key: "pushEnabled",
-    label: "Notificações push",
-    hint: "Alertas no dispositivo, mesmo com o app fechado.",
-    icon: BellRing,
-  },
-  {
-    key: "chatEnabled",
-    label: "Mensagens de chat",
-    hint: "Avisos de mensagens em notebooks e times.",
-    icon: MessagesSquare,
-  },
-];
-
 export function NotificationPreferences() {
+  const t = useTranslations("notifications.preferences");
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
+
+  const rows: {
+    key: keyof Prefs;
+    label: string;
+    hint: string;
+    icon: typeof BellRing;
+  }[] = [
+    {
+      key: "inappEnabled",
+      label: t("inapp_label"),
+      hint: t("inapp_hint"),
+      icon: Inbox,
+    },
+    {
+      key: "pushEnabled",
+      label: t("push_label"),
+      hint: t("push_hint"),
+      icon: BellRing,
+    },
+    {
+      key: "chatEnabled",
+      label: t("chat_label"),
+      hint: t("chat_hint"),
+      icon: MessagesSquare,
+    },
+  ];
 
   useEffect(() => {
     fetchNotificationPreferences()
@@ -69,17 +71,17 @@ export function NotificationPreferences() {
   const update = (key: keyof Prefs, value: boolean) => {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
-    saveNotificationPreference({ scopeKind: "global", ...next }).catch(() => {});
+    saveNotificationPreference({ scopeKind: "global", ...next }).catch(
+      () => {},
+    );
   };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <h2 className="mb-1 text-sm font-semibold">Preferências</h2>
-      <p className="mb-4 text-xs text-muted-foreground">
-        Controle globalmente quais notificações você recebe.
-      </p>
+      <h2 className="mb-1 text-sm font-semibold">{t("title")}</h2>
+      <p className="mb-4 text-xs text-muted-foreground">{t("description")}</p>
       <div className="divide-y divide-border">
-        {ROWS.map((row) => (
+        {rows.map((row) => (
           <div key={row.key} className="flex items-center gap-3 py-3">
             <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
               <row.icon className="size-4" />

@@ -131,12 +131,12 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
         }
       })
       .catch(() => {
-        toast.error("Erro ao carregar dados do time.");
+        toast.error(t("load_error"));
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [teamId]);
+  }, [teamId, t]);
 
   if (isLoading) {
     return (

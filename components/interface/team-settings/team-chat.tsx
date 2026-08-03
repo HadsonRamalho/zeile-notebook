@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import {
   ChatConversation,
@@ -50,6 +51,7 @@ function upsert(list: ChatMessageDTO[], msg: ChatMessageDTO): ChatMessageDTO[] {
 }
 
 export function TeamChat({ teamId }: { teamId: string }) {
+  const t = useTranslations("team_settings.team_chat");
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [caps, setCaps] = useState<CapabilitySnapshot | null>(null);
@@ -149,7 +151,7 @@ export function TeamChat({ teamId }: { teamId: string }) {
             .catch(() => {})
         }
         loadVersions={(id) => fetchTeamMessageVersions(teamId, id)}
-        emptyHint="Converse com o time — as mensagens ficam salvas."
+        emptyHint={t("empty_hint")}
       />
     </div>
   );

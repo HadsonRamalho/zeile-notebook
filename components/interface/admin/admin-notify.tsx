@@ -1,6 +1,7 @@
 "use client";
 
 import { Book, Check, Loader2, Search, Send, Users, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,12 +15,6 @@ import {
 } from "@/lib/api/admin-service";
 import { cn } from "@/lib/utils";
 
-const KINDS: { value: AdminSearchKind; label: string; icon: typeof Users }[] = [
-  { value: "users", label: "Usuários", icon: Users },
-  { value: "teams", label: "Times", icon: Users },
-  { value: "notebooks", label: "Cadernos", icon: Book },
-];
-
 const TARGET_KIND: Record<AdminSearchKind, "user" | "team" | "notebook"> = {
   users: "user",
   teams: "team",
@@ -27,6 +22,13 @@ const TARGET_KIND: Record<AdminSearchKind, "user" | "team" | "notebook"> = {
 };
 
 export function AdminNotify() {
+  const t = useTranslations("admin_notify");
+  const KINDS: { value: AdminSearchKind; label: string; icon: typeof Users }[] =
+    [
+      { value: "users", label: t("kind_users"), icon: Users },
+      { value: "teams", label: t("kind_teams"), icon: Users },
+      { value: "notebooks", label: t("kind_notebooks"), icon: Book },
+    ];
   const [kind, setKind] = useState<AdminSearchKind>("users");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AdminSearchResult[]>([]);
@@ -69,14 +71,14 @@ export function AdminNotify() {
         body: body.trim(),
         url: url.trim() || undefined,
       });
-      toast.success("Notificação enviada");
+      toast.success(t("sent_success"));
       setTitle("");
       setBody("");
       setUrl("");
       setSelected(null);
       setQuery("");
     } catch {
-      toast.error("Falha ao enviar notificação");
+      toast.error(t("sent_error"));
     } finally {
       setSending(false);
     }
@@ -113,7 +115,10 @@ export function AdminNotify() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Buscar ${KINDS.find((k) => k.value === kind)?.label.toLowerCase()}...`}
+            placeholder={t("search_placeholder", {
+              kind:
+                KINDS.find((k) => k.value === kind)?.label.toLowerCase() ?? "",
+            })}
             className="pl-9"
           />
         </div>
@@ -121,11 +126,11 @@ export function AdminNotify() {
         <div className="max-h-72 space-y-1 overflow-y-auto">
           {searching ? (
             <div className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Buscando...
+              <Loader2 className="size-4 animate-spin" /> {t("searching")}
             </div>
           ) : results.length === 0 ? (
             <p className="px-1 py-2 text-sm text-muted-foreground">
-              {query.trim() ? "Nenhum resultado." : "Digite para buscar."}
+              {query.trim() ? t("no_results") : t("type_to_search")}
             </p>
           ) : (
             results.map((r) => (
@@ -161,13 +166,13 @@ export function AdminNotify() {
 
       <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Mensagem</h3>
+          <h3 className="text-sm font-semibold">{t("message_heading")}</h3>
           {selected && (
             <span className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary">
               {selected.label}
               <button
                 type="button"
-                aria-label="Remover alvo"
+                aria-label={t("remove_target_aria")}
                 onClick={() => setSelected(null)}
               >
                 <X className="size-3" />
@@ -179,20 +184,20 @@ export function AdminNotify() {
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Título"
+          placeholder={t("title_placeholder")}
           maxLength={255}
         />
         <Textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Corpo da notificação"
+          placeholder={t("body_placeholder")}
           rows={4}
           className="resize-none"
         />
         <Input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Link (opcional) — ex.: /notebook/123"
+          placeholder={t("url_placeholder")}
         />
 
         <Button
@@ -205,11 +210,11 @@ export function AdminNotify() {
           ) : (
             <Send className="size-4" />
           )}
-          Enviar notificação
+          {t("send_button")}
         </Button>
         {!selected && (
           <p className="text-center text-xs text-muted-foreground">
-            Selecione um alvo na busca ao lado.
+            {t("select_target_hint")}
           </p>
         )}
       </div>

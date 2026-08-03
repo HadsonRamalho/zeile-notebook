@@ -9,7 +9,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/motion/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -96,11 +101,19 @@ export function SettingsForm() {
             className="w-full"
           >
             <TabsList className="w-fit">
-              <TabsTrigger value="general" className="gap-2" indicatorClassName="bg-primary">
+              <TabsTrigger
+                value="general"
+                className="gap-2"
+                indicatorClassName="bg-primary"
+              >
                 <Palette size={16} />
                 {t("tabs.general")}
               </TabsTrigger>
-              <TabsTrigger value="editor" className="gap-2" indicatorClassName="bg-primary">
+              <TabsTrigger
+                value="editor"
+                className="gap-2"
+                indicatorClassName="bg-primary"
+              >
                 <SlidersHorizontal size={16} />
                 {t("tabs.editor")}
               </TabsTrigger>
@@ -158,7 +171,10 @@ export function SettingsForm() {
                       {t("fields.language.description")}
                     </p>
                   </div>
-                  <Select defaultValue={currentLocale} onValueChange={onLocaleChange}>
+                  <Select
+                    defaultValue={currentLocale}
+                    onValueChange={onLocaleChange}
+                  >
                     <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
@@ -175,17 +191,19 @@ export function SettingsForm() {
                     <div className="flex items-center justify-between gap-4">
                       <div className="space-y-0.5">
                         <p className="text-sm font-medium">
-                          Notificações push
+                          {t("fields.push_notifications.label")}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {pushSubscription.permission === "denied"
-                            ? "Bloqueadas nas configurações do navegador."
-                            : "Receba um aviso quando alguém te mencionar no chat de um caderno."}
+                            ? t("fields.push_notifications.denied")
+                            : t("fields.push_notifications.description")}
                         </p>
                       </div>
                       <Button
                         type="button"
-                        variant={pushSubscription.isSubscribed ? "outline" : "default"}
+                        variant={
+                          pushSubscription.isSubscribed ? "outline" : "default"
+                        }
                         disabled={
                           pushSubscription.isLoading ||
                           pushSubscription.permission === "denied"
