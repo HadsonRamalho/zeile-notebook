@@ -8,6 +8,14 @@ export type UserRole = "Admin" | "User";
 
 export type AuthProvider = "Email" | "Google" | "Github";
 
+export type OAuthProviderSlug = "github" | "google";
+
+export interface AuthMethods {
+  password: boolean;
+  providers: OAuthProviderSlug[];
+  primary_provider: AuthProvider;
+}
+
 export interface User {
   id: string;
   public_id: number;

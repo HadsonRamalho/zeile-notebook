@@ -37,13 +37,13 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-context";
 import { updateProfile } from "@/lib/api/user-service";
-import { resolve } from "@/lib/runtime/router";
 import { profileSchema } from "@/lib/schemas/user-schemas";
 import type { ProfileFormValues } from "@/lib/types/user-types";
 import { GithubIcon } from "./icons/github-icon";
 import { GoogleIcon } from "./icons/google-icon";
 import { BackButton } from "./interface/back-button";
 import { DeleteAccountDialog } from "./interface/delete-account-dialog";
+import { ProfileConnections } from "./interface/profile/profile-connections";
 import { ProfileSecurityForm } from "./interface/profile/profile-security-form";
 
 export function ProfileForm() {
@@ -55,11 +55,6 @@ export function ProfileForm() {
     "general",
   );
   const canEditEmail = user?.primary_provider === "Email";
-
-  const handleLinkGithub = () => {
-    const redirectUrl = `${resolve("auth").baseUrl}/user/link/github`;
-    window.location.href = redirectUrl;
-  };
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -248,13 +243,6 @@ export function ProfileForm() {
                   </div>
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 gap-4 md:flex justify-end border-t px-6 py-4">
-                  {user?.primary_provider !== "Github" && (
-                    <Button onClick={handleLinkGithub} type="button">
-                      <GithubIcon />
-                      {t("profile_card.link_to_github")}
-                    </Button>
-                  )}
-
                   <Button
                     type="submit"
                     disabled={isSaving || !form.formState.isDirty}
@@ -275,7 +263,9 @@ export function ProfileForm() {
           </TabsContent>
         )}
 
-        <TabsContent value="account" className="w-full">
+        <TabsContent value="account" className="w-full space-y-6">
+          <ProfileConnections />
+
           <Card className="border-destructive/50 bg-destructive/5">
             <CardHeader>
               <CardTitle className="text-destructive flex items-center gap-2">
