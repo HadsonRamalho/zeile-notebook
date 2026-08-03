@@ -124,9 +124,9 @@ tema de shutdown; são a dívida que a escrita do diagrama de isolamento do READ
 
 #### 7 · Compatibilidade de versão (Q100)
 
-- [ ] Versão de contrato exposta no `health/ready` + aviso ao cliente velho demais
-- [ ] **Guarda de downgrade de migration** — recusar o boot se o banco estiver migrado à frente do binário. Único risco que corrompe dado na máquina do usuário
-- [ ] Política de versão mínima suportada em ADR (governa o prazo do alias do Q29)
+- [x] Versão de contrato exposta no `health/ready` + aviso ao cliente velho demais. `contract_version` e `min_supported_contract_version` no payload; cliente que declara versão via header `X-Contract-Version` abaixo do mínimo recebe `client_contract_outdated: true` e gera `tracing::warn!`
+- [x] **Guarda de downgrade de migration** — recusar o boot se o banco estiver migrado à frente do binário. `guard_against_migration_downgrade` compara a última versão aplicada com a mais recente embutida no binário antes de `run_pending_migrations`; testado contra Postgres real (aceita banco em dia, rejeita migration "do futuro")
+- [x] Política de versão mínima suportada em ADR (governa o prazo do alias do Q29). [docs/decisions/0001-contract-version-policy.md](decisions/0001-contract-version-policy.md) — janela de 90 dias antes de subir `min_supported_contract_version`, amarrada à remoção do `serde alias`
 
 #### 8 · Crates e gate de release (Q101)
 

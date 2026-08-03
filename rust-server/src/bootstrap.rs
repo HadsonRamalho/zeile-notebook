@@ -31,6 +31,9 @@ pub enum BootError {
     #[error("failed to apply embedded migrations: {0}")]
     Migration(String),
 
+    #[error("{0}")]
+    MigrationDowngrade(String),
+
     #[error("failed to build the Postgres connection pool: {0}")]
     Pool(String),
 
