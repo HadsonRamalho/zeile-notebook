@@ -32,6 +32,8 @@ mod middleware_test;
 pub mod notebook;
 pub mod notifications;
 #[cfg(test)]
+mod oauth_test;
+#[cfg(test)]
 mod rate_limit_global_test;
 
 pub mod permissions;
