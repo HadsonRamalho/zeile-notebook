@@ -100,7 +100,7 @@ implementação, não um arquivo.
 - [x] `GET /api/auth/providers` (G7) devolve a lista de providers configurados
 - [x] `GET /api/user/auth/methods` diz à UI o que a conta tem hoje: senha, providers vinculados e o primário
 - [x] Env novas documentadas: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-- [ ] Front: botão do Google no login e card de conexões no perfil, com strings em pt-br e en
+- [x] Front: botões de login vindos de `/api/auth/providers` e card de Conexões no perfil (vincular, desvincular, aviso de senha ausente), com strings em pt-br e en
 - [ ] Tela de consentimento do Google publicada e domínio verificado — bloqueia o uso em produção fora do modo de teste
 
 **Três correções de segurança que não estavam no plano** e que o trabalho tornou obrigatórias:

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/auth-context";
+import { getAuthProviders } from "@/lib/api/auth-service";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
   type AccountType,
@@ -36,8 +37,10 @@ import {
 } from "@/lib/runtime/router";
 import { loginSchema } from "@/lib/schemas/auth-schemas";
 import type { LoginFormValues } from "@/lib/types/auth-types";
+import type { OAuthProviderSlug } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
 import { GithubIcon } from "./icons/github-icon";
+import { GoogleIcon } from "./icons/google-icon";
 import { BackButton } from "./interface/back-button";
 
 export function LoginForm({
@@ -51,6 +54,7 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("cloud");
+  const [providers, setProviders] = useState<OAuthProviderSlug[]>([]);
   const searchParams = useSearchParams();
   const authError = searchParams.get("auth_error");
 
@@ -61,8 +65,14 @@ export function LoginForm({
     }
   }, [account]);
 
-  const handleGithubLogin = () => {
-    const redirectUrl = `${resolve("auth", accountType).baseUrl}/user/login/github`;
+  useEffect(() => {
+    getAuthProviders()
+      .then((resposta) => setProviders(resposta.providers))
+      .catch(() => setProviders([]));
+  }, []);
+
+  const handleOAuthLogin = (provider: OAuthProviderSlug) => {
+    const redirectUrl = `${resolve("auth", accountType).baseUrl}/user/login/${provider}`;
     window.location.href = redirectUrl;
   };
 
@@ -138,18 +148,32 @@ export function LoginForm({
               </div>
             )}
 
-            {accountType === "cloud" && (
+            {accountType === "cloud" && providers.length > 0 && (
               <>
                 <div className="flex flex-col gap-4">
-                  <Button
-                    variant="outline"
-                    type="button"
-                    disabled={isLoading}
-                    onClick={handleGithubLogin}
-                  >
-                    <GithubIcon />
-                    {t("github_button")}
-                  </Button>
+                  {providers.includes("github") && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => handleOAuthLogin("github")}
+                    >
+                      <GithubIcon />
+                      {t("github_button")}
+                    </Button>
+                  )}
+
+                  {providers.includes("google") && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => handleOAuthLogin("google")}
+                    >
+                      <GoogleIcon />
+                      {t("google_button")}
+                    </Button>
+                  )}
                 </div>
 
                 <div className="relative">

@@ -94,9 +94,18 @@
       "github_response_error": "Erro ao validar resposta do GitHub. Tente novamente.",
       "github_data_error": "Erro ao validar dados enviados pelo GitHub. Tente novamente.",
       "github_emails_not_found": "Não encontramos seus e-mails vinculados ao GitHub. Tente novamente ou cadastre-se por outro meio.",
-      "wrong_login_method": "Erro ao realizar login. Tente novamente com outro método de autenticação.",
-      "generic_github_error": "Não conseguimos nos comunicar com o GitHub. Tente novamente."
-    }
+      "generic_github_error": "Não conseguimos nos comunicar com o GitHub. Tente novamente.",
+      "google_response_failed": "Falha ao se comunicar com o Google. Tente novamente.",
+      "google_response_error": "Erro ao validar resposta do Google. Tente novamente.",
+      "google_data_error": "Erro ao validar dados enviados pelo Google. Tente novamente.",
+      "google_emails_not_found": "Não encontramos um e-mail na sua conta Google. Tente outro método.",
+      "google_email_not_verified": "Seu e-mail não está verificado no Google. Verifique-o e tente de novo.",
+      "github_email_not_verified": "Seu e-mail não está verificado no GitHub. Verifique-o e tente de novo.",
+      "invalid_state": "A sessão de login expirou ou foi aberta em outro navegador. Comece de novo.",
+      "unknown_provider": "Método de login desconhecido.",
+      "oauth_unavailable": "Esse método de login não está disponível nesta instalação."
+    },
+    "google_button": "Login com Google"
   },
   "signup": {
     "title": "Crie sua conta",
@@ -142,7 +151,6 @@
       "update_image": "Alterar foto",
       "full_name": "Nome Completo",
       "email": "E-mail",
-      "link_to_github": "Vincular ao GitHub",
       "save": "Salvar Alterações",
       "profile_updated": "Perfil atualizado!",
       "profile_update_error": "Erro ao atualizar o perfil",
@@ -165,6 +173,24 @@
       "delete_account": "Deletar Conta",
       "delete_account_description": "Isso excluirá permanentemente sua conta e todos os seus dados.",
       "delete_account_button": "Deletar Conta"
+    },
+    "connections": {
+      "title": "Conexões",
+      "description": "Métodos que você pode usar para entrar na sua conta.",
+      "link": "Vincular",
+      "unlink": "Desvincular",
+      "status_linked": "Vinculado",
+      "status_unlinked": "Não vinculado",
+      "linked_success": "{provider} vinculado à sua conta.",
+      "unlinked_success": "{provider} desvinculado da sua conta.",
+      "set_password_hint": "Sua conta não tem senha. Para poder desvincular um provedor, defina uma senha antes.",
+      "set_password_link": "Definir senha",
+      "errors": {
+        "link_failed": "Não conseguimos vincular esse provedor. Tente novamente.",
+        "unlink_failed": "Não conseguimos desvincular esse provedor. Tente novamente.",
+        "already_linked": "Essa conta do provedor já está vinculada a outro usuário.",
+        "last_login_method": "Este é o seu último meio de login. Defina uma senha antes de desvinculá-lo."
+      }
     }
   },
   "settings": {

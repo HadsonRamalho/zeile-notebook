@@ -94,9 +94,18 @@
       "github_response_error": "Error validating GitHub response. Try again.",
       "github_data_error": "Error validating data sent by GitHub. Try again.",
       "github_emails_not_found": "We couldn't find any emails linked to your GitHub. Try again or sign up using another method.",
-      "wrong_login_method": "Login error. Try again with a different authentication method.",
-      "generic_github_error": "We couldn't communicate with GitHub. Try again."
-    }
+      "generic_github_error": "We couldn't communicate with GitHub. Try again.",
+      "google_response_failed": "Failed to reach Google. Please try again.",
+      "google_response_error": "Failed to validate Google's response. Please try again.",
+      "google_data_error": "Failed to validate the data sent by Google. Please try again.",
+      "google_emails_not_found": "We couldn't find an email on your Google account. Try another method.",
+      "google_email_not_verified": "Your Google email is not verified. Verify it and try again.",
+      "github_email_not_verified": "Your GitHub email is not verified. Verify it and try again.",
+      "invalid_state": "The sign-in session expired or started in another browser. Please start over.",
+      "unknown_provider": "Unknown sign-in method.",
+      "oauth_unavailable": "This sign-in method is not available on this installation."
+    },
+    "google_button": "Sign in with Google"
   },
   "signup": {
     "title": "Create an account",
@@ -142,7 +151,6 @@
       "update_image": "Change photo",
       "full_name": "Full Name",
       "email": "Email",
-      "link_to_github": "Link to GitHub",
       "save": "Save Changes",
       "profile_updated": "Profile updated!",
       "profile_update_error": "Error updating profile",
@@ -165,6 +173,24 @@
       "delete_account": "Delete Account",
       "delete_account_description": "This will permanently delete your account and all your data.",
       "delete_account_button": "Delete Account"
+    },
+    "connections": {
+      "title": "Connections",
+      "description": "Methods you can use to sign in to your account.",
+      "link": "Link",
+      "unlink": "Unlink",
+      "status_linked": "Linked",
+      "status_unlinked": "Not linked",
+      "linked_success": "{provider} linked to your account.",
+      "unlinked_success": "{provider} unlinked from your account.",
+      "set_password_hint": "Your account has no password. Set one before you can unlink a provider.",
+      "set_password_link": "Set a password",
+      "errors": {
+        "link_failed": "We couldn't link this provider. Please try again.",
+        "unlink_failed": "We couldn't unlink this provider. Please try again.",
+        "already_linked": "That provider account is already linked to another user.",
+        "last_login_method": "This is your last sign-in method. Set a password before unlinking it."
+      }
     }
   },
   "settings": {

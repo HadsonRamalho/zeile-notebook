@@ -1,4 +1,9 @@
-import type { LoginUser, RegisterUser, User } from "../types/user-types";
+import type {
+  LoginUser,
+  OAuthProviderSlug,
+  RegisterUser,
+  User,
+} from "../types/user-types";
 import { createApi } from "./base";
 
 const api = createApi("auth");
@@ -13,4 +18,8 @@ export async function register(data: RegisterUser) {
 
 export async function getProfile() {
   return api.get<User>("/user/me");
+}
+
+export async function getAuthProviders() {
+  return api.get<{ providers: OAuthProviderSlug[] }>("/auth/providers");
 }
