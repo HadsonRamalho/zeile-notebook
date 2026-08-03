@@ -130,9 +130,11 @@ tema de shutdown; são a dívida que a escrita do diagrama de isolamento do READ
 
 #### 8 · Crates e gate de release (Q101)
 
-- [ ] `Cargo.toml` de workspace na raiz com `rust-server` + `src-tauri` — reconciliar edition 2024 × 2021 e `rust-version`
-- [ ] Job de gate antes do `build` no `desktop-release.yml` — hoje um push de tag publica instalador para 3 SOs sem verificação
-- [ ] Housekeeping: `description`/`authors`/`license` de scaffold em `src-tauri/Cargo.toml`; `version` fixa vs `package.json` como fonte única; `package.json` ainda é `"name": "docs"`
+- [x] `Cargo.toml` de workspace na raiz com `rust-server` + `src-tauri` — `src-tauri` passou para edition 2024 (igual ao `rust-server`) e `rust-version` foi de `1.77.2` para `1.85`, o piso real da edition 2024. Lockfiles por crate substituídos por um único `Cargo.lock` na raiz
+- [x] Job de gate antes do `build` no `desktop-release.yml` — hoje um push de tag publica instalador para 3 SOs sem verificação. `gate` roda `types:check` + `test` do front e `cargo test` + `cargo check --workspace` do Rust; `build` passa a depender dele (`needs: gate`). **`pnpm lint` ficou fora por ora**: o repo tem 146 arquivos de fonte já rastreados com achados de `biome check` pré-existentes (fora do escopo desta etapa) — travar o release nisso agora violaria a ordem que a própria etapa 13 declara (limpeza antes do gate bloqueante). Entra quando a etapa 13 zerar o lint
+- [x] Housekeeping: `description`/`authors`/`license` de scaffold em `src-tauri/Cargo.toml` preenchidos; `version` sincronizada com `package.json` (`1.0.2`, era `1.0.0`); `package.json` renomeado de `"docs"` para `"zeile-notebook"`
+- [x] **Achado durante a etapa**: `public/sw.js` (gerado pelo build do serwist a partir de `app/sw.ts`) estava commitado por engano e inflava o lint sozinho com centenas de achados — removido do controle de versão e ignorado. `/target` também passou a ser ignorado na raiz, já que agora é o diretório de build único do workspace (antes só `rust-server/target` e `src-tauri/target`, individuais, estavam no `.gitignore`)
+- [x] **`pnpm audit` do frontend, fora do escopo original do Q101 mas resolvido junto**: 79 vulnerabilidades (34 altas, 36 moderadas, 9 baixas) reportadas pelo GitHub. `next` foi de `16.1.6` para `16.2.12` (fecha a maioria: DoS, SSRF, bypass de middleware, XSS); `nanoid`, `lodash-es`, `immutable`, `dompurify`, `esbuild`, `brace-expansion`, `postcss` e `sharp` — todos transitivos, vindos de dentro de `@excalidraw/excalidraw`, `@serwist/*` e do próprio `next` — via `overrides` em `pnpm-workspace.yaml` (não mais em `package.json`: nesta versão do pnpm o campo `pnpm.*` do `package.json` foi descontinuado). `pnpm audit` zerado; `pnpm build`, `pnpm test` e `pnpm types:check` confirmados depois do bump
 
 #### 9 · ⚠ MERGE da `tauri` na `main`
 
