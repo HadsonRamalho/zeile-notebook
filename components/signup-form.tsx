@@ -66,7 +66,7 @@ export function SignupForm({
 
     try {
       await register(
-        { ...data, password_hash: data.password },
+        { ...data, passwordHash: data.password },
         isDesktop ? accountType : undefined,
       );
     } catch (err: any) {

@@ -13,21 +13,21 @@ export type OAuthProviderSlug = "github" | "google";
 export interface AuthMethods {
   password: boolean;
   providers: OAuthProviderSlug[];
-  primary_provider: AuthProvider;
+  primaryProvider: AuthProvider;
 }
 
 export interface User {
   id: string;
-  public_id: number;
+  publicId: number;
   name: string;
   email: string;
-  avatar_url: string | null;
-  primary_provider: AuthProvider;
+  avatarUrl: string | null;
+  primaryProvider: AuthProvider;
   role: UserRole;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 }
 
 export interface UserAuthInfo {
@@ -50,17 +50,17 @@ export interface UpdateUser {
 export interface RegisterUser {
   name: string;
   email: string;
-  password_hash: string;
+  passwordHash: string;
 }
 
 export interface NewUserInternal {
   name: string;
   email: string;
-  password_hash: string | null;
-  primary_provider: AuthProvider;
-  github_id: string | null;
-  google_id: string | null;
-  avatar_url: string | null;
+  passwordHash: string | null;
+  primaryProvider: AuthProvider;
+  githubId: string | null;
+  googleId: string | null;
+  avatarUrl: string | null;
 }
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;

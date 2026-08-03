@@ -54,7 +54,7 @@ export function ProfileForm() {
   const [activeTab, setActiveTab] = useState<"general" | "security" | "account">(
     "general",
   );
-  const canEditEmail = user?.primary_provider === "Email";
+  const canEditEmail = user?.primaryProvider === "Email";
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -154,7 +154,7 @@ export function ProfileForm() {
                   <div className="flex flex-col items-center gap-4 sm:flex-row">
                     <div className="relative group cursor-pointer">
                       <Avatar className="h-24 w-24 border-2 border-border group-hover:opacity-75 transition-opacity">
-                        <AvatarImage src={user?.avatar_url || ""} />
+                        <AvatarImage src={user?.avatarUrl || ""} />
                         <AvatarFallback className="text-2xl">
                           {initials}
                         </AvatarFallback>
@@ -207,14 +207,14 @@ export function ProfileForm() {
                             <FormLabel>{t("profile_card.email")}</FormLabel>
                             {!canEditEmail && (
                               <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-full flex items-center gap-1">
-                                {user?.primary_provider === "Google" && (
+                                {user?.primaryProvider === "Google" && (
                                   <GoogleIcon />
                                 )}
-                                {user?.primary_provider === "Github" && (
+                                {user?.primaryProvider === "Github" && (
                                   <GithubIcon />
                                 )}
                                 {t("profile_card.linked_to")}
-                                {user?.primary_provider}
+                                {user?.primaryProvider}
                               </span>
                             )}
                           </div>

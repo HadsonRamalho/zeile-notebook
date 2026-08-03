@@ -66,7 +66,7 @@ function usePresenceUsers({
       {
         id: socketUserId || "me",
         name: currentUser?.name || "Visitante",
-        avatar: currentUser?.avatar_url || null,
+        avatar: currentUser?.avatarUrl || null,
         isGuest: !currentUser,
         isMe: true,
         color: currentUser?.name

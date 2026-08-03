@@ -118,7 +118,7 @@ export function AuthProvider({
 
     const session = await authApi.post<Session>("/user/register", {
       ...data,
-      primary_provider: "Email",
+      primaryProvider: "Email",
     });
 
     storeSession(session, target);

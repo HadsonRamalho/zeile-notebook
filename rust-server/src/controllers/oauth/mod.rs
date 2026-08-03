@@ -237,6 +237,7 @@ pub async fn api_oauth_login(Path(slug): Path<String>) -> Response {
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LinkStartResponse {
     pub url: String,
 }
@@ -468,6 +469,7 @@ pub async fn api_unlink(
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthMethodsResponse {
     pub password: bool,
     pub providers: Vec<&'static str>,
@@ -498,6 +500,7 @@ pub async fn api_auth_methods(
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProvidersResponse {
     pub providers: Vec<&'static str>,
 }

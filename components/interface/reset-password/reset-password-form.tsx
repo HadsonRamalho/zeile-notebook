@@ -67,7 +67,7 @@ export function ResetPasswordForm({
     try {
       await api.post("/user/execute-password-reset", {
         token,
-        new_password: data.password,
+        newPassword: data.password,
       });
       toast.success(t("success_toast"));
       router.push("/login");
