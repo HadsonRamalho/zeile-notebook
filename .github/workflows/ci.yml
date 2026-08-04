@@ -61,7 +61,7 @@ jobs:
 
       - run: cargo test --manifest-path rust-server/Cargo.toml
 
-      - run: cargo install diesel_cli --no-default-features --features postgres --locked
+      - run: cargo install diesel_cli --version 2.3.10 --no-default-features --features postgres --locked
 
       - run: bash scripts/check_schema.sh
         working-directory: rust-server
