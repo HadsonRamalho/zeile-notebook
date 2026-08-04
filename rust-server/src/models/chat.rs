@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
 
 #[derive(
     Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema, ts_rs::TS,
@@ -40,16 +41,26 @@ pub struct NewChatMessage {
     pub quoted_message_id: Option<Uuid>,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SendMessageRequest {
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "Message must be between 1 and 10000 characters"
+    ))]
     pub content: String,
     pub parent_id: Option<Uuid>,
     pub quoted_message_id: Option<Uuid>,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 pub struct EditMessageRequest {
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "Message must be between 1 and 10000 characters"
+    ))]
     pub content: String,
 }
 

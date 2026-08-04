@@ -213,10 +213,11 @@ pub struct NewTeamRoleRequest {
     pub permissions: RolePermissions,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTeamRole {
     pub id: Uuid,
+    #[validate(length(min = 2, message = "Team role name is required"))]
     pub name: Option<String>,
     #[serde(alias = "can_read")]
     pub can_read: Option<bool>,

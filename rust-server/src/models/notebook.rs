@@ -14,6 +14,7 @@ use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::schema::{blocks, notebooks};
 
@@ -165,9 +166,14 @@ pub struct NewBlock {
     pub position: i32,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNotebookTitle {
+    #[validate(length(
+        min = 1,
+        max = 300,
+        message = "Title must be between 1 and 300 characters"
+    ))]
     pub title: String,
 }
 

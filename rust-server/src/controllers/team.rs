@@ -7,6 +7,7 @@ use axum::{
 use diesel_async::AsyncPgConnection;
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
@@ -130,6 +131,10 @@ pub async fn api_update_team(
     headers: HeaderMap,
     Json(payload): Json<UpdateTeam>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -168,6 +173,10 @@ pub async fn api_create_team_role(
     headers: HeaderMap,
     Json(payload): Json<NewTeamRoleRequest>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -210,6 +219,10 @@ pub async fn api_update_team_role(
     headers: HeaderMap,
     Json(payload): Json<UpdateTeamRole>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -380,6 +393,10 @@ pub async fn api_create_team(
     headers: HeaderMap,
     Json(data): Json<NewTeam>,
 ) -> Result<Json<Team>, ApiError> {
+    if let Err(errors) = data.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await

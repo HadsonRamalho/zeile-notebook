@@ -8,6 +8,7 @@ use rand::{Rng, distributions::Alphanumeric};
 use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
@@ -30,6 +31,10 @@ pub async fn api_invite_member(
     headers: HeaderMap,
     Json(payload): Json<InviteRequest>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let id = extract_claims_from_header(&headers).await?.1.id;
 
     let mut conn = &mut get_conn(&state.pool)
@@ -99,6 +104,10 @@ pub async fn api_accept_invite(
     headers: HeaderMap,
     Json(payload): Json<AcceptInviteRequest>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let id = extract_claims_from_header(&headers).await?.1.id;
 
     let mut conn = &mut get_conn(&state.pool)

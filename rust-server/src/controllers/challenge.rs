@@ -8,6 +8,7 @@ use hyper::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::controllers::challenge_judge::{judge_submission, limits_for, normalize};
 use crate::controllers::jwt::extract_claims_from_header;
@@ -22,12 +23,14 @@ use crate::models::error::ApiError;
 use crate::models::state::AppState;
 use crate::models::user::UserRole;
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateChallengeRequest {
     pub notebook_id: Uuid,
     pub block_id: Option<Uuid>,
+    #[validate(length(max = 100, message = "Slug must be at most 100 characters"))]
     pub slug: String,
+    #[validate(length(max = 300, message = "Title must be at most 300 characters"))]
     pub title: String,
     pub statement_md: String,
     pub difficulty: Option<String>,
@@ -42,9 +45,10 @@ pub struct CreateChallengeRequest {
     pub team_id: Option<Uuid>,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateChallengeRequest {
+    #[validate(length(max = 300, message = "Title must be at most 300 characters"))]
     pub title: Option<String>,
     pub statement_md: Option<String>,
     pub difficulty: Option<String>,
@@ -100,8 +104,10 @@ const VALID_JUDGE_MODES: [&str; 3] = ["io", "reference", "property"];
 
 async fn conn_from(
     state: &AppState,
-) -> Result<diesel_async::pooled_connection::deadpool::Object<diesel_async::AsyncPgConnection>, ApiError>
-{
+) -> Result<
+    diesel_async::pooled_connection::deadpool::Object<diesel_async::AsyncPgConnection>,
+    ApiError,
+> {
     get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))
@@ -184,6 +190,10 @@ pub async fn api_create_challenge(
     headers: HeaderMap,
     Json(payload): Json<CreateChallengeRequest>,
 ) -> Result<(StatusCode, Json<ChallengePublic>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     require(
@@ -200,7 +210,9 @@ pub async fn api_create_challenge(
         return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
     }
     if payload.slug.trim().is_empty() || payload.title.trim().is_empty() {
-        return Err(ApiError::Request("slug e title são obrigatórios".to_string()));
+        return Err(ApiError::Request(
+            "slug e title são obrigatórios".to_string(),
+        ));
     }
     if payload.languages.is_empty() {
         return Err(ApiError::Request(
@@ -243,6 +255,10 @@ pub async fn api_update_challenge(
     headers: HeaderMap,
     Json(payload): Json<UpdateChallengeRequest>,
 ) -> Result<Json<ChallengePublic>, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
