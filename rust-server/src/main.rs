@@ -30,9 +30,12 @@ pub struct CodeRequest {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CodeResponse {
-    stdout: String,
-    stderr: String,
+    pub status: crate::executor::ExecStatus,
+    pub error_code: Option<String>,
+    pub stdout: String,
+    pub stderr: String,
 }
 
 #[tokio::main]
