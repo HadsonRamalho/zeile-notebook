@@ -58,7 +58,9 @@ pub async fn api_create_notebook(
         Err(e) => return Err(ApiError::Database(e)),
     }
 
-    let _ = models::notebook::create_block(conn, &new_block).await;
+    models::notebook::create_block(conn, &new_block)
+        .await
+        .map_err(ApiError::Database)?;
 
     Ok((StatusCode::OK, Json(notebook_id)))
 }
