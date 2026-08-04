@@ -62,14 +62,14 @@ salvo indicação. `[ ]` = pendente.
 - [x] `lib/runtime/router.ts` (branch `tauri`) — decide para onde vai o dado do usuário
 - [x] Serviço Postgres + `TEST_MIGRATION_DATABASE_URL` no job `rust-test` do CI — sem eles, `embedded_migrations_apply_from_scratch_and_are_idempotent` retornava cedo e passava sem verificar nada
 
-#### 4 · Capacidade fail-closed (Q99, branch `tauri`)
+#### 4 · Capacidade fail-closed (Q99, branch `tauri`) — [x] concluída
 
 - [x] `capability` obrigatória no tipo: `createApi(cap: Capability)` sem default; remover `export const api = createApi()`. `resolve(capability)` também deixou de aceitar `undefined`, que era o fail-open de verdade
 - [x] Furo 1: `"public"` existe no tipo e nenhum serviço usa — `getPublicNotebookBySlug` está sob `notebook-crud` (local) e roteia para `127.0.0.1` → `getPublicNotebookBySlug` e `fetchPublicNotebooks` passaram para um `createApi("public")`
 - [x] Furo 2: `login-form.tsx` e `profile-form.tsx` importam `BASE_URL` direto, furando `resolve()` → `BASE_URL` deixou de ser exportado; ambos usam `resolve("auth")`. O login passa a conta por argumento porque o seletor de conta só mexe em estado do React, e o cookie pode estar desatualizado
 - [x] Furo 3: `forgot-password-form.tsx` e `reset-password-form.tsx` usam o `api` sem capacidade → `createApi("auth")` em cada um
 - [x] Furo 4: `app/api/search/route.ts` (rota de servidor) importa o cliente do browser → `fetch` direto, tipado, sem passar pelo cliente que lê cookie do browser
-- [ ] Furo 5: `exec-compiled` sem eixo de plataforma → resolvido pela etapa 12 (Q104)
+- [x] Furo 5: `exec-compiled` sem eixo de plataforma → resolvido pela etapa 12 (Q104, PR #117/#118)
 
 `CAPABILITIES` virou array `as const` (o tipo deriva dele), e um teste garante que toda capacidade
 está classificada como local ou exclusiva de nuvem — capacidade nova sem classificação quebra a suíte
@@ -168,15 +168,15 @@ branch local `tauri` (`aa268ac`) é ancestral de `main`; nada pendente para mesc
 
 **Achado fora do escopo, registrado e não bloqueante**: `routes::rate_limit_global_test::anonymous_traffic_has_a_per_origin_ceiling` é flaky sob paralelismo do `cargo test` (rate limiter global com estado compartilhado) — passou no rerun, sem relação com o diff desta etapa.
 
-#### 12 · Capacidade e erro estruturado
+#### 12 · Capacidade e erro estruturado — [x] concluída
 
-- [ ] `GET /capabilities` — o backend declara o que sabe fazer, por linguagem (Q104)
-- [ ] `run-rust.ts`: backend devolve `{ status, errorCode, … }`; remover os `includes()` em texto de compilador (Q105)
-- [ ] `validator` nos DTOs de request (Q37)
-- [ ] Mapear erro Diesel por causa: unique → 409, not-found → 404, FK → 400 (Q39)
-- [ ] Proibir `let _ =` sobre `Result`; corrigir `api_create_notebook` (Q40)
-- [ ] `match` exaustivo no `IntoResponse` (Q41)
-- [ ] Sem `throw` raw no frontend (Q38)
+- [x] Mapear erro Diesel por causa: unique → 409, not-found → 404, FK → 400 (Q39) — `From<diesel::result::Error> for ApiError` com `UniqueViolation`/`ForeignKeyViolation`/`NotFound`; mensagem genérica pro cliente, detalhe cru só no log (PR #112)
+- [x] `match` exaustivo no `IntoResponse` (Q41) — sem `_ =>`; achado no caminho: `MultipleAuthorizationErrors` e `InvalidEmail` caíam no catch-all genérico de 500/400 por omissão, igual ao `DATABASE_ERROR` do Q39 (PR #112)
+- [x] Proibir `let _ =` sobre `Result`; corrigir `api_create_notebook` (Q40) — o bloco inicial parava de ser criado em silêncio se `create_block` falhasse; auditoria das ~50 ocorrências restantes não achou outro caso do mesmo padrão (resto é descarte deliberado de efeito colateral ou já propaga erro via `?` antes do `let _`); `#[warn(clippy::let_underscore_must_use)]` adicionado — o `-D warnings` completo é da etapa 13 (PR #114)
+- [x] `validator` nos DTOs de request (Q37) — cobria só auth e metade de `team.rs`; faltava em notebook/chat/comentário/pasta/convite/challenge/template/snapshot/push. Achado: `api_create_team` nunca chamava `.validate()` — nome de time vazio passava direto, o próprio bug que o Q37 descreve (PR #116)
+- [x] `GET /capabilities` — o backend declara o que sabe fazer, por linguagem (Q104) — reaproveita os checks que os testes do executor já faziam (bwrap/prlimit, cargo+rustup+wasm32-wasip1+wasmtime pro Rust, go, clang++/g++, zig 0.15.x), cacheado por processo; resolve o Furo 5 da etapa 4 (PR #117). Frontend: `useExecutionCapabilities` cruza isso com a permissão de bloco pra rust/go/cpp/zig — não python (Pyodide) nem tsx (Babel no browser) — e falha aberta se o endpoint não responder (PR #118)
+- [x] `run-rust.ts`: backend devolve `{ status, errorCode, … }`; remover os `includes()` em texto de compilador (Q105) — `CodeResponse` ganha `ExecStatus` (11 variantes) e `errorCode`; `MODULE_NOT_FOUND` e a detecção de bomba de compilação em C++ já eram lidos no backend, só não saíam como código estável (PR #119). Frontend ramifica por `status`/`errorCode` em vez de string do compilador (PR #120)
+- [x] Sem `throw` raw no frontend (Q38) — único caso restante do padrão: `runTsxInSandbox` (era `lib/api.ts`, hoje `lib/sandbox/tsx-sandbox.ts`) lançava `Error` sem código e sem quem capturasse; virou `ApiClientError` com `BABEL_NOT_READY`, e `handleRunSimple` passou a capturar e mostrar por toast (PR #120)
 
 #### 13 · Limpeza, depois ligar o gate
 
