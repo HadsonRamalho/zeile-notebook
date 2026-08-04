@@ -71,7 +71,7 @@ pub struct RunOutcome {
     pub wall_ms: u64,
 }
 
-fn wasmtime_path() -> String {
+pub(crate) fn wasmtime_path() -> String {
     if let Ok(path) = std::env::var("WASMTIME_PATH") {
         return path;
     }
@@ -187,11 +187,7 @@ pub fn run_envelope_args(binary_path: &str, limits: RunLimits) -> Vec<String> {
     args
 }
 
-pub async fn run_safe_bin(
-    binary_path: &str,
-    stdin: Option<&str>,
-    limits: RunLimits,
-) -> RunOutcome {
+pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLimits) -> RunOutcome {
     let path_obj = Path::new(binary_path);
     if !path_obj.exists() {
         error!("ERROR: Binary does not exist: {}", binary_path);

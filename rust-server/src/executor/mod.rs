@@ -9,6 +9,7 @@ use crate::sec::{
     verify_go_code, verify_zig_code,
 };
 
+pub mod capabilities;
 pub mod sandbox;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -467,7 +468,10 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
         let result = run_compiled(&bin, None, RunLimits::default()).await;
 
         assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
-        assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
+        assert!(
+            result.stdout.contains("hello from the sandbox"),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -572,7 +576,10 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
         let result = run_compiled(&bin, None, RunLimits::default()).await;
 
         assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
-        assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
+        assert!(
+            result.stdout.contains("hello from the sandbox"),
+            "{result:?}"
+        );
     }
 
     #[tokio::test]
@@ -590,7 +597,10 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
         let result = run_compiled(&bin, None, RunLimits::default()).await;
 
         assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
-        assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
+        assert!(
+            result.stdout.contains("hello from the sandbox"),
+            "{result:?}"
+        );
     }
 
     #[tokio::test]
