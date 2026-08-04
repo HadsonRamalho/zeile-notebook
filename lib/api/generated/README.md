@@ -4,6 +4,23 @@ Artefatos gerados a partir da superfície HTTP do `rust-server`. Nunca editar à
 arquivo aqui leva cabeçalho `@generated`. Regime completo em
 [docs/decisoes.md#regime-do-artefato-gerado](../../../docs/decisoes.md#regime-do-artefato-gerado).
 
+## Allowlist (Q28c/Q31) — o que atravessa a fronteira Rust → TS
+
+Quatro categorias cruzam hoje, cada uma com seu próprio mecanismo de allowlist — ampliar o que
+atravessa é sempre mudança de **config**, revisada em PR, nunca edição do arquivo gerado:
+
+| Categoria | Allowlist | Mecanismo |
+|---|---|---|
+| DTOs de request/response | `components(schemas(...))` em `rust-server/src/routes/docs.rs` | `openapi-types.ts` — só o que está listado ali entra no `components.schemas` do OpenAPI |
+| Payload de WebSocket | as raízes `WsServerMessage`/`WsClientMessage` em `rust-server/src/models/ws_message.rs` | `ws-message.ts` — `export_all_to` segue os campos a partir dessas duas raízes |
+| Catálogo de `errorCode` | `ApiError::ALL_ERROR_CODES` em `rust-server/src/models/error.rs`, com teste que trava se divergir de `ApiError::error_code()` | `error-codes.ts` |
+| Chaves de permissão | `sec/catalog/*` em `rust-server/src/sec/catalog/`, snapshot em `contracts/permission-catalog.json` (`UPDATE_PERMISSION_CATALOG_SNAPSHOT=1` regenera) | consumido hoje pela suíte de paridade TS↔Rust (`lib/permissions/engine.test.ts`), ainda não por um gerador de constantes — abertura registrada em Q31 |
+
+Enums de domínio (`BlockType`, `Language`, `GrantEffect`, `GrantTargetKind`, `GrantSubjectKind`,
+`UserRole`, `AuthProvider`) não têm allowlist própria: eles só existem no artefato gerado por
+aparecerem como campo de algum DTO já listado em `components(schemas(...))` — não há como um enum
+de domínio atravessar sem que um DTO already-allowlisted o referencie.
+
 ## `openapi-types.ts`
 
 Gerado por `pnpm generate:openapi-types`, que:
@@ -76,3 +93,22 @@ mesma grafia, exatamente o que a regra "um conceito, uma grafia" (`docs/decisoes
 - O `ApiDoc` do `openapi-types.ts` usa o estilo minimalista já praticado no repo: a maioria das
   respostas declara só o status, sem `body`. O TS gerado para essas rotas tipa a resposta como
   vazia — não é um bug do gerador, é reflexo de a anotação Rust não declarar o schema.
+
+## `error-codes.ts`
+
+Gerado por `pnpm generate:error-codes`, que roda `cargo run -- export-error-codes <tmp>` e formata
+o array com `biome format`. A fonte é `ApiError::ALL_ERROR_CODES` em
+`rust-server/src/models/error.rs` — uma constante mantida ao lado do `match` de
+`ApiError::error_code()`, travada por `all_error_codes_matches_every_variant` (um `match` sem
+wildcard sobre todas as variantes: adicionar uma variante nova sem atualizar o teste não compila).
+
+### O que exige decisão humana
+
+- Toda variante nova de `ApiError` precisa de uma entrada em `ALL_ERROR_CODES` — o teste
+  `all_error_codes_matches_every_variant` força isso, mas é o autor do PR que escreve o código
+  estável (`SCREAMING_SNAKE_CASE`), nunca o gerador.
+
+### Limitações conhecidas
+
+- `ErrorCode` ainda não é consumido por `lib/api/handle-api-error.ts` nem pelas rotas
+  `app/api/*/route.ts` — isso é o Q32 (etapa 11, item 5), não deste gerador.

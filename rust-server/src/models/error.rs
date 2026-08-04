@@ -73,6 +73,28 @@ pub enum ApiError {
     LastLoginMethod,
 }
 
+pub const ALL_ERROR_CODES: &[&str] = &[
+    "BAD_REQUEST",
+    "DATABASE_CONNECTION_ERROR",
+    "INVALID_AUTH_TOKEN",
+    "MULTIPLE_AUTH_ERRORS",
+    "DATABASE_ERROR",
+    "TOKEN_CREATION_FAILED",
+    "INVALID_DATA",
+    "INVALID_EMAIL",
+    "INVALID_CREDENTIALS",
+    "WRONG_PROVIDER",
+    "USER_NOT_ACTIVE",
+    "INVALID_PASSWORD",
+    "MISSING_FRONTEND_URL",
+    "USER_NOT_FOUND",
+    "MISSING_ENV_VAR",
+    "PASSWORDS_DO_NOT_MATCH",
+    "ERROR_SENDING_EMAIL",
+    "PERMISSION_DENIED",
+    "LAST_LOGIN_METHOD",
+];
+
 impl ApiError {
     fn error_code(&self) -> &'static str {
         match self {
@@ -168,5 +190,81 @@ impl IntoResponse for ApiError {
         });
 
         (status, Json(body)).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn one_of_each_variant() -> Vec<ApiError> {
+        vec![
+            ApiError::Request(String::new()),
+            ApiError::DatabaseConnection(String::new()),
+            ApiError::InvalidAuthorizationToken,
+            ApiError::MultipleAuthorizationErrors(Vec::new()),
+            ApiError::Database(String::new()),
+            ApiError::CreateToken(String::new()),
+            ApiError::InvalidData,
+            ApiError::InvalidEmail,
+            ApiError::InvalidCredentials,
+            ApiError::WrongProvider(String::new()),
+            ApiError::NotActiveUser,
+            ApiError::InvalidPassword,
+            ApiError::FrontendUrl,
+            ApiError::UserNotFound,
+            ApiError::MissingFrontendUrl,
+            ApiError::MissingEnv(String::new()),
+            ApiError::PasswordsDoNotMatch,
+            ApiError::SendingEmail,
+            ApiError::PermissionDenied(String::new()),
+            ApiError::LastLoginMethod,
+        ]
+    }
+
+    // exhaustive match with no wildcard: a new variant fails to compile here until
+    // `one_of_each_variant` is updated, so the drift guard below can't go silently stale
+    fn assert_exhaustive(e: &ApiError) {
+        match e {
+            ApiError::Request(_)
+            | ApiError::DatabaseConnection(_)
+            | ApiError::InvalidAuthorizationToken
+            | ApiError::MultipleAuthorizationErrors(_)
+            | ApiError::Database(_)
+            | ApiError::CreateToken(_)
+            | ApiError::InvalidData
+            | ApiError::InvalidEmail
+            | ApiError::InvalidCredentials
+            | ApiError::WrongProvider(_)
+            | ApiError::NotActiveUser
+            | ApiError::InvalidPassword
+            | ApiError::FrontendUrl
+            | ApiError::UserNotFound
+            | ApiError::MissingFrontendUrl
+            | ApiError::MissingEnv(_)
+            | ApiError::PasswordsDoNotMatch
+            | ApiError::SendingEmail
+            | ApiError::PermissionDenied(_)
+            | ApiError::LastLoginMethod => {}
+        }
+    }
+
+    #[test]
+    fn all_error_codes_matches_every_variant() {
+        let variants = one_of_each_variant();
+        variants.iter().for_each(assert_exhaustive);
+        let mut codes_from_variants: Vec<&'static str> =
+            variants.iter().map(|e| e.error_code()).collect();
+        codes_from_variants.sort_unstable();
+        codes_from_variants.dedup();
+
+        let mut declared: Vec<&'static str> = ALL_ERROR_CODES.to_vec();
+        declared.sort_unstable();
+        declared.dedup();
+
+        assert_eq!(
+            codes_from_variants, declared,
+            "ALL_ERROR_CODES divergiu de ApiError::error_code() — atualize a constante"
+        );
     }
 }
