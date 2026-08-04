@@ -22,8 +22,6 @@ pub enum ExecVerdict {
     Timeout,
 }
 
-/// The client branches on this, never on a substring of `stderr` — the
-/// compiler's own wording is not a stable contract (see Q105).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecStatus {
