@@ -1061,7 +1061,7 @@ export interface paths {
     delete: operations["api_delete_team"];
     options?: never;
     head?: never;
-    patch?: never;
+    patch: operations["api_update_team"];
     trace?: never;
   };
   "/team/{id}/capabilities": {
@@ -1256,6 +1256,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/team/{id}/notebooks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["api_get_team_pages"];
+    put?: never;
+    post: operations["api_create_team_page"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/team/{id}/roles": {
     parameters: {
       query?: never;
@@ -1270,54 +1286,6 @@ export interface paths {
     options?: never;
     head?: never;
     patch: operations["api_update_team_role"];
-    trace?: never;
-  };
-  "/teams/{team_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch: operations["api_update_team"];
-    trace?: never;
-  };
-  "/teams/{team_id}/notebook/create": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["api_create_team_page"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/teams/{team_id}/notebooks": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: operations["api_get_team_pages"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
     trace?: never;
   };
   "/template/": {
@@ -1664,6 +1632,95 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    AcceptInviteRequest: {
+      token: string;
+    };
+    Activity: {
+      /** Format: uuid */
+      actorId?: string | null;
+      actorName: string;
+      blockId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      /** Format: uuid */
+      notebookId: string;
+      summary?: string | null;
+    };
+    AdminChartData: {
+      name: string;
+      /** Format: int64 */
+      notebooks: number;
+      /** Format: int64 */
+      users: number;
+    };
+    AdminNotebookView: {
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      isPublic: boolean;
+      /** Format: uuid */
+      teamId?: string | null;
+      title: string;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    AdminNotifyRequest: {
+      body: string;
+      /** Format: uuid */
+      targetId: string;
+      targetKind: string;
+      title: string;
+      url?: string | null;
+    };
+    AdminSearchResult: {
+      /** Format: uuid */
+      id: string;
+      label: string;
+      sublabel?: string | null;
+    };
+    AdminSystemStats: {
+      chartData: components["schemas"]["AdminChartData"][];
+      /** Format: int64 */
+      totalActiveUsers: number;
+      /** Format: int64 */
+      totalNotebooks: number;
+      /** Format: int64 */
+      totalPublicNotebooks: number;
+      /** Format: int64 */
+      totalTeamMembers: number;
+      /** Format: int64 */
+      totalTeams: number;
+      /** Format: int64 */
+      totalUsers: number;
+    };
+    AdminTeamView: {
+      /** Format: date-time */
+      createdAt: string;
+      description?: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: int64 */
+      memberCount: number;
+      name: string;
+    };
+    AdminUserView: {
+      /** Format: date-time */
+      createdAt: string;
+      email: string;
+      /** Format: uuid */
+      id: string;
+      isActive: boolean;
+      name: string;
+      primaryProvider: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     ApiError:
       | {
           Request: string;
@@ -1701,15 +1758,326 @@ export interface components {
           PermissionDenied: string;
         }
       | "LastLoginMethod";
+    AuthMethodsResponse: {
+      password: boolean;
+      primaryProvider: components["schemas"]["AuthProvider"];
+      providers: string[];
+    };
     /** @enum {string} */
     AuthProvider: "Email" | "Google" | "Github";
+    BlockMetadata:
+      | {
+          props: components["schemas"]["CalloutProps"];
+          /** @enum {string} */
+          type: "callout";
+        }
+      | {
+          props: components["schemas"]["CardProps"];
+          /** @enum {string} */
+          type: "card";
+        }
+      | {
+          props: components["schemas"]["GithubRepoProps"];
+          /** @enum {string} */
+          type: "github_repo";
+        }
+      | {
+          /** @enum {string} */
+          type: "banner";
+          variant: string;
+        }
+      | (unknown & {
+          /** @enum {string} */
+          type: "generic";
+        });
+    BlockRequest: {
+      content: string;
+      /** Format: uuid */
+      id: string;
+      language?: null | components["schemas"]["Language"];
+      metadata?: null | components["schemas"]["BlockMetadata"];
+      title: string;
+      type: components["schemas"]["BlockType"];
+    };
+    BlockResponse: {
+      content: string;
+      /** Format: uuid */
+      id: string;
+      language?: null | components["schemas"]["Language"];
+      metadata?: null | components["schemas"]["BlockMetadata"];
+      title: string;
+      type: components["schemas"]["BlockType"];
+    };
+    /** @enum {string} */
+    BlockType:
+      | "text"
+      | "code"
+      | "component"
+      | "drawing"
+      | "free_drawing"
+      | "database_schema"
+      | "latex"
+      | "sql"
+      | "typst"
+      | "challenge"
+      | "notebook_ref"
+      | "template_ref"
+      | "chart"
+      | "mermaid";
+    CalloutProps: {
+      icon?: string | null;
+      title?: string | null;
+      type?: string | null;
+    };
+    CapabilitySnapshot: {
+      all: boolean;
+      grants: components["schemas"]["GrantView"][];
+    };
+    CardProps: {
+      description?: string | null;
+      href?: string | null;
+      title: string;
+    };
+    ChallengePublic: {
+      /** Format: uuid */
+      blockId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      difficulty: string;
+      /** Format: uuid */
+      id: string;
+      judgeMode: string;
+      languages: unknown;
+      /** Format: int32 */
+      memLimitKb: number;
+      /** Format: uuid */
+      notebookId?: string | null;
+      propertySpec?: unknown;
+      slug: string;
+      starterCode?: unknown;
+      statementMd: string;
+      tags: unknown;
+      /** Format: uuid */
+      teamId?: string | null;
+      /** Format: int32 */
+      timeLimitMs: number;
+      title: string;
+      visibility: string;
+    };
+    ChatMessage: {
+      authorName: string;
+      content: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      deletedAt?: string | null;
+      /** Format: date-time */
+      editedAt?: string | null;
+      /** Format: uuid */
+      id: string;
+      isEdited: boolean;
+      /** Format: uuid */
+      notebookId?: string | null;
+      /** Format: uuid */
+      parentId?: string | null;
+      /** Format: uuid */
+      quotedMessageId?: string | null;
+      /** Format: uuid */
+      teamId?: string | null;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    ChatMessageVersion: {
+      content: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      messageId: string;
+    };
+    CodeRequest: {
+      code: string;
+      /** Format: uuid */
+      notebookId?: string | null;
+    };
     CodeResponse: {
       stderr: string;
       stdout: string;
     };
+    Comment: {
+      /** Format: uuid */
+      authorId?: string | null;
+      authorName: string;
+      body: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      deletedAt?: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      threadId: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    CommentThread: {
+      /** Format: int32 */
+      anchorOffset?: number | null;
+      blockId: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      createdBy?: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      notebookId: string;
+      status: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    CreateChallengeRequest: {
+      /** Format: uuid */
+      blockId?: string | null;
+      difficulty?: string | null;
+      judgeMode?: string | null;
+      languages: string[];
+      /** Format: int32 */
+      memLimitKb?: number | null;
+      /** Format: uuid */
+      notebookId: string;
+      propertySpec?: unknown;
+      slug: string;
+      starterCode?: unknown;
+      statementMd: string;
+      tags?: string[] | null;
+      /** Format: uuid */
+      teamId?: string | null;
+      /** Format: int32 */
+      timeLimitMs?: number | null;
+      title: string;
+      visibility?: string | null;
+    };
+    CreateGrantRequest: {
+      effect: components["schemas"]["GrantEffect"];
+      permissionKey: string;
+      /** Format: uuid */
+      subjectId?: string | null;
+      subjectKind: components["schemas"]["GrantSubjectKind"];
+      /** Format: uuid */
+      targetId?: string | null;
+      targetKind: components["schemas"]["GrantTargetKind"];
+      targetValue?: string | null;
+    };
+    CreateSnapshotRequest: {
+      label: string;
+      note?: string | null;
+    };
+    CreateTemplateRequest: {
+      kind: string;
+      name: string;
+      /** Format: uuid */
+      sourceNotebookId?: string | null;
+      /** Format: uuid */
+      teamId?: string | null;
+    };
+    CreateTestCaseRequest: {
+      expected?: string | null;
+      input: string;
+      isHidden?: boolean | null;
+      /** Format: int32 */
+      ord?: number | null;
+      /** Format: int32 */
+      weight?: number | null;
+    };
+    CreateThreadRequest: {
+      /** Format: int32 */
+      anchorOffset?: number | null;
+      blockId: string;
+      body: string;
+    };
+    EditMessageRequest: {
+      content: string;
+    };
+    Folder: {
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      tags: unknown;
+      /** Format: uuid */
+      teamId?: string | null;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    FolderNameRequest: {
+      name: string;
+    };
+    GithubRepoProps: {
+      owner: string;
+      repo: string;
+    };
+    /** @enum {string} */
+    GrantEffect: "allow" | "deny";
+    /** @enum {string} */
+    GrantSubjectKind: "role" | "user" | "principal";
+    /** @enum {string} */
+    GrantTargetKind:
+      | "team"
+      | "notebook"
+      | "block"
+      | "block_type"
+      | "chat"
+      | "global";
+    GrantView: {
+      effect: components["schemas"]["GrantEffect"];
+      permissionKey: string;
+      /** Format: uuid */
+      targetId?: string | null;
+      targetKind: components["schemas"]["GrantTargetKind"];
+      targetValue?: string | null;
+    };
+    InviteRequest: {
+      email: string;
+      /** Format: uuid */
+      roleId: string;
+    };
+    /** @enum {string} */
+    Language: "rust" | "typescript" | "python" | "zig" | "go" | "cpp";
+    LeaderboardEntry: {
+      authorName: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: int32 */
+      maxScore: number;
+      /** Format: int32 */
+      runtimeMs: number;
+      /** Format: int32 */
+      score: number;
+      /** Format: uuid */
+      submissionId: string;
+      /** Format: uuid */
+      userId: string;
+    };
     LoginUser: {
       email: string;
       password: string;
+    };
+    MoveFolderRequest: {
+      /** Format: uuid */
+      folderId?: string | null;
+    };
+    NewTeam: {
+      description?: string | null;
+      imageUrl?: string | null;
+      name: string;
+    };
+    NewTeamRoleRequest: components["schemas"]["RolePermissions"] & {
+      name: string;
     };
     NewUser: {
       avatarUrl?: string | null;
@@ -1719,6 +2087,495 @@ export interface components {
       name: string;
       passwordHash?: string | null;
       primaryProvider: components["schemas"]["AuthProvider"];
+    };
+    Notebook: {
+      /** Format: date-time */
+      createdAt: string;
+      documentData?: number[] | null;
+      /** Format: uuid */
+      folderId?: string | null;
+      /** Format: uuid */
+      id: string;
+      isPublic: boolean;
+      publicSlug?: string | null;
+      tags: unknown;
+      /** Format: uuid */
+      teamId?: string | null;
+      title: string;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    NotebookResponse: components["schemas"]["Notebook"] & {
+      blocks: components["schemas"]["BlockResponse"][];
+    };
+    Notification: {
+      body: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      /** Format: uuid */
+      notebookId?: string | null;
+      /** Format: date-time */
+      readAt?: string | null;
+      /** Format: uuid */
+      teamId?: string | null;
+      title: string;
+      url?: string | null;
+      /** Format: uuid */
+      userId: string;
+    };
+    NotificationPreference: {
+      chatEnabled: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      inappEnabled: boolean;
+      pushEnabled: boolean;
+      /** Format: uuid */
+      scopeId?: string | null;
+      scopeKind: string;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      userId: string;
+    };
+    NotificationsResponse: {
+      items: components["schemas"]["Notification"][];
+      /** Format: int64 */
+      unreadCount: number;
+    };
+    PaginatedResponse_AdminNotebookView: {
+      data: {
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: uuid */
+        id: string;
+        isPublic: boolean;
+        /** Format: uuid */
+        teamId?: string | null;
+        title: string;
+        /** Format: date-time */
+        updatedAt: string;
+        /** Format: uuid */
+        userId?: string | null;
+      }[];
+      /** Format: int64 */
+      limit: number;
+      /** Format: int64 */
+      page: number;
+      /** Format: int64 */
+      total: number;
+      /** Format: int64 */
+      totalPages: number;
+    };
+    PaginatedResponse_AdminTeamView: {
+      data: {
+        /** Format: date-time */
+        createdAt: string;
+        description?: string | null;
+        /** Format: uuid */
+        id: string;
+        /** Format: int64 */
+        memberCount: number;
+        name: string;
+      }[];
+      /** Format: int64 */
+      limit: number;
+      /** Format: int64 */
+      page: number;
+      /** Format: int64 */
+      total: number;
+      /** Format: int64 */
+      totalPages: number;
+    };
+    PaginatedResponse_AdminUserView: {
+      data: {
+        /** Format: date-time */
+        createdAt: string;
+        email: string;
+        /** Format: uuid */
+        id: string;
+        isActive: boolean;
+        name: string;
+        primaryProvider: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }[];
+      /** Format: int64 */
+      limit: number;
+      /** Format: int64 */
+      page: number;
+      /** Format: int64 */
+      total: number;
+      /** Format: int64 */
+      totalPages: number;
+    };
+    PermissionGrant: {
+      /** Format: date-time */
+      createdAt: string;
+      effect: components["schemas"]["GrantEffect"];
+      /** Format: uuid */
+      id: string;
+      permissionKey: string;
+      /** Format: uuid */
+      scopeTeamId?: string | null;
+      /** Format: uuid */
+      subjectId?: string | null;
+      subjectKind: components["schemas"]["GrantSubjectKind"];
+      subjectPrincipal?: string | null;
+      /** Format: uuid */
+      targetId?: string | null;
+      targetKind: components["schemas"]["GrantTargetKind"];
+      targetValue?: string | null;
+    };
+    ProvidersResponse: {
+      providers: string[];
+    };
+    PublicGrantRequest: {
+      effect: components["schemas"]["GrantEffect"];
+      permissionKey: string;
+    };
+    PublicNotebookDoc: {
+      documentData?: number[] | null;
+      /** Format: uuid */
+      id: string;
+      ownerName?: string | null;
+      publicSlug?: string | null;
+      title: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    PublicNotebookResponse: {
+      /** Format: uuid */
+      id: string;
+      ownerName: string;
+      /** Format: uuid */
+      teamId?: string | null;
+      title: string;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    PublicTemplateResponse: {
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      /** Format: int32 */
+      latestVersion: number;
+      name: string;
+      ownerName: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    PublishVersionRequest: {
+      namedSources: unknown;
+      note?: string | null;
+    };
+    PushSubscriptionKeysRequest: {
+      auth: string;
+      p256dh: string;
+    };
+    PushSubscriptionRequest: {
+      endpoint: string;
+      keys: components["schemas"]["PushSubscriptionKeysRequest"];
+    };
+    PushUnsubscribeRequest: {
+      endpoint: string;
+    };
+    RankedSearchItem: {
+      /** Format: uuid */
+      blockId?: string | null;
+      kind: string;
+      /** Format: uuid */
+      notebookId: string;
+      notebookTitle: string;
+      /** Format: float */
+      rank: number;
+      snippet: string;
+      /** Format: uuid */
+      teamId?: string | null;
+      teamName?: string | null;
+    };
+    RecordEditRequest: {
+      blockId?: string | null;
+    };
+    RefreshPayload: {
+      refreshToken: string;
+    };
+    ReplyRequest: {
+      body: string;
+    };
+    ResetPasswordPayload: {
+      newPassword: string;
+      token: string;
+    };
+    ResolvedTemplate: components["schemas"]["Template"] & {
+      version?: null | components["schemas"]["TemplateVersion"];
+    };
+    RolePermissions: {
+      canInviteUsers: boolean;
+      canManageClones: boolean;
+      canManagePermissions: boolean;
+      canManagePrivacy: boolean;
+      canManageTeam: boolean;
+      canRead: boolean;
+      canRemoveUsers: boolean;
+      canWrite: boolean;
+    };
+    RunSamplesResponse: {
+      compileError?: string | null;
+      results: components["schemas"]["SampleResultView"][];
+    };
+    SampleResultView: {
+      expected?: string | null;
+      input: string;
+      stderr?: string | null;
+      stdout: string;
+      verdict: string;
+    };
+    SearchResult: {
+      content: string;
+      /** Format: uuid */
+      id: string;
+      title: string;
+    };
+    SendMessageRequest: {
+      content: string;
+      /** Format: uuid */
+      parentId?: string | null;
+      /** Format: uuid */
+      quotedMessageId?: string | null;
+    };
+    SessionResponse: {
+      accessToken: string;
+      /** Format: int64 */
+      expiresInSecs: number;
+      refreshToken: string;
+    };
+    SetReferenceRequest: {
+      language: string;
+      solution: string;
+    };
+    SnapshotMeta: {
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      createdBy?: string | null;
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      label: string;
+      note?: string | null;
+      /** Format: uuid */
+      notebookId: string;
+    };
+    SubmissionResultView: {
+      isHidden: boolean;
+      /** Format: int32 */
+      ord: number;
+      /** Format: int32 */
+      runtimeMs: number;
+      stderrSnippet?: string | null;
+      /** Format: uuid */
+      testCaseId?: string | null;
+      verdict: string;
+    };
+    SubmissionView: {
+      /** Format: uuid */
+      challengeId: string;
+      code: string;
+      /** Format: date-time */
+      createdAt: string;
+      errorMessage?: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      judgedAt?: string | null;
+      language: string;
+      /** Format: int32 */
+      maxScore: number;
+      results: components["schemas"]["SubmissionResultView"][];
+      /** Format: int32 */
+      runtimeMs: number;
+      /** Format: int32 */
+      score: number;
+      status: string;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    SubmitRequest: {
+      code: string;
+      language: string;
+    };
+    SyncNotebookRequest: {
+      blocks: components["schemas"]["BlockRequest"][];
+      isPublic: boolean;
+      title: string;
+    };
+    Team: {
+      /** Format: date-time */
+      createdAt: string;
+      description?: string | null;
+      /** Format: uuid */
+      id: string;
+      imageUrl?: string | null;
+      name: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    TeamRoleView: components["schemas"]["RolePermissions"] & {
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** Format: uuid */
+      teamId: string;
+    };
+    Template: {
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      isPublic: boolean;
+      kind: string;
+      /** Format: int32 */
+      latestVersion: number;
+      name: string;
+      /** Format: uuid */
+      sourceNotebookId?: string | null;
+      /** Format: uuid */
+      teamId?: string | null;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      userId?: string | null;
+    };
+    TemplateVersion: {
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      id: string;
+      namedSources: unknown;
+      note?: string | null;
+      /** Format: uuid */
+      templateId: string;
+      /** Format: int32 */
+      version: number;
+    };
+    TestCaseAuthoringView: {
+      expected?: string | null;
+      /** Format: uuid */
+      id: string;
+      input: string;
+      isHidden: boolean;
+      /** Format: int32 */
+      ord: number;
+      /** Format: int32 */
+      weight: number;
+    };
+    ThreadWithComments: components["schemas"]["CommentThread"] & {
+      comments: components["schemas"]["Comment"][];
+    };
+    UpdateChallengeRequest: {
+      difficulty?: string | null;
+      judgeMode?: string | null;
+      languages?: string[] | null;
+      /** Format: int32 */
+      memLimitKb?: number | null;
+      propertySpec?: unknown;
+      starterCode?: unknown;
+      statementMd?: string | null;
+      tags?: string[] | null;
+      /** Format: int32 */
+      timeLimitMs?: number | null;
+      title?: string | null;
+      visibility?: string | null;
+    };
+    UpdateMemberRoleRequest: {
+      /** Format: uuid */
+      roleId: string;
+      /** Format: uuid */
+      userId: string;
+    };
+    UpdateNotebookTitle: {
+      title: string;
+    };
+    UpdateNotebookVisibility: {
+      isVisible: boolean;
+    };
+    UpdateTagsRequest: {
+      tags: string[];
+    };
+    UpdateTeam: {
+      description?: string | null;
+      imageUrl?: string | null;
+      name?: string | null;
+    };
+    UpdateTeamRole: {
+      canInviteUsers?: boolean | null;
+      canManageClones?: boolean | null;
+      canManagePermissions?: boolean | null;
+      canManagePrivacy?: boolean | null;
+      canManageTeam?: boolean | null;
+      canRead?: boolean | null;
+      canRemoveUsers?: boolean | null;
+      canWrite?: boolean | null;
+      /** Format: uuid */
+      id: string;
+      name?: string | null;
+    };
+    UpdateThreadRequest: {
+      status: string;
+    };
+    UpdateUser: {
+      email: string;
+      name: string;
+    };
+    UpdateUserPassword: {
+      confirmPassword: string;
+      currentPassword: string;
+      newPassword: string;
+    };
+    UpsertPreferenceRequest: {
+      chatEnabled: boolean;
+      inappEnabled: boolean;
+      pushEnabled: boolean;
+      /** Format: uuid */
+      scopeId?: string | null;
+      scopeKind: string;
+    };
+    User: {
+      avatarUrl?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      deletedAt?: string | null;
+      email: string;
+      /** Format: uuid */
+      id: string;
+      isActive: boolean;
+      name: string;
+      primaryProvider: components["schemas"]["AuthProvider"];
+      /** Format: int32 */
+      publicId: number;
+      role: components["schemas"]["UserRole"];
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    UserEmail: {
+      email: string;
+    };
+    /** @enum {string} */
+    UserRole: "Admin" | "User";
+    VisibilityRequest: {
+      isPublic: boolean;
     };
   };
   responses: never;
@@ -1742,7 +2599,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AdminNotebookView"];
+        };
       };
       401: {
         headers: {
@@ -1761,7 +2620,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdminNotifyRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -1792,7 +2655,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["AdminSearchResult"][];
+        };
       };
       401: {
         headers: {
@@ -1817,7 +2682,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["AdminSystemStats"];
+        };
       };
       401: {
         headers: {
@@ -1842,7 +2709,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AdminTeamView"];
+        };
       };
       401: {
         headers: {
@@ -1867,7 +2736,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AdminUserView"];
+        };
       };
       401: {
         headers: {
@@ -1892,14 +2763,8 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
-      };
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
         content: {
-          "application/json": components["schemas"]["ApiError"];
+          "application/json": components["schemas"]["ProvidersResponse"];
         };
       };
     };
@@ -1911,13 +2776,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateChallengeRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChallengePublic"];
+        };
       };
       401: {
         headers: {
@@ -1942,7 +2813,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChallengePublic"][];
+        };
       };
       401: {
         headers: {
@@ -1967,7 +2840,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       401: {
         headers: {
@@ -1992,7 +2867,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SubmissionView"];
+        };
       };
       401: {
         headers: {
@@ -2017,7 +2894,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       401: {
         headers: {
@@ -2036,13 +2915,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateChallengeRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChallengePublic"];
+        };
       };
       401: {
         headers: {
@@ -2067,7 +2952,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["LeaderboardEntry"][];
+        };
       };
       401: {
         headers: {
@@ -2092,7 +2979,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       401: {
         headers: {
@@ -2111,13 +3000,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetReferenceRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChallengePublic"];
+        };
       };
       401: {
         headers: {
@@ -2142,7 +3037,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       401: {
         headers: {
@@ -2161,13 +3058,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmitRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["RunSamplesResponse"];
+        };
       };
       401: {
         headers: {
@@ -2192,7 +3095,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SubmissionView"][];
+        };
       };
       401: {
         headers: {
@@ -2211,13 +3116,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmitRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SubmissionView"];
+        };
       };
       401: {
         headers: {
@@ -2242,7 +3153,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["TestCaseAuthoringView"][];
+        };
       };
       401: {
         headers: {
@@ -2261,13 +3174,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTestCaseRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       401: {
         headers: {
@@ -2317,7 +3236,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Notebook"][];
+        };
       };
       401: {
         headers: {
@@ -2342,7 +3263,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PublicNotebookResponse"][];
+        };
       };
       401: {
         headers: {
@@ -2367,7 +3290,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "text/plain": string;
+        };
       };
       401: {
         headers: {
@@ -2392,7 +3317,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"][];
+        };
       };
       401: {
         headers: {
@@ -2411,13 +3338,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FolderNameRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"];
+        };
       };
       401: {
         headers: {
@@ -2461,13 +3394,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FolderNameRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"];
+        };
       };
       401: {
         headers: {
@@ -2486,13 +3425,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTagsRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"];
+        };
       };
       401: {
         headers: {
@@ -2517,7 +3462,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PublicNotebookDoc"];
+        };
       };
       401: {
         headers: {
@@ -2536,7 +3483,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PushSubscriptionRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -2561,7 +3512,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PushUnsubscribeRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -2592,7 +3547,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SearchResult"][];
+        };
       };
       401: {
         headers: {
@@ -2617,7 +3574,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["RankedSearchItem"][];
+        };
       };
       401: {
         headers: {
@@ -2642,7 +3601,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Notebook"];
+        };
       };
       401: {
         headers: {
@@ -2692,7 +3653,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Activity"][];
+        };
       };
       401: {
         headers: {
@@ -2711,7 +3674,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RecordEditRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -2742,7 +3709,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CapabilitySnapshot"];
+        };
       };
       401: {
         headers: {
@@ -2767,7 +3736,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"][];
+        };
       };
       401: {
         headers: {
@@ -2786,13 +3757,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendMessageRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"];
+        };
       };
       401: {
         headers: {
@@ -2817,7 +3794,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"];
+        };
       };
       401: {
         headers: {
@@ -2836,13 +3815,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EditMessageRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"];
+        };
       };
       401: {
         headers: {
@@ -2867,7 +3852,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessageVersion"][];
+        };
       };
       401: {
         headers: {
@@ -2892,7 +3879,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "text/plain": string;
+        };
       };
       401: {
         headers: {
@@ -2917,7 +3906,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ThreadWithComments"][];
+        };
       };
       401: {
         headers: {
@@ -2936,13 +3927,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateThreadRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ThreadWithComments"];
+        };
       };
       401: {
         headers: {
@@ -2961,13 +3958,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateThreadRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CommentThread"];
+        };
       };
       401: {
         headers: {
@@ -2986,13 +3989,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplyRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Comment"];
+        };
       };
       401: {
         headers: {
@@ -3017,7 +4026,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Comment"];
+        };
       };
       401: {
         headers: {
@@ -3036,7 +4047,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SyncNotebookRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3061,7 +4076,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MoveFolderRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3092,7 +4111,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["NotebookResponse"];
+        };
       };
       401: {
         headers: {
@@ -3117,7 +4138,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["TeamRoleView"];
+        };
       };
       401: {
         headers: {
@@ -3142,7 +4165,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PermissionGrant"][];
+        };
       };
       401: {
         headers: {
@@ -3161,13 +4186,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicGrantRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PermissionGrant"];
+        };
       };
       401: {
         headers: {
@@ -3217,7 +4248,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SnapshotMeta"][];
+        };
       };
       401: {
         headers: {
@@ -3236,13 +4269,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateSnapshotRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SnapshotMeta"];
+        };
       };
       401: {
         headers: {
@@ -3311,7 +4350,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTagsRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3336,7 +4379,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateNotebookTitle"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3361,7 +4408,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateNotebookVisibility"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3392,7 +4443,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["NotificationsResponse"];
+        };
       };
       401: {
         headers: {
@@ -3417,7 +4470,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["NotificationPreference"][];
+        };
       };
       401: {
         headers: {
@@ -3436,13 +4491,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpsertPreferenceRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["NotificationPreference"];
+        };
       };
       401: {
         headers: {
@@ -3553,7 +4614,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CodeRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3572,7 +4637,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CodeRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3591,7 +4660,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CodeRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3610,7 +4683,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CodeRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3654,13 +4731,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NewTeam"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Team"];
+        };
       };
       401: {
         headers: {
@@ -3679,7 +4762,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AcceptInviteRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -3710,7 +4797,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Team"];
+        };
       };
       401: {
         headers: {
@@ -3747,6 +4836,35 @@ export interface operations {
       };
     };
   };
+  api_update_team: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTeam"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
   api_get_team_capabilities: {
     parameters: {
       query?: never;
@@ -3760,7 +4878,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CapabilitySnapshot"];
+        };
       };
       401: {
         headers: {
@@ -3785,7 +4905,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"][];
+        };
       };
       401: {
         headers: {
@@ -3804,13 +4926,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendMessageRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"];
+        };
       };
       401: {
         headers: {
@@ -3835,7 +4963,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"];
+        };
       };
       401: {
         headers: {
@@ -3854,13 +4984,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EditMessageRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessage"];
+        };
       };
       401: {
         headers: {
@@ -3885,7 +5021,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ChatMessageVersion"][];
+        };
       };
       401: {
         headers: {
@@ -3910,7 +5048,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"][];
+        };
       };
       401: {
         headers: {
@@ -3929,13 +5069,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FolderNameRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"];
+        };
       };
       401: {
         headers: {
@@ -3979,13 +5125,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FolderNameRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"];
+        };
       };
       401: {
         headers: {
@@ -4004,13 +5156,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTagsRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Folder"];
+        };
       };
       401: {
         headers: {
@@ -4035,7 +5193,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PermissionGrant"][];
+        };
       };
       401: {
         headers: {
@@ -4054,13 +5214,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateGrantRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PermissionGrant"];
+        };
       };
       401: {
         headers: {
@@ -4104,7 +5270,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InviteRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -4154,7 +5324,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "text/plain": string;
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -4179,7 +5353,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateMemberRoleRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -4222,6 +5400,60 @@ export interface operations {
       };
     };
   };
+  api_get_team_pages: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Notebook"][];
+        };
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  api_create_team_page: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/plain": string;
+        };
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
   api_get_team_roles: {
     parameters: {
       query?: never;
@@ -4235,7 +5467,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["TeamRoleView"][];
+        };
       };
       401: {
         headers: {
@@ -4254,7 +5488,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NewTeamRoleRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -4279,7 +5517,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTeamRole"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -4287,80 +5529,6 @@ export interface operations {
         };
         content?: never;
       };
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ApiError"];
-        };
-      };
-    };
-  };
-  api_update_team: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ApiError"];
-        };
-      };
-    };
-  };
-  api_create_team_page: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description ID do Time */
-        team_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "text/plain": string;
-        };
-      };
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ApiError"];
-        };
-      };
-    };
-  };
-  api_get_team_pages: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
       401: {
         headers: {
           [name: string]: unknown;
@@ -4378,13 +5546,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTemplateRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Template"];
+        };
       };
       401: {
         headers: {
@@ -4409,7 +5583,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Template"][];
+        };
       };
       401: {
         headers: {
@@ -4434,7 +5610,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PublicTemplateResponse"][];
+        };
       };
       401: {
         headers: {
@@ -4459,7 +5637,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["ResolvedTemplate"];
+        };
       };
       401: {
         headers: {
@@ -4503,13 +5683,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublishVersionRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["TemplateVersion"];
+        };
       };
       401: {
         headers: {
@@ -4528,13 +5714,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VisibilityRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Template"];
+        };
       };
       401: {
         headers: {
@@ -4586,14 +5778,6 @@ export interface operations {
         };
         content?: never;
       };
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ApiError"];
-        };
-      };
     };
   };
   api_auth_methods: {
@@ -4609,7 +5793,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["AuthMethodsResponse"];
+        };
       };
       401: {
         headers: {
@@ -4628,7 +5814,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResetPasswordPayload"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -4711,14 +5901,6 @@ export interface operations {
         };
         content?: never;
       };
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ApiError"];
-        };
-      };
     };
   };
   api_login_user: {
@@ -4763,14 +5945,6 @@ export interface operations {
         };
         content?: never;
       };
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ApiError"];
-        };
-      };
     };
   };
   api_logout: {
@@ -4780,7 +5954,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefreshPayload"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -4811,7 +5989,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["User"];
+        };
       };
       401: {
         headers: {
@@ -4830,7 +6010,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateUserPassword"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -4855,13 +6039,19 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefreshPayload"];
+      };
+    };
     responses: {
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["SessionResponse"];
+        };
       };
       401: {
         headers: {
@@ -4907,7 +6097,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserEmail"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -4932,7 +6126,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateUser"];
+      };
+    };
     responses: {
       200: {
         headers: {
