@@ -23,59 +23,46 @@ use crate::models::state::AppState;
 use crate::models::user::UserRole;
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateChallengeRequest {
-    #[serde(rename = "notebookId")]
     pub notebook_id: Uuid,
-    #[serde(rename = "blockId")]
     pub block_id: Option<Uuid>,
     pub slug: String,
     pub title: String,
-    #[serde(rename = "statementMd")]
     pub statement_md: String,
     pub difficulty: Option<String>,
     pub tags: Option<Vec<String>>,
     pub languages: Vec<String>,
-    #[serde(rename = "judgeMode")]
     pub judge_mode: Option<String>,
-    #[serde(rename = "timeLimitMs")]
     pub time_limit_ms: Option<i32>,
-    #[serde(rename = "memLimitKb")]
     pub mem_limit_kb: Option<i32>,
-    #[serde(rename = "starterCode")]
     pub starter_code: Option<Value>,
-    #[serde(rename = "propertySpec")]
     pub property_spec: Option<Value>,
     pub visibility: Option<String>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateChallengeRequest {
     pub title: Option<String>,
-    #[serde(rename = "statementMd")]
     pub statement_md: Option<String>,
     pub difficulty: Option<String>,
-    #[serde(rename = "judgeMode")]
     pub judge_mode: Option<String>,
-    #[serde(rename = "timeLimitMs")]
     pub time_limit_ms: Option<i32>,
-    #[serde(rename = "memLimitKb")]
     pub mem_limit_kb: Option<i32>,
     pub tags: Option<Vec<String>>,
     pub languages: Option<Vec<String>>,
-    #[serde(rename = "starterCode")]
     pub starter_code: Option<Value>,
-    #[serde(rename = "propertySpec")]
     pub property_spec: Option<Value>,
     pub visibility: Option<String>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateTestCaseRequest {
     pub input: String,
     pub expected: Option<String>,
-    #[serde(rename = "isHidden")]
     pub is_hidden: Option<bool>,
     pub weight: Option<i32>,
     pub ord: Option<i32>,
@@ -103,8 +90,8 @@ pub struct SampleResultView {
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RunSamplesResponse {
-    #[serde(rename = "compileError")]
     pub compile_error: Option<String>,
     pub results: Vec<SampleResultView>,
 }

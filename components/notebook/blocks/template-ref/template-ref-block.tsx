@@ -57,7 +57,7 @@ async function loadPickerEntries(): Promise<PickerEntry[]> {
     byId.set(t.id, {
       id: t.id,
       name: t.name,
-      ownerLabel: t.owner_name,
+      ownerLabel: t.ownerName,
       isPublic: true,
     });
   }

@@ -34,9 +34,9 @@ export interface PublicTemplate {
   id: string;
   kind: TemplateKind;
   name: string;
-  owner_name: string;
-  latest_version: number;
-  updated_at: string;
+  ownerName: string;
+  latestVersion: number;
+  updatedAt: string;
 }
 
 export interface CreateTemplateInput {

@@ -27,25 +27,24 @@ use crate::{
 const ALLOWED_KINDS: &[&str] = &["typst"];
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateTemplateRequest {
     pub kind: String,
     pub name: String,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
-    #[serde(rename = "sourceNotebookId")]
     pub source_notebook_id: Option<Uuid>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PublishVersionRequest {
-    #[serde(rename = "namedSources")]
     pub named_sources: Value,
     pub note: Option<String>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VisibilityRequest {
-    #[serde(rename = "isPublic")]
     pub is_public: bool,
 }
 
@@ -61,8 +60,8 @@ pub struct PublicQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MyTemplatesQuery {
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
 }
 

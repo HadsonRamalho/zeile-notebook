@@ -79,33 +79,24 @@ pub struct UpdateChallenge {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChallengePublic {
     pub id: Uuid,
     pub slug: String,
     pub title: String,
-    #[serde(rename = "statementMd")]
     pub statement_md: String,
     pub difficulty: String,
     pub tags: Value,
     pub languages: Value,
-    #[serde(rename = "judgeMode")]
     pub judge_mode: String,
-    #[serde(rename = "timeLimitMs")]
     pub time_limit_ms: i32,
-    #[serde(rename = "memLimitKb")]
     pub mem_limit_kb: i32,
-    #[serde(rename = "starterCode")]
     pub starter_code: Option<Value>,
-    #[serde(rename = "propertySpec")]
     pub property_spec: Option<Value>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
-    #[serde(rename = "notebookId")]
     pub notebook_id: Option<Uuid>,
-    #[serde(rename = "blockId")]
     pub block_id: Option<Uuid>,
     pub visibility: String,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -168,11 +159,11 @@ pub struct TestCasePublic {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TestCaseAuthoringView {
     pub id: Uuid,
     pub input: String,
     pub expected: Option<String>,
-    #[serde(rename = "isHidden")]
     pub is_hidden: bool,
     pub weight: i32,
     pub ord: i32,
@@ -221,25 +212,19 @@ pub struct NewSubmission {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubmissionView {
     pub id: Uuid,
-    #[serde(rename = "challengeId")]
     pub challenge_id: Uuid,
-    #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
     pub language: String,
     pub code: String,
     pub status: String,
     pub score: i32,
-    #[serde(rename = "maxScore")]
     pub max_score: i32,
-    #[serde(rename = "runtimeMs")]
     pub runtime_ms: i32,
-    #[serde(rename = "errorMessage")]
     pub error_message: Option<String>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "judgedAt")]
     pub judged_at: Option<DateTime<Utc>>,
     pub results: Vec<SubmissionResultView>,
 }
@@ -291,15 +276,12 @@ pub struct NewSubmissionResult {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubmissionResultView {
-    #[serde(rename = "testCaseId")]
     pub test_case_id: Option<Uuid>,
     pub verdict: String,
-    #[serde(rename = "runtimeMs")]
     pub runtime_ms: i32,
-    #[serde(rename = "isHidden")]
     pub is_hidden: bool,
-    #[serde(rename = "stderrSnippet")]
     pub stderr_snippet: Option<String>,
     pub ord: i32,
 }
@@ -327,19 +309,14 @@ impl SubmissionResult {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LeaderboardEntry {
-    #[serde(rename = "submissionId")]
     pub submission_id: Uuid,
-    #[serde(rename = "userId")]
     pub user_id: Uuid,
-    #[serde(rename = "authorName")]
     pub author_name: String,
     pub score: i32,
-    #[serde(rename = "maxScore")]
     pub max_score: i32,
-    #[serde(rename = "runtimeMs")]
     pub runtime_ms: i32,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
