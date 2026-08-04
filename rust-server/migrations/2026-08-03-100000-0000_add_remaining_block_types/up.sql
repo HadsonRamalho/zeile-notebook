@@ -1,0 +1,10 @@
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'free_drawing';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'database_schema';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'latex';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'sql';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'typst';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'challenge';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'notebook_ref';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'template_ref';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'chart';
+ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS 'mermaid';

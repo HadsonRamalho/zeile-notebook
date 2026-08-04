@@ -19,12 +19,22 @@ use crate::schema::{blocks, notebooks};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
 #[ExistingTypePath = "crate::schema::sql_types::BlockTypeEnum"]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum BlockType {
     Text,
     Code,
     Component,
     Drawing,
+    FreeDrawing,
+    DatabaseSchema,
+    Latex,
+    Sql,
+    Typst,
+    Challenge,
+    NotebookRef,
+    TemplateRef,
+    Chart,
+    Mermaid,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
@@ -1145,6 +1155,40 @@ pub async fn get_public_notebooks(
 mod tests {
     use super::*;
     use automerge::transaction::Transactable;
+
+    #[test]
+    fn block_type_serializes_multi_word_variants_as_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&BlockType::FreeDrawing).unwrap(),
+            "\"free_drawing\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BlockType::DatabaseSchema).unwrap(),
+            "\"database_schema\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BlockType::NotebookRef).unwrap(),
+            "\"notebook_ref\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BlockType::TemplateRef).unwrap(),
+            "\"template_ref\""
+        );
+    }
+
+    #[test]
+    fn block_type_serializes_single_word_variants_unchanged() {
+        assert_eq!(serde_json::to_string(&BlockType::Text).unwrap(), "\"text\"");
+        assert_eq!(serde_json::to_string(&BlockType::Code).unwrap(), "\"code\"");
+        assert_eq!(
+            serde_json::to_string(&BlockType::Component).unwrap(),
+            "\"component\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BlockType::Drawing).unwrap(),
+            "\"drawing\""
+        );
+    }
 
     fn doc_with_blocks(blocks_in: &[(&str, &str)]) -> AutoCommit {
         let mut doc = AutoCommit::new();
