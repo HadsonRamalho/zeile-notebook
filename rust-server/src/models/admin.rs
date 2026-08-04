@@ -17,6 +17,7 @@ pub struct PaginationQuery {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaginatedResponse<T> {
     pub data: Vec<T>,
     pub total: i64,
@@ -33,6 +34,7 @@ pub struct AdminChartData {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdminSystemStats {
     pub total_users: i64,
     pub total_active_users: i64,
@@ -44,6 +46,7 @@ pub struct AdminSystemStats {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdminUserView {
     pub id: Uuid,
     pub name: String,
@@ -55,6 +58,7 @@ pub struct AdminUserView {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdminTeamView {
     pub id: Uuid,
     pub name: String,
@@ -64,18 +68,14 @@ pub struct AdminTeamView {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdminNotebookView {
     pub id: Uuid,
-    #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
     pub title: String,
-    #[serde(rename = "isPublic")]
     pub is_public: bool,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 

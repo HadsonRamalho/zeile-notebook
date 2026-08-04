@@ -123,10 +123,9 @@ pub async fn api_admin_search(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdminNotifyRequest {
-    #[serde(rename = "targetKind")]
     pub target_kind: String,
-    #[serde(rename = "targetId")]
     pub target_id: Uuid,
     pub title: String,
     pub body: String,

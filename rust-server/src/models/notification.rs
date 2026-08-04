@@ -8,21 +8,17 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::notifications)]
+#[serde(rename_all = "camelCase")]
 pub struct Notification {
     pub id: Uuid,
-    #[serde(rename = "userId")]
     pub user_id: Uuid,
     pub kind: String,
     pub title: String,
     pub body: String,
     pub url: Option<String>,
-    #[serde(rename = "notebookId")]
     pub notebook_id: Option<Uuid>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
-    #[serde(rename = "readAt")]
     pub read_at: Option<DateTime<Utc>>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
