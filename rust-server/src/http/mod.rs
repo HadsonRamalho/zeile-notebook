@@ -28,6 +28,7 @@ use crate::file::RunLimits;
 use crate::file::register_log;
 use crate::file::run_safe_bin;
 use crate::file::setup_user_env;
+use crate::sec::ast::rust::verify_rust_ast;
 use crate::sec::verify_code;
 use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
@@ -133,6 +134,13 @@ pub async fn verify_request(
     }
 
     if let Err(msg) = verify_code(&payload.code) {
+        return Json(CodeResponse {
+            stdout: "".into(),
+            stderr: msg,
+        });
+    }
+
+    if let Err(msg) = verify_rust_ast(&payload.code) {
         return Json(CodeResponse {
             stdout: "".into(),
             stderr: msg,
