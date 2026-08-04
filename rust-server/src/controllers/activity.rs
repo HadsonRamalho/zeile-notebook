@@ -17,7 +17,7 @@ use crate::{
     models::{self, activity::Activity, error::ApiError, state::AppState},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordEditRequest {
     pub block_id: Option<String>,
@@ -50,6 +50,7 @@ pub fn spawn_record(
     });
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/activity", responses((status = OK, body = Vec<Activity>), (status = 401, body = ApiError)))]
 pub async fn api_list_activity(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -77,6 +78,7 @@ pub async fn api_list_activity(
     Ok((StatusCode::OK, Json(items)))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/activity", request_body = RecordEditRequest, responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_record_edit(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

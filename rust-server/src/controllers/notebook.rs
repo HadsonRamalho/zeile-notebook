@@ -23,7 +23,7 @@ use crate::{
     },
 };
 
-#[utoipa::path(post, path = "/notebook/create", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/notebook/create", responses((status = OK, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_create_notebook(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -64,6 +64,7 @@ pub async fn api_create_notebook(
     Ok((StatusCode::OK, Json(notebook_id)))
 }
 
+#[utoipa::path(get, path = "/notebook/all", responses((status = OK, body = Vec<Notebook>), (status = 401, body = ApiError)))]
 pub async fn api_get_notebooks(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -80,6 +81,7 @@ pub async fn api_get_notebooks(
     }
 }
 
+#[utoipa::path(get, path = "/notebook/{id}", responses((status = OK, body = Notebook), (status = 401, body = ApiError)))]
 pub async fn api_get_single_notebook(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -108,6 +110,7 @@ pub async fn api_get_single_notebook(
     Ok((StatusCode::OK, Json(notebook)))
 }
 
+#[utoipa::path(patch, path = "/notebook/{id}/title", request_body = UpdateNotebookTitle, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_rename_notebook(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -137,6 +140,7 @@ pub async fn api_rename_notebook(
     }
 }
 
+#[utoipa::path(patch, path = "/notebook/{id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_notebook_tags(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -164,6 +168,7 @@ pub async fn api_update_notebook_tags(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(patch, path = "/notebook/{id}/visibility", request_body = UpdateNotebookVisibility, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_notebook_visibility(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -195,6 +200,7 @@ pub async fn api_update_notebook_visibility(
     }
 }
 
+#[utoipa::path(delete, path = "/notebook/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_notebook(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -223,6 +229,7 @@ pub async fn api_delete_notebook(
     }
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/full", responses((status = OK, body = NotebookResponse), (status = 401, body = ApiError)))]
 pub async fn api_get_single_notebook_with_blocks(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -309,6 +316,7 @@ pub fn validate_content(payload: &SyncNotebookRequest) -> Result<(), ApiError> {
     Ok(())
 }
 
+#[utoipa::path(put, path = "/notebook/{id}/content", request_body = SyncNotebookRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_save_notebook_content(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -367,6 +375,7 @@ pub async fn api_save_notebook_content(
         Err(e) => Err(ApiError::Database(e)),
     }
 }
+#[utoipa::path(post, path = "/notebook/{id}/clone", responses((status = CREATED, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_clone_notebook(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -417,6 +426,7 @@ pub async fn api_clone_notebook(
     Ok((StatusCode::CREATED, Json(new_notebook_id)))
 }
 
+#[utoipa::path(get, path = "/notebook/search/", responses((status = OK, body = Vec<SearchResult>), (status = 401, body = ApiError)))]
 pub async fn api_search_notebooks(
     State(state): State<Arc<AppState>>,
     Query(params): Query<SearchQuery>,
@@ -441,6 +451,7 @@ pub async fn api_search_notebooks(
     Ok((StatusCode::OK, Json(results)))
 }
 
+#[utoipa::path(get, path = "/notebook/search/ranked/", responses((status = OK, body = Vec<RankedSearchItem>), (status = 401, body = ApiError)))]
 pub async fn api_search_notebooks_ranked(
     State(state): State<Arc<AppState>>,
     Query(params): Query<RankedSearchQuery>,
@@ -466,6 +477,7 @@ pub async fn api_search_notebooks_ranked(
     Ok((StatusCode::OK, Json(results)))
 }
 
+#[utoipa::path(get, path = "/notebook/public/{slug}", responses((status = OK, body = PublicNotebookDoc), (status = 401, body = ApiError)))]
 pub async fn api_get_public_notebook_by_slug(
     State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,
@@ -480,6 +492,7 @@ pub async fn api_get_public_notebook_by_slug(
     Ok((StatusCode::OK, Json(doc)))
 }
 
+#[utoipa::path(get, path = "/notebook/all/public", responses((status = OK, body = Vec<PublicNotebookResponse>), (status = 401, body = ApiError)))]
 pub async fn api_get_public_notebooks(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PublicSearchQuery>,

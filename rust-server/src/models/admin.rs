@@ -16,7 +16,7 @@ pub struct PaginationQuery {
     pub limit: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PaginatedResponse<T> {
     pub data: Vec<T>,
@@ -26,14 +26,14 @@ pub struct PaginatedResponse<T> {
     pub total_pages: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct AdminChartData {
     pub name: String,
     pub users: i64,
     pub notebooks: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AdminSystemStats {
     pub total_users: i64,
@@ -45,7 +45,7 @@ pub struct AdminSystemStats {
     pub chart_data: Vec<AdminChartData>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AdminUserView {
     pub id: Uuid,
@@ -57,7 +57,7 @@ pub struct AdminUserView {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AdminTeamView {
     pub id: Uuid,
@@ -67,7 +67,7 @@ pub struct AdminTeamView {
     pub member_count: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AdminNotebookView {
     pub id: Uuid,
@@ -79,7 +79,7 @@ pub struct AdminNotebookView {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct AdminSearchResult {
     pub id: Uuid,
     pub label: String,

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
+#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize, utoipa::ToSchema)]
 #[diesel(table_name = teams)]
 #[serde(rename_all = "camelCase")]
 pub struct Team {
@@ -22,7 +22,7 @@ pub struct Team {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Insertable, Deserialize, Validate)]
+#[derive(Insertable, Deserialize, Validate, utoipa::ToSchema)]
 #[diesel(table_name = teams)]
 #[serde(rename_all = "camelCase")]
 pub struct NewTeam {
@@ -33,7 +33,7 @@ pub struct NewTeam {
     pub image_url: Option<String>,
 }
 
-#[derive(AsChangeset, Deserialize, Validate)]
+#[derive(AsChangeset, Deserialize, Validate, utoipa::ToSchema)]
 #[diesel(table_name = teams)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTeam {
@@ -54,7 +54,7 @@ pub struct TeamRole {
 }
 
 // os oito bools do contrato publico; a fonte de verdade e permission_grants
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RolePermissions {
     #[serde(alias = "can_read")]
@@ -151,7 +151,7 @@ impl RolePermissions {
 }
 
 // mantem o formato plano que o frontend consome (`TeamRole` em lib/types/team-types.ts)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TeamRoleView {
     pub id: Uuid,
@@ -204,7 +204,7 @@ pub struct NewTeamRole {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Validate)]
+#[derive(Serialize, Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NewTeamRoleRequest {
     #[validate(length(min = 2, message = "Team role name is required"))]
@@ -213,7 +213,7 @@ pub struct NewTeamRoleRequest {
     pub permissions: RolePermissions,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTeamRole {
     pub id: Uuid,
@@ -280,7 +280,7 @@ pub struct TeamMemberResponse {
     pub joined_at: NaiveDateTime,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateMemberRoleRequest {
     #[serde(alias = "user_id")]

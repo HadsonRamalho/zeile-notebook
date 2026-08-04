@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::templates)]
 #[serde(rename_all = "camelCase")]
 pub struct Template {
@@ -33,7 +33,7 @@ pub struct NewTemplate {
     pub source_notebook_id: Option<Uuid>,
 }
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::template_versions)]
 #[serde(rename_all = "camelCase")]
 pub struct TemplateVersion {
@@ -54,7 +54,7 @@ pub struct NewTemplateVersion {
     pub note: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicTemplateResponse {
     pub id: Uuid,

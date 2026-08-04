@@ -19,7 +19,7 @@ pub mod schema;
 pub mod sec;
 pub mod shutdown;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeRequest {
     pub code: String,
@@ -27,7 +27,7 @@ pub struct CodeRequest {
     pub notebook_id: Option<uuid::Uuid>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct CodeResponse {
     stdout: String,
     stderr: String,

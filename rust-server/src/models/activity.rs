@@ -6,7 +6,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::notebook_activity)]
 #[serde(rename_all = "camelCase")]
 pub struct Activity {

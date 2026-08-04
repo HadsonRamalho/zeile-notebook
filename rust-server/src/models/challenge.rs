@@ -78,7 +78,7 @@ pub struct UpdateChallenge {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ChallengePublic {
     pub id: Uuid,
@@ -158,7 +158,7 @@ pub struct TestCasePublic {
     pub ord: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TestCaseAuthoringView {
     pub id: Uuid,
@@ -211,7 +211,7 @@ pub struct NewSubmission {
     pub max_score: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SubmissionView {
     pub id: Uuid,
@@ -275,7 +275,7 @@ pub struct NewSubmissionResult {
     pub ord: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SubmissionResultView {
     pub test_case_id: Option<Uuid>,
@@ -308,7 +308,7 @@ impl SubmissionResult {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardEntry {
     pub submission_id: Uuid,

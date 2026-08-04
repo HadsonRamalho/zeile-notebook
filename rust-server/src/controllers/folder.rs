@@ -21,6 +21,7 @@ use crate::{
     },
 };
 
+#[utoipa::path(get, path = "/notebook/folders", responses((status = OK, body = Vec<Folder>), (status = 401, body = ApiError)))]
 pub async fn api_list_folders(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -33,6 +34,7 @@ pub async fn api_list_folders(
     Ok((StatusCode::OK, Json(folders)))
 }
 
+#[utoipa::path(post, path = "/notebook/folders", request_body = FolderNameRequest, responses((status = CREATED, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_create_folder(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -59,6 +61,7 @@ pub async fn api_create_folder(
     Ok((StatusCode::CREATED, Json(folder)))
 }
 
+#[utoipa::path(patch, path = "/notebook/folders/{folder_id}", request_body = FolderNameRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_rename_folder(
     State(state): State<Arc<AppState>>,
     Path(folder_id): Path<Uuid>,
@@ -81,6 +84,7 @@ pub async fn api_rename_folder(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(patch, path = "/notebook/folders/{folder_id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_update_folder_tags(
     State(state): State<Arc<AppState>>,
     Path(folder_id): Path<Uuid>,
@@ -100,6 +104,7 @@ pub async fn api_update_folder_tags(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(delete, path = "/notebook/folders/{folder_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_folder(
     State(state): State<Arc<AppState>>,
     Path(folder_id): Path<Uuid>,
@@ -117,6 +122,7 @@ pub async fn api_delete_folder(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(patch, path = "/notebook/{id}/folder", request_body = MoveFolderRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_move_notebook_to_folder(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -155,6 +161,7 @@ pub async fn api_move_notebook_to_folder(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(get, path = "/team/{id}/folders", responses((status = OK, body = Vec<Folder>), (status = 401, body = ApiError)))]
 pub async fn api_list_team_folders(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -169,6 +176,7 @@ pub async fn api_list_team_folders(
     Ok((StatusCode::OK, Json(folders)))
 }
 
+#[utoipa::path(post, path = "/team/{id}/folders", request_body = FolderNameRequest, responses((status = CREATED, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_create_team_folder(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -197,6 +205,7 @@ pub async fn api_create_team_folder(
     Ok((StatusCode::CREATED, Json(folder)))
 }
 
+#[utoipa::path(patch, path = "/team/{id}/folders/{folder_id}", request_body = FolderNameRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_rename_team_folder(
     State(state): State<Arc<AppState>>,
     Path((team_id, folder_id)): Path<(Uuid, Uuid)>,
@@ -220,6 +229,7 @@ pub async fn api_rename_team_folder(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(patch, path = "/team/{id}/folders/{folder_id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_update_team_folder_tags(
     State(state): State<Arc<AppState>>,
     Path((team_id, folder_id)): Path<(Uuid, Uuid)>,
@@ -240,6 +250,7 @@ pub async fn api_update_team_folder_tags(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(delete, path = "/team/{id}/folders/{folder_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_team_folder(
     State(state): State<Arc<AppState>>,
     Path((team_id, folder_id)): Path<(Uuid, Uuid)>,

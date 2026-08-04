@@ -6,7 +6,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::notebook_snapshots)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotMeta {
@@ -31,7 +31,7 @@ struct NewSnapshot {
     created_by: Option<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateSnapshotRequest {
     pub label: String,

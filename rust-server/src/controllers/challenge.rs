@@ -22,7 +22,7 @@ use crate::models::error::ApiError;
 use crate::models::state::AppState;
 use crate::models::user::UserRole;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateChallengeRequest {
     pub notebook_id: Uuid,
@@ -42,7 +42,7 @@ pub struct CreateChallengeRequest {
     pub team_id: Option<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateChallengeRequest {
     pub title: Option<String>,
@@ -58,7 +58,7 @@ pub struct UpdateChallengeRequest {
     pub visibility: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTestCaseRequest {
     pub input: String,
@@ -68,19 +68,19 @@ pub struct CreateTestCaseRequest {
     pub ord: Option<i32>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct SetReferenceRequest {
     pub solution: String,
     pub language: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct SubmitRequest {
     pub language: String,
     pub code: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct SampleResultView {
     pub input: String,
     pub expected: Option<String>,
@@ -89,7 +89,7 @@ pub struct SampleResultView {
     pub verdict: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RunSamplesResponse {
     pub compile_error: Option<String>,
@@ -125,6 +125,7 @@ async fn require_notebook(
     Ok(())
 }
 
+#[utoipa::path(get, path = "/challenge/list", responses((status = OK, body = Vec<ChallengePublic>), (status = 401, body = ApiError)))]
 pub async fn api_list_challenges(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ChallengePublic>>, ApiError> {
@@ -153,6 +154,7 @@ async fn challenge_detail(
     })))
 }
 
+#[utoipa::path(get, path = "/challenge/slug/{slug}", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
 pub async fn api_get_challenge(
     State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,
@@ -164,6 +166,7 @@ pub async fn api_get_challenge(
     challenge_detail(&state, &headers, ch).await
 }
 
+#[utoipa::path(get, path = "/challenge/{id}", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
 pub async fn api_get_challenge_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -175,6 +178,7 @@ pub async fn api_get_challenge_by_id(
     challenge_detail(&state, &headers, ch).await
 }
 
+#[utoipa::path(post, path = "/challenge/create", request_body = CreateChallengeRequest, responses((status = CREATED, body = ChallengePublic), (status = 401, body = ApiError)))]
 pub async fn api_create_challenge(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -232,6 +236,7 @@ pub async fn api_create_challenge(
     Ok((StatusCode::CREATED, Json(ChallengePublic::from(created))))
 }
 
+#[utoipa::path(put, path = "/challenge/{id}", request_body = UpdateChallengeRequest, responses((status = OK, body = ChallengePublic), (status = 401, body = ApiError)))]
 pub async fn api_update_challenge(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -275,6 +280,7 @@ pub async fn api_update_challenge(
     Ok(Json(ChallengePublic::from(updated)))
 }
 
+#[utoipa::path(post, path = "/challenge/{id}/test-cases", request_body = CreateTestCaseRequest, responses((status = CREATED, body = Value), (status = 401, body = ApiError)))]
 pub async fn api_add_test_case(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -306,6 +312,7 @@ pub async fn api_add_test_case(
     Ok((StatusCode::CREATED, Json(json!({ "id": created.id }))))
 }
 
+#[utoipa::path(post, path = "/challenge/{id}/reference", request_body = SetReferenceRequest, responses((status = CREATED, body = ChallengePublic), (status = 401, body = ApiError)))]
 pub async fn api_set_reference(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -329,6 +336,7 @@ pub async fn api_set_reference(
     Ok(Json(ChallengePublic::from(updated)))
 }
 
+#[utoipa::path(get, path = "/challenge/{id}/reference", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
 pub async fn api_get_reference(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -350,6 +358,7 @@ pub async fn api_get_reference(
     })))
 }
 
+#[utoipa::path(delete, path = "/challenge/{id}/reference/{language}", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
 pub async fn api_delete_reference(
     State(state): State<Arc<AppState>>,
     Path((id, language)): Path<(Uuid, String)>,
@@ -372,6 +381,7 @@ pub async fn api_delete_reference(
     })))
 }
 
+#[utoipa::path(get, path = "/challenge/{id}/test-cases", responses((status = OK, body = Vec<TestCaseAuthoringView>), (status = 401, body = ApiError)))]
 pub async fn api_list_test_cases(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -395,6 +405,7 @@ pub async fn api_list_test_cases(
     ))
 }
 
+#[utoipa::path(delete, path = "/challenge/{id}/test-cases/{case_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_test_case(
     State(state): State<Arc<AppState>>,
     Path((id, case_id)): Path<(Uuid, Uuid)>,
@@ -416,6 +427,7 @@ pub async fn api_delete_test_case(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(post, path = "/challenge/{id}/submit", request_body = SubmitRequest, responses((status = CREATED, body = SubmissionView), (status = 401, body = ApiError)))]
 pub async fn api_submit(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -478,6 +490,7 @@ pub async fn api_submit(
     Ok((StatusCode::ACCEPTED, Json(submission.into_view(Vec::new()))))
 }
 
+#[utoipa::path(post, path = "/challenge/{id}/run", request_body = SubmitRequest, responses((status = CREATED, body = RunSamplesResponse), (status = 401, body = ApiError)))]
 pub async fn api_run_samples(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -568,6 +581,7 @@ pub async fn api_run_samples(
     }))
 }
 
+#[utoipa::path(get, path = "/challenge/submissions/{submission_id}", responses((status = OK, body = SubmissionView), (status = 401, body = ApiError)))]
 pub async fn api_get_submission(
     State(state): State<Arc<AppState>>,
     Path(submission_id): Path<Uuid>,
@@ -601,6 +615,7 @@ pub async fn api_get_submission(
     Ok(Json(submission.into_view(results)))
 }
 
+#[utoipa::path(get, path = "/challenge/{id}/submissions", responses((status = OK, body = Vec<SubmissionView>), (status = 401, body = ApiError)))]
 pub async fn api_list_my_submissions(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -614,6 +629,7 @@ pub async fn api_list_my_submissions(
     ))
 }
 
+#[utoipa::path(get, path = "/challenge/{id}/leaderboard", responses((status = OK, body = Vec<LeaderboardEntry>), (status = 401, body = ApiError)))]
 pub async fn api_leaderboard(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

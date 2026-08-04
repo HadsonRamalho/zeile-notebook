@@ -43,6 +43,7 @@ pub async fn check_admin_role(
     Ok(())
 }
 
+#[utoipa::path(get, path = "/admin/stats", responses((status = OK, body = AdminSystemStats), (status = 401, body = ApiError)))]
 pub async fn api_get_admin_stats(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -58,6 +59,7 @@ pub async fn api_get_admin_stats(
     Ok((StatusCode::OK, Json(stats)))
 }
 
+#[utoipa::path(get, path = "/admin/users", responses((status = OK, body = PaginatedResponse<AdminUserView>), (status = 401, body = ApiError)))]
 pub async fn api_get_admin_users(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
@@ -74,6 +76,7 @@ pub async fn api_get_admin_users(
     Ok((StatusCode::OK, Json(users_data)))
 }
 
+#[utoipa::path(get, path = "/admin/teams", responses((status = OK, body = PaginatedResponse<AdminTeamView>), (status = 401, body = ApiError)))]
 pub async fn api_get_admin_teams(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
@@ -96,6 +99,7 @@ pub struct AdminSearchQuery {
     pub q: String,
 }
 
+#[utoipa::path(get, path = "/admin/search", responses((status = OK, body = Vec<AdminSearchResult>), (status = 401, body = ApiError)))]
 pub async fn api_admin_search(
     State(state): State<Arc<AppState>>,
     Query(params): Query<AdminSearchQuery>,
@@ -122,7 +126,7 @@ pub async fn api_admin_search(
     Ok((StatusCode::OK, Json(results)))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AdminNotifyRequest {
     pub target_kind: String,
@@ -132,6 +136,7 @@ pub struct AdminNotifyRequest {
     pub url: Option<String>,
 }
 
+#[utoipa::path(post, path = "/admin/notify", request_body = AdminNotifyRequest, responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_admin_notify(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -196,6 +201,7 @@ pub async fn api_admin_notify(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(get, path = "/admin/notebooks", responses((status = OK, body = PaginatedResponse<AdminNotebookView>), (status = 401, body = ApiError)))]
 pub async fn api_get_admin_notebooks(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
