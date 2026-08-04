@@ -3,7 +3,10 @@ use tracing::info;
 
 use crate::executor::sandbox::{CompileSandbox, absolute_path};
 use crate::file::{RunLimits, RunOutcome, run_safe_bin, setup_user_env};
-use crate::sec::{verify_code, verify_cpp_code, verify_go_code, verify_zig_code};
+use crate::sec::{
+    diff_new_lines, header_baseline_source, verify_code, verify_cpp_code, verify_cpp_preprocessed,
+    verify_go_code, verify_zig_code,
+};
 
 pub mod sandbox;
 
@@ -237,9 +240,42 @@ async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
         .await
         .map_err(|e| e.to_string())?;
 
+    let baseline_path = Path::new(&user_dir).join("baseline.cpp");
+    tokio::fs::write(&baseline_path, header_baseline_source(code))
+        .await
+        .map_err(|e| e.to_string())?;
+
     let cpp_path = std::env::var("CPP_PATH").unwrap_or_else(|_| "clang++".to_string());
-    let compile_output = CompileSandbox::new(absolute_path(&user_dir)?)
-        .with_compiler(&cpp_path)
+    let sandbox = CompileSandbox::new(absolute_path(&user_dir)?).with_compiler(&cpp_path);
+
+    let (full_result, baseline_result) = tokio::join!(
+        sandbox.run(&cpp_path, &["-E", "-P", "-std=c++20", "main.cpp"]),
+        sandbox.run(&cpp_path, &["-E", "-P", "-std=c++20", "baseline.cpp"])
+    );
+
+    let full_output = full_result?;
+
+    if !full_output.status.success() {
+        return Err(format!(
+            "C++ compile error:\n{}",
+            String::from_utf8_lossy(&full_output.stderr)
+        ));
+    }
+
+    let baseline_output = baseline_result?;
+
+    if !baseline_output.status.success() {
+        return Err(format!(
+            "C++ compile error:\n{}",
+            String::from_utf8_lossy(&baseline_output.stderr)
+        ));
+    }
+
+    let full = String::from_utf8_lossy(&full_output.stdout);
+    let baseline = String::from_utf8_lossy(&baseline_output.stdout);
+    verify_cpp_preprocessed(&diff_new_lines(&full, &baseline))?;
+
+    let compile_output = sandbox
         .run(
             &cpp_path,
             &["-O2", "-std=c++20", "-o", &bin_name, "main.cpp"],
@@ -458,6 +494,48 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
         let _ = std::fs::remove_dir_all(format!("files/{session}"));
 
         assert!(bin.is_ok(), "rust should compile: {bin:?}");
+    }
+
+    #[tokio::test]
+    async fn cpp_compile_rejects_a_macro_reconstructed_system_call() {
+        if !has_sandbox() || !(exists("clang++") || exists("g++")) {
+            eprintln!("clang++/g++/bwrap missing; test skipped");
+            return;
+        }
+
+        let session = Session::new("cpp_macro_bypass");
+        let code = "#define RUN system\nint main(){ RUN(\"id\"); return 0; }\n";
+
+        let result = compile_code("cpp", code, &session.0).await;
+
+        assert!(
+            result.is_err(),
+            "macro-reconstructed system() should be rejected: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn cpp_compile_rejects_a_line_directive_spoofing_a_header() {
+        if !has_sandbox() || !(exists("clang++") || exists("g++")) {
+            eprintln!("clang++/g++/bwrap missing; test skipped");
+            return;
+        }
+
+        let session = Session::new("cpp_line_bypass");
+        let code = concat!(
+            "#define RUN system\n",
+            "#line 1 \"/usr/include/c++/v1/fake_header.h\"\n",
+            "static void evil(){ RUN(\"id\"); }\n",
+            "#line 20 \"main.cpp\"\n",
+            "int main(){ evil(); return 0; }\n",
+        );
+
+        let result = compile_code("cpp", code, &session.0).await;
+
+        assert!(
+            result.is_err(),
+            "a #line directive claiming the call lives in a header must not hide it: {result:?}"
+        );
     }
 
     #[tokio::test]
