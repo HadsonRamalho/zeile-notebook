@@ -9,6 +9,7 @@ on:
       - "scripts/generate-openapi-types.mjs"
       - "scripts/generate-ws-types.mjs"
       - "scripts/generate-error-codes.mjs"
+      - "scripts/check-no-duplicate-fields.mjs"
       - "lib/api/generated/**"
       - "package.json"
       - ".github/workflows/generators.yml"
@@ -21,6 +22,7 @@ on:
       - "scripts/generate-openapi-types.mjs"
       - "scripts/generate-ws-types.mjs"
       - "scripts/generate-error-codes.mjs"
+      - "scripts/check-no-duplicate-fields.mjs"
       - "lib/api/generated/**"
       - "package.json"
       - ".github/workflows/generators.yml"
@@ -58,3 +60,5 @@ jobs:
       - run: pnpm generate:ws-types:check
 
       - run: pnpm generate:error-codes:check
+
+      - run: pnpm check:no-duplicate-fields
