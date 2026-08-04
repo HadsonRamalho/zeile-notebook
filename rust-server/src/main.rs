@@ -1,3 +1,5 @@
+#![warn(clippy::let_underscore_must_use)]
+
 use serde::{Deserialize, Serialize};
 use tower_http::trace::TraceLayer;
 
