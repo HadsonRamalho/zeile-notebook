@@ -35,9 +35,27 @@ pub struct CodeResponse {
 
 #[tokio::main]
 async fn main() {
+    if std::env::args().nth(1).as_deref() == Some("export-openapi") {
+        return export_openapi();
+    }
+
     if let Err(error) = run().await {
         eprintln!("zeile-server failed to start: {error}");
         std::process::exit(1);
+    }
+}
+
+fn export_openapi() {
+    let docs = crate::routes::docs::get_api_docs();
+    let json = docs
+        .to_pretty_json()
+        .expect("OpenApi struct always serializes to JSON");
+    match std::env::args().nth(2) {
+        Some(path) => std::fs::write(&path, json).unwrap_or_else(|e| {
+            eprintln!("failed to write {path}: {e}");
+            std::process::exit(1);
+        }),
+        None => println!("{json}"),
     }
 }
 
