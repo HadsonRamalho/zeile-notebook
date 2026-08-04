@@ -6,9 +6,10 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema, ts_rs::TS)]
 #[diesel(table_name = crate::schema::chat_messages)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "ws-message.ts", rename_all = "camelCase")]
 pub struct ChatMessage {
     pub id: Uuid,
     pub notebook_id: Option<Uuid>,

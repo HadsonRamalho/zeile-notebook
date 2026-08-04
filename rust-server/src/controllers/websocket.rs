@@ -34,6 +34,7 @@ use crate::{
     models::{
         notebook::{checkpoint_notebook_data, extract_search_text, load_notebook_data},
         state::AppState,
+        ws_message::WsServerMessage,
     },
     shutdown::Shutdown,
 };
@@ -499,7 +500,10 @@ async fn handle_presence_socket(
 
     let (tx, mut rx) = mpsc::channel::<String>(PRESENCE_CHANNEL_CAP);
 
-    let _ = tx.try_send(format!(r#"{{"type":"init","userId":"{}"}}"#, session_id));
+    let _ = tx.try_send(serde_json::to_string(&WsServerMessage::Init {
+            user_id: session_id,
+        })
+        .expect("WsServerMessage::Init always serializes"));
 
     let registry = state.presence_registry.clone();
 
@@ -670,12 +674,11 @@ async fn presence_flush_loop(
             continue;
         }
 
-        let batch = serde_json::json!({
-            "type": "presence_batch",
-            "updates": updates,
-            "gone": gone.iter().map(|u| u.to_string()).collect::<Vec<String>>(),
+        let batch = serde_json::to_string(&WsServerMessage::PresenceBatch {
+            updates,
+            gone: gone.iter().map(|u| u.to_string()).collect(),
         })
-        .to_string();
+        .expect("WsServerMessage::PresenceBatch always serializes");
 
         for m in room.subscribers.iter() {
             let _ = m.value().tx.try_send(batch.clone());
@@ -731,7 +734,8 @@ pub async fn restore_notebook_doc(state: &Arc<AppState>, notebook_id: Uuid, byte
     broadcast_comment_event(
         state,
         notebook_id,
-        serde_json::json!({ "type": "notebook_restored" }).to_string(),
+        serde_json::to_string(&WsServerMessage::NotebookRestored)
+            .expect("WsServerMessage::NotebookRestored always serializes"),
     );
 }
 
@@ -977,7 +981,10 @@ async fn handle_combined_socket(
     });
     let _ = member
         .tx
-        .try_send(format!(r#"{{"type":"init","userId":"{}"}}"#, session_id));
+        .try_send(serde_json::to_string(&WsServerMessage::Init {
+            user_id: session_id,
+        })
+        .expect("WsServerMessage::Init always serializes"));
     let room = join_presence_room(
         &state.presence_registry,
         notebook_id,

@@ -24,11 +24,13 @@ use crate::{
         },
         error::ApiError,
         state::AppState,
+        ws_message::WsServerMessage,
     },
 };
 
 fn comment_signal(notebook_id: Uuid) -> String {
-    serde_json::json!({ "type": "comment_event", "notebookId": notebook_id }).to_string()
+    serde_json::to_string(&WsServerMessage::CommentEvent { notebook_id })
+        .expect("WsServerMessage::CommentEvent always serializes")
 }
 
 fn mentions_name(text: &str, name: &str) -> bool {
