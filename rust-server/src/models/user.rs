@@ -186,11 +186,13 @@ impl Sanitize for UserEmail {
     }
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ResetPasswordPayload {
+    #[validate(length(min = 1, message = "Token is required"))]
     pub token: String,
     #[serde(alias = "new_password")]
+    #[validate(length(min = 1, message = "The new password is required"))]
     pub new_password: String,
 }
 

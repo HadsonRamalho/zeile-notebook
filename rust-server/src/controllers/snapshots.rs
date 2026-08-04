@@ -6,6 +6,7 @@ use axum::{
 };
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
@@ -65,6 +66,10 @@ pub async fn api_create_snapshot(
     headers: HeaderMap,
     Json(payload): Json<CreateSnapshotRequest>,
 ) -> Result<(StatusCode, Json<SnapshotMeta>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     require(

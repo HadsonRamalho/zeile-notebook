@@ -6,6 +6,7 @@ use diesel::{
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::models::error::ApiError;
 use crate::schema::push_subscriptions;
@@ -32,20 +33,25 @@ pub struct NewPushSubscription {
     pub auth: String,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 pub struct PushSubscriptionKeysRequest {
+    #[validate(length(min = 1, message = "p256dh key is required"))]
     pub p256dh: String,
+    #[validate(length(min = 1, message = "auth key is required"))]
     pub auth: String,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 pub struct PushSubscriptionRequest {
+    #[validate(url(message = "Invalid push endpoint"))]
     pub endpoint: String,
+    #[validate(nested)]
     pub keys: PushSubscriptionKeysRequest,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 pub struct PushUnsubscribeRequest {
+    #[validate(url(message = "Invalid push endpoint"))]
     pub endpoint: String,
 }
 

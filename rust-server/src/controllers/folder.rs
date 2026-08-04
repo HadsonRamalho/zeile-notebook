@@ -6,6 +6,7 @@ use axum::{
 };
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
@@ -40,6 +41,10 @@ pub async fn api_create_folder(
     headers: HeaderMap,
     Json(payload): Json<FolderNameRequest>,
 ) -> Result<(StatusCode, Json<Folder>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let name = payload.name.trim().to_string();
     if name.is_empty() {
@@ -68,6 +73,10 @@ pub async fn api_rename_folder(
     headers: HeaderMap,
     Json(payload): Json<FolderNameRequest>,
 ) -> Result<(StatusCode, Json<Folder>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let name = payload.name.trim().to_string();
     if name.is_empty() {
@@ -148,8 +157,7 @@ pub async fn api_move_notebook_to_folder(
 
     if let Some(folder_id) = payload.folder_id {
         let folder = models::folder::get_folder(conn, folder_id).await?;
-        let same_scope =
-            folder.user_id == notebook.user_id && folder.team_id == notebook.team_id;
+        let same_scope = folder.user_id == notebook.user_id && folder.team_id == notebook.team_id;
         if !same_scope {
             return Err(ApiError::Request(
                 "A pasta pertence a outro escopo".to_string(),
@@ -183,6 +191,10 @@ pub async fn api_create_team_folder(
     headers: HeaderMap,
     Json(payload): Json<FolderNameRequest>,
 ) -> Result<(StatusCode, Json<Folder>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let name = payload.name.trim().to_string();
     if name.is_empty() {
@@ -212,6 +224,10 @@ pub async fn api_rename_team_folder(
     headers: HeaderMap,
     Json(payload): Json<FolderNameRequest>,
 ) -> Result<(StatusCode, Json<Folder>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let name = payload.name.trim().to_string();
     if name.is_empty() {
@@ -223,7 +239,9 @@ pub async fn api_rename_team_folder(
     require_team_permission(conn, user_id, team_id, "notebook.pages.add").await?;
     let folder = models::folder::get_folder(conn, folder_id).await?;
     if folder.team_id != Some(team_id) {
-        return Err(ApiError::Request("Pasta não pertence a este time".to_string()));
+        return Err(ApiError::Request(
+            "Pasta não pertence a este time".to_string(),
+        ));
     }
     let updated = models::folder::rename_folder(conn, folder_id, &name).await?;
     Ok((StatusCode::OK, Json(updated)))
@@ -244,7 +262,9 @@ pub async fn api_update_team_folder_tags(
     require_team_permission(conn, user_id, team_id, "notebook.pages.add").await?;
     let folder = models::folder::get_folder(conn, folder_id).await?;
     if folder.team_id != Some(team_id) {
-        return Err(ApiError::Request("Pasta não pertence a este time".to_string()));
+        return Err(ApiError::Request(
+            "Pasta não pertence a este time".to_string(),
+        ));
     }
     let updated = models::folder::set_folder_tags(conn, folder_id, &tags).await?;
     Ok((StatusCode::OK, Json(updated)))
@@ -263,7 +283,9 @@ pub async fn api_delete_team_folder(
     require_team_permission(conn, user_id, team_id, "notebook.pages.add").await?;
     let folder = models::folder::get_folder(conn, folder_id).await?;
     if folder.team_id != Some(team_id) {
-        return Err(ApiError::Request("Pasta não pertence a este time".to_string()));
+        return Err(ApiError::Request(
+            "Pasta não pertence a este time".to_string(),
+        ));
     }
     models::folder::delete_folder(conn, folder_id).await?;
     Ok(StatusCode::OK)

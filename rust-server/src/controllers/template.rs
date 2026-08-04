@@ -8,12 +8,11 @@ use hyper::{HeaderMap, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
-        jwt::extract_claims_from_header,
-        permissions::require_team_permission,
-        utils::get_conn,
+        jwt::extract_claims_from_header, permissions::require_team_permission, utils::get_conn,
     },
     models::{
         self,
@@ -26,10 +25,11 @@ use crate::{
 
 const ALLOWED_KINDS: &[&str] = &["typst"];
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTemplateRequest {
     pub kind: String,
+    #[validate(length(max = 300, message = "Name must be at most 300 characters"))]
     pub name: String,
     pub team_id: Option<Uuid>,
     pub source_notebook_id: Option<Uuid>,
@@ -113,6 +113,10 @@ pub async fn api_create_template(
     headers: HeaderMap,
     Json(payload): Json<CreateTemplateRequest>,
 ) -> Result<(StatusCode, Json<Template>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     let kind = payload.kind.trim().to_lowercase();
@@ -202,7 +206,10 @@ pub async fn api_get_template(
     Query(query): Query<VersionQuery>,
     headers: HeaderMap,
 ) -> Result<(StatusCode, Json<ResolvedTemplate>), ApiError> {
-    let user_id = extract_claims_from_header(&headers).await.ok().map(|c| c.1.id);
+    let user_id = extract_claims_from_header(&headers)
+        .await
+        .ok()
+        .map(|c| c.1.id);
 
     let conn = &mut get_conn(&state.pool)
         .await
@@ -251,7 +258,11 @@ pub async fn api_list_public_templates(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let kind = query.kind.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let kind = query
+        .kind
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let q = query.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
 
     let templates = models::template::list_public_templates(conn, kind, q).await?;

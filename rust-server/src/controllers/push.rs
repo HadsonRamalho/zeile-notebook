@@ -5,9 +5,10 @@ use hyper::{HeaderMap, StatusCode};
 use serde::Serialize;
 use serde_json::json;
 use uuid::Uuid;
+use validator::Validate;
 use web_push::{
-    ContentEncoding, HyperWebPushClient, SubscriptionInfo, SubscriptionKeys,
-    VapidSignatureBuilder, WebPushClient, WebPushError, WebPushMessageBuilder,
+    ContentEncoding, HyperWebPushClient, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder,
+    WebPushClient, WebPushError, WebPushMessageBuilder,
 };
 
 use crate::{
@@ -33,7 +34,11 @@ pub fn load_push_state() -> Option<PushState> {
         let key_path = get_var_from_env("VAPID_PRIVATE_KEY_PATH").ok()?;
         let pem = std::fs::read(&key_path)
             .map_err(|e| {
-                tracing::warn!("Could not read VAPID_PRIVATE_KEY_PATH ({}): {}", key_path, e);
+                tracing::warn!(
+                    "Could not read VAPID_PRIVATE_KEY_PATH ({}): {}",
+                    key_path,
+                    e
+                );
             })
             .ok()?;
         VapidSignatureBuilder::from_pem_no_sub(pem.as_slice())
@@ -123,6 +128,10 @@ pub async fn api_subscribe_push(
     headers: HeaderMap,
     Json(payload): Json<PushSubscriptionRequest>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     let conn = &mut get_conn(&state.pool)
@@ -140,6 +149,10 @@ pub async fn api_unsubscribe_push(
     headers: HeaderMap,
     Json(payload): Json<PushUnsubscribeRequest>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     extract_claims_from_header(&headers).await?;
 
     let conn = &mut get_conn(&state.pool)

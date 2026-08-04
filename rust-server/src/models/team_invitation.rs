@@ -4,16 +4,19 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct InviteRequest {
+    #[validate(email(message = "Invalid email format"))]
     pub email: String,
     pub role_id: Uuid,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 pub struct AcceptInviteRequest {
+    #[validate(length(min = 1, message = "Token is required"))]
     pub token: String,
 }
 
@@ -69,10 +72,7 @@ pub async fn find_invitation_by_token(
     }
 }
 
-pub async fn delete_invitation(
-    conn: &mut AsyncPgConnection,
-    id_param: Uuid,
-) -> Result<(), String> {
+pub async fn delete_invitation(conn: &mut AsyncPgConnection, id_param: Uuid) -> Result<(), String> {
     match diesel::delete(team_invitations::table.filter(team_invitations::id.eq(id_param)))
         .execute(conn)
         .await
@@ -102,18 +102,30 @@ mod tests {
     #[test]
     fn case_and_whitespace_do_not_prevent_a_match() {
         assert!(email_matches("Person@Example.Test", "person@example.test"));
-        assert!(email_matches("  person@example.test  ", "person@example.test"));
-        assert!(email_matches("person@example.test", " PERSON@example.TEST "));
+        assert!(email_matches(
+            "  person@example.test  ",
+            "person@example.test"
+        ));
+        assert!(email_matches(
+            "person@example.test",
+            " PERSON@example.TEST "
+        ));
     }
 
     #[test]
     fn a_different_email_does_not_match() {
-        assert!(!email_matches("invited@example.test", "intruder@example.test"));
+        assert!(!email_matches(
+            "invited@example.test",
+            "intruder@example.test"
+        ));
     }
 
     #[test]
     fn a_prefix_does_not_count_as_a_match() {
-        assert!(!email_matches("person@example.test", "person@example.test.br"));
+        assert!(!email_matches(
+            "person@example.test",
+            "person@example.test.br"
+        ));
         assert!(!email_matches("person@example.test", "person"));
         assert!(!email_matches("", "person@example.test"));
     }
