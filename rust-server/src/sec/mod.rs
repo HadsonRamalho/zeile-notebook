@@ -1,3 +1,4 @@
+pub mod ast;
 pub mod catalog;
 
 pub fn verify_code(code: &str) -> Result<(), String> {

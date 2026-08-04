@@ -7,6 +7,7 @@ use crate::sec::{
     diff_new_lines, header_baseline_source, verify_code, verify_cpp_code, verify_cpp_preprocessed,
     verify_go_code, verify_zig_code,
 };
+use crate::sec::ast::rust::verify_rust_ast;
 
 pub mod sandbox;
 
@@ -120,6 +121,7 @@ pub async fn compile_rust_with_warnings(
     safe_session: &str,
 ) -> Result<(String, String), String> {
     verify_code(code)?;
+    verify_rust_ast(code)?;
 
     let project_path = setup_user_env(safe_session).await;
     let src_path = project_path.join("src");
