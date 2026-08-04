@@ -18,8 +18,8 @@ use crate::CodeRequest;
 use crate::CodeResponse;
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{TargetCtx, require};
-use crate::models::state::AppState;
 use crate::controllers::utils::extract_module_name;
+use crate::executor::ExecStatus;
 use crate::executor::sanitize_session;
 use crate::executor::{
     compile_rust_with_warnings, project_absolute_path, run_compiled, sandbox_rust,
@@ -28,16 +28,28 @@ use crate::file::RunLimits;
 use crate::file::register_log;
 use crate::file::run_safe_bin;
 use crate::file::setup_user_env;
+use crate::models::state::AppState;
 use crate::sec::ast::rust::verify_rust_ast;
 use crate::sec::verify_code;
 use crate::sec::verify_cpp_code;
 use crate::sec::verify_go_code;
 use crate::sec::verify_zig_code;
 
-fn execution_denied(reason: &str) -> CodeResponse {
+fn ok_response(stdout: String, stderr: String) -> CodeResponse {
     CodeResponse {
+        status: ExecStatus::Ok,
+        error_code: None,
+        stdout,
+        stderr,
+    }
+}
+
+fn failure(status: ExecStatus, error_code: &str, stderr: String) -> CodeResponse {
+    CodeResponse {
+        status,
+        error_code: Some(error_code.to_string()),
         stdout: String::new(),
-        stderr: reason.to_string(),
+        stderr,
     }
 }
 
@@ -54,8 +66,10 @@ async fn enforce_execute(
     let user_id = match extract_claims_from_header(headers).await {
         Ok(claims) => claims.1.id,
         Err(_) => {
-            return Err(execution_denied(
-                "É necessário estar autenticado para executar código.",
+            return Err(failure(
+                ExecStatus::Unauthenticated,
+                "NOT_AUTHENTICATED",
+                "É necessário estar autenticado para executar código.".to_string(),
             ));
         }
     };
@@ -63,8 +77,10 @@ async fn enforce_execute(
     let notebook_id = match notebook_id {
         Some(id) => id,
         None => {
-            return Err(execution_denied(
-                "É necessário informar o notebook do bloco que está sendo executado.",
+            return Err(failure(
+                ExecStatus::InvalidRequest,
+                "MISSING_NOTEBOOK_ID",
+                "É necessário informar o notebook do bloco que está sendo executado.".to_string(),
             ));
         }
     };
@@ -77,17 +93,28 @@ async fn enforce_execute(
 
     match require(pool, Some(user_id), notebook_id, &key, &target).await {
         Ok(_) => Ok(execution_session(user_id, notebook_id)),
-        Err(_) => Err(execution_denied(
-            "Você não tem permissão para executar este tipo de bloco.",
+        Err(_) => Err(failure(
+            ExecStatus::PermissionDenied,
+            "PERMISSION_DENIED",
+            "Você não tem permissão para executar este tipo de bloco.".to_string(),
         )),
     }
 }
 
 fn unsupported_execution() -> CodeResponse {
-    CodeResponse {
-        stdout: String::new(),
-        stderr: "Execução de código compilado (Rust/Go/C++/Zig) não é suportada nesta plataforma. Use blocos Python/JS.".into(),
-    }
+    failure(
+        ExecStatus::ToolchainUnavailable,
+        "UNSUPPORTED_PLATFORM",
+        "Execução de código compilado (Rust/Go/C++/Zig) não é suportada nesta plataforma. Use blocos Python/JS.".into(),
+    )
+}
+
+fn server_busy() -> CodeResponse {
+    failure(
+        ExecStatus::ServerBusy,
+        "SERVER_SHUTTING_DOWN",
+        "O servidor está encerrando e não aceita novas execuções.".to_string(),
+    )
 }
 
 #[utoipa::path(post, path = "/run", request_body = CodeRequest, responses((status = OK, body = CodeResponse)))]
@@ -108,11 +135,7 @@ pub async fn verify_request(
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
-        Err(_) => {
-            return Json(execution_denied(
-                "O servidor está encerrando e não aceita novas execuções.",
-            ));
-        }
+        Err(_) => return Json(server_busy()),
     };
 
     let addr = addr.ip();
@@ -135,17 +158,19 @@ pub async fn verify_request(
     }
 
     if let Err(msg) = verify_code(&payload.code) {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: msg,
-        });
+        return Json(failure(
+            ExecStatus::SecurityRejected,
+            "SECURITY_REJECTED",
+            msg,
+        ));
     }
 
     if let Err(msg) = verify_rust_ast(&payload.code) {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: msg,
-        });
+        return Json(failure(
+            ExecStatus::SecurityRejected,
+            "SECURITY_REJECTED",
+            msg,
+        ));
     }
 
     let project_path = setup_user_env(&safe_session).await;
@@ -158,59 +183,68 @@ pub async fn verify_request(
     };
 
     if file_name == "build.rs" {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!(
+        return Json(failure(
+            ExecStatus::InvalidRequest,
+            "FORBIDDEN_MODULE_NAME",
+            format!(
                 "Não é permitido usar build.rs como nome de módulo: {}",
                 file_name
             ),
-        });
+        ));
     }
 
     if !is_main {
         let file_path = src_path.join(&file_name);
 
         if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
-            return Json(CodeResponse {
-                stdout: "".into(),
-                stderr: format!("Erro ao salvar arquivo {}: {}", file_name, e),
-            });
+            return Json(failure(
+                ExecStatus::Internal,
+                "FILE_WRITE_FAILED",
+                format!("Erro ao salvar arquivo {}: {}", file_name, e),
+            ));
         }
 
         let sandbox = sandbox_rust(project_absolute_path(&project_path));
 
         return match sandbox.run("cargo", &["check"]).await {
-            Ok(out) => Json(CodeResponse {
-                stdout: format!(
+            Ok(out) => Json(ok_response(
+                format!(
                     "Módulo '{}' salvo.\nStdOut Check: {}",
                     file_name,
                     String::from_utf8_lossy(&out.stdout)
                 ),
-                stderr: String::from_utf8_lossy(&out.stderr).to_string(),
-            }),
-            Err(e) => Json(CodeResponse {
-                stdout: "".into(),
-                stderr: format!("Erro ao verificar módulo no sandbox: {}", e),
-            }),
+                String::from_utf8_lossy(&out.stderr).to_string(),
+            )),
+            Err(e) => Json(failure(
+                ExecStatus::Internal,
+                "SANDBOX_INVOCATION_FAILED",
+                format!("Erro ao verificar módulo no sandbox: {}", e),
+            )),
         };
     }
 
     info!("Starting isolated build for session {}", safe_session);
 
-    let (bin_path, warnings) = match compile_rust_with_warnings(&payload.code, &safe_session).await {
+    let (bin_path, warnings) = match compile_rust_with_warnings(&payload.code, &safe_session).await
+    {
         Ok(compiled) => compiled,
         Err(msg) => {
             error!("Compilation failed.");
-            return Json(CodeResponse {
-                stdout: "".into(),
-                stderr: msg,
-            });
+            let error_code = if msg.contains("file not found for module") {
+                "MODULE_NOT_FOUND"
+            } else {
+                "COMPILE_ERROR"
+            };
+            return Json(failure(ExecStatus::CompileError, error_code, msg));
         }
     };
 
     let out = run_compiled(&bin_path, None, RunLimits::default()).await;
 
+    let status: ExecStatus = out.verdict.into();
     Json(CodeResponse {
+        status,
+        error_code: status.default_error_code().map(|c| c.to_string()),
         stdout: out.stdout,
         stderr: warnings + &out.stderr,
     })
@@ -226,19 +260,15 @@ pub async fn verify_go_request(
     if !cfg!(unix) {
         return Json(unsupported_execution());
     }
-    let safe_session =
-        match enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await {
-            Ok(session) => session,
-            Err(denied) => return Json(denied),
-        };
+    let safe_session = match enforce_execute(&state.pool, &headers, payload.notebook_id, "go").await
+    {
+        Ok(session) => session,
+        Err(denied) => return Json(denied),
+    };
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
-        Err(_) => {
-            return Json(execution_denied(
-                "O servidor está encerrando e não aceita novas execuções.",
-            ));
-        }
+        Err(_) => return Json(server_busy()),
     };
     let addr = addr.ip();
     let ip = headers
@@ -260,10 +290,11 @@ pub async fn verify_go_request(
     }
 
     if let Err(msg) = verify_go_code(&payload.code) {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: msg,
-        });
+        return Json(failure(
+            ExecStatus::SecurityRejected,
+            "SECURITY_REJECTED",
+            msg,
+        ));
     }
 
     let bin_name = if cfg!(windows) {
@@ -279,10 +310,11 @@ pub async fn verify_go_request(
     let bin_path = Path::new(&user_dir).join(&bin_name);
 
     if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: e.to_string(),
-        });
+        return Json(failure(
+            ExecStatus::Internal,
+            "FILE_WRITE_FAILED",
+            e.to_string(),
+        ));
     }
 
     info!("Compiling Go...");
@@ -302,22 +334,29 @@ pub async fn verify_go_request(
         Ok(out) if out.status.success() => {
             let bin_path_str = bin_path.to_string_lossy().to_string();
             let run = run_safe_bin(&bin_path_str, None, RunLimits::default()).await;
-            Json(CodeResponse {
-                stdout: run.stdout,
-                stderr: run.stderr,
-            })
+            {
+                let status = ExecStatus::from_run_outcome(&run);
+                Json(CodeResponse {
+                    status,
+                    error_code: status.default_error_code().map(|c| c.to_string()),
+                    stdout: run.stdout,
+                    stderr: run.stderr,
+                })
+            }
         }
-        Ok(out) => Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!(
+        Ok(out) => Json(failure(
+            ExecStatus::CompileError,
+            "COMPILE_ERROR",
+            format!(
                 "Erro de Compilação Go:\n{}",
                 String::from_utf8_lossy(&out.stderr)
             ),
-        }),
-        Err(e) => Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Falha ao invocar compilador Go: {}", e),
-        }),
+        )),
+        Err(e) => Json(failure(
+            ExecStatus::Internal,
+            "COMPILER_INVOCATION_FAILED",
+            format!("Falha ao invocar compilador Go: {}", e),
+        )),
     }
 }
 
@@ -339,11 +378,7 @@ pub async fn verify_cpp_request(
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
-        Err(_) => {
-            return Json(execution_denied(
-                "O servidor está encerrando e não aceita novas execuções.",
-            ));
-        }
+        Err(_) => return Json(server_busy()),
     };
     let addr = addr.ip();
     let ip = headers
@@ -365,10 +400,11 @@ pub async fn verify_cpp_request(
     }
 
     if let Err(msg) = verify_cpp_code(&payload.code) {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Erro ao salvar arquivo C++: {}", msg),
-        });
+        return Json(failure(
+            ExecStatus::SecurityRejected,
+            "SECURITY_REJECTED",
+            format!("Erro ao salvar arquivo C++: {}", msg),
+        ));
     }
 
     let bin_name = if cfg!(windows) {
@@ -384,10 +420,11 @@ pub async fn verify_cpp_request(
     let bin_path = Path::new(&user_dir).join(&bin_name);
 
     if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Erro ao salvar arquivo C++: {}", e),
-        });
+        return Json(failure(
+            ExecStatus::Internal,
+            "FILE_WRITE_FAILED",
+            format!("Erro ao salvar arquivo C++: {}", e),
+        ));
     }
 
     info!("Compiling C++...");
@@ -415,10 +452,15 @@ pub async fn verify_cpp_request(
             if out.status.success() {
                 let bin_path_str = bin_path.to_string_lossy().to_string();
                 let run = run_safe_bin(&bin_path_str, None, RunLimits::default()).await;
-                Json(CodeResponse {
-                    stdout: run.stdout,
-                    stderr: run.stderr,
-                })
+                {
+                    let status = ExecStatus::from_run_outcome(&run);
+                    Json(CodeResponse {
+                        status,
+                        error_code: status.default_error_code().map(|c| c.to_string()),
+                        stdout: run.stdout,
+                        stderr: run.stderr,
+                    })
+                }
             } else {
                 let stderr_txt = String::from_utf8_lossy(&out.stderr).to_string();
                 let killed_by_signal = out.status.code().is_none();
@@ -431,31 +473,34 @@ pub async fn verify_cpp_request(
                     "memory exhausted",
                     "out of memory",
                 ];
-                let is_dos =
-                    killed_by_signal || dos_markers.iter().any(|m| low.contains(m));
+                let is_dos = killed_by_signal || dos_markers.iter().any(|m| low.contains(m));
                 if is_dos {
-                    Json(CodeResponse {
-                        stdout: "".into(),
-                        stderr: "Segurança: compilação bloqueada por exceder os limites de recurso (possível bomba de compilação — template/include/macro).".into(),
-                    })
+                    Json(failure(
+                        ExecStatus::SecurityRejected,
+                        "COMPILATION_RESOURCE_LIMIT",
+                        "Segurança: compilação bloqueada por exceder os limites de recurso (possível bomba de compilação — template/include/macro).".into(),
+                    ))
                 } else {
-                    Json(CodeResponse {
-                        stdout: "".into(),
-                        stderr: format!("Erro de Compilação C++:\n{}", stderr_txt),
-                    })
+                    Json(failure(
+                        ExecStatus::CompileError,
+                        "COMPILE_ERROR",
+                        format!("Erro de Compilação C++:\n{}", stderr_txt),
+                    ))
                 }
             }
         }
-        Ok(Err(e)) => Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Falha ao invocar compilador C++: {}", e),
-        }),
+        Ok(Err(e)) => Json(failure(
+            ExecStatus::Internal,
+            "COMPILER_INVOCATION_FAILED",
+            format!("Falha ao invocar compilador C++: {}", e),
+        )),
         Err(_) => {
             let _ = tokio::fs::remove_file(&file_path).await;
-            Json(CodeResponse {
-                stdout: "".into(),
-                stderr: "Segurança: compilação bloqueada por exceder o tempo limite (possível bomba de compilação / negação de serviço).".into(),
-            })
+            Json(failure(
+                ExecStatus::SecurityRejected,
+                "COMPILATION_TIMEOUT",
+                "Segurança: compilação bloqueada por exceder o tempo limite (possível bomba de compilação / negação de serviço).".into(),
+            ))
         }
     }
 }
@@ -478,11 +523,7 @@ pub async fn verify_zig_request(
 
     let _permit = match state.judge_semaphore.clone().acquire_owned().await {
         Ok(permit) => permit,
-        Err(_) => {
-            return Json(execution_denied(
-                "O servidor está encerrando e não aceita novas execuções.",
-            ));
-        }
+        Err(_) => return Json(server_busy()),
     };
     let addr = addr.ip();
     let ip = headers
@@ -504,10 +545,11 @@ pub async fn verify_zig_request(
     }
 
     if let Err(msg) = verify_zig_code(&payload.code) {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: msg,
-        });
+        return Json(failure(
+            ExecStatus::SecurityRejected,
+            "SECURITY_REJECTED",
+            msg,
+        ));
     }
 
     let bin_name = if cfg!(windows) {
@@ -523,10 +565,11 @@ pub async fn verify_zig_request(
     let bin_path = Path::new(&user_dir).join(&bin_name);
 
     if let Err(e) = tokio::fs::write(&file_path, &payload.code).await {
-        return Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Erro ao salvar arquivo Zig: {}", e),
-        });
+        return Json(failure(
+            ExecStatus::Internal,
+            "FILE_WRITE_FAILED",
+            format!("Erro ao salvar arquivo Zig: {}", e),
+        ));
     }
 
     info!("Compiling Zig...");
@@ -548,21 +591,28 @@ pub async fn verify_zig_request(
         Ok(out) if out.status.success() => {
             let bin_path_str = bin_path.to_string_lossy().to_string();
             let run = run_safe_bin(&bin_path_str, None, RunLimits::default()).await;
-            Json(CodeResponse {
-                stdout: run.stdout,
-                stderr: run.stderr,
-            })
+            {
+                let status = ExecStatus::from_run_outcome(&run);
+                Json(CodeResponse {
+                    status,
+                    error_code: status.default_error_code().map(|c| c.to_string()),
+                    stdout: run.stdout,
+                    stderr: run.stderr,
+                })
+            }
         }
-        Ok(out) => Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!(
+        Ok(out) => Json(failure(
+            ExecStatus::CompileError,
+            "COMPILE_ERROR",
+            format!(
                 "Erro de Compilação Zig:\n{}",
                 String::from_utf8_lossy(&out.stderr)
             ),
-        }),
-        Err(e) => Json(CodeResponse {
-            stdout: "".into(),
-            stderr: format!("Falha ao invocar compilador Zig: {}", e),
-        }),
+        )),
+        Err(e) => Json(failure(
+            ExecStatus::Internal,
+            "COMPILER_INVOCATION_FAILED",
+            format!("Falha ao invocar compilador Zig: {}", e),
+        )),
     }
 }

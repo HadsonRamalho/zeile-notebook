@@ -1,5 +1,7 @@
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tracing::info;
+use utoipa::ToSchema;
 
 use crate::executor::sandbox::{CompileSandbox, absolute_path};
 use crate::file::{RunLimits, RunOutcome, run_safe_bin, setup_user_env};
@@ -18,6 +20,61 @@ pub enum ExecVerdict {
     CompileError,
     RuntimeError,
     Timeout,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecStatus {
+    Ok,
+    CompileError,
+    RuntimeError,
+    Timeout,
+    SecurityRejected,
+    Unauthenticated,
+    PermissionDenied,
+    InvalidRequest,
+    ServerBusy,
+    ToolchainUnavailable,
+    Internal,
+}
+
+impl From<ExecVerdict> for ExecStatus {
+    fn from(verdict: ExecVerdict) -> Self {
+        match verdict {
+            ExecVerdict::Ok => ExecStatus::Ok,
+            ExecVerdict::CompileError => ExecStatus::CompileError,
+            ExecVerdict::RuntimeError => ExecStatus::RuntimeError,
+            ExecVerdict::Timeout => ExecStatus::Timeout,
+        }
+    }
+}
+
+impl ExecStatus {
+    pub fn from_run_outcome(out: &RunOutcome) -> Self {
+        if out.timed_out {
+            ExecStatus::Timeout
+        } else if out.exit_ok {
+            ExecStatus::Ok
+        } else {
+            ExecStatus::RuntimeError
+        }
+    }
+
+    pub fn default_error_code(&self) -> Option<&'static str> {
+        match self {
+            ExecStatus::Ok => None,
+            ExecStatus::CompileError => Some("COMPILE_ERROR"),
+            ExecStatus::RuntimeError => Some("RUNTIME_ERROR"),
+            ExecStatus::Timeout => Some("TIMEOUT"),
+            ExecStatus::SecurityRejected => Some("SECURITY_REJECTED"),
+            ExecStatus::Unauthenticated => Some("NOT_AUTHENTICATED"),
+            ExecStatus::PermissionDenied => Some("PERMISSION_DENIED"),
+            ExecStatus::InvalidRequest => Some("INVALID_REQUEST"),
+            ExecStatus::ServerBusy => Some("SERVER_SHUTTING_DOWN"),
+            ExecStatus::ToolchainUnavailable => Some("UNSUPPORTED_PLATFORM"),
+            ExecStatus::Internal => Some("INTERNAL_ERROR"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -1931,6 +1931,8 @@ export interface components {
       notebookId?: string | null;
     };
     CodeResponse: {
+      errorCode?: string | null;
+      status: components["schemas"]["ExecStatus"];
       stderr: string;
       stdout: string;
     };
@@ -2029,6 +2031,19 @@ export interface components {
     EditMessageRequest: {
       content: string;
     };
+    /** @enum {string} */
+    ExecStatus:
+      | "ok"
+      | "compile_error"
+      | "runtime_error"
+      | "timeout"
+      | "security_rejected"
+      | "unauthenticated"
+      | "permission_denied"
+      | "invalid_request"
+      | "server_busy"
+      | "toolchain_unavailable"
+      | "internal";
     Folder: {
       /** Format: date-time */
       createdAt: string;

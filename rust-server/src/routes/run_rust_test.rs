@@ -69,6 +69,14 @@ async fn anonymous_execution_is_refused_in_every_language() {
             body.contains("autenticado"),
             "{route} accepted anonymous execution: {body}"
         );
+        assert!(
+            body.contains("\"status\":\"unauthenticated\""),
+            "{route} did not report a structured status: {body}"
+        );
+        assert!(
+            body.contains("\"errorCode\":\"NOT_AUTHENTICATED\""),
+            "{route} did not report a stable errorCode: {body}"
+        );
     }
 }
 
