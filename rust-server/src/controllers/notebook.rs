@@ -6,6 +6,7 @@ use axum::{
 };
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{jwt::extract_claims_from_header, utils::get_conn},
@@ -118,6 +119,10 @@ pub async fn api_rename_notebook(
     headers: HeaderMap,
     Json(payload): Json<UpdateNotebookTitle>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let id = extract_claims_from_header(&headers).await?.1.id;
 
     crate::controllers::permissions::require(

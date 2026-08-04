@@ -6,6 +6,7 @@ use axum::{
 };
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
@@ -18,8 +19,7 @@ use crate::{
     models::{
         self,
         chat::{
-            ChatMessage, ChatMessageVersion, EditMessageRequest, NewChatMessage,
-            SendMessageRequest,
+            ChatMessage, ChatMessageVersion, EditMessageRequest, NewChatMessage, SendMessageRequest,
         },
         error::ApiError,
         state::AppState,
@@ -47,7 +47,10 @@ pub async fn api_list_notebook_messages(
     Path(notebook_id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<(StatusCode, Json<Vec<ChatMessage>>), ApiError> {
-    let user_id = extract_claims_from_header(&headers).await.ok().map(|c| c.1.id);
+    let user_id = extract_claims_from_header(&headers)
+        .await
+        .ok()
+        .map(|c| c.1.id);
 
     require(
         &state.pool,
@@ -73,6 +76,10 @@ pub async fn api_send_notebook_message(
     headers: HeaderMap,
     Json(payload): Json<SendMessageRequest>,
 ) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     require(
@@ -191,6 +198,10 @@ pub async fn api_edit_notebook_message(
     headers: HeaderMap,
     Json(payload): Json<EditMessageRequest>,
 ) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     require(
@@ -213,7 +224,9 @@ pub async fn api_edit_notebook_message(
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.notebook_id != Some(notebook_id) {
-        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+        return Err(ApiError::Request(
+            "Mensagem não pertence a este chat".to_string(),
+        ));
     }
     if existing.user_id != Some(user_id) {
         return Err(ApiError::PermissionDenied("chat.messages.edit".to_string()));
@@ -247,6 +260,10 @@ pub async fn api_edit_team_message(
     headers: HeaderMap,
     Json(payload): Json<EditMessageRequest>,
 ) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     let content = payload.content.trim().to_string();
@@ -262,7 +279,9 @@ pub async fn api_edit_team_message(
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.team_id != Some(team_id) {
-        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+        return Err(ApiError::Request(
+            "Mensagem não pertence a este chat".to_string(),
+        ));
     }
     if existing.user_id != Some(user_id) {
         return Err(ApiError::PermissionDenied("chat.messages.edit".to_string()));
@@ -293,7 +312,9 @@ pub async fn api_delete_notebook_message(
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.notebook_id != Some(notebook_id) {
-        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+        return Err(ApiError::Request(
+            "Mensagem não pertence a este chat".to_string(),
+        ));
     }
 
     let delete_key = if existing.user_id == Some(user_id) {
@@ -338,7 +359,9 @@ pub async fn api_delete_team_message(
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.team_id != Some(team_id) {
-        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+        return Err(ApiError::Request(
+            "Mensagem não pertence a este chat".to_string(),
+        ));
     }
 
     let delete_key = if existing.user_id == Some(user_id) {
@@ -358,7 +381,10 @@ pub async fn api_list_notebook_message_versions(
     Path((notebook_id, message_id)): Path<(Uuid, Uuid)>,
     headers: HeaderMap,
 ) -> Result<(StatusCode, Json<Vec<ChatMessageVersion>>), ApiError> {
-    let user_id = extract_claims_from_header(&headers).await.ok().map(|c| c.1.id);
+    let user_id = extract_claims_from_header(&headers)
+        .await
+        .ok()
+        .map(|c| c.1.id);
 
     require(
         &state.pool,
@@ -375,7 +401,9 @@ pub async fn api_list_notebook_message_versions(
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.notebook_id != Some(notebook_id) {
-        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+        return Err(ApiError::Request(
+            "Mensagem não pertence a este chat".to_string(),
+        ));
     }
 
     let versions = models::chat::list_message_versions(conn, message_id).await?;
@@ -398,7 +426,9 @@ pub async fn api_list_team_message_versions(
 
     let existing = models::chat::get_message(conn, message_id).await?;
     if existing.team_id != Some(team_id) {
-        return Err(ApiError::Request("Mensagem não pertence a este chat".to_string()));
+        return Err(ApiError::Request(
+            "Mensagem não pertence a este chat".to_string(),
+        ));
     }
 
     let versions = models::chat::list_message_versions(conn, message_id).await?;
@@ -430,6 +460,10 @@ pub async fn api_send_team_message(
     headers: HeaderMap,
     Json(payload): Json<SendMessageRequest>,
 ) -> Result<(StatusCode, Json<ChatMessage>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     let content = payload.content.trim().to_string();
@@ -486,14 +520,10 @@ pub async fn api_send_team_message(
                 if member.user_id == user_id {
                     continue;
                 }
-                let allowed = member_has_capability(
-                    &mut conn,
-                    team_id,
-                    member.user_id,
-                    "chat.team.access",
-                )
-                .await
-                .unwrap_or(false);
+                let allowed =
+                    member_has_capability(&mut conn, team_id, member.user_id, "chat.team.access")
+                        .await
+                        .unwrap_or(false);
                 if !allowed {
                     continue;
                 }

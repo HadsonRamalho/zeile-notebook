@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::folders)]
@@ -28,9 +29,14 @@ pub struct NewFolder {
     pub team_id: Option<Uuid>,
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FolderNameRequest {
+    #[validate(length(
+        min = 1,
+        max = 300,
+        message = "Name must be between 1 and 300 characters"
+    ))]
     pub name: String,
 }
 

@@ -6,6 +6,7 @@ use axum::{
 };
 use hyper::{HeaderMap, StatusCode};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     controllers::{
@@ -139,6 +140,10 @@ pub async fn api_create_thread(
     headers: HeaderMap,
     Json(payload): Json<CreateThreadRequest>,
 ) -> Result<(StatusCode, Json<ThreadWithComments>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     require(
@@ -217,6 +222,10 @@ pub async fn api_reply(
     headers: HeaderMap,
     Json(payload): Json<ReplyRequest>,
 ) -> Result<(StatusCode, Json<Comment>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     require(

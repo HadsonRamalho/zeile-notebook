@@ -396,6 +396,10 @@ pub async fn api_request_password_reset(
     let mut email = input;
     email.sanitize();
 
+    if let Err(errors) = email.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
@@ -428,6 +432,10 @@ pub async fn api_execute_password_reset(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ResetPasswordPayload>,
 ) -> Result<StatusCode, ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let claims = crate::controllers::jwt::verify_reset_token(&payload.token)?;
 
     let conn = &mut get_conn(&state.pool)
