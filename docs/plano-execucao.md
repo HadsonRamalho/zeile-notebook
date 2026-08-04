@@ -155,16 +155,18 @@ branch local `tauri` (`aa268ac`) é ancestral de `main`; nada pendente para mesc
 - [x] `#[serde(alias = "<snake>")]` só na entrada, com data de remoção em ADR — aplicado em todo campo de entrada real que muda de nome; prazo de 90 dias documentado em [docs/decisions/0001-contract-version-policy.md](decisions/0001-contract-version-policy.md)
 - [x] Aplicar "um conceito, uma grafia": remover `#[serde(rename)]` campo a campo, reconciliar `permission_grant.rs` com o resto — feito nos domínios já cobertos (`UpdateUserPassword`, `SessionResponse`, `RefreshPayload`, `InviteRequest` tinham rename campo a campo, consolidados para o blanket attribute)
 
-#### 11 · Geradores e guards ([regime do artefato gerado](decisoes.md#regime-do-artefato-gerado))
+#### 11 · Geradores e guards ([regime do artefato gerado](decisoes.md#regime-do-artefato-gerado)) — [x] concluída
 
-- [ ] Completar os `#[utoipa::path]` faltantes (`api_get_notebooks`, `api_rename_notebook`, …)
-- [ ] `openapi-typescript` para a superfície HTTP: modelos + paths/métodos/status
-- [ ] `ts-rs`/`typeshare` para o que não passa por endpoint: payload de WebSocket, shape do doc Automerge
-- [ ] Allowlist: DTOs · enums de domínio · catálogo de `errorCode` · chaves de permissão (Q28c/Q31)
-- [ ] `errorCode` como contrato aditivo + `app/api/*/route.ts` no formato `{code, message, details}` (Q32)
-- [ ] `--check` no CI, em workflow próprio com filtro de `paths`
-- [ ] Check `schema.rs` ≡ migrations (Q56a)
-- [ ] Check "nenhum par de campos gerados normaliza para o mesmo identificador"
+- [x] Completar os `#[utoipa::path]` faltantes (`api_get_notebooks`, `api_rename_notebook`, …) — 130 handlers anotados, com `request_body`/`body` refletindo o tipo Rust real (PR #102)
+- [x] `openapi-typescript` para a superfície HTTP: modelos + paths/métodos/status — `cargo run -- export-openapi` monta o `utoipa::OpenApi` em memória, sem subir servidor; ~100 schemas registrados em `components(schemas(...))` (PR #105)
+- [x] `ts-rs`/`typeshare` para o que não passa por endpoint: payload de WebSocket, shape do doc Automerge — `WsServerMessage`/`WsClientMessage` em `models/ws_message.rs`; handlers migrados de `json!`/`format!` ad-hoc pro tipo real. Shape do doc Automerge já coberto por `Notebook`/`Block*` via `openapi-types.ts` (PR #106)
+- [x] Allowlist: DTOs · enums de domínio · catálogo de `errorCode` · chaves de permissão (Q28c/Q31) — `ApiError::ALL_ERROR_CODES` travado por teste com `match` exaustivo; README de `lib/api/generated/` documenta as 4 allowlists (PR #107)
+- [x] `errorCode` como contrato aditivo + `app/api/*/route.ts` no formato `{code, message, details}` (Q32) — `routeError()` em `lib/api/route-error.ts`; `app/api/search/route.ts` não emite erro, ficou fora (PR #108)
+- [x] `--check` no CI, em workflow próprio com filtro de `paths` — `.github/workflows/generators.yml` (PR #109)
+- [x] Check `schema.rs` ≡ migrations (Q56a) — achado no caminho: `diesel.toml` estava gitignorado (CI nunca teve `custom_type_derives`) e tanto `diesel migration run` quanto `print-schema` sobrescrevem o `file` do config como efeito colateral; isolado com `DIESEL_CONFIG_FILE` temporário (PR #103)
+- [x] Check "nenhum par de campos gerados normaliza para o mesmo identificador" — `scripts/check-no-duplicate-fields.mjs`, por bloco de chaves (PR #110)
+
+**Achado fora do escopo, registrado e não bloqueante**: `routes::rate_limit_global_test::anonymous_traffic_has_a_per_origin_ceiling` é flaky sob paralelismo do `cargo test` (rate limiter global com estado compartilhado) — passou no rerun, sem relação com o diff desta etapa.
 
 #### 12 · Capacidade e erro estruturado
 
