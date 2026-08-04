@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { routeError } from "@/lib/api/route-error";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -6,9 +7,10 @@ export async function GET(request: Request) {
   const repo = searchParams.get("repo");
 
   if (!owner || !repo) {
-    return NextResponse.json(
-      { error: "Usuário ou repositório não encontrado" },
-      { status: 400 },
+    return routeError(
+      "GITHUB_REPO_PARAMS_MISSING",
+      "Usuário ou repositório não encontrado",
+      400,
     );
   }
 
@@ -27,18 +29,16 @@ export async function GET(request: Request) {
     );
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: "Erro na API do GitHub" },
-        { status: response.status },
+      return routeError(
+        "GITHUB_API_ERROR",
+        "Erro na API do GitHub",
+        response.status,
       );
     }
 
     const data = await response.json();
     return NextResponse.json({ stars: data.stargazers_count });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Erro interno no servidor, hehe ;)" },
-      { status: 500 },
-    );
+  } catch (_error) {
+    return routeError("GITHUB_INTERNAL_ERROR", "Erro interno no servidor", 500);
   }
 }
