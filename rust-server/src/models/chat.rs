@@ -6,7 +6,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::chat_messages)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
@@ -37,7 +37,7 @@ pub struct NewChatMessage {
     pub quoted_message_id: Option<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SendMessageRequest {
     pub content: String,
@@ -45,12 +45,12 @@ pub struct SendMessageRequest {
     pub quoted_message_id: Option<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct EditMessageRequest {
     pub content: String,
 }
 
-#[derive(Queryable, Selectable, Serialize, Debug)]
+#[derive(Queryable, Selectable, Serialize, Debug, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::chat_message_versions)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessageVersion {

@@ -6,7 +6,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::comment_threads)]
 #[serde(rename_all = "camelCase")]
 pub struct CommentThread {
@@ -31,7 +31,7 @@ pub struct NewCommentThread {
     pub created_by: Option<Uuid>,
 }
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::comments)]
 #[serde(rename_all = "camelCase")]
 pub struct Comment {
@@ -55,7 +55,7 @@ pub struct NewComment {
     pub body: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ThreadWithComments {
     #[serde(flatten)]
@@ -63,7 +63,7 @@ pub struct ThreadWithComments {
     pub comments: Vec<Comment>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateThreadRequest {
     pub block_id: String,
@@ -71,13 +71,13 @@ pub struct CreateThreadRequest {
     pub body: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplyRequest {
     pub body: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateThreadRequest {
     pub status: String,

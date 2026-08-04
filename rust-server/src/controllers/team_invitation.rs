@@ -23,7 +23,7 @@ use crate::{
     },
 };
 
-#[utoipa::path(post, path = "/team/{id}/invites", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/team/{id}/invites", request_body = InviteRequest, responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_invite_member(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -93,7 +93,7 @@ pub async fn api_invite_member(
     Ok(StatusCode::OK)
 }
 
-#[utoipa::path(post, path = "/team/invites/accept", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/team/invites/accept", request_body = AcceptInviteRequest, responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_accept_invite(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

@@ -90,7 +90,7 @@ fn unsupported_execution() -> CodeResponse {
     }
 }
 
-#[utoipa::path(post, path = "/run", responses((status = OK, body = CodeResponse)))]
+#[utoipa::path(post, path = "/run", request_body = CodeRequest, responses((status = OK, body = CodeResponse)))]
 pub async fn verify_request(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -216,7 +216,7 @@ pub async fn verify_request(
     })
 }
 
-#[utoipa::path(post, path = "/run/go", responses((status = OK, body = CodeResponse)))]
+#[utoipa::path(post, path = "/run/go", request_body = CodeRequest, responses((status = OK, body = CodeResponse)))]
 pub async fn verify_go_request(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -321,7 +321,7 @@ pub async fn verify_go_request(
     }
 }
 
-#[utoipa::path(post, path = "/run/cpp", responses((status = OK, body = CodeResponse)))]
+#[utoipa::path(post, path = "/run/cpp", request_body = CodeRequest, responses((status = OK, body = CodeResponse)))]
 pub async fn verify_cpp_request(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -460,7 +460,7 @@ pub async fn verify_cpp_request(
     }
 }
 
-#[utoipa::path(post, path = "/run/zig", responses((status = OK, body = CodeResponse)))]
+#[utoipa::path(post, path = "/run/zig", request_body = CodeRequest, responses((status = OK, body = CodeResponse)))]
 pub async fn verify_zig_request(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

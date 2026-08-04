@@ -29,19 +29,19 @@ pub struct NewPushSubscription {
     pub auth: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct PushSubscriptionKeysRequest {
     pub p256dh: String,
     pub auth: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct PushSubscriptionRequest {
     pub endpoint: String,
     pub keys: PushSubscriptionKeysRequest,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct PushUnsubscribeRequest {
     pub endpoint: String,
 }

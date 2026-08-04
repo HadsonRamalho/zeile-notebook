@@ -102,7 +102,7 @@ async fn role_belongs_to_team(
         .is_ok()
 }
 
-#[utoipa::path(get, path = "/team/{id}/grants", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/team/{id}/grants", responses((status = OK, body = Vec<PermissionGrant>), (status = 401, body = ApiError)))]
 pub async fn api_list_team_grants(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -137,7 +137,7 @@ async fn is_self_subject(
     }
 }
 
-#[utoipa::path(post, path = "/team/{id}/grants", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/team/{id}/grants", request_body = CreateGrantRequest, responses((status = CREATED, body = PermissionGrant), (status = 401, body = ApiError)))]
 pub async fn api_create_team_grant(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -268,7 +268,7 @@ async fn require_notebook_owner(
     }
 }
 
-#[utoipa::path(get, path = "/notebook/{id}/public-grants", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/notebook/{id}/public-grants", responses((status = OK, body = Vec<PermissionGrant>), (status = 401, body = ApiError)))]
 pub async fn api_list_public_grants(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -287,7 +287,7 @@ pub async fn api_list_public_grants(
     Ok((StatusCode::OK, Json(grants)))
 }
 
-#[utoipa::path(post, path = "/notebook/{id}/public-grants", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/notebook/{id}/public-grants", request_body = PublicGrantRequest, responses((status = CREATED, body = PermissionGrant), (status = 401, body = ApiError)))]
 pub async fn api_create_public_grant(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

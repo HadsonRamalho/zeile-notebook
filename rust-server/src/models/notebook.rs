@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::schema::{blocks, notebooks};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize, utoipa::ToSchema)]
 #[ExistingTypePath = "crate::schema::sql_types::BlockTypeEnum"]
 #[serde(rename_all = "snake_case")]
 pub enum BlockType {
@@ -37,7 +37,7 @@ pub enum BlockType {
     Mermaid,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize, utoipa::ToSchema)]
 #[ExistingTypePath = "crate::schema::sql_types::LanguageEnum"]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
@@ -49,7 +49,7 @@ pub enum Language {
     Cpp,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum BlockMetadata {
     Callout {
@@ -70,7 +70,7 @@ pub enum BlockMetadata {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CalloutProps {
     pub title: Option<String>,
     pub icon: Option<String>,
@@ -78,20 +78,20 @@ pub struct CalloutProps {
     pub callout_type: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CardProps {
     pub title: String,
     pub description: Option<String>,
     pub href: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GithubRepoProps {
     pub owner: String,
     pub repo: String,
 }
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::notebooks)]
 #[serde(rename_all = "camelCase")]
 pub struct Notebook {
@@ -123,7 +123,7 @@ pub struct Block {
     pub position: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NotebookResponse {
     #[serde(flatten)]
@@ -131,7 +131,7 @@ pub struct NotebookResponse {
     pub blocks: Vec<BlockResponse>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockResponse {
     pub id: Uuid,
@@ -165,26 +165,26 @@ pub struct NewBlock {
     pub position: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNotebookTitle {
     pub title: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTagsRequest {
     pub tags: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNotebookVisibility {
     #[serde(alias = "is_visible")]
     pub is_visible: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncNotebookRequest {
     pub title: String,
@@ -192,7 +192,7 @@ pub struct SyncNotebookRequest {
     pub is_public: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockRequest {
     pub id: Uuid,
@@ -215,7 +215,7 @@ pub struct PublicSearchQuery {
     pub q: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SearchResult {
     pub id: Uuid,
     pub title: String,
@@ -229,7 +229,7 @@ pub struct RankedSearchQuery {
     pub limit: Option<i64>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RankedSearchItem {
     pub kind: String,
@@ -282,7 +282,7 @@ pub enum NotebookPermission {
     Viewer,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicNotebookResponse {
     pub id: Uuid,
@@ -461,7 +461,7 @@ pub async fn ensure_public_slug(
     Err(ApiError::Database("slug unavailable".to_string()))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicNotebookDoc {
     pub id: Uuid,

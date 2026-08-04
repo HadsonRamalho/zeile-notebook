@@ -6,7 +6,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::notification_preferences)]
 #[serde(rename_all = "camelCase")]
 pub struct NotificationPreference {

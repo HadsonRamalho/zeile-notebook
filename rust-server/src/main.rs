@@ -19,7 +19,7 @@ pub mod schema;
 pub mod sec;
 pub mod shutdown;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeRequest {
     pub code: String,

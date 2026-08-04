@@ -27,7 +27,7 @@ pub enum AuthProvider {
     Github,
 }
 
-#[derive(Queryable, Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone)]
+#[derive(Queryable, Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -142,7 +142,7 @@ pub struct LoginUser {
     pub password: String,
 }
 
-#[derive(Deserialize, Validate, AsChangeset)]
+#[derive(Deserialize, Validate, AsChangeset, utoipa::ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUser {
@@ -153,7 +153,7 @@ pub struct UpdateUser {
     pub email: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUserPassword {
     #[validate(length(min = 1, message = "The current password is required"))]
@@ -171,7 +171,7 @@ impl Sanitize for UpdateUser {
     }
 }
 
-#[derive(Validate, Serialize, Deserialize)]
+#[derive(Validate, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserEmail {
     #[validate(email)]
@@ -184,7 +184,7 @@ impl Sanitize for UserEmail {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ResetPasswordPayload {
     pub token: String,

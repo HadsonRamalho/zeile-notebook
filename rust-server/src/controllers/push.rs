@@ -117,7 +117,7 @@ async fn send_one(
     push.client.send(builder.build()?).await
 }
 
-#[utoipa::path(post, path = "/notebook/push/subscribe", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/notebook/push/subscribe", request_body = PushSubscriptionRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_subscribe_push(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -134,7 +134,7 @@ pub async fn api_subscribe_push(
     Ok(StatusCode::OK)
 }
 
-#[utoipa::path(delete, path = "/notebook/push/subscribe", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(delete, path = "/notebook/push/subscribe", request_body = PushUnsubscribeRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_unsubscribe_push(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

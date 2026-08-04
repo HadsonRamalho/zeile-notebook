@@ -214,7 +214,7 @@ pub async fn resolve_capabilities(
     Ok(caps)
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GrantView {
     pub permission_key: String,
@@ -224,7 +224,7 @@ pub struct GrantView {
     pub target_value: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct CapabilitySnapshot {
     pub all: bool,
     pub grants: Vec<GrantView>,
@@ -531,7 +531,7 @@ pub async fn api_get_permission_catalog()
     (StatusCode::OK, Json(catalog()))
 }
 
-#[utoipa::path(get, path = "/team/{id}/capabilities", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/team/{id}/capabilities", responses((status = OK, body = CapabilitySnapshot), (status = 401, body = ApiError)))]
 pub async fn api_get_team_capabilities(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -557,7 +557,7 @@ pub async fn api_get_team_capabilities(
     Ok((StatusCode::OK, Json(caps.snapshot())))
 }
 
-#[utoipa::path(get, path = "/notebook/{id}/capabilities", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/notebook/{id}/capabilities", responses((status = OK, body = CapabilitySnapshot), (status = 401, body = ApiError)))]
 pub async fn api_get_notebook_capabilities(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

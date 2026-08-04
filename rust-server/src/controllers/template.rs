@@ -26,7 +26,7 @@ use crate::{
 
 const ALLOWED_KINDS: &[&str] = &["typst"];
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTemplateRequest {
     pub kind: String,
@@ -35,14 +35,14 @@ pub struct CreateTemplateRequest {
     pub source_notebook_id: Option<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PublishVersionRequest {
     pub named_sources: Value,
     pub note: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VisibilityRequest {
     pub is_public: bool,
@@ -65,7 +65,7 @@ pub struct MyTemplatesQuery {
     pub team_id: Option<Uuid>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct ResolvedTemplate {
     #[serde(flatten)]
     pub template: Template,
@@ -107,7 +107,7 @@ async fn authorize_use(
     Err(ApiError::PermissionDenied("template.use".to_string()))
 }
 
-#[utoipa::path(post, path = "/template/", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/template/", request_body = CreateTemplateRequest, responses((status = CREATED, body = Template), (status = 401, body = ApiError)))]
 pub async fn api_create_template(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -153,7 +153,7 @@ pub async fn api_create_template(
     Ok((StatusCode::CREATED, Json(template)))
 }
 
-#[utoipa::path(post, path = "/template/{id}/versions", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/template/{id}/versions", request_body = PublishVersionRequest, responses((status = CREATED, body = TemplateVersion), (status = 401, body = ApiError)))]
 pub async fn api_publish_version(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,
@@ -195,7 +195,7 @@ pub async fn api_publish_version(
     Ok((StatusCode::CREATED, Json(version)))
 }
 
-#[utoipa::path(get, path = "/template/{id}", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/template/{id}", responses((status = OK, body = ResolvedTemplate), (status = 401, body = ApiError)))]
 pub async fn api_get_template(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,
@@ -219,7 +219,7 @@ pub async fn api_get_template(
     Ok((StatusCode::OK, Json(ResolvedTemplate { template, version })))
 }
 
-#[utoipa::path(get, path = "/template/all", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/template/all", responses((status = OK, body = Vec<Template>), (status = 401, body = ApiError)))]
 pub async fn api_list_my_templates(
     State(state): State<Arc<AppState>>,
     Query(query): Query<MyTemplatesQuery>,
@@ -242,7 +242,7 @@ pub async fn api_list_my_templates(
     Ok((StatusCode::OK, Json(templates)))
 }
 
-#[utoipa::path(get, path = "/template/all/public", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/template/all/public", responses((status = OK, body = Vec<PublicTemplateResponse>), (status = 401, body = ApiError)))]
 pub async fn api_list_public_templates(
     State(state): State<Arc<AppState>>,
     Query(query): Query<PublicQuery>,
@@ -258,7 +258,7 @@ pub async fn api_list_public_templates(
     Ok((StatusCode::OK, Json(templates)))
 }
 
-#[utoipa::path(patch, path = "/template/{id}/visibility", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(patch, path = "/template/{id}/visibility", request_body = VisibilityRequest, responses((status = OK, body = Template), (status = 401, body = ApiError)))]
 pub async fn api_update_template_visibility(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,

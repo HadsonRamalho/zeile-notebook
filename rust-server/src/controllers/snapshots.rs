@@ -30,7 +30,7 @@ async fn actor_name(conn: &mut diesel_async::AsyncPgConnection, user_id: Uuid) -
         .unwrap_or_else(|_| "Usuário".to_string())
 }
 
-#[utoipa::path(get, path = "/notebook/{id}/snapshots", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/notebook/{id}/snapshots", responses((status = OK, body = Vec<SnapshotMeta>), (status = 401, body = ApiError)))]
 pub async fn api_list_snapshots(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -58,7 +58,7 @@ pub async fn api_list_snapshots(
     Ok((StatusCode::OK, Json(snapshots)))
 }
 
-#[utoipa::path(post, path = "/notebook/{id}/snapshots", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/notebook/{id}/snapshots", request_body = CreateSnapshotRequest, responses((status = CREATED, body = SnapshotMeta), (status = 401, body = ApiError)))]
 pub async fn api_create_snapshot(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
