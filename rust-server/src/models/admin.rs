@@ -108,7 +108,7 @@ pub async fn search_users(
                 })
                 .collect()
         })
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn search_teams(
@@ -133,7 +133,7 @@ pub async fn search_teams(
                 })
                 .collect()
         })
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn search_notebooks(
@@ -158,7 +158,7 @@ pub async fn search_notebooks(
                 })
                 .collect()
         })
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_detailed_system_stats(
@@ -172,39 +172,39 @@ pub async fn get_detailed_system_stats(
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let total_active_users: i64 = u::users
         .filter(u::is_active.eq(true))
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let total_notebooks: i64 = n::notebooks
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let total_public: i64 = n::notebooks
         .filter(n::is_public.eq(true))
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let total_teams: i64 = t::teams
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let total_team_members: i64 = tm::team_members
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let chart_query = sql::<(Text, BigInt, BigInt)>(
         "
@@ -234,7 +234,7 @@ pub async fn get_detailed_system_stats(
     let chart_results = chart_query
         .load::<(String, i64, i64)>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let chart_data = chart_results
         .into_iter()
@@ -269,7 +269,7 @@ pub async fn get_paginated_users(
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let results = users
         .select((
@@ -294,7 +294,7 @@ pub async fn get_paginated_users(
             chrono::DateTime<chrono::Utc>,
         )>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let data = results
         .into_iter()
@@ -338,7 +338,7 @@ pub async fn get_paginated_teams(
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let results = t::teams
         .select((t::id, t::name, t::description, t::created_at))
@@ -347,7 +347,7 @@ pub async fn get_paginated_teams(
         .offset(offset)
         .load::<(uuid::Uuid, String, Option<String>, NaiveDateTime)>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let mut data = Vec::new();
 
@@ -392,7 +392,7 @@ pub async fn get_paginated_notebooks(
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let results = notebooks
         .select((
@@ -411,7 +411,7 @@ pub async fn get_paginated_notebooks(
             chrono::DateTime<chrono::Utc>,
         )>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let data = results
         .into_iter()

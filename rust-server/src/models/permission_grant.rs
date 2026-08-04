@@ -39,7 +39,9 @@ pub enum GrantEffect {
     Deny,
 }
 
-#[derive(Queryable, Selectable, Identifiable, Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Queryable, Selectable, Identifiable, Debug, Clone, Serialize, Deserialize, utoipa::ToSchema,
+)]
 #[diesel(table_name = permission_grants)]
 #[serde(rename_all = "camelCase")]
 pub struct PermissionGrant {
@@ -106,7 +108,7 @@ pub async fn create_grant(
         .returning(PermissionGrant::as_returning())
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn delete_grant_in_team(
@@ -121,7 +123,7 @@ pub async fn delete_grant_in_team(
     )
     .execute(conn)
     .await
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 // chaves de grant `allow` de cada role, agrupadas por role
@@ -143,7 +145,7 @@ pub async fn grant_keys_by_role(
         ))
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let mut out: HashMap<Uuid, HashSet<String>> = HashMap::new();
     for (subject_id, key) in rows {
@@ -200,7 +202,7 @@ pub async fn replace_team_role_grants(
         .scope_boxed()
     })
     .await
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 pub async fn seed_team_role_grants(
@@ -232,7 +234,7 @@ pub async fn seed_team_role_grants(
         .values(&rows)
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(())
 }
@@ -249,7 +251,7 @@ pub async fn list_notebook_principal_grants(
         .select(PermissionGrant::as_select())
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn delete_notebook_grant(
@@ -265,7 +267,7 @@ pub async fn delete_notebook_grant(
     )
     .execute(conn)
     .await
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 pub async fn find_team_grant(
@@ -280,7 +282,7 @@ pub async fn find_team_grant(
         .first(conn)
         .await
         .optional()
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_team_grants(
@@ -292,5 +294,5 @@ pub async fn list_team_grants(
         .select(PermissionGrant::as_select())
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }

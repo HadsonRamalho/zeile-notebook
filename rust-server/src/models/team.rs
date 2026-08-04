@@ -305,7 +305,7 @@ pub async fn create_team(conn: &mut AsyncPgConnection, data: &NewTeam) -> Result
         .await
     {
         Ok(team) => Ok(team),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -319,7 +319,7 @@ pub async fn find_team_by_id(
         .await
     {
         Ok(team) => Ok(team),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -335,7 +335,7 @@ pub async fn update_team_data(
         .await
     {
         Ok(team) => Ok(team),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -349,7 +349,7 @@ pub async fn delete_team(
         .await
     {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -362,7 +362,7 @@ pub async fn create_team_role(
         .values(data)
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     replace_team_role_grants(conn, role.id, role.team_id, &permissions.grant_keys()).await?;
 
@@ -420,7 +420,7 @@ pub async fn find_roles_by_team(
         .filter(team_roles::team_id.eq(team_id_param))
         .load::<TeamRole>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     build_role_views(conn, &roles).await
 }
@@ -436,12 +436,12 @@ pub async fn update_team_role(
             .set(team_roles::name.eq(new_name))
             .get_result(conn)
             .await
-            .map_err(|e| ApiError::Database(e.to_string()))?,
+            .map_err(ApiError::from)?,
         None => team_roles::table
             .filter(team_roles::id.eq(role_id_param))
             .get_result(conn)
             .await
-            .map_err(|e| ApiError::Database(e.to_string()))?,
+            .map_err(ApiError::from)?,
     };
 
     let current = load_role_permissions(conn, &[role.id])
@@ -468,7 +468,7 @@ pub async fn add_user_to_team(
         .await
     {
         Ok(member) => Ok(member),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -484,7 +484,7 @@ pub async fn remove_user_from_team(
         .await
     {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -501,7 +501,7 @@ pub async fn update_member_role(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn find_team_member_with_role(
@@ -521,7 +521,7 @@ pub async fn find_team_member_with_role(
         .await
     {
         Ok(results) => Ok(results),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -567,7 +567,7 @@ pub async fn find_team_members_with_role_rows(
         .await
     {
         Ok(results) => Ok(results),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -582,7 +582,7 @@ pub async fn find_user_teams(
         .select((teams::all_columns, team_roles::all_columns))
         .load::<(Team, TeamRole)>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let roles: Vec<TeamRole> = rows.iter().map(|(_, role)| role.clone()).collect();
     let views = build_role_views(conn, &roles).await?;

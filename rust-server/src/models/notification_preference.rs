@@ -55,7 +55,7 @@ async fn find_pref(
         .first::<NotificationPreference>(conn)
         .await
         .optional()
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_for_user(
@@ -67,7 +67,7 @@ pub async fn list_for_user(
         .order(notification_preferences::created_at.asc())
         .load::<NotificationPreference>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn upsert_preference(
@@ -79,7 +79,8 @@ pub async fn upsert_preference(
     inapp: bool,
     chat: bool,
 ) -> Result<NotificationPreference, ApiError> {
-    if let Some(existing) = find_pref(conn, param_user_id, param_scope_kind, param_scope_id).await? {
+    if let Some(existing) = find_pref(conn, param_user_id, param_scope_kind, param_scope_id).await?
+    {
         diesel::update(notification_preferences::table.find(existing.id))
             .set((
                 notification_preferences::push_enabled.eq(push),
@@ -89,7 +90,7 @@ pub async fn upsert_preference(
             ))
             .get_result::<NotificationPreference>(conn)
             .await
-            .map_err(|e| ApiError::Database(e.to_string()))
+            .map_err(ApiError::from)
     } else {
         diesel::insert_into(notification_preferences::table)
             .values((
@@ -103,7 +104,7 @@ pub async fn upsert_preference(
             ))
             .get_result::<NotificationPreference>(conn)
             .await
-            .map_err(|e| ApiError::Database(e.to_string()))
+            .map_err(ApiError::from)
     }
 }
 

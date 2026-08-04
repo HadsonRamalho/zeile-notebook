@@ -1,6 +1,6 @@
 use crate::controllers::permissions::{NotebookCtx, TargetCtx, capabilities, resolve_capabilities};
 use crate::{models::error::ApiError, schema::blocks::dsl as blocks_dsl};
-use automerge::{AutoCommit, ObjType, ReadDoc, ROOT, ScalarValue, Value as AmValue};
+use automerge::{AutoCommit, ObjType, ROOT, ReadDoc, ScalarValue, Value as AmValue};
 use chrono::{DateTime, Utc};
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
@@ -337,7 +337,7 @@ pub async fn find_notebook_by_id(
         .await
     {
         Ok(notebook) => Ok(notebook),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -432,7 +432,7 @@ pub async fn ensure_public_slug(
         .select(public_slug)
         .first::<Option<String>>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     if let Some(slug) = current {
         return Ok(slug);
@@ -447,13 +447,13 @@ pub async fn ensure_public_slug(
             .count()
             .get_result(conn)
             .await
-            .map_err(|e| ApiError::Database(e.to_string()))?;
+            .map_err(ApiError::from)?;
         if count == 0 {
             diesel::update(notebooks.filter(id.eq(notebook_id)))
                 .set(public_slug.eq(&candidate))
                 .execute(conn)
                 .await
-                .map_err(|e| ApiError::Database(e.to_string()))?;
+                .map_err(ApiError::from)?;
             return Ok(candidate);
         }
     }
@@ -657,7 +657,7 @@ pub async fn clone_notebook(
         .await
     {
         Ok(n) => n,
-        Err(e) => return Err(ApiError::Database(e.to_string())),
+        Err(e) => return Err(ApiError::from(e)),
     };
 
     let db_blocks: Vec<Block> = match Block::belonging_to(&target_notebook)
@@ -667,7 +667,7 @@ pub async fn clone_notebook(
         .await
     {
         Ok(b) => b,
-        Err(e) => return Err(ApiError::Database(e.to_string())),
+        Err(e) => return Err(ApiError::from(e)),
     };
 
     let mut new_db_blocks = vec![];
@@ -712,7 +712,7 @@ pub async fn clone_notebook(
 
     match result {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -737,7 +737,7 @@ pub async fn search_user_blocks(
         .limit(10)
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let final_results = results_tuples
         .into_iter()
@@ -795,7 +795,7 @@ pub async fn search_notebooks_ranked(
         .bind::<BigInt, _>(limit)
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let block_rows: Vec<BlockHitRow> = diesel::sql_query(block_sql)
         .bind::<Text, _>(query_text)
@@ -803,7 +803,7 @@ pub async fn search_notebooks_ranked(
         .bind::<BigInt, _>(limit)
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let mut items: Vec<RankedSearchItem> =
         Vec::with_capacity(notebook_rows.len() + block_rows.len());
@@ -962,9 +962,7 @@ pub async fn checkpoint_notebook_data(
         .ok();
 }
 
-pub async fn backfill_search_text(
-    pool: &Pool<AsyncPgConnection>,
-) -> Result<usize, String> {
+pub async fn backfill_search_text(pool: &Pool<AsyncPgConnection>) -> Result<usize, String> {
     use crate::schema::notebooks::dsl::*;
 
     let mut conn = pool.get().await.map_err(|e| e.to_string())?;
@@ -1061,7 +1059,7 @@ pub async fn set_notebook_tags(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_team_notebooks(
@@ -1127,7 +1125,7 @@ pub async fn get_public_notebooks(
         .await
     {
         Ok(res) => res,
-        Err(e) => return Err(ApiError::Database(e.to_string())),
+        Err(e) => return Err(ApiError::from(e)),
     };
 
     let public_notebooks = raw_results
@@ -1245,15 +1243,11 @@ mod tests {
             .put_object(ROOT, "blocks", ObjType::List)
             .expect("blocks list");
         let block = doc.insert_object(&blocks, 0, ObjType::Map).expect("block");
-        doc.put(&block, "title", "scalar title")
-            .expect("put title");
+        doc.put(&block, "title", "scalar title").expect("put title");
         doc.put(&block, "content", "scalar content")
             .expect("put content");
 
-        assert_eq!(
-            extract_search_text(&doc),
-            "scalar title\nscalar content\n"
-        );
+        assert_eq!(extract_search_text(&doc), "scalar title\nscalar content\n");
     }
 
     #[test]

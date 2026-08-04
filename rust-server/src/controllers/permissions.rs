@@ -3,27 +3,27 @@ use std::sync::Arc;
 use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 
-use dashmap::DashMap;
-use rustls::ClientConfig;
-use rustls_platform_verifier::ConfigVerifierExt;
 use axum::extract::{Path, State};
 use axum::{Json, http::HeaderMap};
+use dashmap::DashMap;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, pooled_connection::deadpool::Pool};
 use hyper::StatusCode;
+use rustls::ClientConfig;
+use rustls_platform_verifier::ConfigVerifierExt;
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::sync::PresenceRegistry;
 use crate::controllers::utils::get_conn;
-use crate::schema::notebooks;
 use crate::models::error::ApiError;
 use crate::models::permission_grant::{
     GrantEffect, GrantSubjectKind, GrantTargetKind, PermissionGrant,
 };
 use crate::models::state::AppState;
 use crate::models::team::find_team_member_with_role;
+use crate::schema::notebooks;
 use crate::schema::permission_grants;
 use crate::sec::catalog::catalog;
 
@@ -165,7 +165,7 @@ pub async fn resolve_capabilities(
                 .select(PermissionGrant::as_select())
                 .load(conn)
                 .await
-                .map_err(|e| ApiError::Database(e.to_string()))?;
+                .map_err(ApiError::from)?;
             grants.extend(team_grants);
         }
     }
@@ -197,7 +197,7 @@ pub async fn resolve_capabilities(
             .select(PermissionGrant::as_select())
             .load(conn)
             .await
-            .map_err(|e| ApiError::Database(e.to_string()))?;
+            .map_err(ApiError::from)?;
         grants.extend(principal_grants);
     }
 
@@ -431,12 +431,9 @@ pub async fn broadcast_capability_change(
 
     // notify other nodes (best-effort); notebook_id is a validated uuid
     if let Ok(mut conn) = get_conn(pool).await {
-        let _ = diesel::sql_query(format!(
-            "SELECT pg_notify('zeile_caps', '{}')",
-            notebook_id
-        ))
-        .execute(&mut conn)
-        .await;
+        let _ = diesel::sql_query(format!("SELECT pg_notify('zeile_caps', '{}')", notebook_id))
+            .execute(&mut conn)
+            .await;
     }
 }
 
@@ -461,8 +458,7 @@ async fn run_caps_listener(
         let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config);
         let (client, mut connection) = tokio_postgres::connect(db_url, tls).await?;
         let conn_task = tokio::spawn(async move {
-            let mut stream =
-                futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+            let mut stream = futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
             while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
                 match msg {
                     Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
@@ -478,8 +474,7 @@ async fn run_caps_listener(
         let (client, mut connection) =
             tokio_postgres::connect(db_url, tokio_postgres::NoTls).await?;
         let conn_task = tokio::spawn(async move {
-            let mut stream =
-                futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+            let mut stream = futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
             while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
                 match msg {
                     Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
@@ -589,7 +584,12 @@ mod tests {
         }
     }
 
-    fn grant(key: &str, effect: GrantEffect, kind: GrantTargetKind, value: Option<&str>) -> PermissionGrant {
+    fn grant(
+        key: &str,
+        effect: GrantEffect,
+        kind: GrantTargetKind,
+        value: Option<&str>,
+    ) -> PermissionGrant {
         PermissionGrant {
             id: Uuid::new_v4(),
             subject_kind: GrantSubjectKind::Role,
@@ -636,8 +636,18 @@ mod tests {
     #[test]
     fn deny_beats_allow_at_same_level() {
         let c = caps(vec![
-            grant("notebook.view", GrantEffect::Allow, GrantTargetKind::Team, None),
-            grant("notebook.view", GrantEffect::Deny, GrantTargetKind::Team, None),
+            grant(
+                "notebook.view",
+                GrantEffect::Allow,
+                GrantTargetKind::Team,
+                None,
+            ),
+            grant(
+                "notebook.view",
+                GrantEffect::Deny,
+                GrantTargetKind::Team,
+                None,
+            ),
         ]);
         assert!(!c.can("notebook.view", &TargetCtx::default()));
     }
@@ -645,7 +655,12 @@ mod tests {
     #[test]
     fn more_specific_allow_overrides_broader_deny() {
         let c = caps(vec![
-            grant("notebook.blocks.view", GrantEffect::Deny, GrantTargetKind::Team, None),
+            grant(
+                "notebook.blocks.view",
+                GrantEffect::Deny,
+                GrantTargetKind::Team,
+                None,
+            ),
             grant(
                 "notebook.blocks.rust.view",
                 GrantEffect::Allow,
@@ -663,7 +678,12 @@ mod tests {
     #[test]
     fn block_type_deny_hides_only_that_type() {
         let c = caps(vec![
-            grant("notebook.blocks.view", GrantEffect::Allow, GrantTargetKind::Team, None),
+            grant(
+                "notebook.blocks.view",
+                GrantEffect::Allow,
+                GrantTargetKind::Team,
+                None,
+            ),
             grant(
                 "notebook.blocks.go.view",
                 GrantEffect::Deny,

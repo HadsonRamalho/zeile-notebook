@@ -58,10 +58,7 @@ pub fn token_hash(token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
-pub async fn issue(
-    conn: &mut AsyncPgConnection,
-    user: Uuid,
-) -> Result<(Uuid, String), ApiError> {
+pub async fn issue(conn: &mut AsyncPgConnection, user: Uuid) -> Result<(Uuid, String), ApiError> {
     let token = generate_token();
     let id = Uuid::new_v4();
 
@@ -76,7 +73,7 @@ pub async fn issue(
         .values(&new_token)
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok((id, token))
 }
@@ -98,7 +95,7 @@ pub async fn revoke(conn: &mut AsyncPgConnection, token_id: Uuid) -> Result<(), 
         .set(dsl::revoked_at.eq(Utc::now()))
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(())
 }
@@ -118,15 +115,12 @@ pub async fn rotate(
         ))
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok((new_id, token))
 }
 
-pub async fn revoke_for_user(
-    conn: &mut AsyncPgConnection,
-    user: Uuid,
-) -> Result<usize, ApiError> {
+pub async fn revoke_for_user(conn: &mut AsyncPgConnection, user: Uuid) -> Result<usize, ApiError> {
     diesel::update(
         dsl::refresh_tokens
             .filter(dsl::user_id.eq(user))
@@ -135,14 +129,14 @@ pub async fn revoke_for_user(
     .set(dsl::revoked_at.eq(Utc::now()))
     .execute(conn)
     .await
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 pub async fn delete_expired(conn: &mut AsyncPgConnection) -> Result<usize, ApiError> {
     diesel::delete(dsl::refresh_tokens.filter(dsl::expires_at.lt(Utc::now())))
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 #[cfg(test)]
@@ -274,7 +268,10 @@ mod tests_with_database {
 
         let spent = find_by_token(&mut conn, &old).await.expect("find");
 
-        assert!(!spent.usable(Utc::now()), "the previous token should be spent");
+        assert!(
+            !spent.usable(Utc::now()),
+            "the previous token should be spent"
+        );
         assert_eq!(spent.replaced_by, Some(new_id));
         assert_ne!(old_id, new_id);
 
@@ -298,8 +295,18 @@ mod tests_with_database {
         let count = revoke_for_user(&mut conn, user).await.expect("revoke");
 
         assert_eq!(count, 2);
-        assert!(!find_by_token(&mut conn, &a).await.unwrap().usable(Utc::now()));
-        assert!(!find_by_token(&mut conn, &b).await.unwrap().usable(Utc::now()));
+        assert!(
+            !find_by_token(&mut conn, &a)
+                .await
+                .unwrap()
+                .usable(Utc::now())
+        );
+        assert!(
+            !find_by_token(&mut conn, &b)
+                .await
+                .unwrap()
+                .usable(Utc::now())
+        );
         assert!(
             find_by_token(&mut conn, &unrelated)
                 .await
