@@ -60,3 +60,10 @@ jobs:
           workspaces: .
 
       - run: cargo test --manifest-path rust-server/Cargo.toml
+
+      - run: cargo install diesel_cli --version 2.3.10 --no-default-features --features postgres --locked
+
+      - run: bash scripts/check_schema.sh
+        working-directory: rust-server
+        env:
+          SCHEMA_CHECK_DATABASE_URL: postgres://zeile:zeilepass@localhost:5432/zeile_migration_test
