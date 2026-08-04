@@ -35,8 +35,8 @@ async function loadScopedNotebooks(
 ): Promise<Notebook[]> {
   if (currentNotebookId) {
     const meta = await getNotebookMeta(currentNotebookId).catch(() => null);
-    if (meta?.team_id) {
-      return (await fetchTeamPages(meta.team_id)) ?? [];
+    if (meta?.teamId) {
+      return (await fetchTeamPages(meta.teamId)) ?? [];
     }
   }
   return (await getMyNotebooks()) ?? [];

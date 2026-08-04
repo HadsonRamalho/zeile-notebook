@@ -33,7 +33,7 @@ export async function updateNotebookTitle(id: string, newTitle: string) {
 
 export async function updateNotebookVisibility(id: string, isVisible: boolean) {
   return api.patch<void>(`/notebook/${id}/visibility`, {
-    is_visible: isVisible,
+    isVisible,
   });
 }
 

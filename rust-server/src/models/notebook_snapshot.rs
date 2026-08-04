@@ -8,16 +8,14 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::notebook_snapshots)]
+#[serde(rename_all = "camelCase")]
 pub struct SnapshotMeta {
     pub id: Uuid,
-    #[serde(rename = "notebookId")]
     pub notebook_id: Uuid,
     pub label: String,
     pub note: Option<String>,
     pub kind: String,
-    #[serde(rename = "createdBy")]
     pub created_by: Option<Uuid>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -34,6 +32,7 @@ struct NewSnapshot {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSnapshotRequest {
     pub label: String,
     pub note: Option<String>,

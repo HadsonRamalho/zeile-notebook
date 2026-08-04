@@ -46,7 +46,7 @@ export async function RunCode({
 
     const data: RunCodeApiResponse = await api.post(endpoint, {
       code,
-      notebook_id: notebookId,
+      notebookId,
     });
 
     const stderr = data.stderr || "";

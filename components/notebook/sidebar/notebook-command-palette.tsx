@@ -256,9 +256,9 @@ export function NotebookCommandPalette({
   }
   for (const hit of blockResults) {
     flat.push({
-      key: `block-${hit.block_id}`,
+      key: `block-${hit.blockId}`,
       onSelect: () => {
-        router.push(buildNotebookHref(hit.notebook_id, hit.block_id));
+        router.push(buildNotebookHref(hit.notebookId, hit.blockId));
         onOpenChange(false);
       },
     });
@@ -443,26 +443,26 @@ export function NotebookCommandPalette({
             )}
             {blockResults.map((hit) => (
               <button
-                key={`block-${hit.block_id}`}
+                key={`block-${hit.blockId}`}
                 type="button"
                 onClick={() => {
-                  router.push(buildNotebookHref(hit.notebook_id, hit.block_id));
+                  router.push(buildNotebookHref(hit.notebookId, hit.blockId));
                   onOpenChange(false);
                 }}
                 onMouseEnter={() =>
                   setActiveIndex(
-                    flat.findIndex((i) => i.key === `block-${hit.block_id}`),
+                    flat.findIndex((i) => i.key === `block-${hit.blockId}`),
                   )
                 }
                 className={cn(
-                  rowClass(`block-${hit.block_id}`),
+                  rowClass(`block-${hit.blockId}`),
                   "flex-col items-start gap-1",
                 )}
               >
                 <span className="flex items-center gap-2.5">
                   <TextSearch className="size-4 shrink-0" />
                   <span className="truncate">
-                    {hit.notebook_title || "Sem título"}
+                    {hit.notebookTitle || "Sem título"}
                   </span>
                 </span>
                 {hit.snippet && (

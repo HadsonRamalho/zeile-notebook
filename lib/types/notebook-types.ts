@@ -1,11 +1,11 @@
 export interface PublicNotebookResponse {
   id: string;
   title: string;
-  user_id: string | null;
-  team_id: string | null;
-  owner_name: string;
+  userId: string | null;
+  teamId: string | null;
+  ownerName: string;
   description: string | null;
-  updated_at: string;
+  updatedAt: string;
 }
 
 export interface PublicNotebookDoc {
@@ -19,11 +19,11 @@ export interface PublicNotebookDoc {
 
 export interface RankedSearchItem {
   kind: "notebook" | "block";
-  notebook_id: string;
-  block_id: string | null;
-  notebook_title: string;
-  team_id: string | null;
-  team_name: string | null;
+  notebookId: string;
+  blockId: string | null;
+  notebookTitle: string;
+  teamId: string | null;
+  teamName: string | null;
   snippet: string;
   rank: number;
 }

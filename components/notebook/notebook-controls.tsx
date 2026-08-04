@@ -127,7 +127,7 @@ export function NotebookControls() {
     showShare: true,
     showExport: exportOptions.length > 0,
     showPublicPerms: isPublic && can("notebook.manage_public"),
-    showTeamPerms: !!meta?.team_id && can("team.roles.edit_role_permissions"),
+    showTeamPerms: !!meta?.teamId && can("team.roles.edit_role_permissions"),
   };
 
   return (
@@ -157,10 +157,10 @@ export function NotebookControls() {
           onOpenChange={setPublicPermsOpen}
         />
       )}
-      {notebook && meta?.team_id && rules.showTeamPerms && (
+      {notebook && meta?.teamId && rules.showTeamPerms && (
         <TeamNotebookPermissions
           notebookId={notebook.id}
-          teamId={meta.team_id}
+          teamId={meta.teamId}
           open={teamPermsOpen}
           onOpenChange={setTeamPermsOpen}
         />
