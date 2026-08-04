@@ -2031,11 +2031,7 @@ export interface components {
     EditMessageRequest: {
       content: string;
     };
-    /**
-     * @description The client branches on this, never on a substring of `stderr` — the
-     *     compiler's own wording is not a stable contract (see Q105).
-     * @enum {string}
-     */
+    /** @enum {string} */
     ExecStatus:
       | "ok"
       | "compile_error"
