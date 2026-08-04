@@ -3,7 +3,7 @@ use axum::http::{Request, StatusCode, header};
 use tower::ServiceExt;
 
 use crate::middleware::rate_limit::JUDGE;
-use crate::routes::test_support::{body_as_text, respond, router_with_unreachable_database};
+use crate::routes::test_support::{body_as_text, get, respond, router_with_unreachable_database};
 
 const ROUTES: [&str; 4] = ["/api/run", "/api/run/go", "/api/run/cpp", "/api/run/zig"];
 
@@ -155,4 +155,19 @@ async fn execution_rate_limit_is_per_language_and_per_origin() {
         StatusCode::TOO_MANY_REQUESTS,
         "one language's limit leaked into another"
     );
+}
+
+#[tokio::test]
+async fn capabilities_reports_one_entry_per_execution_language_and_needs_no_auth() {
+    let response = respond(get("/api/capabilities")).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = body_as_text(response).await;
+    for language in ["rust", "go", "cpp", "zig"] {
+        assert!(
+            body.contains(&format!("\"language\":\"{language}\"")),
+            "missing {language} in {body}"
+        );
+    }
 }

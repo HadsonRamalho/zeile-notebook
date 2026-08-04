@@ -120,6 +120,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/capabilities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["api_get_execution_capabilities"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/challenge/create": {
     parameters: {
       query?: never;
@@ -1838,6 +1854,10 @@ export interface components {
       title?: string | null;
       type?: string | null;
     };
+    CapabilitiesReport: {
+      languages: components["schemas"]["LanguageCapability"][];
+      sandbox: boolean;
+    };
     CapabilitySnapshot: {
       all: boolean;
       grants: components["schemas"]["GrantView"][];
@@ -2057,6 +2077,11 @@ export interface components {
     };
     /** @enum {string} */
     Language: "rust" | "typescript" | "python" | "zig" | "go" | "cpp";
+    LanguageCapability: {
+      available: boolean;
+      language: string;
+      missing: string[];
+    };
     LeaderboardEntry: {
       authorName: string;
       /** Format: date-time */
@@ -2774,6 +2799,25 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ProvidersResponse"];
+        };
+      };
+    };
+  };
+  api_get_execution_capabilities: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CapabilitiesReport"];
         };
       };
     };
