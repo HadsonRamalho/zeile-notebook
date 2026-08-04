@@ -1,0 +1,60 @@
+name: Generators
+
+on:
+  pull_request:
+    paths:
+      - "rust-server/src/**"
+      - "rust-server/Cargo.toml"
+      - "rust-server/Cargo.lock"
+      - "scripts/generate-openapi-types.mjs"
+      - "scripts/generate-ws-types.mjs"
+      - "scripts/generate-error-codes.mjs"
+      - "lib/api/generated/**"
+      - "package.json"
+      - ".github/workflows/generators.yml"
+  push:
+    branches: [main]
+    paths:
+      - "rust-server/src/**"
+      - "rust-server/Cargo.toml"
+      - "rust-server/Cargo.lock"
+      - "scripts/generate-openapi-types.mjs"
+      - "scripts/generate-ws-types.mjs"
+      - "scripts/generate-error-codes.mjs"
+      - "lib/api/generated/**"
+      - "package.json"
+      - ".github/workflows/generators.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generators-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: .
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm generate:openapi-types:check
+
+      - run: pnpm generate:ws-types:check
+
+      - run: pnpm generate:error-codes:check
