@@ -72,7 +72,7 @@ export function UserNav({ compact = false }: { compact?: boolean } = {}) {
           className="relative h-9 w-9 rounded-full print:hidden"
         >
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.avatar_url || ""} alt={user.name} />
+            <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
             <AvatarFallback>{initials || "U"}</AvatarFallback>
           </Avatar>
         </Button>

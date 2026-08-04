@@ -67,18 +67,16 @@ pub async fn api_register_user(
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionResponse {
-    #[serde(rename = "accessToken")]
     pub access_token: String,
-    #[serde(rename = "refreshToken")]
     pub refresh_token: String,
-    #[serde(rename = "expiresInSecs")]
     pub expires_in_secs: i64,
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RefreshPayload {
-    #[serde(rename = "refreshToken")]
     pub refresh_token: String,
 }
 

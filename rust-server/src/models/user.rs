@@ -29,6 +29,7 @@ pub enum AuthProvider {
 
 #[derive(Queryable, Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = users)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: Uuid,
     pub public_id: i32,
@@ -97,6 +98,7 @@ impl From<User> for UserAuthInfo {
 
 #[derive(Insertable, Validate, Debug, ToSchema, Deserialize)]
 #[diesel(table_name = users)]
+#[serde(rename_all = "camelCase")]
 pub struct NewUser {
     #[validate(length(min = 1, message = "Name is required"))]
     pub name: String,
@@ -104,11 +106,16 @@ pub struct NewUser {
     #[validate(email(message = "Invalid email format"))]
     pub email: String,
 
+    #[serde(alias = "password_hash")]
     pub password_hash: Option<String>,
 
+    #[serde(alias = "primary_provider")]
     pub primary_provider: AuthProvider,
+    #[serde(alias = "github_id")]
     pub github_id: Option<String>,
+    #[serde(alias = "google_id")]
     pub google_id: Option<String>,
+    #[serde(alias = "avatar_url")]
     pub avatar_url: Option<String>,
 }
 
@@ -126,6 +133,7 @@ impl Sanitize for NewUser {
 }
 
 #[derive(Deserialize, Validate, Debug, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginUser {
     #[validate(email(message = "Invalid email format"))]
     pub email: String,
@@ -136,6 +144,7 @@ pub struct LoginUser {
 
 #[derive(Deserialize, Validate, AsChangeset)]
 #[diesel(table_name = users)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateUser {
     #[validate(length(min = 1))]
     pub name: String,
@@ -145,15 +154,13 @@ pub struct UpdateUser {
 }
 
 #[derive(Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateUserPassword {
     #[validate(length(min = 1, message = "The current password is required"))]
-    #[serde(rename = "currentPassword")]
     pub current_password: String,
     #[validate(length(min = 1, message = "The new password is required"))]
-    #[serde(rename = "newPassword")]
     pub new_password: String,
     #[validate(length(min = 1, message = "The confirmation password is required"))]
-    #[serde(rename = "confirmPassword")]
     pub confirm_password: String,
 }
 
@@ -165,6 +172,7 @@ impl Sanitize for UpdateUser {
 }
 
 #[derive(Validate, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserEmail {
     #[validate(email)]
     pub email: String,
@@ -177,8 +185,10 @@ impl Sanitize for UserEmail {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResetPasswordPayload {
     pub token: String,
+    #[serde(alias = "new_password")]
     pub new_password: String,
 }
 
@@ -390,6 +400,59 @@ pub async fn delete_user(conn: &mut AsyncPgConnection, id_param: &Uuid) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn user_serializes_multi_word_fields_as_camel_case() {
+        let u = user(true, false, false);
+        let json = serde_json::to_value(&u).unwrap();
+
+        assert!(json.get("publicId").is_some());
+        assert!(json.get("avatarUrl").is_some());
+        assert!(json.get("primaryProvider").is_some());
+        assert!(json.get("isActive").is_some());
+        assert!(json.get("createdAt").is_some());
+        assert!(json.get("updatedAt").is_some());
+        assert!(json.get("deletedAt").is_some());
+        assert!(json.get("public_id").is_none());
+        assert!(json.get("avatar_url").is_none());
+    }
+
+    #[test]
+    fn new_user_accepts_camel_case_and_the_legacy_snake_case_alias() {
+        let camel = r#"{
+            "name": "Zeile",
+            "email": "z@zeile.dev",
+            "passwordHash": "hash",
+            "primaryProvider": "Email",
+            "githubId": null,
+            "googleId": null,
+            "avatarUrl": null
+        }"#;
+        let snake = r#"{
+            "name": "Zeile",
+            "email": "z@zeile.dev",
+            "password_hash": "hash",
+            "primary_provider": "Email",
+            "github_id": null,
+            "google_id": null,
+            "avatar_url": null
+        }"#;
+
+        let from_camel: NewUser = serde_json::from_str(camel).unwrap();
+        let from_snake: NewUser = serde_json::from_str(snake).unwrap();
+
+        assert_eq!(from_camel.password_hash, from_snake.password_hash);
+    }
+
+    #[test]
+    fn reset_password_payload_accepts_camel_case_and_the_legacy_snake_case_alias() {
+        let camel: ResetPasswordPayload =
+            serde_json::from_str(r#"{"token":"t","newPassword":"p"}"#).unwrap();
+        let snake: ResetPasswordPayload =
+            serde_json::from_str(r#"{"token":"t","new_password":"p"}"#).unwrap();
+
+        assert_eq!(camel.new_password, snake.new_password);
+    }
 
     fn user(password: bool, github: bool, google: bool) -> User {
         User {
