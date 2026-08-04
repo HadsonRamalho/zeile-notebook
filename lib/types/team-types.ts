@@ -5,8 +5,8 @@ export interface Team {
   id: string;
   name: string;
   description?: string;
-  image_url?: string;
-  created_at: string;
+  imageUrl?: string;
+  createdAt: string;
 }
 
 export interface NewTeam {
@@ -16,24 +16,24 @@ export interface NewTeam {
 
 export interface TeamRole {
   id: string;
-  team_id: string;
+  teamId: string;
   name: string;
-  can_read: boolean;
-  can_write: boolean;
-  can_manage_privacy: boolean;
-  can_manage_clones: boolean;
-  can_invite_users: boolean;
-  can_remove_users: boolean;
-  can_manage_permissions: boolean;
-  can_manage_team: boolean;
+  canRead: boolean;
+  canWrite: boolean;
+  canManagePrivacy: boolean;
+  canManageClones: boolean;
+  canInviteUsers: boolean;
+  canRemoveUsers: boolean;
+  canManagePermissions: boolean;
+  canManageTeam: boolean;
 }
 
 export interface TeamMember {
   id: string;
-  team_id: string;
-  user_id: string;
-  role_id: string;
-  joined_at: string;
+  teamId: string;
+  userId: string;
+  roleId: string;
+  joinedAt: string;
 }
 
 export interface TeamMemberWithUserData {
@@ -41,42 +41,42 @@ export interface TeamMemberWithUserData {
 
   name: string;
   email: string;
-  avatar_url: string | null;
+  avatarUrl: string | null;
 
-  team_id: string;
-  user_id: string;
-  role_id: string;
-  joined_at: string;
+  teamId: string;
+  userId: string;
+  roleId: string;
+  joinedAt: string;
 }
 
 export interface UpdateTeamRole {
   id: string;
   name?: string;
-  can_read?: boolean;
-  can_write?: boolean;
-  can_manage_privacy?: boolean;
-  can_manage_clones?: boolean;
-  can_invite_users?: boolean;
-  can_remove_users?: boolean;
-  can_manage_permissions?: boolean;
+  canRead?: boolean;
+  canWrite?: boolean;
+  canManagePrivacy?: boolean;
+  canManageClones?: boolean;
+  canInviteUsers?: boolean;
+  canRemoveUsers?: boolean;
+  canManagePermissions?: boolean;
 }
 
 export interface NewTeamRoleRequest {
   name: string;
-  can_read: boolean;
-  can_write: boolean;
-  can_manage_privacy: boolean;
-  can_manage_clones: boolean;
-  can_invite_users: boolean;
-  can_remove_users: boolean;
-  can_manage_permissions: boolean;
-  can_manage_team: boolean;
+  canRead: boolean;
+  canWrite: boolean;
+  canManagePrivacy: boolean;
+  canManageClones: boolean;
+  canInviteUsers: boolean;
+  canRemoveUsers: boolean;
+  canManagePermissions: boolean;
+  canManageTeam: boolean;
 }
 
 export interface UpdateTeam {
   name?: string;
   description?: string;
-  image_url?: string;
+  imageUrl?: string;
 }
 
 export interface InviteTeamMember {

@@ -215,6 +215,7 @@ pub async fn resolve_capabilities(
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GrantView {
     pub permission_key: String,
     pub effect: GrantEffect,

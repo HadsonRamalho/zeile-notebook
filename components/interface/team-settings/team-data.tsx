@@ -131,7 +131,7 @@ export function TeamData({
                 <FormField
                   control={form.control}
                   name="name"
-                  disabled={!userPermissions?.can_manage_team}
+                  disabled={!userPermissions?.canManageTeam}
                   render={({ field }) => (
                     <FormItem className="col-span-1">
                       <FormLabel>{a("team_name")}</FormLabel>
@@ -147,7 +147,7 @@ export function TeamData({
               <FormField
                 control={form.control}
                 name="description"
-                disabled={!userPermissions?.can_manage_team}
+                disabled={!userPermissions?.canManageTeam}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{a("team_description")}</FormLabel>
@@ -163,14 +163,14 @@ export function TeamData({
                 )}
               />
             </CardContent>
-            {userPermissions?.can_manage_team && (
+            {userPermissions?.canManageTeam && (
               <CardFooter className="flex justify-end border-t px-6 py-4">
                 <Button
                   type="submit"
                   disabled={
                     isSaving ||
                     !form.formState.isDirty ||
-                    !userPermissions?.can_manage_team
+                    !userPermissions?.canManageTeam
                   }
                 >
                   {isSaving && (
@@ -185,7 +185,7 @@ export function TeamData({
         </form>
       </Form>
 
-      {userPermissions?.can_manage_team && (
+      {userPermissions?.canManageTeam && (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">

@@ -33,7 +33,7 @@ export async function fetchTeamMembers(id: string) {
 
 export async function updateMemberRole(
   teamId: string,
-  body: { user_id: string; role_id: string },
+  body: { userId: string; roleId: string },
 ) {
   return await api.patch(`/team/${teamId}/members`, body);
 }

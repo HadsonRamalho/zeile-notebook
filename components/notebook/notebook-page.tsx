@@ -92,8 +92,8 @@ export default function RustInteractivePage({
     () =>
       capabilitiesReady
         ? {
-            can_read: canDo("notebook.view"),
-            can_write: canDo("notebook.edit"),
+            canRead: canDo("notebook.view"),
+            canWrite: canDo("notebook.edit"),
           }
         : null,
     [canDo, capabilitiesReady],
@@ -136,7 +136,7 @@ export default function RustInteractivePage({
   const lastEditPingRef = useRef(0);
 
   const pingEdit = useCallback(() => {
-    if (!userPermissions?.can_write) return;
+    if (!userPermissions?.canWrite) return;
     const now = Date.now();
     if (now - lastEditPingRef.current < 30000) return;
     lastEditPingRef.current = now;
@@ -298,7 +298,7 @@ export default function RustInteractivePage({
 
   useEffect(() => {
     if (hasAppliedPendingImport.current) return;
-    if (!userPermissions?.can_write || blocks.length === 0) return;
+    if (!userPermissions?.canWrite || blocks.length === 0) return;
 
     const imported = consumePendingImport();
     hasAppliedPendingImport.current = true;
@@ -431,7 +431,7 @@ export default function RustInteractivePage({
     );
   }
 
-  if (!userPermissions.can_read) {
+  if (!userPermissions.canRead) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <AppNotFound variant="forbidden" />
@@ -446,13 +446,13 @@ export default function RustInteractivePage({
           icon={<FileText className="size-5" />}
           title={tEmpty("notebook_title")}
           description={
-            userPermissions.can_write
+            userPermissions.canWrite
               ? tEmpty("notebook_desc")
               : tEmpty("notebook_readonly_desc")
           }
-          hint={userPermissions.can_write ? tEmpty("run_hint") : undefined}
+          hint={userPermissions.canWrite ? tEmpty("run_hint") : undefined}
         >
-          {userPermissions.can_write && (
+          {userPermissions.canWrite && (
             <>
               <Button
                 onClick={() => handleAddBlock(-1, "text")}
@@ -481,7 +481,7 @@ export default function RustInteractivePage({
       <CommentsProvider
         notebookId={pageId}
         token={token}
-        canComment={!!userPermissions.can_write}
+        canComment={!!userPermissions.canWrite}
         currentUserId={user?.id}
       >
         <div
@@ -489,7 +489,7 @@ export default function RustInteractivePage({
           className="min-h-screen flex flex-col w-full print:block print:min-h-0 print:h-auto print:m-0 print:p-0 print:bg-white print:text-black"
         >
           <CollabBar
-            canWriteHistory={userPermissions.can_write}
+            canWriteHistory={userPermissions.canWrite}
             automergeHistory={automergeHistory}
             automergeHistoryVisibleCount={automergeHistoryVisibleCount}
             isLoadingAutomergeHistory={isLoadingAutomergeHistory}
@@ -533,7 +533,7 @@ export default function RustInteractivePage({
                 onStop={() => setFollowingId(null)}
               />
               <ActivityFeed notebookId={pageId} />
-              {userPermissions.can_write && (
+              {userPermissions.canWrite && (
                 <SnapshotsPanel notebookId={pageId} />
               )}
             </div>
@@ -593,7 +593,7 @@ export default function RustInteractivePage({
 
                 return (
                   <Fragment key={block.id}>
-                    {userPermissions?.can_write && (
+                    {userPermissions?.canWrite && (
                       <ReorderTools
                         index={index - 1}
                         addBlock={handleAddBlock}
@@ -650,11 +650,11 @@ export default function RustInteractivePage({
                         updateDrawingScene={updateDrawingScene}
                         doc={doc}
                         notebookId={pageId}
-                        canWrite={!previewDoc && !!userPermissions?.can_write}
+                        canWrite={!previewDoc && !!userPermissions?.canWrite}
                       />
                     </div>
 
-                    {userPermissions?.can_write &&
+                    {userPermissions?.canWrite &&
                       index === blocks.length - 1 && (
                         <ReorderTools index={index} addBlock={handleAddBlock} />
                       )}

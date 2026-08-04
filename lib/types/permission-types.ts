@@ -17,7 +17,7 @@ export interface CatalogPermission {
   tier: Tier;
   targets: PermissionTargetKind[];
   label: string;
-  implied_by: string[];
+  impliedBy: string[];
   view: ViewSensitivity | null;
 }
 
@@ -26,11 +26,11 @@ export interface PermissionCatalog {
 }
 
 export interface GrantView {
-  permission_key: string;
+  permissionKey: string;
   effect: GrantEffect;
-  target_kind: PermissionTargetKind;
-  target_id: string | null;
-  target_value: string | null;
+  targetKind: PermissionTargetKind;
+  targetId: string | null;
+  targetValue: string | null;
 }
 
 export interface CapabilitySnapshot {
@@ -48,24 +48,24 @@ export type GrantSubjectKind = "role" | "user" | "principal";
 
 export interface TeamGrant {
   id: string;
-  subject_kind: GrantSubjectKind;
-  subject_id: string | null;
-  subject_principal: string | null;
-  scope_team_id: string | null;
-  permission_key: string;
-  target_kind: PermissionTargetKind;
-  target_id: string | null;
-  target_value: string | null;
+  subjectKind: GrantSubjectKind;
+  subjectId: string | null;
+  subjectPrincipal: string | null;
+  scopeTeamId: string | null;
+  permissionKey: string;
+  targetKind: PermissionTargetKind;
+  targetId: string | null;
+  targetValue: string | null;
   effect: GrantEffect;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface CreateGrantRequest {
-  subject_kind: "role" | "user";
-  subject_id: string;
-  permission_key: string;
-  target_kind: PermissionTargetKind;
-  target_id?: string | null;
-  target_value?: string | null;
+  subjectKind: "role" | "user";
+  subjectId: string;
+  permissionKey: string;
+  targetKind: PermissionTargetKind;
+  targetId?: string | null;
+  targetValue?: string | null;
   effect: GrantEffect;
 }

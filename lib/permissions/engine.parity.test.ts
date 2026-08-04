@@ -35,11 +35,11 @@ function grant(
   value: string | null = null,
 ): GrantView {
   return {
-    permission_key: key,
+    permissionKey: key,
     effect,
-    target_kind: kind,
-    target_id: kind === "notebook" ? NIL_UUID : null,
-    target_value: value,
+    targetKind: kind,
+    targetId: kind === "notebook" ? NIL_UUID : null,
+    targetValue: value,
   };
 }
 
@@ -78,7 +78,7 @@ describe("catalog snapshot", () => {
     const rustExecute = catalog.permissions.find(
       (p) => p.key === "notebook.blocks.rust.execute",
     );
-    expect(rustExecute?.implied_by).toContain("notebook.blocks.execute");
+    expect(rustExecute?.impliedBy).toContain("notebook.blocks.execute");
   });
 });
 

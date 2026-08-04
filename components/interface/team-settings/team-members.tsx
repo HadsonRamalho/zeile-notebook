@@ -100,11 +100,11 @@ export function TeamMembers({
   const t = useTranslations("api_errors");
   const locale = useLocale();
 
-  const canManageRoles = !!userPermissions?.can_manage_permissions;
+  const canManageRoles = !!userPermissions?.canManagePermissions;
 
   const handleChangeRole = async (userId: string, roleId: string) => {
     try {
-      await updateMemberRole(teamId, { user_id: userId, role_id: roleId });
+      await updateMemberRole(teamId, { userId, roleId });
       toast.success(a("role_updated"));
       onUpdate();
     } catch (err) {
@@ -185,7 +185,7 @@ export function TeamMembers({
             onOpenChange={setIsInviteDialogOpen}
           >
             <AlertDialogTrigger asChild>
-              {userPermissions?.can_invite_users && (
+              {userPermissions?.canInviteUsers && (
                 <Button size="sm" className="gap-2">
                   <Plus size={16} /> {a("invite_member_button")}
                 </Button>
@@ -266,9 +266,9 @@ export function TeamMembers({
                 className="flex flex-wrap items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
               >
                 <Avatar className="size-9 shrink-0">
-                  {member[0].avatar_url && (
+                  {member[0].avatarUrl && (
                     <AvatarImage
-                      src={member[0].avatar_url}
+                      src={member[0].avatarUrl}
                       alt={member[0].name}
                     />
                   )}
@@ -280,7 +280,7 @@ export function TeamMembers({
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-sm font-medium">
                     {member[0].name}
-                    {member[0].user_id === user.id && (
+                    {member[0].userId === user.id && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         ({a("you")})
                       </span>
@@ -291,7 +291,7 @@ export function TeamMembers({
                   </span>
                   <span className="text-xs text-muted-foreground opacity-75">
                     {a("joined_on")}{" "}
-                    {new Date(member[0].joined_at).toLocaleDateString(locale, {
+                    {new Date(member[0].joinedAt).toLocaleDateString(locale, {
                       day: "2-digit",
                       month: "2-digit",
                       year: "numeric",
@@ -319,7 +319,7 @@ export function TeamMembers({
                     </Badge>
                   )}
 
-                  {canManageRoles && member[0].user_id !== user.id && (
+                  {canManageRoles && member[0].userId !== user.id && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -335,9 +335,9 @@ export function TeamMembers({
                           {a("change_role")}
                         </DropdownMenuLabel>
                         <DropdownMenuRadioGroup
-                          value={member[0].role_id}
+                          value={member[0].roleId}
                           onValueChange={(rid) =>
-                            handleChangeRole(member[0].user_id, rid)
+                            handleChangeRole(member[0].userId, rid)
                           }
                         >
                           {roles.map((role) => (
@@ -352,7 +352,7 @@ export function TeamMembers({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() =>
-                            onEditMemberPermissions(member[0].user_id)
+                            onEditMemberPermissions(member[0].userId)
                           }
                         >
                           <KeyRound size={16} />
@@ -368,9 +368,9 @@ export function TeamMembers({
                     </DropdownMenu>
                   )}
 
-                  {!member[1].can_manage_team &&
-                    (userPermissions?.can_manage_team ||
-                      userPermissions?.can_remove_users) && (
+                  {!member[1].canManageTeam &&
+                    (userPermissions?.canManageTeam ||
+                      userPermissions?.canRemoveUsers) && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -378,7 +378,7 @@ export function TeamMembers({
                         title={a("remove_member_button")}
                         onClick={() =>
                           setMemberToRemove({
-                            id: member[0].user_id,
+                            id: member[0].userId,
                             name: member[0].name,
                           })
                         }

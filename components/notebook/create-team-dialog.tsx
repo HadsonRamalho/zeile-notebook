@@ -53,16 +53,16 @@ export function CreateTeamDialog({
 
       const newRole: TeamRole = {
         id: "1",
-        team_id: newTeam.id,
+        teamId: newTeam.id,
         name: "Admin",
-        can_read: true,
-        can_write: true,
-        can_manage_privacy: true,
-        can_manage_clones: true,
-        can_invite_users: true,
-        can_remove_users: true,
-        can_manage_permissions: true,
-        can_manage_team: true,
+        canRead: true,
+        canWrite: true,
+        canManagePrivacy: true,
+        canManageClones: true,
+        canInviteUsers: true,
+        canRemoveUsers: true,
+        canManagePermissions: true,
+        canManageTeam: true,
       };
 
       onCreated([newTeam, newRole]);

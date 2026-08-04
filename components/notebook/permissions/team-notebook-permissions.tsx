@@ -113,11 +113,11 @@ export function TeamNotebookPermissions({
     (key: string): Effect =>
       grants.find(
         (g) =>
-          g.subject_kind === "role" &&
-          g.subject_id === roleId &&
-          g.target_kind === "notebook" &&
-          g.target_id === notebookId &&
-          g.permission_key === key,
+          g.subjectKind === "role" &&
+          g.subjectId === roleId &&
+          g.targetKind === "notebook" &&
+          g.targetId === notebookId &&
+          g.permissionKey === key,
       )?.effect ?? "none",
     [grants, roleId, notebookId],
   );
@@ -128,11 +128,11 @@ export function TeamNotebookPermissions({
       setPending((prev) => new Set(prev).add(key));
       const existing = grants.filter(
         (g) =>
-          g.subject_kind === "role" &&
-          g.subject_id === roleId &&
-          g.target_kind === "notebook" &&
-          g.target_id === notebookId &&
-          g.permission_key === key,
+          g.subjectKind === "role" &&
+          g.subjectId === roleId &&
+          g.targetKind === "notebook" &&
+          g.targetId === notebookId &&
+          g.permissionKey === key,
       );
       try {
         for (const grant of existing) {
@@ -140,11 +140,11 @@ export function TeamNotebookPermissions({
         }
         if (next !== "none") {
           await createTeamGrant(teamId, {
-            subject_kind: "role",
-            subject_id: roleId,
-            permission_key: key,
-            target_kind: "notebook",
-            target_id: notebookId,
+            subjectKind: "role",
+            subjectId: roleId,
+            permissionKey: key,
+            targetKind: "notebook",
+            targetId: notebookId,
             effect: next,
           });
         }

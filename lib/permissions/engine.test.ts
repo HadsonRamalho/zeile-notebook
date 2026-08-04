@@ -20,7 +20,7 @@ function perm(key: string, impliedBy: string[] = []): CatalogPermission {
     tier: "granular",
     targets: ["notebook"],
     label: `perm.${key}`,
-    implied_by: impliedBy,
+    impliedBy,
     view: null,
   };
 }
@@ -36,11 +36,11 @@ function grant(
   opts: { targetId?: string | null; targetValue?: string | null } = {},
 ): GrantView {
   return {
-    permission_key: key,
+    permissionKey: key,
     effect,
-    target_kind: kind,
-    target_id: opts.targetId ?? null,
-    target_value: opts.targetValue ?? null,
+    targetKind: kind,
+    targetId: opts.targetId ?? null,
+    targetValue: opts.targetValue ?? null,
   };
 }
 
