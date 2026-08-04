@@ -8,23 +8,16 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::notification_preferences)]
+#[serde(rename_all = "camelCase")]
 pub struct NotificationPreference {
     pub id: Uuid,
-    #[serde(rename = "userId")]
     pub user_id: Uuid,
-    #[serde(rename = "scopeKind")]
     pub scope_kind: String,
-    #[serde(rename = "scopeId")]
     pub scope_id: Option<Uuid>,
-    #[serde(rename = "pushEnabled")]
     pub push_enabled: bool,
-    #[serde(rename = "inappEnabled")]
     pub inapp_enabled: bool,
-    #[serde(rename = "chatEnabled")]
     pub chat_enabled: bool,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 

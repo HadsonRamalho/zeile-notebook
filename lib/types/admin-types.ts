@@ -3,7 +3,7 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   limit: number;
-  total_pages: number;
+  totalPages: number;
 }
 
 export interface AdminChartData {
@@ -13,31 +13,31 @@ export interface AdminChartData {
 }
 
 export interface AdminSystemStats {
-  total_users: number;
-  total_active_users: number;
-  total_notebooks: number;
-  total_public_notebooks: number;
-  total_teams: number;
-  total_team_members: number;
-  chart_data: AdminChartData[];
+  totalUsers: number;
+  totalActiveUsers: number;
+  totalNotebooks: number;
+  totalPublicNotebooks: number;
+  totalTeams: number;
+  totalTeamMembers: number;
+  chartData: AdminChartData[];
 }
 
 export interface AdminUserView {
   id: string;
   name: string;
   email: string;
-  primary_provider: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  primaryProvider: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdminTeamView {
   id: string;
   name: string;
   description: string | null;
-  created_at: string;
-  member_count: number;
+  createdAt: string;
+  memberCount: number;
 }
 
 export interface AdminNotebookView {

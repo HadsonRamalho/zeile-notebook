@@ -93,9 +93,9 @@ pub fn spawn_deliver(state: Arc<AppState>, user_ids: Vec<Uuid>, input: Notificat
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NotificationsResponse {
     pub items: Vec<Notification>,
-    #[serde(rename = "unreadCount")]
     pub unread_count: i64,
 }
 
@@ -180,16 +180,12 @@ pub async fn api_list_preferences(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpsertPreferenceRequest {
-    #[serde(rename = "scopeKind")]
     pub scope_kind: String,
-    #[serde(rename = "scopeId")]
     pub scope_id: Option<Uuid>,
-    #[serde(rename = "pushEnabled")]
     pub push_enabled: bool,
-    #[serde(rename = "inappEnabled")]
     pub inapp_enabled: bool,
-    #[serde(rename = "chatEnabled")]
     pub chat_enabled: bool,
 }
 

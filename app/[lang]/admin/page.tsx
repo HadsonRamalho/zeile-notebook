@@ -72,7 +72,7 @@ export default function AdminDashboardPage() {
     try {
       const data = await fetchAdminUsers(usersPage, 10);
       setUsers(data.data);
-      setUsersTotalPages(data.total_pages);
+      setUsersTotalPages(data.totalPages);
     } catch (error) {
       console.error(error);
     }
@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
     try {
       const data = await fetchAdminTeams(teamsPage, 10);
       setTeams(data.data);
-      setTeamsTotalPages(data.total_pages);
+      setTeamsTotalPages(data.totalPages);
     } catch (error) {
       console.error(error);
     }
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
     try {
       const data = await fetchAdminNotebooks(notebooksPage, 10);
       setNotebooks(data.data);
-      setNotebooksTotalPages(data.total_pages);
+      setNotebooksTotalPages(data.totalPages);
     } catch (error) {
       console.error(error);
     }
@@ -154,10 +154,10 @@ export default function AdminDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      <NumberTicker value={stats?.total_active_users || 0} />
+                      <NumberTicker value={stats?.totalActiveUsers || 0} />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      de {stats?.total_users || 0} contas registradas
+                      de {stats?.totalUsers || 0} contas registradas
                     </p>
                   </CardContent>
                 </Card>
@@ -170,10 +170,10 @@ export default function AdminDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      <NumberTicker value={stats?.total_notebooks || 0} />
+                      <NumberTicker value={stats?.totalNotebooks || 0} />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {stats?.total_public_notebooks || 0} definidos como
+                      {stats?.totalPublicNotebooks || 0} definidos como
                       públicos
                     </p>
                   </CardContent>
@@ -187,10 +187,10 @@ export default function AdminDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      <NumberTicker value={stats?.total_teams || 0} />
+                      <NumberTicker value={stats?.totalTeams || 0} />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {stats?.total_team_members || 0} membros vinculados
+                      {stats?.totalTeamMembers || 0} membros vinculados
                     </p>
                   </CardContent>
                 </Card>
@@ -224,11 +224,11 @@ export default function AdminDashboardPage() {
                           <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {user.primary_provider}
+                              {user.primaryProvider}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {user.is_active ? (
+                            {user.isActive ? (
                               <Badge className="bg-emerald-500 hover:bg-emerald-600">
                                 Ativo
                               </Badge>
@@ -237,7 +237,7 @@ export default function AdminDashboardPage() {
                             )}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
-                            {format(new Date(user.created_at), "dd MMM yyyy", {
+                            {format(new Date(user.createdAt), "dd MMM yyyy", {
                               locale: ptBR,
                             })}
                           </TableCell>
@@ -315,12 +315,12 @@ export default function AdminDashboardPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {team.member_count} associados
+                              {team.memberCount} associados
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
                             {format(
-                              new Date(`${team.created_at}Z`),
+                              new Date(`${team.createdAt}Z`),
                               "dd MMM yyyy",
                               {
                                 locale: ptBR,
