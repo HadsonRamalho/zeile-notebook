@@ -8,20 +8,15 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::comment_threads)]
+#[serde(rename_all = "camelCase")]
 pub struct CommentThread {
     pub id: Uuid,
-    #[serde(rename = "notebookId")]
     pub notebook_id: Uuid,
-    #[serde(rename = "blockId")]
     pub block_id: String,
-    #[serde(rename = "anchorOffset")]
     pub anchor_offset: Option<i32>,
     pub status: String,
-    #[serde(rename = "createdBy")]
     pub created_by: Option<Uuid>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -38,20 +33,15 @@ pub struct NewCommentThread {
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::comments)]
+#[serde(rename_all = "camelCase")]
 pub struct Comment {
     pub id: Uuid,
-    #[serde(rename = "threadId")]
     pub thread_id: Uuid,
-    #[serde(rename = "authorId")]
     pub author_id: Option<Uuid>,
-    #[serde(rename = "authorName")]
     pub author_name: String,
     pub body: String,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
-    #[serde(rename = "deletedAt")]
     pub deleted_at: Option<DateTime<Utc>>,
 }
 
@@ -66,6 +56,7 @@ pub struct NewComment {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreadWithComments {
     #[serde(flatten)]
     pub thread: CommentThread,
@@ -73,20 +64,21 @@ pub struct ThreadWithComments {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateThreadRequest {
-    #[serde(rename = "blockId")]
     pub block_id: String,
-    #[serde(rename = "anchorOffset")]
     pub anchor_offset: Option<i32>,
     pub body: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReplyRequest {
     pub body: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateThreadRequest {
     pub status: String,
 }

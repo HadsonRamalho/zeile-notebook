@@ -8,16 +8,13 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::folders)]
+#[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: Uuid,
     pub name: String,
-    #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
     pub tags: serde_json::Value,
 }
@@ -32,13 +29,14 @@ pub struct NewFolder {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FolderNameRequest {
     pub name: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MoveFolderRequest {
-    #[serde(rename = "folderId")]
     pub folder_id: Option<Uuid>,
 }
 

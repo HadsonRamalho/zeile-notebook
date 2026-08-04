@@ -8,19 +8,15 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::notebook_activity)]
+#[serde(rename_all = "camelCase")]
 pub struct Activity {
     pub id: Uuid,
-    #[serde(rename = "notebookId")]
     pub notebook_id: Uuid,
-    #[serde(rename = "actorId")]
     pub actor_id: Option<Uuid>,
-    #[serde(rename = "actorName")]
     pub actor_name: String,
     pub kind: String,
-    #[serde(rename = "blockId")]
     pub block_id: Option<String>,
     pub summary: Option<String>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 

@@ -70,7 +70,7 @@ export default function PublicNotebooksPage() {
 
   const filtered = useMemo(() => {
     return notebooks.filter((notebook) => {
-      const isTeam = !!notebook.team_id;
+      const isTeam = !!notebook.teamId;
       if (filter === "personal" && isTeam) return false;
       if (filter === "team" && !isTeam) return false;
       return true;
@@ -148,8 +148,8 @@ export default function PublicNotebooksPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {filtered.map((notebook) => {
-            const isTeam = !!notebook.team_id;
-            const formattedDate = new Date(notebook.updated_at).toLocaleDateString();
+            const isTeam = !!notebook.teamId;
+            const formattedDate = new Date(notebook.updatedAt).toLocaleDateString();
 
             return (
               <Link key={notebook.id} href={`/notebook/${notebook.id}`}>
@@ -175,9 +175,9 @@ export default function PublicNotebooksPage() {
                       {isTeam ? <Users size={14} /> : <User size={14} />}
                       <span
                         className="max-w-30 truncate"
-                        title={displayOwnerName(notebook.owner_name)}
+                        title={displayOwnerName(notebook.ownerName)}
                       >
-                        {displayOwnerName(notebook.owner_name)}
+                        {displayOwnerName(notebook.ownerName)}
                       </span>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">

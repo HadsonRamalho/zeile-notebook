@@ -18,8 +18,8 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecordEditRequest {
-    #[serde(rename = "blockId")]
     pub block_id: Option<String>,
 }
 

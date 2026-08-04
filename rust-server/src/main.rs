@@ -20,9 +20,10 @@ pub mod sec;
 pub mod shutdown;
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CodeRequest {
     pub code: String,
-    #[serde(default)]
+    #[serde(default, alias = "notebook_id")]
     pub notebook_id: Option<uuid::Uuid>,
 }
 

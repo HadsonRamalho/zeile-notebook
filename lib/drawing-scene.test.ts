@@ -27,7 +27,7 @@ function notebook(blocks: Block[]): Notebook {
     id: "nb-1",
     title: "Caderno",
     userId: null,
-    team_id: null,
+    teamId: null,
     isPublic: false,
     createdAt: "2026-07-29T00:00:00Z",
     updatedAt: "2026-07-29T00:00:00Z",

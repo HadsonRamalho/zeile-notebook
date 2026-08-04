@@ -93,29 +93,25 @@ pub struct GithubRepoProps {
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug)]
 #[diesel(table_name = crate::schema::notebooks)]
+#[serde(rename_all = "camelCase")]
 pub struct Notebook {
     pub id: Uuid,
-    #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
     pub title: String,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
-    #[serde(rename = "isPublic")]
     pub is_public: bool,
     pub document_data: Option<Vec<u8>>,
     pub team_id: Option<Uuid>,
-    #[serde(rename = "folderId")]
     pub folder_id: Option<Uuid>,
     pub tags: Value,
-    #[serde(rename = "publicSlug")]
     pub public_slug: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Identifiable, Associations, Serialize, Debug, Insertable)]
 #[diesel(belongs_to(Notebook))]
 #[diesel(table_name = crate::schema::blocks)]
+#[serde(rename_all = "camelCase")]
 pub struct Block {
     pub id: Uuid,
     pub notebook_id: Uuid,
@@ -128,6 +124,7 @@ pub struct Block {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NotebookResponse {
     #[serde(flatten)]
     pub meta: Notebook,
@@ -135,6 +132,7 @@ pub struct NotebookResponse {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlockResponse {
     pub id: Uuid,
     pub title: String,
@@ -168,29 +166,34 @@ pub struct NewBlock {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateNotebookTitle {
     pub title: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateTagsRequest {
     pub tags: Vec<String>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateNotebookVisibility {
+    #[serde(alias = "is_visible")]
     pub is_visible: bool,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncNotebookRequest {
     pub title: String,
     pub blocks: Vec<BlockRequest>,
-    #[serde(rename = "isPublic")]
     pub is_public: bool,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlockRequest {
     pub id: Uuid,
     pub title: String,
@@ -227,6 +230,7 @@ pub struct RankedSearchQuery {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RankedSearchItem {
     pub kind: String,
     pub notebook_id: Uuid,
@@ -279,6 +283,7 @@ pub enum NotebookPermission {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PublicNotebookResponse {
     pub id: Uuid,
     pub title: String,
@@ -457,16 +462,13 @@ pub async fn ensure_public_slug(
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PublicNotebookDoc {
     pub id: Uuid,
     pub title: String,
-    #[serde(rename = "ownerName")]
     pub owner_name: Option<String>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
-    #[serde(rename = "publicSlug")]
     pub public_slug: Option<String>,
-    #[serde(rename = "documentData")]
     pub document_data: Option<Vec<u8>>,
 }
 

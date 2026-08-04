@@ -140,7 +140,7 @@ export interface NotebookMeta {
   id: string;
   title: string;
   userId: string | null;
-  team_id: string | null;
+  teamId: string | null;
   isPublic: boolean;
   createdAt: string;
   updatedAt: string;
