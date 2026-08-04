@@ -219,6 +219,7 @@ mod tests_with_database {
 
     async fn connection() -> Option<AsyncPgConnection> {
         let url = std::env::var("TEST_MIGRATION_DATABASE_URL").ok()?;
+        crate::db_migrations::ensure_test_database_migrated(&url);
 
         AsyncPgConnection::establish(&url).await.ok()
     }
