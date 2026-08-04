@@ -1,6 +1,5 @@
 /target
 .env
-diesel.toml
 /files
 /logs
 *.pem

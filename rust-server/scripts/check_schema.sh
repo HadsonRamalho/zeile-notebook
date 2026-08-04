@@ -12,12 +12,18 @@ if [[ -z "$DATABASE_URL" ]]; then
   exit 1
 fi
 
+WORKDIR="$(mktemp -d)"
+trap 'rm -rf "$WORKDIR"' EXIT
+
+GENERATED="$WORKDIR/schema.rs"
+TMP_CONFIG="$WORKDIR/diesel.toml"
+
+sed "s#^file = .*#file = \"$GENERATED\"#" diesel.toml >"$TMP_CONFIG"
+
+export DIESEL_CONFIG_FILE="$TMP_CONFIG"
+
 diesel migration run --database-url "$DATABASE_URL" --migration-dir migrations >/dev/null
-
-GENERATED="$(mktemp)"
-trap 'rm -f "$GENERATED"' EXIT
-
-diesel print-schema --database-url "$DATABASE_URL" > "$GENERATED"
+diesel print-schema --database-url "$DATABASE_URL" >/dev/null
 
 if ! diff -u src/schema.rs "$GENERATED" >/tmp/schema-check.diff; then
   echo "src/schema.rs está divergente das migrations. Rode:" >&2
