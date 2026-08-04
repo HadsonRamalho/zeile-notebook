@@ -9,23 +9,17 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::templates)]
+#[serde(rename_all = "camelCase")]
 pub struct Template {
     pub id: Uuid,
     pub kind: String,
     pub name: String,
-    #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
-    #[serde(rename = "sourceNotebookId")]
     pub source_notebook_id: Option<Uuid>,
-    #[serde(rename = "isPublic")]
     pub is_public: bool,
-    #[serde(rename = "latestVersion")]
     pub latest_version: i32,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -41,15 +35,13 @@ pub struct NewTemplate {
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::template_versions)]
+#[serde(rename_all = "camelCase")]
 pub struct TemplateVersion {
     pub id: Uuid,
-    #[serde(rename = "templateId")]
     pub template_id: Uuid,
     pub version: i32,
-    #[serde(rename = "namedSources")]
     pub named_sources: Value,
     pub note: Option<String>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -63,6 +55,7 @@ pub struct NewTemplateVersion {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PublicTemplateResponse {
     pub id: Uuid,
     pub kind: String,

@@ -8,28 +8,19 @@ use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::chat_messages)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     pub id: Uuid,
-    #[serde(rename = "notebookId")]
     pub notebook_id: Option<Uuid>,
-    #[serde(rename = "teamId")]
     pub team_id: Option<Uuid>,
-    #[serde(rename = "userId")]
     pub user_id: Option<Uuid>,
-    #[serde(rename = "authorName")]
     pub author_name: String,
     pub content: String,
-    #[serde(rename = "parentId")]
     pub parent_id: Option<Uuid>,
-    #[serde(rename = "quotedMessageId")]
     pub quoted_message_id: Option<Uuid>,
-    #[serde(rename = "isEdited")]
     pub is_edited: bool,
-    #[serde(rename = "editedAt")]
     pub edited_at: Option<DateTime<Utc>>,
-    #[serde(rename = "deletedAt")]
     pub deleted_at: Option<DateTime<Utc>>,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -47,11 +38,10 @@ pub struct NewChatMessage {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SendMessageRequest {
     pub content: String,
-    #[serde(rename = "parentId")]
     pub parent_id: Option<Uuid>,
-    #[serde(rename = "quotedMessageId")]
     pub quoted_message_id: Option<Uuid>,
 }
 
@@ -62,12 +52,11 @@ pub struct EditMessageRequest {
 
 #[derive(Queryable, Selectable, Serialize, Debug)]
 #[diesel(table_name = crate::schema::chat_message_versions)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessageVersion {
     pub id: Uuid,
-    #[serde(rename = "messageId")]
     pub message_id: Uuid,
     pub content: String,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
