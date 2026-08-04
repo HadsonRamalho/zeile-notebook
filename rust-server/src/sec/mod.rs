@@ -491,6 +491,26 @@ func main() { fmt.Println("hello") }
     }
 
     #[test]
+    fn go_blocks_a_dot_import_of_a_forbidden_package() {
+        let code = "package main\n\nimport . \"syscall\"\n\nfunc main() { Exit(1) }\n";
+
+        assert!(
+            verify_go_code(code).is_err(),
+            "dot-import brings every exported symbol into scope unqualified, and must not bypass the path check"
+        );
+    }
+
+    #[test]
+    fn go_blocks_a_blank_import_of_a_forbidden_package() {
+        let code = "package main\n\nimport _ \"unsafe\"\n\nfunc main() {}\n";
+
+        assert!(
+            verify_go_code(code).is_err(),
+            "a blank (side-effect only) import must still be checked by path"
+        );
+    }
+
+    #[test]
     fn go_does_not_confuse_a_similarly_named_package() {
         let code = "package main\n\nimport \"osmosis/fmt\"\n";
 
