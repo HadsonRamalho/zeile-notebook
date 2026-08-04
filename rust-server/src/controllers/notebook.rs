@@ -13,11 +13,10 @@ use crate::{
         self,
         error::ApiError,
         notebook::{
-            NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookDoc,
+            BlockRequest, NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookDoc,
             PublicNotebookResponse, PublicSearchQuery, RankedSearchItem, RankedSearchQuery,
-            BlockRequest, SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
-            UpdateNotebookVisibility, delete_notebook, get_public_notebooks,
-            update_notebook_title,
+            SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
+            UpdateNotebookVisibility, delete_notebook, get_public_notebooks, update_notebook_title,
         },
         state::AppState,
     },
@@ -132,7 +131,7 @@ pub async fn api_rename_notebook(
         .pool
         .get()
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     match update_notebook_title(&mut conn, notebook_id, payload.title).await {
         Ok(_) => Ok(StatusCode::OK),
@@ -190,7 +189,7 @@ pub async fn api_update_notebook_visibility(
         .pool
         .get()
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     match models::notebook::update_notebook_visibility(&mut conn, notebook_id, payload.is_visible)
         .await
@@ -221,7 +220,7 @@ pub async fn api_delete_notebook(
         .pool
         .get()
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     match delete_notebook(&mut conn, &notebook_id).await {
         Ok(_) => Ok(StatusCode::OK),
@@ -340,7 +339,7 @@ pub async fn api_save_notebook_content(
         .pool
         .get()
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     let blocks_to_insert: Vec<NewBlock> = payload
         .blocks
@@ -503,11 +502,7 @@ pub async fn api_get_public_notebooks(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
-    let q = params
-        .q
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
+    let q = params.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
 
     Ok((
         StatusCode::OK,

@@ -74,7 +74,7 @@ pub async fn create_template(
         .returning(Template::as_returning())
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_template(
@@ -86,7 +86,7 @@ pub async fn get_template(
         .select(Template::as_select())
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_personal_templates(
@@ -99,7 +99,7 @@ pub async fn list_personal_templates(
         .select(Template::as_select())
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_team_templates(
@@ -112,7 +112,7 @@ pub async fn list_team_templates(
         .select(Template::as_select())
         .load(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn update_template_visibility(
@@ -128,7 +128,7 @@ pub async fn update_template_visibility(
         .returning(Template::as_returning())
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn delete_template(
@@ -139,7 +139,7 @@ pub async fn delete_template(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn publish_version(
@@ -174,7 +174,7 @@ pub async fn publish_version(
         })
         .await;
 
-    result.map_err(|e| ApiError::Database(e.to_string()))
+    result.map_err(ApiError::from)
 }
 
 pub async fn get_version(
@@ -189,7 +189,7 @@ pub async fn get_version(
         .first(conn)
         .await
         .optional()
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_latest_version(
@@ -203,7 +203,7 @@ pub async fn get_latest_version(
         .first(conn)
         .await
         .optional()
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_public_templates(
@@ -251,7 +251,7 @@ pub async fn list_public_templates(
             DateTime<Utc>,
         )>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(rows
         .into_iter()

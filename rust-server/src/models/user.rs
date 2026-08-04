@@ -27,7 +27,9 @@ pub enum AuthProvider {
     Github,
 }
 
-#[derive(Queryable, Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
+#[derive(
+    Queryable, Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone, utoipa::ToSchema,
+)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -210,7 +212,7 @@ pub async fn find_user_by_email(
     match users.filter(email.eq(param)).get_result(conn).await {
         Ok(user) => Ok(user),
         Err(diesel::result::Error::NotFound) => Err(ApiError::UserNotFound),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -218,7 +220,7 @@ pub async fn find_user_by_id(conn: &mut AsyncPgConnection, param: &Uuid) -> Resu
     match users.filter(id.eq(param)).get_result(conn).await {
         Ok(user) => Ok(user),
         Err(diesel::result::Error::NotFound) => Err(ApiError::UserNotFound),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -244,7 +246,7 @@ pub async fn update_user_data(
         .await
     {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -272,7 +274,7 @@ pub async fn find_user_by_provider_id(
     match resultado {
         Ok(user) => Ok(user),
         Err(diesel::result::Error::NotFound) => Err(ApiError::UserNotFound),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -302,7 +304,7 @@ pub async fn link_provider_account(
     };
 
     if let Err(e) = resultado {
-        return Err(ApiError::Database(e.to_string()));
+        return Err(ApiError::from(e));
     }
 
     if let Some(avatar) = avatar {
@@ -344,7 +346,7 @@ pub async fn unlink_provider_account(
 
     match resultado {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -363,7 +365,7 @@ pub async fn update_user_password(
         .await
     {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -382,7 +384,7 @@ pub async fn rehash_user_password(
         .await
     {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 
@@ -393,7 +395,7 @@ pub async fn delete_user(conn: &mut AsyncPgConnection, id_param: &Uuid) -> Resul
         .await
     {
         Ok(_) => Ok(()),
-        Err(e) => Err(ApiError::Database(e.to_string())),
+        Err(e) => Err(ApiError::from(e)),
     }
 }
 

@@ -71,6 +71,32 @@ pub enum ApiError {
 
     #[error("This is the last login method on the account")]
     LastLoginMethod,
+
+    #[error("Resource already exists: {0}")]
+    UniqueViolation(String),
+
+    #[error("Related resource does not exist: {0}")]
+    ForeignKeyViolation(String),
+
+    #[error("Resource not found: {0}")]
+    NotFound(String),
+}
+
+impl From<diesel::result::Error> for ApiError {
+    fn from(err: diesel::result::Error) -> Self {
+        use diesel::result::{DatabaseErrorKind, Error};
+
+        match err {
+            Error::NotFound => ApiError::NotFound("resource not found".to_string()),
+            Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
+                ApiError::UniqueViolation(info.message().to_string())
+            }
+            Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, info) => {
+                ApiError::ForeignKeyViolation(info.message().to_string())
+            }
+            other => ApiError::Database(other.to_string()),
+        }
+    }
 }
 
 pub const ALL_ERROR_CODES: &[&str] = &[
@@ -93,6 +119,9 @@ pub const ALL_ERROR_CODES: &[&str] = &[
     "ERROR_SENDING_EMAIL",
     "PERMISSION_DENIED",
     "LAST_LOGIN_METHOD",
+    "UNIQUE_VIOLATION",
+    "FOREIGN_KEY_VIOLATION",
+    "NOT_FOUND",
 ];
 
 impl ApiError {
@@ -117,6 +146,9 @@ impl ApiError {
             ApiError::SendingEmail => "ERROR_SENDING_EMAIL",
             ApiError::PermissionDenied(_) => "PERMISSION_DENIED",
             ApiError::LastLoginMethod => "LAST_LOGIN_METHOD",
+            ApiError::UniqueViolation(_) => "UNIQUE_VIOLATION",
+            ApiError::ForeignKeyViolation(_) => "FOREIGN_KEY_VIOLATION",
+            ApiError::NotFound(_) => "NOT_FOUND",
         }
     }
 
@@ -139,7 +171,9 @@ impl IntoResponse for ApiError {
             ApiError::Database(_)
             | ApiError::DatabaseConnection(_)
             | ApiError::CreateToken(_)
-            | ApiError::SendingEmail => {
+            | ApiError::SendingEmail
+            | ApiError::MissingEnv(_)
+            | ApiError::FrontendUrl => {
                 tracing::error!(error_code, "falha de infraestrutura: {self}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -147,14 +181,26 @@ impl IntoResponse for ApiError {
                 )
             }
 
-            ApiError::Request(_) | ApiError::InvalidData | ApiError::MissingFrontendUrl => {
-                (StatusCode::BAD_REQUEST, self.to_string())
+            ApiError::Request(_)
+            | ApiError::InvalidData
+            | ApiError::MissingFrontendUrl
+            | ApiError::InvalidEmail => (StatusCode::BAD_REQUEST, self.to_string()),
+
+            ApiError::ForeignKeyViolation(detail) => {
+                tracing::warn!(error_code, %detail, "referenced resource does not exist");
+                (
+                    StatusCode::BAD_REQUEST,
+                    "Related resource does not exist".to_string(),
+                )
             }
 
             ApiError::InvalidAuthorizationToken
             | ApiError::InvalidPassword
             | ApiError::InvalidCredentials
-            | ApiError::PasswordsDoNotMatch => (StatusCode::UNAUTHORIZED, self.to_string()),
+            | ApiError::PasswordsDoNotMatch
+            | ApiError::MultipleAuthorizationErrors(_) => {
+                (StatusCode::UNAUTHORIZED, self.to_string())
+            }
 
             ApiError::NotActiveUser => (
                 StatusCode::FORBIDDEN,
@@ -162,18 +208,18 @@ impl IntoResponse for ApiError {
             ),
             ApiError::PermissionDenied(_) => (StatusCode::FORBIDDEN, self.to_string()),
             ApiError::LastLoginMethod => (StatusCode::CONFLICT, self.to_string()),
+            ApiError::UniqueViolation(detail) => {
+                tracing::warn!(error_code, %detail, "unique constraint violated");
+                (StatusCode::CONFLICT, "Resource already exists".to_string())
+            }
             ApiError::WrongProvider(p) => {
                 (StatusCode::BAD_REQUEST, format!("Please log in with {}", p))
             }
 
             ApiError::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
-
-            _ => {
-                tracing::error!(error_code, "unclassified error: {self}");
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    INTERNAL_MESSAGE.to_string(),
-                )
+            ApiError::NotFound(detail) => {
+                tracing::warn!(error_code, %detail, "resource not found");
+                (StatusCode::NOT_FOUND, "Resource not found".to_string())
             }
         };
 
@@ -219,6 +265,9 @@ mod tests {
             ApiError::SendingEmail,
             ApiError::PermissionDenied(String::new()),
             ApiError::LastLoginMethod,
+            ApiError::UniqueViolation(String::new()),
+            ApiError::ForeignKeyViolation(String::new()),
+            ApiError::NotFound(String::new()),
         ]
     }
 
@@ -245,7 +294,10 @@ mod tests {
             | ApiError::PasswordsDoNotMatch
             | ApiError::SendingEmail
             | ApiError::PermissionDenied(_)
-            | ApiError::LastLoginMethod => {}
+            | ApiError::LastLoginMethod
+            | ApiError::UniqueViolation(_)
+            | ApiError::ForeignKeyViolation(_)
+            | ApiError::NotFound(_) => {}
         }
     }
 

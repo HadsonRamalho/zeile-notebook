@@ -98,7 +98,7 @@ pub async fn create_thread(
         .values(new_thread)
         .get_result::<CommentThread>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn create_comment(
@@ -109,7 +109,7 @@ pub async fn create_comment(
         .values(new_comment)
         .get_result::<Comment>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     diesel::update(comment_threads::table.find(new_comment.thread_id))
         .set(comment_threads::updated_at.eq(Utc::now()))
@@ -156,7 +156,7 @@ pub async fn update_thread_status(
         ))
         .get_result::<CommentThread>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn soft_delete_comment(
@@ -168,7 +168,7 @@ pub async fn soft_delete_comment(
         .get_result::<Comment>(conn)
         .await
         .map(mask_deleted)
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_threads_with_comments(
@@ -181,7 +181,7 @@ pub async fn list_threads_with_comments(
         .select(CommentThread::as_select())
         .load::<CommentThread>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let thread_ids: Vec<Uuid> = threads.iter().map(|t| t.id).collect();
 
@@ -191,7 +191,7 @@ pub async fn list_threads_with_comments(
         .select(Comment::as_select())
         .load::<Comment>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(threads
         .into_iter()

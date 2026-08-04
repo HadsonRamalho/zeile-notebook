@@ -53,14 +53,14 @@ pub async fn record_activity(
             .first::<Uuid>(conn)
             .await
             .optional()
-            .map_err(|e| ApiError::Database(e.to_string()))?;
+            .map_err(ApiError::from)?;
 
         if let Some(existing) = recent {
             diesel::update(notebook_activity::table.find(existing))
                 .set(notebook_activity::created_at.eq(Utc::now()))
                 .execute(conn)
                 .await
-                .map_err(|e| ApiError::Database(e.to_string()))?;
+                .map_err(ApiError::from)?;
             return Ok(());
         }
     }
@@ -77,7 +77,7 @@ pub async fn record_activity(
         })
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(())
 }
@@ -94,5 +94,5 @@ pub async fn list_activity(
         .select(Activity::as_select())
         .load::<Activity>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }

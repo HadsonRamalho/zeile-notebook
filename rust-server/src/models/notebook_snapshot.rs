@@ -53,7 +53,7 @@ pub async fn create_snapshot(
         .select(notebooks::document_data)
         .first::<Option<Vec<u8>>>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     let new_snapshot = NewSnapshot {
         id: Uuid::new_v4(),
@@ -70,7 +70,7 @@ pub async fn create_snapshot(
         .returning(SnapshotMeta::as_returning())
         .get_result::<SnapshotMeta>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_snapshots(
@@ -83,7 +83,7 @@ pub async fn list_snapshots(
         .select(SnapshotMeta::as_select())
         .load::<SnapshotMeta>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_snapshot(
@@ -108,6 +108,6 @@ pub async fn delete_snapshot(
     diesel::delete(notebook_snapshots::table.find(snapshot_id))
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
     Ok(())
 }

@@ -45,7 +45,7 @@ pub async fn create_notification(
         .values(new_notification)
         .get_result::<Notification>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_for_user(
@@ -58,7 +58,7 @@ pub async fn list_for_user(
         .limit(NOTIFICATION_LIMIT)
         .load::<Notification>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn unread_count(
@@ -71,7 +71,7 @@ pub async fn unread_count(
         .count()
         .get_result(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn mark_read(
@@ -88,7 +88,7 @@ pub async fn mark_read(
     .execute(conn)
     .await
     .map(|_| ())
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 pub async fn mark_all_read(
@@ -104,7 +104,7 @@ pub async fn mark_all_read(
     .execute(conn)
     .await
     .map(|_| ())
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 pub async fn delete_notification(
@@ -120,5 +120,5 @@ pub async fn delete_notification(
     .execute(conn)
     .await
     .map(|_| ())
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }

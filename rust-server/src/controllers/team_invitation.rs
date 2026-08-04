@@ -142,7 +142,7 @@ pub async fn api_accept_invite(
     };
 
     if let Err(e) = models::team::add_user_to_team(&mut conn, &new_member).await {
-        return Err(ApiError::Database(e.to_string()));
+        return Err(ApiError::from(e));
     }
 
     // Only consumed after joining the team: if the insert fails, the invite

@@ -48,18 +48,15 @@ pub async fn create_folder(
         .values(new_folder)
         .get_result::<Folder>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
-pub async fn get_folder(
-    conn: &mut AsyncPgConnection,
-    folder_id: Uuid,
-) -> Result<Folder, ApiError> {
+pub async fn get_folder(conn: &mut AsyncPgConnection, folder_id: Uuid) -> Result<Folder, ApiError> {
     folders::table
         .find(folder_id)
         .get_result::<Folder>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_personal_folders(
@@ -71,7 +68,7 @@ pub async fn list_personal_folders(
         .order(folders::name.asc())
         .load::<Folder>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_team_folders(
@@ -83,7 +80,7 @@ pub async fn list_team_folders(
         .order(folders::name.asc())
         .load::<Folder>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn rename_folder(
@@ -98,18 +95,15 @@ pub async fn rename_folder(
         ))
         .get_result::<Folder>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
-pub async fn delete_folder(
-    conn: &mut AsyncPgConnection,
-    folder_id: Uuid,
-) -> Result<(), ApiError> {
+pub async fn delete_folder(conn: &mut AsyncPgConnection, folder_id: Uuid) -> Result<(), ApiError> {
     diesel::delete(folders::table.find(folder_id))
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn set_folder_tags(
@@ -117,13 +111,12 @@ pub async fn set_folder_tags(
     folder_id: Uuid,
     new_tags: &[String],
 ) -> Result<Folder, ApiError> {
-    let value =
-        serde_json::to_value(new_tags).unwrap_or_else(|_| serde_json::Value::Array(vec![]));
+    let value = serde_json::to_value(new_tags).unwrap_or_else(|_| serde_json::Value::Array(vec![]));
     diesel::update(folders::table.find(folder_id))
         .set((folders::tags.eq(value), folders::updated_at.eq(Utc::now())))
         .get_result::<Folder>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn set_notebook_folder(
@@ -136,5 +129,5 @@ pub async fn set_notebook_folder(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }

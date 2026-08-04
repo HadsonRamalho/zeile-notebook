@@ -1,6 +1,7 @@
 use crate::models::error::ApiError;
 use crate::schema::{
-    challenge_submission_results, challenge_submissions, challenge_test_cases, challenges, notebooks,
+    challenge_submission_results, challenge_submissions, challenge_test_cases, challenges,
+    notebooks,
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -328,7 +329,7 @@ pub async fn create_challenge(
         .values(new_challenge)
         .get_result::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_challenge_by_id(
@@ -339,7 +340,7 @@ pub async fn get_challenge_by_id(
         .find(id)
         .get_result::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_challenge_by_slug(
@@ -350,7 +351,7 @@ pub async fn get_challenge_by_slug(
         .filter(challenges::slug.eq(slug))
         .get_result::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_public_challenges(
@@ -363,7 +364,7 @@ pub async fn list_public_challenges(
         .select(Challenge::as_select())
         .load::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn update_challenge(
@@ -375,7 +376,7 @@ pub async fn update_challenge(
         .set(changes)
         .get_result::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn upsert_reference(
@@ -400,7 +401,7 @@ pub async fn upsert_reference(
         ))
         .get_result::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn delete_reference(
@@ -422,7 +423,7 @@ pub async fn delete_reference(
         ))
         .get_result::<Challenge>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub fn reference_map(challenge: &Challenge) -> serde_json::Map<String, Value> {
@@ -465,7 +466,7 @@ pub async fn create_test_case(
         .values(new_case)
         .get_result::<TestCase>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_test_cases(
@@ -477,7 +478,7 @@ pub async fn list_test_cases(
         .order(challenge_test_cases::ord.asc())
         .load::<TestCase>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_public_test_cases(
@@ -490,7 +491,7 @@ pub async fn list_public_test_cases(
         .order(challenge_test_cases::ord.asc())
         .load::<TestCase>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
     Ok(rows
         .into_iter()
         .map(|t| TestCasePublic {
@@ -516,7 +517,7 @@ pub async fn delete_test_case(
     .execute(conn)
     .await
     .map(|_| ())
-    .map_err(|e| ApiError::Database(e.to_string()))
+    .map_err(ApiError::from)
 }
 
 pub async fn create_submission(
@@ -527,7 +528,7 @@ pub async fn create_submission(
         .values(new_submission)
         .get_result::<Submission>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn get_submission(
@@ -538,7 +539,7 @@ pub async fn get_submission(
         .find(id)
         .get_result::<Submission>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn set_submission_running(
@@ -550,7 +551,7 @@ pub async fn set_submission_running(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn finalize_submission(
@@ -574,7 +575,7 @@ pub async fn finalize_submission(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn insert_submission_results(
@@ -589,7 +590,7 @@ pub async fn insert_submission_results(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_submission_results(
@@ -601,7 +602,7 @@ pub async fn list_submission_results(
         .order(challenge_submission_results::ord.asc())
         .load::<SubmissionResult>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_user_submissions(
@@ -616,7 +617,7 @@ pub async fn list_user_submissions(
         .limit(100)
         .load::<Submission>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_done_submissions(
@@ -632,5 +633,5 @@ pub async fn list_done_submissions(
         ))
         .load::<Submission>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }

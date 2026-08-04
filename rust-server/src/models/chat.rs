@@ -6,7 +6,9 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema, ts_rs::TS)]
+#[derive(
+    Queryable, Selectable, Identifiable, Serialize, Debug, Clone, utoipa::ToSchema, ts_rs::TS,
+)]
 #[diesel(table_name = crate::schema::chat_messages)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "ws-message.ts", rename_all = "camelCase")]
@@ -88,7 +90,7 @@ pub async fn create_message(
         .values(new_message)
         .get_result::<ChatMessage>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 /// Resolves a reply's parent: validates scope and reparents to the thread
@@ -134,7 +136,7 @@ pub async fn get_message(
         .find(message_id)
         .get_result::<ChatMessage>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn update_message_content(
@@ -150,7 +152,7 @@ pub async fn update_message_content(
         ))
         .get_result::<ChatMessage>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn soft_delete_message(
@@ -162,7 +164,7 @@ pub async fn soft_delete_message(
         .get_result::<ChatMessage>(conn)
         .await
         .map(mask_deleted)
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn create_message_version(
@@ -179,7 +181,7 @@ pub async fn create_message_version(
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_message_versions(
@@ -191,7 +193,7 @@ pub async fn list_message_versions(
         .order(chat_message_versions::created_at.asc())
         .load::<ChatMessageVersion>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
 
 pub async fn list_notebook_messages(
@@ -204,7 +206,7 @@ pub async fn list_notebook_messages(
         .limit(CHAT_HISTORY_LIMIT)
         .load::<ChatMessage>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
     rows.reverse();
     Ok(rows.into_iter().map(mask_deleted).collect())
 }
@@ -219,7 +221,7 @@ pub async fn list_team_messages(
         .limit(CHAT_HISTORY_LIMIT)
         .load::<ChatMessage>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
     rows.reverse();
     Ok(rows.into_iter().map(mask_deleted).collect())
 }

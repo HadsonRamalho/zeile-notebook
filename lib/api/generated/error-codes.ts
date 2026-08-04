@@ -25,6 +25,9 @@ export const ERROR_CODES = [
   "ERROR_SENDING_EMAIL",
   "PERMISSION_DENIED",
   "LAST_LOGIN_METHOD",
+  "UNIQUE_VIOLATION",
+  "FOREIGN_KEY_VIOLATION",
+  "NOT_FOUND",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

@@ -1,5 +1,8 @@
 use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, QueryDsl, prelude::{Identifiable, Insertable, Queryable, Selectable}};
+use diesel::{
+    ExpressionMethods, QueryDsl,
+    prelude::{Identifiable, Insertable, Queryable, Selectable},
+};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -72,7 +75,7 @@ pub async fn upsert_push_subscription(
         ))
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(())
 }
@@ -86,7 +89,7 @@ pub async fn delete_push_subscription(
     diesel::delete(push_subscriptions.filter(endpoint.eq(param_endpoint)))
         .execute(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))?;
+        .map_err(ApiError::from)?;
 
     Ok(())
 }
@@ -101,5 +104,5 @@ pub async fn get_push_subscriptions_for_user(
         .filter(user_id.eq(param_user_id))
         .load::<PushSubscription>(conn)
         .await
-        .map_err(|e| ApiError::Database(e.to_string()))
+        .map_err(ApiError::from)
 }
