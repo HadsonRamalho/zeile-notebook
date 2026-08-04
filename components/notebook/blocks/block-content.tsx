@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useExecutionCapabilities } from "@/hooks/use-execution-capabilities";
 import type {
   Block,
   BlockMetadata,
@@ -41,6 +42,7 @@ const KNOWN_BLOCK_TYPES = new Set([
   "text",
 ]);
 const EXEC_LANGS = ["rust", "go", "python", "cpp", "zig", "tsx"];
+const BACKEND_COMPILED_LANGS = new Set(["rust", "go", "cpp", "zig"]);
 
 const DIRECT_PERM_TYPES = new Set([
   "latex",
@@ -143,6 +145,21 @@ export function BlockContent({
     },
     [block.id, updateBlock],
   );
+
+  const executionCapabilities = useExecutionCapabilities();
+
+  const effectiveCanExecute = (language: string) =>
+    BACKEND_COMPILED_LANGS.has(language)
+      ? canExecute && executionCapabilities.isLanguageAvailable(language)
+      : canExecute;
+
+  const executionUnavailableReason = (language: string): string | undefined => {
+    if (executionCapabilities.isLanguageAvailable(language)) return undefined;
+    const missing = executionCapabilities.missingFor(language);
+    return `Execução de ${language} indisponível neste servidor${
+      missing.length ? ` (faltando: ${missing.join(", ")})` : ""
+    }.`;
+  };
 
   return (
     <div className="flex-1 min-w-0">
@@ -255,7 +272,8 @@ export function BlockContent({
           block={block}
           isDragging={isDragging}
           notebookId={notebookId}
-          canExecute={canExecute}
+          canExecute={effectiveCanExecute("go")}
+          executionUnavailableReason={executionUnavailableReason("go")}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
         />
       ) : block.language === "cpp" ? (
@@ -263,14 +281,16 @@ export function BlockContent({
           block={block}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
           notebookId={notebookId}
-          canExecute={canExecute}
+          canExecute={effectiveCanExecute("cpp")}
+          executionUnavailableReason={executionUnavailableReason("cpp")}
         />
       ) : block.language === "zig" ? (
         <ZigEditor
           block={block}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
           notebookId={notebookId}
-          canExecute={canExecute}
+          canExecute={effectiveCanExecute("zig")}
+          executionUnavailableReason={executionUnavailableReason("zig")}
         />
       ) : block.language === "generic" ? (
         (() => {
@@ -312,7 +332,8 @@ export function BlockContent({
           block={block}
           isDragging={isDragging}
           notebookId={notebookId}
-          canExecute={canExecute}
+          canExecute={effectiveCanExecute("rust")}
+          executionUnavailableReason={executionUnavailableReason("rust")}
           onCodeChange={canEditContent ? handleUpdateContent : () => {}}
         />
       )}

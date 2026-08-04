@@ -15,6 +15,7 @@ interface GoNotebookProps {
   isDragging?: boolean;
   notebookId?: string;
   canExecute?: boolean;
+  executionUnavailableReason?: string;
 }
 
 export function GoEditor({
@@ -23,10 +24,13 @@ export function GoEditor({
   notebookId,
   canExecute = true,
   isDragging = false,
+  executionUnavailableReason,
 }: GoNotebookProps) {
-  const [output, setOutput] = useState("");
+  const [output, setOutput] = useState(executionUnavailableReason ?? "");
   const [isRunning, setIsRunning] = useState(false);
-  const [status, setStatus] = useState<RunStatus>("idle");
+  const [status, setStatus] = useState<RunStatus>(
+    executionUnavailableReason ? "error" : "idle",
+  );
 
   async function handleRun() {
     await RunCode({
