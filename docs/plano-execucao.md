@@ -146,9 +146,14 @@ branch local `tauri` (`aa268ac`) é ancestral de `main`; nada pendente para mesc
 #### 10 · Enum e casing — destrava os geradores
 
 - [x] Migration: `ALTER TYPE block_type_enum ADD VALUE IF NOT EXISTS` × 10 + enum Rust completo (Q30). `BlockType` ganhou `FreeDrawing`, `DatabaseSchema`, `Latex`, `Sql`, `Typst`, `Challenge`, `NotebookRef`, `TemplateRef`, `Chart`, `Mermaid` — os mesmos 14 valores que `lib/types.ts` já usava. **Achado**: `#[serde(rename_all = "lowercase")]` não insere `_` em variante de duas palavras (`FreeDrawing` virava `"freedrawing"`, não `"free_drawing"`); trocado para `"snake_case"`, idêntico para as 4 variantes antigas e correto para as novas. `diesel-derive-enum` mapeia pro Postgres por `snake_case` por padrão, independente do atributo serde — os dois lados já batiam por baixo, só o serde estava errado
-- [ ] `#[serde(rename_all = "camelCase")]` em todos os structs serializados (Q29)
-- [ ] `#[serde(alias = "<snake>")]` só na entrada, com data de remoção em ADR
-- [ ] Aplicar "um conceito, uma grafia": remover `#[serde(rename)]` campo a campo, reconciliar `permission_grant.rs` com o resto
+- [ ] `#[serde(rename_all = "camelCase")]` em todos os structs serializados (Q29) — **em andamento, dividido em PRs por domínio** (empilhadas via `gh stack`, cada uma cobrindo Rust + frontend do domínio, já que a saída muda sem dualidade). Enums de valor de domínio (`BlockType`, `GrantEffect`, `Tier`, etc.) ficam de fora: é casing de variante, não de campo — fora do escopo literal do Q29
+  - [x] Auth/user (PR #89): `models/user.rs`, `controllers/user.rs`, `controllers/oauth/mod.rs` + frontend. JWT (`Claims`, `ResetClaims`, `StateClaims`) e espelhos de API externa (`models/oauth.rs`: `GithubUser`, `GoogleUser`, `GithubEmail`) ficaram de fora — não são contrato nosso
+  - [x] Times/permissões (PR #90): `models/team.rs`, `models/team_invitation.rs`, `models/permission_grant.rs`, `controllers/permissions.rs`, `sec/catalog/mod.rs` (+ `contracts/permission-catalog.json` regenerado) + frontend
+  - [ ] Notebook/blocos/comentários/atividade/pastas
+  - [ ] Challenges/chat/templates
+  - [ ] Notificações/push/admin
+- [ ] `#[serde(alias = "<snake>")]` só na entrada, com data de remoção em ADR — aplicado nos domínios já feitos (auth/user, times/permissões); prazo de 90 dias já documentado em [docs/decisions/0001-contract-version-policy.md](decisions/0001-contract-version-policy.md)
+- [x] Aplicar "um conceito, uma grafia": remover `#[serde(rename)]` campo a campo, reconciliar `permission_grant.rs` com o resto — feito nos domínios já cobertos (`UpdateUserPassword`, `SessionResponse`, `RefreshPayload`, `InviteRequest` tinham rename campo a campo, consolidados para o blanket attribute)
 
 #### 11 · Geradores e guards ([regime do artefato gerado](decisoes.md#regime-do-artefato-gerado))
 
