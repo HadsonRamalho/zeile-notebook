@@ -102,6 +102,7 @@ fn notify_mentions(
     });
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/comments", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_comments(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -129,6 +130,7 @@ pub async fn api_list_comments(
     Ok((StatusCode::OK, Json(threads)))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/comments", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_create_thread(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -206,6 +208,7 @@ pub async fn api_create_thread(
     ))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/comments/threads/{thread_id}/replies", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_reply(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, thread_id)): Path<(Uuid, Uuid)>,
@@ -257,6 +260,7 @@ pub async fn api_reply(
     Ok((StatusCode::CREATED, Json(comment)))
 }
 
+#[utoipa::path(patch, path = "/notebook/{id}/comments/threads/{thread_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_thread(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, thread_id)): Path<(Uuid, Uuid)>,
@@ -295,6 +299,7 @@ pub async fn api_update_thread(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(delete, path = "/notebook/{id}/comments/{comment_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_comment(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, comment_id)): Path<(Uuid, Uuid)>,

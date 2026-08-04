@@ -30,6 +30,7 @@ async fn actor_name(conn: &mut diesel_async::AsyncPgConnection, user_id: Uuid) -
         .unwrap_or_else(|_| "Usuário".to_string())
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/snapshots", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_snapshots(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -57,6 +58,7 @@ pub async fn api_list_snapshots(
     Ok((StatusCode::OK, Json(snapshots)))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/snapshots", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_create_snapshot(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -107,6 +109,7 @@ pub async fn api_create_snapshot(
     Ok((StatusCode::CREATED, Json(snapshot)))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/snapshots/{snapshot_id}/restore", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_restore_snapshot(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, snapshot_id)): Path<(Uuid, Uuid)>,
@@ -160,6 +163,7 @@ pub async fn api_restore_snapshot(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(delete, path = "/notebook/{id}/snapshots/{snapshot_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_snapshot(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, snapshot_id)): Path<(Uuid, Uuid)>,

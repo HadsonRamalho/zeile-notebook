@@ -99,6 +99,7 @@ pub struct NotificationsResponse {
     pub unread_count: i64,
 }
 
+#[utoipa::path(get, path = "/notifications/", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_notifications(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -121,6 +122,7 @@ pub async fn api_list_notifications(
     ))
 }
 
+#[utoipa::path(post, path = "/notifications/{id}/read", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_mark_notification_read(
     State(state): State<Arc<AppState>>,
     Path(notification_id): Path<Uuid>,
@@ -136,6 +138,7 @@ pub async fn api_mark_notification_read(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(post, path = "/notifications/read-all", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_mark_all_read(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -150,6 +153,7 @@ pub async fn api_mark_all_read(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(delete, path = "/notifications/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_notification(
     State(state): State<Arc<AppState>>,
     Path(notification_id): Path<Uuid>,
@@ -165,6 +169,7 @@ pub async fn api_delete_notification(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(get, path = "/notifications/preferences", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_preferences(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -189,6 +194,7 @@ pub struct UpsertPreferenceRequest {
     pub chat_enabled: bool,
 }
 
+#[utoipa::path(put, path = "/notifications/preferences", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_upsert_preference(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

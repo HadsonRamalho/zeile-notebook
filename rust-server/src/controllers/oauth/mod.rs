@@ -221,6 +221,7 @@ async fn redirect_with_session(
     )
 }
 
+#[utoipa::path(get, path = "/user/login/{provider}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_oauth_login(Path(slug): Path<String>) -> Response {
     let start = resolve(&slug).and_then(|provider| {
         let redirect_url = login_callback_url(provider)?;
@@ -242,6 +243,7 @@ pub struct LinkStartResponse {
     pub url: String,
 }
 
+#[utoipa::path(post, path = "/user/link/{provider}", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_link_start(
     Path(slug): Path<String>,
     headers: HeaderMap,
@@ -268,6 +270,7 @@ pub async fn api_link_start(
     ))
 }
 
+#[utoipa::path(get, path = "/user/auth/callback/{provider}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_oauth_callback(
     State(state_app): State<Arc<AppState>>,
     Path(slug): Path<String>,
@@ -356,6 +359,7 @@ pub async fn api_oauth_callback(
     }
 }
 
+#[utoipa::path(get, path = "/user/link/{provider}/callback", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_link_callback(
     State(state_app): State<Arc<AppState>>,
     Path(slug): Path<String>,
@@ -439,6 +443,7 @@ fn link_redirect(provider: Provider, error: &str) -> Response {
     )
 }
 
+#[utoipa::path(delete, path = "/user/link/{provider}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_unlink(
     State(state_app): State<Arc<AppState>>,
     Path(slug): Path<String>,
@@ -476,6 +481,7 @@ pub struct AuthMethodsResponse {
     pub primary_provider: models::user::AuthProvider,
 }
 
+#[utoipa::path(get, path = "/user/auth/methods", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_auth_methods(
     State(state_app): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -505,6 +511,7 @@ pub struct ProvidersResponse {
     pub providers: Vec<&'static str>,
 }
 
+#[utoipa::path(get, path = "/auth/providers", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_auth_providers() -> Json<ProvidersResponse> {
     Json(ProvidersResponse {
         providers: Provider::configured()

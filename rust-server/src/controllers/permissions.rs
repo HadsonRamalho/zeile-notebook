@@ -525,11 +525,13 @@ pub async fn broadcast_capability_change_for_team(
     }
 }
 
+#[utoipa::path(get, path = "/permissions/catalog", responses((status = OK)))]
 pub async fn api_get_permission_catalog()
 -> (StatusCode, Json<&'static crate::sec::catalog::Catalog>) {
     (StatusCode::OK, Json(catalog()))
 }
 
+#[utoipa::path(get, path = "/team/{id}/capabilities", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_team_capabilities(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -555,6 +557,7 @@ pub async fn api_get_team_capabilities(
     Ok((StatusCode::OK, Json(caps.snapshot())))
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/capabilities", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_notebook_capabilities(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

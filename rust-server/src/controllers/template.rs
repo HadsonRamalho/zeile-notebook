@@ -107,6 +107,7 @@ async fn authorize_use(
     Err(ApiError::PermissionDenied("template.use".to_string()))
 }
 
+#[utoipa::path(post, path = "/template/", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_create_template(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -152,6 +153,7 @@ pub async fn api_create_template(
     Ok((StatusCode::CREATED, Json(template)))
 }
 
+#[utoipa::path(post, path = "/template/{id}/versions", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_publish_version(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,
@@ -193,6 +195,7 @@ pub async fn api_publish_version(
     Ok((StatusCode::CREATED, Json(version)))
 }
 
+#[utoipa::path(get, path = "/template/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_template(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,
@@ -216,6 +219,7 @@ pub async fn api_get_template(
     Ok((StatusCode::OK, Json(ResolvedTemplate { template, version })))
 }
 
+#[utoipa::path(get, path = "/template/all", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_my_templates(
     State(state): State<Arc<AppState>>,
     Query(query): Query<MyTemplatesQuery>,
@@ -238,6 +242,7 @@ pub async fn api_list_my_templates(
     Ok((StatusCode::OK, Json(templates)))
 }
 
+#[utoipa::path(get, path = "/template/all/public", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_public_templates(
     State(state): State<Arc<AppState>>,
     Query(query): Query<PublicQuery>,
@@ -253,6 +258,7 @@ pub async fn api_list_public_templates(
     Ok((StatusCode::OK, Json(templates)))
 }
 
+#[utoipa::path(patch, path = "/template/{id}/visibility", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_template_visibility(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,
@@ -273,6 +279,7 @@ pub async fn api_update_template_visibility(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(delete, path = "/template/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_template(
     State(state): State<Arc<AppState>>,
     Path(template_id): Path<Uuid>,

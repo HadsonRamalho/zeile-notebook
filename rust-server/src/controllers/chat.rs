@@ -37,6 +37,7 @@ async fn author_name(conn: &mut diesel_async::AsyncPgConnection, user_id: Uuid) 
         .unwrap_or_else(|_| "Usuário".to_string())
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/chat/messages", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_notebook_messages(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -61,6 +62,7 @@ pub async fn api_list_notebook_messages(
     Ok((StatusCode::OK, Json(messages)))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/chat/messages", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_send_notebook_message(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -178,6 +180,7 @@ pub async fn api_send_notebook_message(
     Ok((StatusCode::CREATED, Json(message)))
 }
 
+#[utoipa::path(patch, path = "/notebook/{id}/chat/messages/{message_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_edit_notebook_message(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, message_id)): Path<(Uuid, Uuid)>,
@@ -233,6 +236,7 @@ pub async fn api_edit_notebook_message(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(patch, path = "/team/{id}/chat/messages/{message_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_edit_team_message(
     State(state): State<Arc<AppState>>,
     Path((team_id, message_id)): Path<(Uuid, Uuid)>,
@@ -271,6 +275,7 @@ pub async fn api_edit_team_message(
     Ok((StatusCode::OK, Json(updated)))
 }
 
+#[utoipa::path(delete, path = "/notebook/{id}/chat/messages/{message_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_notebook_message(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, message_id)): Path<(Uuid, Uuid)>,
@@ -315,6 +320,7 @@ pub async fn api_delete_notebook_message(
     Ok((StatusCode::OK, Json(deleted)))
 }
 
+#[utoipa::path(delete, path = "/team/{id}/chat/messages/{message_id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_team_message(
     State(state): State<Arc<AppState>>,
     Path((team_id, message_id)): Path<(Uuid, Uuid)>,
@@ -342,6 +348,7 @@ pub async fn api_delete_team_message(
     Ok((StatusCode::OK, Json(deleted)))
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/chat/messages/{message_id}/versions", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_notebook_message_versions(
     State(state): State<Arc<AppState>>,
     Path((notebook_id, message_id)): Path<(Uuid, Uuid)>,
@@ -371,6 +378,7 @@ pub async fn api_list_notebook_message_versions(
     Ok((StatusCode::OK, Json(versions)))
 }
 
+#[utoipa::path(get, path = "/team/{id}/chat/messages/{message_id}/versions", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_team_message_versions(
     State(state): State<Arc<AppState>>,
     Path((team_id, message_id)): Path<(Uuid, Uuid)>,
@@ -393,6 +401,7 @@ pub async fn api_list_team_message_versions(
     Ok((StatusCode::OK, Json(versions)))
 }
 
+#[utoipa::path(get, path = "/team/{id}/chat/messages", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_team_messages(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -410,6 +419,7 @@ pub async fn api_list_team_messages(
     Ok((StatusCode::OK, Json(messages)))
 }
 
+#[utoipa::path(post, path = "/team/{id}/chat/messages", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_send_team_message(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,

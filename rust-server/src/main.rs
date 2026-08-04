@@ -27,7 +27,7 @@ pub struct CodeRequest {
     pub notebook_id: Option<uuid::Uuid>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct CodeResponse {
     stdout: String,
     stderr: String,

@@ -143,6 +143,7 @@ pub async fn api_login_user(
 
 /// Exchanges a refresh token for a new pair. The used token is revoked and
 /// points to its replacement, so reuse of an already-rotated token is detectable.
+#[utoipa::path(post, path = "/user/refresh", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_refresh_session(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<RefreshPayload>,
@@ -184,6 +185,7 @@ pub async fn api_refresh_session(
     }))
 }
 
+#[utoipa::path(post, path = "/user/logout", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_logout(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<RefreshPayload>,
@@ -202,6 +204,7 @@ pub async fn api_logout(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(patch, path = "/user/update", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_user_data(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -233,6 +236,7 @@ pub async fn api_update_user_data(
     }
 }
 
+#[utoipa::path(get, path = "/user/me", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_logged_user(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -250,6 +254,7 @@ pub async fn api_get_logged_user(
     Ok(Json(user))
 }
 
+#[utoipa::path(delete, path = "/user/", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_user(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -265,6 +270,7 @@ pub async fn api_delete_user(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(patch, path = "/user/password", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_user_password(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -366,6 +372,7 @@ pub async fn get_user_notebook_permissions(
     Ok(Json(models::team::build_role_view(conn, &role).await?))
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/permissions", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_user_notebook_permissions(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -381,6 +388,7 @@ pub async fn api_get_user_notebook_permissions(
     Ok(permissions)
 }
 
+#[utoipa::path(post, path = "/user/request-password-reset", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_request_password_reset(
     State(state): State<Arc<AppState>>,
     Json(input): Json<UserEmail>,
@@ -415,6 +423,7 @@ pub async fn api_request_password_reset(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(post, path = "/user/execute-password-reset", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_execute_password_reset(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ResetPasswordPayload>,

@@ -50,6 +50,7 @@ pub fn spawn_record(
     });
 }
 
+#[utoipa::path(get, path = "/notebook/{id}/activity", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_list_activity(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
@@ -77,6 +78,7 @@ pub async fn api_list_activity(
     Ok((StatusCode::OK, Json(items)))
 }
 
+#[utoipa::path(post, path = "/notebook/{id}/activity", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_record_edit(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,

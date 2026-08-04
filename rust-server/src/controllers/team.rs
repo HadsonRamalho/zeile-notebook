@@ -144,6 +144,7 @@ pub async fn api_update_team(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(get, path = "/team/{id}/roles", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_team_roles(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -160,6 +161,7 @@ pub async fn api_get_team_roles(
     Ok(Json(roles))
 }
 
+#[utoipa::path(post, path = "/team/{id}/roles", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_create_team_role(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -184,6 +186,7 @@ pub async fn api_create_team_role(
     }
 }
 
+#[utoipa::path(get, path = "/team/", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_user_teams(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -200,6 +203,7 @@ pub async fn api_get_user_teams(
     }
 }
 
+#[utoipa::path(patch, path = "/team/{id}/roles", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_team_role(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -227,6 +231,7 @@ pub async fn api_update_team_role(
     }
 }
 
+#[utoipa::path(delete, path = "/team/{id}/members", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_remove_user_from_team(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -262,6 +267,7 @@ pub async fn api_remove_user_from_team(
     }
 }
 
+#[utoipa::path(patch, path = "/team/{id}/members", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_member_role(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -311,6 +317,7 @@ pub async fn api_update_member_role(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(get, path = "/team/{id}/members", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_team_members(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -329,6 +336,7 @@ pub async fn api_get_team_members(
     }
 }
 
+#[utoipa::path(get, path = "/team/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_team(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -347,6 +355,7 @@ pub async fn api_get_team(
     }
 }
 
+#[utoipa::path(delete, path = "/team/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_team(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
@@ -365,6 +374,7 @@ pub async fn api_delete_team(
     }
 }
 
+#[utoipa::path(post, path = "/team/", responses((status = CREATED), (status = 401, body = ApiError)))]
 pub async fn api_create_team(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -410,6 +420,7 @@ pub async fn api_create_team(
     Ok(Json(team))
 }
 
+#[utoipa::path(get, path = "/team/{id}/members/permissions", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_get_user_team_permissions(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
