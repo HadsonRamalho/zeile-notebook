@@ -1757,7 +1757,16 @@ export interface components {
       | {
           PermissionDenied: string;
         }
-      | "LastLoginMethod";
+      | "LastLoginMethod"
+      | {
+          UniqueViolation: string;
+        }
+      | {
+          ForeignKeyViolation: string;
+        }
+      | {
+          NotFound: string;
+        };
     AuthMethodsResponse: {
       password: boolean;
       primaryProvider: components["schemas"]["AuthProvider"];
