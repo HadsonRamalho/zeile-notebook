@@ -3,11 +3,11 @@ use tracing::info;
 
 use crate::executor::sandbox::{CompileSandbox, absolute_path};
 use crate::file::{RunLimits, RunOutcome, run_safe_bin, setup_user_env};
+use crate::sec::ast::rust::verify_rust_ast;
 use crate::sec::{
     diff_new_lines, header_baseline_source, verify_code, verify_cpp_code, verify_cpp_preprocessed,
     verify_go_code, verify_zig_code,
 };
-use crate::sec::ast::rust::verify_rust_ast;
 
 pub mod sandbox;
 
@@ -358,6 +358,8 @@ func main() { fmt.Println("hello from the sandbox") }
 int main() { std::cout << "hello from the sandbox" << std::endl; }
 "#;
 
+    const HELLO_ZIG: &str = "const std = @import(\"std\");\npub fn main() void { const o = std.fs.File.stdout(); _ = o.write(\"hello from the sandbox\\n\") catch {}; }\n";
+
     fn exists(binary: &str) -> bool {
         std::process::Command::new("sh")
             .args(["-c", &format!("command -v {binary}")])
@@ -368,6 +370,21 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
 
     fn has_sandbox() -> bool {
         exists("bwrap") && exists("prlimit")
+    }
+
+    fn zig_version_is_compatible() -> bool {
+        let zig_path = std::env::var("ZIG_PATH").unwrap_or_else(|_| "zig".to_string());
+
+        std::process::Command::new(&zig_path)
+            .arg("version")
+            .output()
+            .ok()
+            .map(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .trim()
+                    .starts_with("0.15")
+            })
+            .unwrap_or(false)
     }
 
     struct Session(String);
@@ -556,5 +573,78 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
 
         assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
         assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn zig_compiles_inside_the_sandbox_and_the_binary_runs() {
+        if !has_sandbox() || !zig_version_is_compatible() {
+            eprintln!("zig 0.15.x/bwrap missing; test skipped");
+            return;
+        }
+
+        let session = Session::new("zig_hello");
+        let bin = compile_code("zig", HELLO_ZIG, &session.0)
+            .await
+            .expect("zig should compile inside the sandbox");
+
+        let result = run_compiled(&bin, None, RunLimits::default()).await;
+
+        assert_eq!(result.verdict, ExecVerdict::Ok, "{result:?}");
+        assert!(result.stdout.contains("hello from the sandbox"), "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn zig_compile_rejects_a_chained_alias_of_std() {
+        if !has_sandbox() || !zig_version_is_compatible() {
+            eprintln!("zig 0.15.x/bwrap missing; test skipped");
+            return;
+        }
+
+        let session = Session::new("zig_alias_bypass");
+        let code = "const s = std;\nconst p = s.posix;\npub fn main() void { p.exit(0); }\n";
+
+        let result = compile_code("zig", code, &session.0).await;
+
+        assert!(
+            result.is_err(),
+            "aliasing std itself before reaching a forbidden submodule must not bypass the check: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn zig_compile_rejects_reflective_field_access() {
+        if !has_sandbox() || !zig_version_is_compatible() {
+            eprintln!("zig 0.15.x/bwrap missing; test skipped");
+            return;
+        }
+
+        let session = Session::new("zig_field_bypass");
+        let code = "const std = @import(\"std\");\npub fn main() void { @field(std, \"posix\").exit(0); }\n";
+
+        let result = compile_code("zig", code, &session.0).await;
+
+        assert!(result.is_err(), "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn zig_known_gap_a_function_returning_std_still_bypasses_the_textual_check() {
+        if !has_sandbox() || !zig_version_is_compatible() {
+            eprintln!("zig 0.15.x/bwrap missing; test skipped");
+            return;
+        }
+
+        let session = Session::new("zig_function_return_gap");
+        let code = concat!(
+            "const std = @import(\"std\");\n",
+            "fn getStd() type { return std; }\n",
+            "pub fn main() void { const p = getStd().posix; p.exit(0); }\n",
+        );
+
+        let result = compile_code("zig", code, &session.0).await;
+
+        assert!(
+            result.is_ok(),
+            "this is the known, documented gap: a function returning the std namespace still compiles, bypassing the purely textual alias resolver: {result:?}"
+        );
     }
 }
