@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub mod ast;
 pub mod catalog;
 
@@ -402,27 +404,30 @@ pub fn verify_cpp_code(code: &str) -> Result<(), String> {
     check_cpp_calls_and_tokens(&normalized)
 }
 
-pub fn verify_zig_code(code: &str) -> Result<(), String> {
-    let forbidden_patterns = [
-        "std.os",
-        "std.posix",
-        "std.c",
-        "std.net",
-        "std.process",
-        "std.Thread",
-        "std.ChildProcess",
-        "std.DynLib",
-        "extern",
-        "asm",
-        "@cImport",
-        "@cInclude",
-        "@cDefine",
-        "@extern",
-        "@embedFile",
-        "@syscall",
-    ];
+const ZIG_FORBIDDEN_PATTERNS: &[&str] = &[
+    "std.os",
+    "std.posix",
+    "std.c",
+    "std.net",
+    "std.process",
+    "std.Thread",
+    "std.ChildProcess",
+    "std.DynLib",
+    "extern",
+    "asm",
+    "@cImport",
+    "@cInclude",
+    "@cDefine",
+    "@extern",
+    "@embedFile",
+    "@syscall",
+    "@field",
+];
 
-    for pattern in forbidden_patterns {
+const MAX_ZIG_ALIASES: usize = 512;
+
+fn check_zig_patterns(code: &str) -> Result<(), String> {
+    for pattern in ZIG_FORBIDDEN_PATTERNS {
         if code.contains(pattern) {
             return Err(format!(
                 "Segurança: O uso de '{}' não é permitido.",
@@ -431,7 +436,6 @@ pub fn verify_zig_code(code: &str) -> Result<(), String> {
         }
     }
 
-    // Only allow the specific use of stdout/stderr from std.fs for Zig 0.15.2
     if code.contains("std.fs")
         && !code.contains("std.fs.File.stdout")
         && !code.contains("std.fs.File.stderr")
@@ -440,6 +444,158 @@ pub fn verify_zig_code(code: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn normalize_zig(code: &str) -> String {
+    let mut normalized = String::with_capacity(code.len());
+    let mut chars = code.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if !c.is_whitespace() {
+            normalized.push(c);
+            continue;
+        }
+
+        while chars.peek().is_some_and(|p| p.is_whitespace()) {
+            chars.next();
+        }
+
+        if chars.peek() == Some(&'.') || normalized.ends_with('.') {
+            continue;
+        }
+
+        normalized.push(' ');
+    }
+
+    normalized
+}
+
+fn zig_binding_target(statement: &str) -> Option<(String, String)> {
+    let statement = statement.trim().trim_start_matches("pub ").trim_start();
+
+    let rest = statement
+        .strip_prefix("const ")
+        .or_else(|| statement.strip_prefix("var "))?;
+
+    let (name, rhs) = rest.split_once('=')?;
+    let name = name.trim();
+    let rhs: String = rhs.chars().filter(|c| !c.is_whitespace()).collect();
+
+    if name.is_empty() || !name.chars().all(is_identifier_char) {
+        return None;
+    }
+
+    if rhs == "@import(\"std\")" {
+        return Some((name.to_string(), "std".to_string()));
+    }
+
+    let looks_like_a_path =
+        !rhs.is_empty() && rhs.chars().all(|c| is_identifier_char(c) || c == '.');
+
+    if looks_like_a_path {
+        return Some((name.to_string(), rhs));
+    }
+
+    None
+}
+
+fn zig_alias_table(code: &str) -> Result<HashMap<String, String>, String> {
+    let mut aliases = HashMap::new();
+
+    for statement in code.split(';') {
+        if let Some((name, target)) = zig_binding_target(statement) {
+            aliases.insert(name, target);
+
+            if aliases.len() > MAX_ZIG_ALIASES {
+                return Err(format!(
+                    "Segurança: o arquivo declara mais de {} bindings; recuse-se a resolver aliases além desse limite.",
+                    MAX_ZIG_ALIASES
+                ));
+            }
+        }
+    }
+
+    Ok(aliases)
+}
+
+fn zig_resolve_one(path: &str, aliases: &HashMap<String, String>) -> Option<String> {
+    let (head, rest) = match path.split_once('.') {
+        Some((head, rest)) => (head, Some(rest)),
+        None => (path, None),
+    };
+
+    aliases.get(head).map(|resolved_head| match rest {
+        Some(rest) => format!("{resolved_head}.{rest}"),
+        None => resolved_head.clone(),
+    })
+}
+
+fn zig_fully_resolve(start: &str, aliases: &HashMap<String, String>) -> String {
+    let mut current = start.to_string();
+    let mut seen = std::collections::HashSet::new();
+
+    while let Some(next) = zig_resolve_one(&current, aliases) {
+        if next == current || !seen.insert(current.clone()) {
+            break;
+        }
+        current = next;
+    }
+
+    current
+}
+
+fn zig_resolve_aliases_to_a_fixed_point(aliases: &mut HashMap<String, String>) {
+    let snapshot = aliases.clone();
+
+    for value in aliases.values_mut() {
+        *value = zig_fully_resolve(value, &snapshot);
+    }
+}
+
+fn replace_word(text: &str, target: &str, replacement: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let chars: Vec<char> = text.chars().collect();
+    let target_chars: Vec<char> = target.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        let matches_here = chars[i..].starts_with(target_chars.as_slice());
+        let before_ok = i == 0 || !is_identifier_char(chars[i - 1]);
+        let after = i + target_chars.len();
+        let after_ok = after >= chars.len() || !is_identifier_char(chars[after]);
+
+        if matches_here && before_ok && after_ok {
+            result.push_str(replacement);
+            i = after;
+            continue;
+        }
+
+        result.push(chars[i]);
+        i += 1;
+    }
+
+    result
+}
+
+fn expand_zig_aliases(code: &str) -> Result<String, String> {
+    let mut aliases = zig_alias_table(code)?;
+    zig_resolve_aliases_to_a_fixed_point(&mut aliases);
+
+    let mut expanded = code.to_string();
+    for (name, resolved) in &aliases {
+        if name != resolved {
+            expanded = replace_word(&expanded, name, resolved);
+        }
+    }
+
+    Ok(expanded)
+}
+
+pub fn verify_zig_code(code: &str) -> Result<(), String> {
+    check_zig_patterns(code)?;
+
+    let expanded = normalize_zig(&expand_zig_aliases(code)?);
+    check_zig_patterns(&expanded)
 }
 
 #[cfg(test)]
@@ -744,5 +900,79 @@ func main() { fmt.Println("hello") }
         let code = "const std = @import(\"std\");\npub fn main() void { const o = std.fs.File.stdout(); _ = o; }\n";
 
         assert!(verify_zig_code(code).is_ok());
+    }
+
+    #[test]
+    fn zig_blocks_a_chained_alias_of_std_itself() {
+        let code = "const s = std;\nconst p = s.posix;\npub fn main() void { p.exit(0); }\n";
+
+        assert!(
+            verify_zig_code(code).is_err(),
+            "aliasing std itself before reaching a forbidden submodule must not bypass the check"
+        );
+    }
+
+    #[test]
+    fn zig_blocks_an_alias_from_a_renamed_import() {
+        let code =
+            "const s = @import(\"std\");\nconst p = s.posix;\npub fn main() void { p.exit(0); }\n";
+
+        assert!(
+            verify_zig_code(code).is_err(),
+            "renaming @import(\"std\") itself must not bypass the check"
+        );
+    }
+
+    #[test]
+    fn zig_blocks_a_deeper_alias_chain() {
+        let code =
+            "const a = std;\nconst b = a;\nconst c = b.posix;\npub fn main() void { c.exit(0); }\n";
+
+        assert!(verify_zig_code(code).is_err());
+    }
+
+    #[test]
+    fn zig_blocks_whitespace_split_around_the_dot() {
+        let code = "pub fn main() void { std . posix.exit(0); }\n";
+
+        assert!(
+            verify_zig_code(code).is_err(),
+            "whitespace around the dot must not bypass the substring check"
+        );
+    }
+
+    #[test]
+    fn zig_blocks_reflective_field_access() {
+        let code = "pub fn main() void { @field(std, \"posix\").exit(0); }\n";
+
+        assert!(
+            verify_zig_code(code).is_err(),
+            "@field is a reflective, builtin path to any namespace and has no legitimate use here"
+        );
+    }
+
+    #[test]
+    fn zig_rejects_an_excessive_number_of_bindings_instead_of_silently_skipping_them() {
+        let mut code = String::new();
+        for i in 0..(MAX_ZIG_ALIASES + 1) {
+            code.push_str(&format!("const junk_{i} = 1;\n"));
+        }
+        code.push_str("pub fn main() void {}\n");
+
+        assert!(
+            verify_zig_code(&code).is_err(),
+            "an excessive binding count must be rejected outright, not silently skipped from resolution"
+        );
+    }
+
+    #[test]
+    fn zig_does_not_confuse_an_unrelated_alias() {
+        let code =
+            "const not_std = 1;\nconst posix = not_std;\npub fn main() void { _ = posix; }\n";
+
+        assert!(
+            verify_zig_code(code).is_ok(),
+            "an alias unrelated to std must not be flagged"
+        );
     }
 }
