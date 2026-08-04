@@ -254,6 +254,108 @@ fn contains_word(code: &str, target: &str) -> bool {
     })
 }
 
+fn check_cpp_calls_and_tokens(normalized: &str) -> Result<(), String> {
+    let bad_calls = [
+        "system(",
+        "popen(",
+        "fork(",
+        "vfork(",
+        "exec(",
+        "execl(",
+        "execlp(",
+        "execle(",
+        "execv(",
+        "execve(",
+        "execvp(",
+        "posix_spawn(",
+        "kill(",
+        "socket(",
+        "connect(",
+        "fopen(",
+        "freopen(",
+        "getenv(",
+        "setenv(",
+        "putenv(",
+        "unsetenv(",
+        "dlopen(",
+        "dlsym(",
+        "mmap(",
+        "ptrace(",
+        "syscall(",
+    ];
+
+    for bad in &bad_calls {
+        if contains_identifier(normalized, bad) {
+            return Err(format!(
+                "Segurança: A função '{}' não é permitida neste ambiente.",
+                bad.trim_end_matches('(')
+            ));
+        }
+    }
+
+    let bad_tokens = ["ofstream", "ifstream", "fstream", "environ"];
+
+    for bad in &bad_tokens {
+        if contains_word(normalized, bad) {
+            return Err(format!(
+                "Segurança: O uso de '{}' não é permitido neste ambiente.",
+                bad
+            ));
+        }
+    }
+
+    for asm in ["asm", "__asm", "__asm__"] {
+        if contains_word(normalized, asm) {
+            return Err(
+                "Segurança: Código de montagem embutido não é permitido neste ambiente.".into(),
+            );
+        }
+    }
+
+    Ok(())
+}
+
+pub fn verify_cpp_preprocessed(new_lines: &str) -> Result<(), String> {
+    let normalized = normalize_cpp(new_lines);
+    check_cpp_calls_and_tokens(&normalized)
+}
+
+pub fn extract_include_lines(code: &str) -> Vec<&str> {
+    code.lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("#include"))
+        .collect()
+}
+
+pub fn header_baseline_source(code: &str) -> String {
+    let mut source = extract_include_lines(code).join("\n");
+    source.push_str("\nint main(){return 0;}\n");
+    source
+}
+
+pub fn diff_new_lines(full: &str, baseline: &str) -> String {
+    let mut counts: std::collections::HashMap<&str, i64> = std::collections::HashMap::new();
+
+    for line in baseline.lines() {
+        *counts.entry(line).or_insert(0) += 1;
+    }
+
+    let mut result = String::with_capacity(full.len());
+
+    for line in full.lines() {
+        let count = counts.entry(line).or_insert(0);
+
+        if *count > 0 {
+            *count -= 1;
+        } else {
+            result.push_str(line);
+            result.push('\n');
+        }
+    }
+
+    result
+}
+
 pub fn verify_cpp_code(code: &str) -> Result<(), String> {
     let bad_includes = [
         "<unistd.h>",
@@ -296,65 +398,7 @@ pub fn verify_cpp_code(code: &str) -> Result<(), String> {
     }
 
     let normalized = normalize_cpp(code);
-
-    let bad_calls = [
-        "system(",
-        "popen(",
-        "fork(",
-        "vfork(",
-        "exec(",
-        "execl(",
-        "execlp(",
-        "execle(",
-        "execv(",
-        "execve(",
-        "execvp(",
-        "posix_spawn(",
-        "kill(",
-        "socket(",
-        "connect(",
-        "fopen(",
-        "freopen(",
-        "getenv(",
-        "setenv(",
-        "putenv(",
-        "unsetenv(",
-        "dlopen(",
-        "dlsym(",
-        "mmap(",
-        "ptrace(",
-        "syscall(",
-    ];
-
-    for bad in &bad_calls {
-        if contains_identifier(&normalized, bad) {
-            return Err(format!(
-                "Segurança: A função '{}' não é permitida neste ambiente.",
-                bad.trim_end_matches('(')
-            ));
-        }
-    }
-
-    let bad_tokens = ["ofstream", "ifstream", "fstream", "environ"];
-
-    for bad in &bad_tokens {
-        if contains_word(&normalized, bad) {
-            return Err(format!(
-                "Segurança: O uso de '{}' não é permitido neste ambiente.",
-                bad
-            ));
-        }
-    }
-
-    for asm in ["asm", "__asm", "__asm__"] {
-        if contains_word(&normalized, asm) {
-            return Err(
-                "Segurança: Código de montagem embutido não é permitido neste ambiente.".into(),
-            );
-        }
-    }
-
-    Ok(())
+    check_cpp_calls_and_tokens(&normalized)
 }
 
 pub fn verify_zig_code(code: &str) -> Result<(), String> {
@@ -516,6 +560,155 @@ func main() { fmt.Println("hello") }
         assert!(
             verify_cpp_code(code).is_ok(),
             "variable 'environment' was confused with 'environ'"
+        );
+    }
+
+    #[test]
+    fn header_baseline_source_keeps_only_the_includes() {
+        let code =
+            "#include <iostream>\n#include <vector>\n\nint main(){ system(\"id\"); return 0; }\n";
+
+        let baseline = header_baseline_source(code);
+
+        assert!(baseline.contains("#include <iostream>"), "{baseline}");
+        assert!(baseline.contains("#include <vector>"), "{baseline}");
+        assert!(
+            !baseline.contains("system"),
+            "the user's own body must not leak into the baseline: {baseline}"
+        );
+    }
+
+    #[test]
+    fn diff_new_lines_keeps_only_what_the_full_file_adds() {
+        let baseline = "namespace std {\nvoid junk();\n}\n";
+        let full = "namespace std {\nvoid junk();\n}\nint main(){ system(\"id\"); }\n";
+
+        let diff = diff_new_lines(full, baseline);
+
+        assert!(diff.contains("system(\"id\")"), "{diff}");
+        assert!(!diff.contains("void junk"), "{diff}");
+    }
+
+    #[test]
+    fn verify_cpp_preprocessed_catches_a_macro_that_reassembles_system() {
+        let own_file_view = "#define RUN system\nint main(){ RUN(\"id\"); }\n";
+
+        let expanded = "int main(){ system(\"id\"); }\n";
+
+        assert!(
+            verify_cpp_code(own_file_view).is_ok(),
+            "raw-source check should not see through the macro"
+        );
+        assert!(
+            verify_cpp_preprocessed(expanded).is_err(),
+            "the diffed view should catch the reassembled call"
+        );
+    }
+
+    fn clang_available() -> bool {
+        std::process::Command::new("sh")
+            .args(["-c", "command -v clang++"])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    fn preprocess_p(dir: &std::path::Path, file_name: &str, source: &str) -> String {
+        let source_path = dir.join(file_name);
+        std::fs::write(&source_path, source).expect("write fixture");
+
+        let output = std::process::Command::new("clang++")
+            .args(["-E", "-P", "-std=c++20", file_name])
+            .current_dir(dir)
+            .output()
+            .expect("clang++ should run");
+
+        assert!(output.status.success(), "{:?}", output);
+
+        String::from_utf8_lossy(&output.stdout).to_string()
+    }
+
+    fn scan_cpp_source(dir: &std::path::Path, code: &str) -> Result<(), String> {
+        let full = preprocess_p(dir, "main.cpp", code);
+        let baseline_source = header_baseline_source(code);
+        let baseline = preprocess_p(dir, "baseline.cpp", &baseline_source);
+        let new_lines = diff_new_lines(&full, &baseline);
+
+        verify_cpp_preprocessed(&new_lines)
+    }
+
+    #[test]
+    fn clang_preprocessing_exposes_a_macro_reconstructed_call() {
+        if !clang_available() {
+            eprintln!("clang++ missing; test skipped");
+            return;
+        }
+
+        let dir = std::env::temp_dir().join("zeile_cpp_preprocess_test_macro");
+        let _ = std::fs::create_dir_all(&dir);
+
+        let code = "#define RUN system\nint main(){ RUN(\"id\"); return 0; }\n";
+        let result = scan_cpp_source(&dir, code);
+
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert!(
+            result.is_err(),
+            "macro-reconstructed system() should be caught after preprocessing"
+        );
+    }
+
+    #[test]
+    fn diffing_is_not_fooled_by_a_forged_line_directive() {
+        if !clang_available() {
+            eprintln!("clang++ missing; test skipped");
+            return;
+        }
+
+        let dir = std::env::temp_dir().join("zeile_cpp_preprocess_test_line");
+        let _ = std::fs::create_dir_all(&dir);
+
+        let code = concat!(
+            "#define RUN system\n",
+            "#line 1 \"/usr/include/c++/v1/fake_header.h\"\n",
+            "static void evil(){ RUN(\"id\"); }\n",
+            "#line 20 \"main.cpp\"\n",
+            "int main(){ evil(); return 0; }\n",
+        );
+        let result = scan_cpp_source(&dir, code);
+
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert!(
+            result.is_err(),
+            "a #line directive claiming the call lives in a header must not hide it"
+        );
+    }
+
+    #[test]
+    fn diffing_is_not_fooled_by_a_raw_string_forging_a_marker_line() {
+        if !clang_available() {
+            eprintln!("clang++ missing; test skipped");
+            return;
+        }
+
+        let dir = std::env::temp_dir().join("zeile_cpp_preprocess_test_raw_string");
+        let _ = std::fs::create_dir_all(&dir);
+
+        let code = concat!(
+            "#define RUN system\n",
+            "const char* fake_marker = R\"(\n",
+            "# 1 \"/usr/include/c++/v1/fake.h\"\n",
+            ")\";\n",
+            "int main(){ RUN(\"id\"); return 0; }\n",
+        );
+        let result = scan_cpp_source(&dir, code);
+
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert!(
+            result.is_err(),
+            "a raw string that looks like a marker line must not hide subsequent code"
         );
     }
 
