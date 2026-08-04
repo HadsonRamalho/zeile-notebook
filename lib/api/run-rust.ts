@@ -12,21 +12,37 @@ interface RunCodeProps {
   notebookId?: string;
 }
 
+type ExecStatus =
+  | "ok"
+  | "compile_error"
+  | "runtime_error"
+  | "timeout"
+  | "security_rejected"
+  | "unauthenticated"
+  | "permission_denied"
+  | "invalid_request"
+  | "server_busy"
+  | "toolchain_unavailable"
+  | "internal";
+
 interface RunCodeApiResponse {
-  stdout?: string;
-  stderr?: string;
+  status: ExecStatus;
+  errorCode: string | null;
+  stdout: string;
+  stderr: string;
 }
 
-interface FormatCombinedOutputType {
+function formatCombinedOutput({
+  stdout,
+  stderr,
+}: {
   stdout?: string;
   stderr?: string;
-}
-
-function formatCombinedOutput({ stdout, stderr }: FormatCombinedOutputType) {
+}) {
   if (stdout && stderr) {
     return `${stdout}\n\n--- Erro de Execução ---\n${stderr}`;
   }
-  return stdout || stderr || "Código executado com sucesso.";
+  return stdout || stderr || "";
 }
 
 export async function RunCode({
@@ -49,59 +65,27 @@ export async function RunCode({
       notebookId,
     });
 
-    const stderr = data.stderr || "";
-    const stdout = data.stdout || "";
+    const { status, errorCode, stdout, stderr } = data;
 
-    if (language === "rust") {
-      if (stderr) {
-        if (stderr.includes("file not found for module")) {
-          setStatus("error");
-          setOutput(
-            `Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))\n\n${stderr}`,
-          );
-          return;
-        }
-
-        if (
-          stderr.includes("Finished `dev` profile [unoptimized + debuginfo]") ||
-          stderr.includes("Finished dev [unoptimized + debuginfo]")
-        ) {
-          setStatus("success");
-          setOutput("Bloco compilado!");
-          return;
-        }
-
-        setStatus("error");
-        setOutput(stderr);
-        return;
-      }
-
+    if (status === "ok") {
       setStatus("success");
-      setOutput(stdout || "Código executado com sucesso.");
+      setOutput(
+        formatCombinedOutput({ stdout, stderr }) ||
+          "Código executado com sucesso.",
+      );
       return;
     }
 
-    if (language === "go" || language === "cpp" || language === "zig") {
-      const langName =
-        language === "go" ? "Go" : language === "cpp" ? "C++" : "Zig";
-      const isCompileOrSecError =
-        stderr.includes(`Erro de Compilação ${langName}:`) ||
-        stderr.includes("Falha ao invocar") ||
-        stderr.includes("Segurança:");
+    setStatus("error");
 
-      if (isCompileOrSecError) {
-        setStatus("error");
-        setOutput(stderr);
-        return;
-      }
-
-      setStatus(stderr ? "error" : "success");
-      setOutput(formatCombinedOutput({ stderr, stdout }));
+    if (errorCode === "MODULE_NOT_FOUND") {
+      setOutput(
+        `Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))\n\n${stderr}`,
+      );
       return;
     }
 
-    setStatus(stderr ? "error" : "success");
-    setOutput(formatCombinedOutput({ stderr, stdout }));
+    setOutput(formatCombinedOutput({ stdout, stderr }) || "Erro na execução.");
   } catch (err) {
     console.error(err);
     setStatus("error");

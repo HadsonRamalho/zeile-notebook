@@ -1,3 +1,4 @@
+import { ApiClientError } from "@/lib/api/base";
 import type { Block } from "@/lib/types";
 
 export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
@@ -10,8 +11,9 @@ export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
   const babel = (window as any).Babel;
 
   if (!babel) {
-    throw new Error(
+    throw new ApiClientError(
       "O Babel ainda está sendo carregado, aguarde alguns instantes.",
+      "BABEL_NOT_READY",
     );
   }
 
