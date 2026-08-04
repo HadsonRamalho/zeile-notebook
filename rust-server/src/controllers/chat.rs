@@ -23,11 +23,15 @@ use crate::{
         },
         error::ApiError,
         state::AppState,
+        ws_message::WsServerMessage,
     },
 };
 
 fn message_event(message: &ChatMessage) -> String {
-    serde_json::json!({ "type": "chat_message", "message": message }).to_string()
+    serde_json::to_string(&WsServerMessage::ChatMessage {
+        message: message.clone(),
+    })
+    .expect("WsServerMessage::ChatMessage always serializes")
 }
 
 async fn author_name(conn: &mut diesel_async::AsyncPgConnection, user_id: Uuid) -> String {

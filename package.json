@@ -8,6 +8,8 @@
     "generate-docs": "node scripts/run-generate.mjs",
     "generate:openapi-types": "node scripts/generate-openapi-types.mjs",
     "generate:openapi-types:check": "node scripts/generate-openapi-types.mjs --check",
+    "generate:ws-types": "node scripts/generate-ws-types.mjs",
+    "generate:ws-types:check": "node scripts/generate-ws-types.mjs --check",
     "build": "next build && npx serwist build serwist.config.mjs",
     "dev": "next dev",
     "start": "next start",

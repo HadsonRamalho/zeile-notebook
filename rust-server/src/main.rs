@@ -39,6 +39,10 @@ async fn main() {
         return export_openapi();
     }
 
+    if std::env::args().nth(1).as_deref() == Some("export-ws-types") {
+        return export_ws_types();
+    }
+
     if let Err(error) = run().await {
         eprintln!("zeile-server failed to start: {error}");
         std::process::exit(1);
@@ -57,6 +61,21 @@ fn export_openapi() {
         }),
         None => println!("{json}"),
     }
+}
+
+fn export_ws_types() {
+    use ts_rs::TS;
+
+    let dir = std::env::args().nth(2).unwrap_or_else(|| ".".to_string());
+
+    crate::models::ws_message::WsServerMessage::export_all_to(&dir).unwrap_or_else(|e| {
+        eprintln!("failed to export WsServerMessage: {e}");
+        std::process::exit(1);
+    });
+    crate::models::ws_message::WsClientMessage::export_all_to(&dir).unwrap_or_else(|e| {
+        eprintln!("failed to export WsClientMessage: {e}");
+        std::process::exit(1);
+    });
 }
 
 async fn run() -> Result<(), BootError> {

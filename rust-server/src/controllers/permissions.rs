@@ -398,7 +398,10 @@ pub fn invalidate_caps_cache(notebook_id: Uuid) {
     CAPS_CACHE.retain(|k, _| k.1 != notebook_id);
 }
 
-pub const CAPABILITIES_UPDATED_SIGNAL: &str = r#"{"type":"capabilities_updated"}"#;
+pub fn capabilities_updated_signal() -> String {
+    serde_json::to_string(&crate::models::ws_message::WsServerMessage::CapabilitiesUpdated)
+        .expect("WsServerMessage::CapabilitiesUpdated always serializes")
+}
 
 // invalidates the cache and pushes `capabilities_updated` to local rooms
 pub async fn broadcast_capability_change_local(presence: &PresenceRegistry, notebook_id: Uuid) {
@@ -415,7 +418,7 @@ pub async fn broadcast_capability_change_local(presence: &PresenceRegistry, note
     };
 
     for tx in txs {
-        let _ = tx.send(CAPABILITIES_UPDATED_SIGNAL.to_string()).await;
+        let _ = tx.send(capabilities_updated_signal()).await;
     }
 }
 
