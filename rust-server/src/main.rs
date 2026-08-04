@@ -43,6 +43,10 @@ async fn main() {
         return export_ws_types();
     }
 
+    if std::env::args().nth(1).as_deref() == Some("export-error-codes") {
+        return export_error_codes();
+    }
+
     if let Err(error) = run().await {
         eprintln!("zeile-server failed to start: {error}");
         std::process::exit(1);
@@ -76,6 +80,18 @@ fn export_ws_types() {
         eprintln!("failed to export WsClientMessage: {e}");
         std::process::exit(1);
     });
+}
+
+fn export_error_codes() {
+    let json = serde_json::to_string_pretty(crate::models::error::ALL_ERROR_CODES)
+        .expect("&[&str] always serializes");
+    match std::env::args().nth(2) {
+        Some(path) => std::fs::write(&path, json).unwrap_or_else(|e| {
+            eprintln!("failed to write {path}: {e}");
+            std::process::exit(1);
+        }),
+        None => println!("{json}"),
+    }
 }
 
 async fn run() -> Result<(), BootError> {
