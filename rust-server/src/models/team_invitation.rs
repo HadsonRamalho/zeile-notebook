@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InviteRequest {
     pub email: String,
-    #[serde(rename = "roleId")]
     pub role_id: Uuid,
 }
 
@@ -19,6 +19,7 @@ pub struct AcceptInviteRequest {
 
 #[derive(Queryable, Selectable, Insertable, Serialize, Deserialize, Debug)]
 #[diesel(table_name = team_invitations)]
+#[serde(rename_all = "camelCase")]
 pub struct TeamInvitation {
     pub id: Uuid,
     pub team_id: Uuid,

@@ -68,14 +68,14 @@ type Effect = GrantEffect | "none";
 const MODULE_ORDER = ["notebook", "team", "chat"];
 
 const BLANK_ROLE = {
-  can_read: false,
-  can_write: false,
-  can_manage_privacy: false,
-  can_manage_clones: false,
-  can_invite_users: false,
-  can_remove_users: false,
-  can_manage_permissions: false,
-  can_manage_team: false,
+  canRead: false,
+  canWrite: false,
+  canManagePrivacy: false,
+  canManageClones: false,
+  canInviteUsers: false,
+  canRemoveUsers: false,
+  canManagePermissions: false,
+  canManageTeam: false,
 };
 
 interface TeamPermissionsProps {
@@ -176,16 +176,16 @@ export function TeamPermissions({
         : scopeSel.slice("notebook:".length);
 
   const selfUserId = authUser?.id;
-  const selfRoleId = members.find(([m]) => m.user_id === selfUserId)?.[0]
-    .role_id;
+  const selfRoleId = members.find(([m]) => m.userId === selfUserId)?.[0]
+    .roleId;
 
   const matchesSelection = useCallback(
     (g: TeamGrant, key: string) =>
-      g.subject_kind === subjectKind &&
-      g.subject_id === subjectId &&
-      g.target_kind === targetKind &&
-      (targetKind === "team" || g.target_id === targetId) &&
-      g.permission_key === key,
+      g.subjectKind === subjectKind &&
+      g.subjectId === subjectId &&
+      g.targetKind === targetKind &&
+      (targetKind === "team" || g.targetId === targetId) &&
+      g.permissionKey === key,
     [subjectKind, subjectId, targetKind, targetId],
   );
 
@@ -222,11 +222,11 @@ export function TeamPermissions({
         }
         if (next !== "none") {
           await createTeamGrant(teamId, {
-            subject_kind: subjectKind,
-            subject_id: subjectId,
-            permission_key: key,
-            target_kind: targetKind,
-            target_id: targetId ?? undefined,
+            subjectKind: subjectKind,
+            subjectId: subjectId,
+            permissionKey: key,
+            targetKind: targetKind,
+            targetId: targetId ?? undefined,
             effect: next,
           });
         }
@@ -342,15 +342,15 @@ export function TeamPermissions({
   const memberItems = useMemo<PickerItem[]>(
     () =>
       members.map(([m]) => {
-        const role = roles.find((r) => r.id === m.role_id);
+        const role = roles.find((r) => r.id === m.roleId);
         return {
-          id: m.user_id,
+          id: m.userId,
           primary: m.name,
           secondary: m.email,
           badge: role ? roleLabel(role) : undefined,
-          avatarUrl: m.avatar_url,
+          avatarUrl: m.avatarUrl,
           showAvatar: true,
-          disabled: m.user_id === selfUserId,
+          disabled: m.userId === selfUserId,
         };
       }),
     [members, roles, roleLabel, selfUserId],

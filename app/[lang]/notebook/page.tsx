@@ -175,7 +175,7 @@ export default function NotebookHomePage() {
             {teams.map(([team, role]) => {
               const pagesOfTeam = teamPages[team.id] ?? [];
               const foldersOfTeam = teamFolders[team.id] ?? [];
-              const canManage = role.can_write;
+              const canManage = role.canWrite;
               if (pagesOfTeam.length === 0 && foldersOfTeam.length === 0) {
                 return (
                   <div key={team.id} className="flex flex-col gap-3">

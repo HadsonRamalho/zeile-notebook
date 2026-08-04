@@ -107,23 +107,23 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
 
         const perms: TeamRole = {
           id: "",
-          team_id: teamId,
+          teamId: teamId,
           name: "",
-          can_read: teamCan("notebook.view"),
-          can_write: teamCan("notebook.edit"),
-          can_manage_privacy: teamCan("notebook.manage_privacy"),
-          can_manage_clones: teamCan("notebook.manage_clones"),
-          can_invite_users: teamCan("team.invite_users"),
-          can_remove_users: teamCan("team.remove_users"),
-          can_manage_permissions: teamCan("team.roles.edit_role_permissions"),
-          can_manage_team: teamCan("team.edit_name"),
+          canRead: teamCan("notebook.view"),
+          canWrite: teamCan("notebook.edit"),
+          canManagePrivacy: teamCan("notebook.manage_privacy"),
+          canManageClones: teamCan("notebook.manage_clones"),
+          canInviteUsers: teamCan("team.invite_users"),
+          canRemoveUsers: teamCan("team.remove_users"),
+          canManagePermissions: teamCan("team.roles.edit_role_permissions"),
+          canManageTeam: teamCan("team.edit_name"),
         };
 
         setUserPermissions(perms);
         setTeam(teamData);
         setMembers(m);
 
-        if (perms.can_manage_permissions) {
+        if (perms.canManagePermissions) {
           const r = await fetchTeamRoles(teamId);
           setRoles(r);
         } else {

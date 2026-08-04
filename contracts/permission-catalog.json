@@ -1,7 +1,7 @@
 {
   "permissions": [
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.view",
       "label": "perm.notebook.view",
       "targets": [
@@ -11,7 +11,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.edit",
       "label": "perm.notebook.edit",
       "targets": [
@@ -21,7 +21,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.delete",
       "label": "perm.notebook.delete",
       "targets": [
@@ -31,7 +31,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.edit_name",
@@ -43,7 +43,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.tags.edit",
@@ -55,7 +55,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.manage_privacy",
       "label": "perm.notebook.manage_privacy",
       "targets": [
@@ -65,7 +65,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.manage_clones",
       "label": "perm.notebook.manage_clones",
       "targets": [
@@ -75,7 +75,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.manage_public",
       "label": "perm.notebook.manage_public",
       "targets": [
@@ -85,7 +85,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.pages.add",
@@ -97,7 +97,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.pages.delete",
@@ -109,7 +109,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.export",
       "label": "perm.notebook.export.all",
       "targets": [
@@ -119,7 +119,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.export"
       ],
       "key": "notebook.export.markdown",
@@ -131,7 +131,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.export"
       ],
       "key": "notebook.export.markdown_assets",
@@ -143,7 +143,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.export"
       ],
       "key": "notebook.export.pdf",
@@ -155,7 +155,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.export"
       ],
       "key": "notebook.export.json",
@@ -167,7 +167,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.export"
       ],
       "key": "notebook.export.json_assets",
@@ -179,7 +179,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.view"
       ],
       "key": "notebook.blocks.view",
@@ -191,7 +191,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.blocks.add",
@@ -203,7 +203,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.blocks.edit",
@@ -216,7 +216,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "notebook.blocks.delete",
@@ -229,7 +229,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "notebook.blocks.execute",
       "label": "perm.notebook.blocks.execute",
       "targets": [
@@ -240,7 +240,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.reorder",
@@ -252,7 +252,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.rust.view",
@@ -266,7 +266,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.rust.add",
@@ -279,7 +279,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.rust.edit",
@@ -293,7 +293,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.go.view",
@@ -307,7 +307,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.go.add",
@@ -320,7 +320,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.go.edit",
@@ -334,7 +334,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.python.view",
@@ -348,7 +348,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.python.add",
@@ -361,7 +361,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.python.edit",
@@ -375,7 +375,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.cpp.view",
@@ -389,7 +389,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.cpp.add",
@@ -402,7 +402,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.cpp.edit",
@@ -416,7 +416,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.zig.view",
@@ -430,7 +430,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.zig.add",
@@ -443,7 +443,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.zig.edit",
@@ -457,7 +457,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.tsx.view",
@@ -471,7 +471,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.tsx.add",
@@ -484,7 +484,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.tsx.edit",
@@ -498,7 +498,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.drawing.view",
@@ -512,7 +512,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.drawing.add",
@@ -525,7 +525,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.drawing.edit",
@@ -539,7 +539,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.text.view",
@@ -553,7 +553,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.text.add",
@@ -566,7 +566,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.text.edit",
@@ -580,7 +580,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.latex.view",
@@ -594,7 +594,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.latex.add",
@@ -607,7 +607,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.latex.edit",
@@ -621,7 +621,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.sql.view",
@@ -635,7 +635,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.sql.add",
@@ -648,7 +648,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.sql.edit",
@@ -662,7 +662,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.typst.view",
@@ -676,7 +676,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.typst.add",
@@ -689,7 +689,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.typst.edit",
@@ -703,7 +703,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.database_schema.view",
@@ -717,7 +717,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.database_schema.add",
@@ -730,7 +730,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.database_schema.edit",
@@ -744,7 +744,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.challenge.view",
@@ -758,7 +758,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.challenge.add",
@@ -771,7 +771,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.challenge.edit",
@@ -785,7 +785,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.component.view",
@@ -799,7 +799,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.component.add",
@@ -812,7 +812,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.component.edit",
@@ -826,7 +826,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.notebook_ref.view",
@@ -840,7 +840,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.notebook_ref.add",
@@ -853,7 +853,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.notebook_ref.edit",
@@ -867,7 +867,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.view"
       ],
       "key": "notebook.blocks.template_ref.view",
@@ -881,7 +881,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.add"
       ],
       "key": "notebook.blocks.template_ref.add",
@@ -894,7 +894,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.edit"
       ],
       "key": "notebook.blocks.template_ref.edit",
@@ -908,7 +908,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.execute"
       ],
       "key": "notebook.blocks.rust.execute",
@@ -922,7 +922,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.execute"
       ],
       "key": "notebook.blocks.go.execute",
@@ -936,7 +936,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.execute"
       ],
       "key": "notebook.blocks.python.execute",
@@ -950,7 +950,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.execute"
       ],
       "key": "notebook.blocks.cpp.execute",
@@ -964,7 +964,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.execute"
       ],
       "key": "notebook.blocks.zig.execute",
@@ -978,7 +978,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.blocks.execute"
       ],
       "key": "notebook.blocks.tsx.execute",
@@ -992,7 +992,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "team.manage",
       "label": "perm.team.manage",
       "targets": [
@@ -1002,7 +1002,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "team.manage"
       ],
       "key": "team.edit_name",
@@ -1014,7 +1014,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "team.manage"
       ],
       "key": "team.invite_users",
@@ -1026,7 +1026,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "team.manage"
       ],
       "key": "team.remove_users",
@@ -1038,7 +1038,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "team.manage"
       ],
       "key": "team.roles.create_role",
@@ -1050,7 +1050,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "team.manage"
       ],
       "key": "team.roles.edit_role_name",
@@ -1062,7 +1062,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "team.manage"
       ],
       "key": "team.roles.edit_role_permissions",
@@ -1074,7 +1074,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "chat.view",
       "label": "perm.chat.view",
       "targets": [
@@ -1086,7 +1086,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "chat.messages.send",
       "label": "perm.chat.messages.send",
       "targets": [
@@ -1098,7 +1098,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "chat.view"
       ],
       "key": "chat.team.access",
@@ -1110,7 +1110,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "chat.messages.send"
       ],
       "key": "chat.messages.reply",
@@ -1124,7 +1124,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "chat.messages.send"
       ],
       "key": "chat.messages.quote",
@@ -1138,7 +1138,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "chat.messages.send"
       ],
       "key": "chat.messages.edit",
@@ -1152,7 +1152,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "chat.messages.send"
       ],
       "key": "chat.messages.delete",
@@ -1166,7 +1166,7 @@
       "view": null
     },
     {
-      "implied_by": [],
+      "impliedBy": [],
       "key": "chat.messages.delete_any",
       "label": "perm.chat.messages.delete_any",
       "targets": [
@@ -1178,7 +1178,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.view"
       ],
       "key": "comment.view",
@@ -1191,7 +1191,7 @@
       "view": "cosmetic"
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "comment.create",
@@ -1204,7 +1204,7 @@
       "view": null
     },
     {
-      "implied_by": [
+      "impliedBy": [
         "notebook.edit"
       ],
       "key": "comment.resolve",

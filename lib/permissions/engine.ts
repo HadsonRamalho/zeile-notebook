@@ -10,7 +10,7 @@ export function buildImpliedIndex(
 ): Map<string, string[]> {
   const index = new Map<string, string[]>();
   for (const permission of catalog.permissions) {
-    index.set(permission.key, permission.implied_by);
+    index.set(permission.key, permission.impliedBy);
   }
   return index;
 }
@@ -36,23 +36,23 @@ function targetLevel(
   grant: GrantView,
   target: PermissionTarget,
 ): number | null {
-  switch (grant.target_kind) {
+  switch (grant.targetKind) {
     case "global":
       return 0;
     case "team":
       return 1;
     case "notebook":
-      return grant.target_id === target.notebookId ? 2 : null;
+      return grant.targetId === target.notebookId ? 2 : null;
     case "block_type":
-      return grant.target_value != null &&
+      return grant.targetValue != null &&
         target.blockType != null &&
-        grant.target_value === target.blockType
+        grant.targetValue === target.blockType
         ? 3
         : null;
     case "block":
-      return grant.target_id != null &&
+      return grant.targetId != null &&
         target.blockId != null &&
-        grant.target_id === target.blockId
+        grant.targetId === target.blockId
         ? 4
         : null;
     default:
@@ -75,7 +75,7 @@ export function can(
   let allowAtBest = false;
 
   for (const grant of snapshot.grants) {
-    if (!keys.has(grant.permission_key)) continue;
+    if (!keys.has(grant.permissionKey)) continue;
     const level = targetLevel(grant, target);
     if (level === null) continue;
 

@@ -76,7 +76,7 @@ export function PublicNotebookPermissions({
 
   const effectFor = useCallback(
     (key: string): Effect =>
-      grants.find((g) => g.permission_key === key)?.effect ?? "none",
+      grants.find((g) => g.permissionKey === key)?.effect ?? "none",
     [grants],
   );
 
@@ -84,14 +84,14 @@ export function PublicNotebookPermissions({
     async (key: string, next: Effect) => {
       if (effectFor(key) === next) return;
       setPending((prev) => new Set(prev).add(key));
-      const existing = grants.filter((g) => g.permission_key === key);
+      const existing = grants.filter((g) => g.permissionKey === key);
       try {
         for (const grant of existing) {
           await deletePublicGrant(notebookId, grant.id);
         }
         if (next !== "none") {
           await createPublicGrant(notebookId, {
-            permission_key: key,
+            permissionKey: key,
             effect: next,
           });
         }

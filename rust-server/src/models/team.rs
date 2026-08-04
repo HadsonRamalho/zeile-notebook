@@ -12,6 +12,7 @@ use validator::Validate;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = teams)]
+#[serde(rename_all = "camelCase")]
 pub struct Team {
     pub id: Uuid,
     pub name: String,
@@ -23,19 +24,23 @@ pub struct Team {
 
 #[derive(Insertable, Deserialize, Validate)]
 #[diesel(table_name = teams)]
+#[serde(rename_all = "camelCase")]
 pub struct NewTeam {
     #[validate(length(min = 2, message = "Team name is required"))]
     pub name: String,
     pub description: Option<String>,
+    #[serde(alias = "image_url")]
     pub image_url: Option<String>,
 }
 
 #[derive(AsChangeset, Deserialize, Validate)]
 #[diesel(table_name = teams)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateTeam {
     #[validate(length(min = 2, message = "Team name is required"))]
     pub name: Option<String>,
     pub description: Option<String>,
+    #[serde(alias = "image_url")]
     pub image_url: Option<String>,
 }
 
@@ -50,14 +55,23 @@ pub struct TeamRole {
 
 // os oito bools do contrato publico; a fonte de verdade e permission_grants
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RolePermissions {
+    #[serde(alias = "can_read")]
     pub can_read: bool,
+    #[serde(alias = "can_write")]
     pub can_write: bool,
+    #[serde(alias = "can_manage_privacy")]
     pub can_manage_privacy: bool,
+    #[serde(alias = "can_manage_clones")]
     pub can_manage_clones: bool,
+    #[serde(alias = "can_invite_users")]
     pub can_invite_users: bool,
+    #[serde(alias = "can_remove_users")]
     pub can_remove_users: bool,
+    #[serde(alias = "can_manage_permissions")]
     pub can_manage_permissions: bool,
+    #[serde(alias = "can_manage_team")]
     pub can_manage_team: bool,
 }
 
@@ -138,6 +152,7 @@ impl RolePermissions {
 
 // mantem o formato plano que o frontend consome (`TeamRole` em lib/types/team-types.ts)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TeamRoleView {
     pub id: Uuid,
     pub team_id: Uuid,
@@ -183,12 +198,14 @@ impl TeamRoleView {
 
 #[derive(Insertable, Deserialize)]
 #[diesel(table_name = team_roles)]
+#[serde(rename_all = "camelCase")]
 pub struct NewTeamRole {
     pub team_id: Uuid,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
 pub struct NewTeamRoleRequest {
     #[validate(length(min = 2, message = "Team role name is required"))]
     pub name: String,
@@ -197,16 +214,25 @@ pub struct NewTeamRoleRequest {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateTeamRole {
     pub id: Uuid,
     pub name: Option<String>,
+    #[serde(alias = "can_read")]
     pub can_read: Option<bool>,
+    #[serde(alias = "can_write")]
     pub can_write: Option<bool>,
+    #[serde(alias = "can_manage_privacy")]
     pub can_manage_privacy: Option<bool>,
+    #[serde(alias = "can_manage_clones")]
     pub can_manage_clones: Option<bool>,
+    #[serde(alias = "can_invite_users")]
     pub can_invite_users: Option<bool>,
+    #[serde(alias = "can_remove_users")]
     pub can_remove_users: Option<bool>,
+    #[serde(alias = "can_manage_permissions")]
     pub can_manage_permissions: Option<bool>,
+    #[serde(alias = "can_manage_team")]
     pub can_manage_team: Option<bool>,
 }
 
@@ -232,6 +258,7 @@ impl UpdateTeamRole {
 
 #[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = team_members)]
+#[serde(rename_all = "camelCase")]
 pub struct TeamMember {
     pub id: Uuid,
     pub team_id: Uuid,
@@ -241,6 +268,7 @@ pub struct TeamMember {
 }
 
 #[derive(Queryable, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct TeamMemberResponse {
     pub id: Uuid,
     pub team_id: Uuid,
@@ -253,13 +281,17 @@ pub struct TeamMemberResponse {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateMemberRoleRequest {
+    #[serde(alias = "user_id")]
     pub user_id: Uuid,
+    #[serde(alias = "role_id")]
     pub role_id: Uuid,
 }
 
 #[derive(Insertable, Deserialize)]
 #[diesel(table_name = team_members)]
+#[serde(rename_all = "camelCase")]
 pub struct NewTeamMember {
     pub team_id: Uuid,
     pub user_id: Uuid,
@@ -595,18 +627,32 @@ mod tests {
         let json = serde_json::to_value(&role).expect("serialize");
 
         assert_eq!(json["name"], "Owner");
-        assert_eq!(json["can_read"], true);
+        assert_eq!(json["canRead"], true);
         for key in [
-            "can_write",
-            "can_manage_privacy",
-            "can_manage_clones",
-            "can_invite_users",
-            "can_remove_users",
-            "can_manage_permissions",
-            "can_manage_team",
+            "canWrite",
+            "canManagePrivacy",
+            "canManageClones",
+            "canInviteUsers",
+            "canRemoveUsers",
+            "canManagePermissions",
+            "canManageTeam",
         ] {
             assert_eq!(json[key], false, "{key} should come back as false");
         }
+    }
+
+    #[test]
+    fn role_permissions_accept_the_legacy_snake_case_alias() {
+        let camel: RolePermissions = serde_json::from_str(
+            r#"{"canRead":true,"canWrite":false,"canManagePrivacy":false,"canManageClones":false,"canInviteUsers":false,"canRemoveUsers":false,"canManagePermissions":false,"canManageTeam":false}"#,
+        )
+        .unwrap();
+        let snake: RolePermissions = serde_json::from_str(
+            r#"{"can_read":true,"can_write":false,"can_manage_privacy":false,"can_manage_clones":false,"can_invite_users":false,"can_remove_users":false,"can_manage_permissions":false,"can_manage_team":false}"#,
+        )
+        .unwrap();
+
+        assert_eq!(camel, snake);
     }
 
     #[test]

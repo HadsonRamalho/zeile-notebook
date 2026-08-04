@@ -41,7 +41,7 @@ export async function getPublicGrants(notebookId: string) {
 
 export async function createPublicGrant(
   notebookId: string,
-  body: { permission_key: string; effect: "allow" | "deny" },
+  body: { permissionKey: string; effect: "allow" | "deny" },
 ) {
   return await api.post<TeamGrant>(
     `/notebook/${notebookId}/public-grants`,

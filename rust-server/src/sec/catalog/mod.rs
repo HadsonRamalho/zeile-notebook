@@ -35,6 +35,7 @@ pub enum ViewSensitivity {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Permission {
     pub key: String,
     pub tier: Tier,
