@@ -40,7 +40,6 @@ export function AdminNotify() {
   const [sending, setSending] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: busca reage a query/kind
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
     const q = query.trim();

@@ -21,6 +21,7 @@ const GenericSvg = ({
       height={size}
       viewBox={viewBox}
       fill={color}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: content é sempre um path SVG estático embutido nos ícones de linguagem, nunca dado do usuário
       dangerouslySetInnerHTML={{ __html: content }}
       style={{ display: "inline-block", verticalAlign: "middle", ...style }}
       {...props}

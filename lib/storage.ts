@@ -82,7 +82,7 @@ export async function restoreFullBackup(jsonString: string): Promise<boolean> {
     const storedIndex = localStorage.getItem(INDEX_KEY);
     const currentIndex = storedIndex ? JSON.parse(storedIndex) : [];
 
-    let newIndex;
+    let newIndex: unknown;
 
     if (Array.isArray(currentIndex) && Array.isArray(backup.index)) {
       const indexMap = new Map();

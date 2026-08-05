@@ -82,21 +82,16 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
   }
 
   return (
-    <h1
-      role="button"
-      tabIndex={0}
-      className="text-3xl font-bold cursor-text hover:bg-accent rounded px-1 transition-colors"
-      onClick={() => {
-        setIsEditing(true);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
+    <h1 className="text-3xl font-bold px-1">
+      <button
+        type="button"
+        className="cursor-text hover:bg-accent rounded transition-colors text-left w-full"
+        onClick={() => {
           setIsEditing(true);
-        }
-      }}
-    >
-      {title || "..."}
+        }}
+      >
+        {title || "..."}
+      </button>
     </h1>
   );
 }

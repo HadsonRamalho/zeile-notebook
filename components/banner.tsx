@@ -77,6 +77,7 @@ export function Banner({
       ) : null}
       {globalKey ? (
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: globalKey vem de um prop estático do desenvolvedor (id do banner), não de entrada do usuário; evita FOUC antes da hidratação
           dangerouslySetInnerHTML={{
             __html: `if (localStorage.getItem('${globalKey}') === 'true') document.documentElement.classList.add('${globalKey}');`,
           }}

@@ -25,11 +25,10 @@ export function extractTOCFromBlocks(blocks: Block[]): TOCItemType[] {
         ["card", "banner"].includes(block.metadata?.type))
     ) {
       const regex = /^(#{1,6})\s+(.+)$/gm;
-      let match;
 
-      while ((match = regex.exec(block.content)) !== null) {
-        const depth = match[1].length;
-        const title = match[2].trim();
+      for (const match of block.content.matchAll(regex)) {
+        const depth = match[1]?.length ?? 0;
+        const title = match[2]?.trim() ?? "";
         const url = `#${slugger.slug(title)}`;
 
         items.push({

@@ -1025,6 +1025,7 @@ export function FreeDrawingCell({
   }, [canWrite]);
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: só rastreia hover para mostrar/ocultar os controles sobrepostos, que já são alcançáveis por tab
     <div
       style={
         fullscreen
@@ -1908,7 +1909,7 @@ function LayerRow({
         </button>
         {isEditing ? (
           <input
-            autoFocus
+            ref={(el) => el?.focus()}
             value={draft}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setDraft(e.target.value)}
@@ -1920,16 +1921,24 @@ function LayerRow({
             className="w-0 min-w-0 flex-1 rounded border border-border bg-background px-1 py-0.5 text-[11px] outline-none"
           />
         ) : (
-          <span
-            className="flex-1 truncate"
+          <button
+            type="button"
+            className="flex-1 truncate text-left"
             onDoubleClick={(e) => {
               e.stopPropagation();
               startEditing();
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                startEditing();
+              }
+            }}
             title="Duplo clique para renomear"
           >
             {layer.name}
-          </span>
+          </button>
         )}
         <button
           type="button"
@@ -1961,6 +1970,8 @@ function LayerRow({
         )}
       </div>
       {isActive && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: só contém propagação de clique para não colapsar a linha; os controles reais (Slider) já são acessíveis
+        // biome-ignore lint/a11y/useKeyWithClickEvents: idem — sem ação própria, só bloqueia bubbling
         <div
           className="flex items-center gap-2 pl-6"
           onClick={(e) => e.stopPropagation()}

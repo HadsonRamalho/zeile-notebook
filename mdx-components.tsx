@@ -46,8 +46,8 @@ async function CodeBlock({ code, lang }: { code: string; lang: string }) {
     theme: "github-dark",
   }).catch(() => `<pre><code>${code}</code></pre>`);
 
-  // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki output is trusted, generated at build time
   return (
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki output is trusted, generated at build time
     <div className="not-prose" dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
