@@ -108,7 +108,7 @@ export function TsxEditor({
     document.body.appendChild(script);
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <loadBabel does not need to be in the dependency array>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: loadBabel só precisa reagir a babelReady/mode; a função é idempotente e não muda de identidade de forma relevante
   useEffect(() => {
     if (!babelReady && mode === "simple") {
       loadBabel();
