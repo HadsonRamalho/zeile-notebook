@@ -42,6 +42,8 @@ rust-server/.compilers
 .github/skills
 .github/hooks
 .codex
+.vscode
+.impeccable
 
 # artefatos de build commitados por engano em pastas de backup de métricas
 docs/metrics-backup/**/target
