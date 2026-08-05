@@ -163,11 +163,10 @@ export function getHeadings(markdown: string): TOCItemType[] {
   const slugger = new Slugger();
   const items: TOCItemType[] = [];
   const regex = /^(#{1,6})\s+(.+)$/gm;
-  let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(markdown)) !== null) {
-    const depth = match[1].length;
-    const title = match[2].trim();
+  for (const match of markdown.matchAll(regex)) {
+    const depth = match[1]?.length ?? 0;
+    const title = match[2]?.trim() ?? "";
     items.push({ title, url: `#${slugger.slug(title)}`, depth });
   }
 

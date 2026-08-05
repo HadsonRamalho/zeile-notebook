@@ -10,13 +10,13 @@ import { NotebooksCta } from "@/components/interface/home/notebooks-cta";
 import { VideoShowcase } from "@/components/interface/home/video-showcase";
 import { AppShell } from "@/components/layout/app-shell";
 import { RetroGrid } from "@/components/ui/retro-grid";
-import { baseOptions } from "@/lib/layout.shared";
+import { useBaseOptions } from "@/lib/layout.shared";
 
 export default function HomePage() {
   const t = useTranslations("homepage");
 
   return (
-    <AppShell nav={baseOptions({ variant: "home" }).nav?.component}>
+    <AppShell nav={useBaseOptions({ variant: "home" }).nav?.component}>
       <main className="relative overflow-hidden bg-background">
         <section className="relative flex min-h-[80vh] w-full flex-col items-center justify-center overflow-hidden px-6 py-24 text-center md:py-32">
           <div className="z-10 flex flex-col items-center justify-center gap-6 max-w-4xl">

@@ -2,7 +2,7 @@ import { NextIntlClientProvider, useMessages } from "next-intl";
 import { DocsLayout } from "@/components/layout/docs";
 import { GoToNotebooksButton } from "@/components/notebook/go-to-notebooks-button";
 import { getPageTree } from "@/lib/docs";
-import { baseOptions } from "@/lib/layout.shared";
+import { useBaseOptions } from "@/lib/layout.shared";
 
 export default function Layout({ children }: LayoutProps<"/[lang]/docs">) {
   const messages = useMessages();
@@ -21,7 +21,7 @@ export default function Layout({ children }: LayoutProps<"/[lang]/docs">) {
     <NextIntlClientProvider messages={messages}>
       <DocsLayout
         tree={filteredTree}
-        {...baseOptions({ variant: "docs" })}
+        {...useBaseOptions({ variant: "docs" })}
         sidebar={{
           banner: <GoToNotebooksButton className="mb-1" />,
         }}

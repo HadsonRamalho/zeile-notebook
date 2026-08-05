@@ -17,6 +17,7 @@ export function BaseNode({ className, ...props }: ComponentProps<"div">) {
         "in-[.selected]:shadow-lg",
         className,
       )}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: React Flow navega entre nós do diagrama por teclado quando o nó está focável
       tabIndex={0}
       {...props}
     />

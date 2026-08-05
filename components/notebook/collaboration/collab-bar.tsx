@@ -101,9 +101,8 @@ function splitMentions(text: string, names: string[]) {
   );
   const parts: { mention: boolean; value: string }[] = [];
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(text))) {
+  for (const match of text.matchAll(pattern)) {
     if (match.index > lastIndex) {
       parts.push({ mention: false, value: text.slice(lastIndex, match.index) });
     }
@@ -160,11 +159,11 @@ function HistoryPanel({
           Nenhuma alteração detectada.
         </p>
       ) : (
-        history.map((snap, index) => {
+        history.map((snap) => {
           const isSelected = previewDoc === snap.doc;
           return (
             <Button
-              key={index}
+              key={snap.timestamp.getTime()}
               onClick={() => setPreviewDoc(snap.doc)}
               className={`w-full justify-start rounded-xl border p-3 text-left text-sm transition-all ${
                 isSelected

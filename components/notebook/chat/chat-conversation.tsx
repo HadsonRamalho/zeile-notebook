@@ -114,8 +114,7 @@ function MessageBody({ text, names }: { text: string; names: string[] }) {
     );
     const out: { mention: boolean; value: string }[] = [];
     let last = 0;
-    let m: RegExpExecArray | null;
-    while ((m = pattern.exec(text))) {
+    for (const m of text.matchAll(pattern)) {
       if (m.index > last)
         out.push({ mention: false, value: text.slice(last, m.index) });
       out.push({ mention: true, value: m[0] });
@@ -363,7 +362,6 @@ export function ChatConversation({
                     setEditingId(null);
                   }
                 }}
-                // biome-ignore lint/a11y/noAutofocus: foco imediato ao editar
                 autoFocus
                 rows={1}
                 className="min-h-9 resize-none bg-background text-sm"

@@ -63,6 +63,7 @@ function NotebookCard({
 }) {
   const tags = notebook.tags ?? [];
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: HTML5 drag-and-drop nativo não tem equivalente de teclado na plataforma web
     <div
       className="group relative"
       draggable={canManage}
@@ -272,6 +273,7 @@ function DropZone({
   if (!canManage) return <div className={className}>{children}</div>;
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: zona de drop do drag-and-drop nativo HTML5, sem equivalente de teclado na plataforma
     <div
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(DRAG_MIME)) {

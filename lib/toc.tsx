@@ -54,7 +54,9 @@ export function AnchorProvider({
       { rootMargin: "-80px 0% -70% 0%" },
     );
 
-    elements.forEach((el) => observer.observe(el));
+    elements.forEach((el) => {
+      observer.observe(el);
+    });
     return () => observer.disconnect();
   }, [toc]);
 

@@ -444,6 +444,7 @@ export function LayoutsCanvasToolsShowcasePage() {
     <div className="relative h-svh w-full select-none overflow-hidden bg-foreground/[0.02] text-foreground">
       <DotGrid pan={pan} zoom={zoom} />
 
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: superfície de desenho/pan por ponteiro, não é um controle discreto operável por teclado */}
       <div
         ref={canvasRef}
         className={cn("absolute inset-0", cursorClass)}
@@ -627,6 +628,7 @@ function SelectionFrame({ shape, zoom }: { shape: Shape; zoom: number }) {
       />
       {handles.map((p, i) => (
         <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: posições fixas de handles de resize, recalculadas a cada render, sem identidade própria
           key={i}
           className="pointer-events-none absolute bg-blue-500"
           style={{
@@ -934,9 +936,18 @@ function Inspector({
             [...shapes].reverse().map((layer) => {
               const isActive = selectedId === layer.id;
               return (
+                // biome-ignore lint/a11y/useSemanticElements: não pode ser um button real, já contém um button aninhado para outra ação
                 <div
                   key={layer.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelect(layer.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(layer.id);
+                    }
+                  }}
                   className={cn(
                     "flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-[11px] transition-colors",
                     isActive

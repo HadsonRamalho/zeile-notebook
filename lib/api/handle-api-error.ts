@@ -3,10 +3,7 @@ import { ApiClientError } from "@/lib/api/base";
 
 interface HandleErrorOptions {
   err: unknown;
-  t: (
-    key: string,
-    values?: Record<string, string | number | Date>,
-  ) => string;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
   setError?: (msg: string) => void;
 }
 

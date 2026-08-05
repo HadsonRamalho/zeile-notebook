@@ -33,7 +33,7 @@ interface BaseOptionsProps {
   variant: "default" | "home" | "global" | "notebook" | "docs";
 }
 
-export function baseOptions({
+export function useBaseOptions({
   variant = "default",
 }: BaseOptionsProps): BaseLayoutProps {
   const messages = useMessages();

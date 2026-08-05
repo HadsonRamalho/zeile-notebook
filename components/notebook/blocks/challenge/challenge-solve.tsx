@@ -446,6 +446,7 @@ function SampleRunPanel({
           : t("samples_some_fail", { failed, total: results.length })}
       </p>
       {results.map((r, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: resultados de um único run de teste, ordem fixa e nunca reordenada/filtrada
         <div key={i} className="rounded-lg border border-border">
           <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

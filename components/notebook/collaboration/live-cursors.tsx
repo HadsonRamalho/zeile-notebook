@@ -56,6 +56,7 @@ function CursorIcon({ color }: { color: string }) {
       className="size-6 drop-shadow-md"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 40 40"
+      aria-hidden="true"
     >
       <path
         fill={color}

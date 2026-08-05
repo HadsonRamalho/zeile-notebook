@@ -591,7 +591,9 @@ export default function RustInteractivePage({
                       />
                     )}
 
+                    {/* biome-ignore lint/a11y/noStaticElementInteractions: navegação por teclado entre blocos via tabIndex, padrão de widget composto (roving tabindex) */}
                     <div
+                      // biome-ignore lint/a11y/noNoninteractiveTabindex: tabIndex é o mecanismo de foco do editor de blocos, não um controle isolado
                       tabIndex={0}
                       data-block-index={index}
                       data-block-id={block.id}

@@ -58,6 +58,7 @@ export function Marquee({
         .fill(0)
         .map((_, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: repetição estática do conteúdo para o efeito de marquee infinito, sem identidade própria
             key={i}
             className={cn("flex shrink-0 justify-around [gap:var(--gap)]", {
               "animate-marquee flex-row": !vertical,

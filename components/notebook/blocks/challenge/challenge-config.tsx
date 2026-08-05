@@ -55,6 +55,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: children é o controle real, injetado pelo caller
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium">{label}</span>
       {children}
@@ -426,10 +427,12 @@ export function ChallengeConfig({
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-5">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: Switch renderiza um input nativo internamente, biome não enxerga através do componente */}
             <label className="flex items-center gap-2 text-sm font-medium">
               <Switch checked={hidden} onCheckedChange={setHidden} />
               {t("test_hidden")}
             </label>
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: Input renderiza um input nativo internamente, biome não enxerga através do componente */}
             <label className="flex items-center gap-2 text-sm font-medium">
               {t("test_weight")}
               <Input

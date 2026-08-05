@@ -32,11 +32,11 @@ function SidebarNodeList({
 
   return (
     <ul className="flex flex-col gap-0.5">
-      {nodes.map((node, i) => {
+      {nodes.map((node) => {
         if (node.type === "page") {
           const active = isActive(node.url, pathname, false);
           return (
-            <li key={i}>
+            <li key={node.url}>
               <Link
                 href={node.url}
                 onClick={onNavigate}
@@ -52,7 +52,7 @@ function SidebarNodeList({
         }
 
         return (
-          <li key={i} className="mt-2 first:mt-0">
+          <li key={node.name} className="mt-2 first:mt-0">
             {node.index ? (
               <Link
                 href={node.index.type === "page" ? node.index.url : "#"}

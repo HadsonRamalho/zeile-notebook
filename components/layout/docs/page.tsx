@@ -15,7 +15,7 @@ export function PageBreadcrumb() {
   return (
     <div className="mb-4 flex items-center gap-1.5 text-sm text-fd-muted-foreground">
       {items.map((item, i) => (
-        <Fragment key={i}>
+        <Fragment key={item.type === "page" ? item.url : item.name}>
           {i !== 0 && <ChevronRight className="size-3.5 shrink-0" />}
           {item.type === "page" ? (
             <Link href={item.url} className="truncate hover:opacity-80">

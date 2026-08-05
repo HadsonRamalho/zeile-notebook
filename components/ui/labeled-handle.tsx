@@ -40,9 +40,9 @@ export function LabeledHandle({
         className={handleClassName}
         {...handleProps}
       />
-      <label className={cn("text-foreground px-3", labelClassName)}>
+      <span className={cn("text-foreground px-3", labelClassName)}>
         {title}
-      </label>
+      </span>
     </div>
   );
 }
