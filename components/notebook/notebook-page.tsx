@@ -217,12 +217,12 @@ export default function RustInteractivePage({
 
   const handlePreviewOlder = () => {
     if (!hasOlderPreview) return;
-    setPreviewDoc(automergeHistory[previewIndex + 1].doc);
+    setPreviewDoc(automergeHistory[previewIndex + 1]!.doc);
   };
 
   const handlePreviewNewer = () => {
     if (!hasNewerPreview) return;
-    setPreviewDoc(automergeHistory[previewIndex - 1].doc);
+    setPreviewDoc(automergeHistory[previewIndex - 1]!.doc);
   };
 
   const blocks = useMemo(() => {
@@ -307,7 +307,7 @@ export default function RustInteractivePage({
     hasAppliedPendingImport.current = true;
     if (!imported) return;
 
-    const firstBlock = blocks[0];
+    const firstBlock = blocks[0]!;
     const nextContent = firstBlock.content
       ? `${firstBlock.content}\n\n${imported}`
       : imported;
@@ -407,7 +407,9 @@ export default function RustInteractivePage({
     const target = index + direction;
     if (index < 0 || target < 0 || target >= blocks.length) return;
     const next = [...blocks];
-    [next[index], next[target]] = [next[target], next[index]];
+    const temp = next[index]!;
+    next[index] = next[target]!;
+    next[target] = temp;
     reorderBlocks(next);
     pingEdit();
   };
@@ -579,7 +581,7 @@ export default function RustInteractivePage({
                 );
                 const borderColor =
                   focusedUsers.length > 0
-                    ? focusedUsers[0].color
+                    ? focusedUsers[0]!.color
                     : "transparent";
 
                 return (

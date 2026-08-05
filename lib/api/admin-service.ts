@@ -63,7 +63,7 @@ export interface AdminNotifyPayload {
   targetId: string;
   title: string;
   body: string;
-  url?: string;
+  url?: string | undefined;
 }
 
 export async function adminNotify(payload: AdminNotifyPayload) {

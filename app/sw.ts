@@ -26,7 +26,7 @@ async function retryQueuedRequests() {
       const response = await fetch(req.url, {
         method: req.method,
         headers: req.headers,
-        body: req.body ?? undefined,
+        body: req.body ?? null,
       });
       if (response.ok) await removeQueuedRequest(req.id);
     } catch {}
@@ -85,7 +85,7 @@ const pushSelf = self as unknown as PushCapableScope;
 
   pushEvent.waitUntil(
     pushSelf.registration.showNotification(title, {
-      body: payload.body,
+      ...(payload.body !== undefined ? { body: payload.body } : {}),
       icon: "/icon-128.png",
       badge: "/icon-128.png",
       data: { url: payload.url ?? "/" },
@@ -126,7 +126,7 @@ const offlineFallbackPlugin: SerwistPlugin = {
 };
 
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: self.__SW_MANIFEST ?? [],
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,

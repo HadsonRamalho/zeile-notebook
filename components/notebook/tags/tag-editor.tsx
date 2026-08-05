@@ -147,7 +147,7 @@ export function TagEditor({
               e.preventDefault();
               commitInput();
             } else if (e.key === "Backspace" && !input && draft.length > 0) {
-              removeTag(draft[draft.length - 1]);
+              removeTag(draft[draft.length - 1]!);
             }
           }}
           placeholder={full ? "Limite atingido" : "Adicionar tag e Enter"}

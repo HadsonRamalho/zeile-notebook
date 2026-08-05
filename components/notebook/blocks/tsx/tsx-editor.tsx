@@ -147,7 +147,7 @@ export function TsxEditor({
       />
       <SandpackProvider
         key={mode}
-        theme={theme === "dark" ? "dark" : undefined}
+        {...(theme === "dark" ? { theme: "dark" as const } : {})}
         template="react-ts"
         files={editorFiles}
         options={editorOptions}

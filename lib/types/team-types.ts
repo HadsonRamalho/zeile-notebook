@@ -4,14 +4,14 @@ import type { getTeamFormSchema } from "../schemas/team-schemas";
 export interface Team {
   id: string;
   name: string;
-  description?: string;
+  description?: string | undefined;
   imageUrl?: string;
   createdAt: string;
 }
 
 export interface NewTeam {
   name: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 export interface TeamRole {
@@ -75,7 +75,7 @@ export interface NewTeamRoleRequest {
 
 export interface UpdateTeam {
   name?: string;
-  description?: string;
+  description?: string | undefined;
   imageUrl?: string;
 }
 

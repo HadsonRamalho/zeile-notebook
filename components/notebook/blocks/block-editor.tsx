@@ -28,7 +28,7 @@ interface BlockEditorProps {
   language?: Language;
   onBlur: () => void;
   onChange: (val: string) => void;
-  onRun?: () => void;
+  onRun?: (() => void) | undefined;
   onCreateEditor?: (view: EditorView) => void;
   readOnly?: boolean;
   className?: string;
@@ -205,7 +205,7 @@ export const BlockEditor = React.memo(
         onBlur={onBlur}
         autoFocus={!isTouchDevice}
         onChange={handleChange}
-        onCreateEditor={onCreateEditor}
+        {...(onCreateEditor ? { onCreateEditor } : {})}
         editable={!readOnly}
         basicSetup={basicSetup}
         className={`text-sm w-full border border-border rounded-md overflow-hidden ${className}`}

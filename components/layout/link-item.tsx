@@ -111,7 +111,7 @@ export function LinkItem({
       href={item.url}
       target={item.external ? "_blank" : undefined}
       rel={item.external ? "noreferrer" : undefined}
-      {...props}
+      {...(props as Omit<ComponentProps<typeof Link>, "href">)}
       data-active={active}
     >
       {props.children}

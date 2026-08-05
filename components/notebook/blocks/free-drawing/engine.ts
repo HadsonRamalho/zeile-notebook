@@ -598,7 +598,10 @@ function calligraphyHitPath(stroke: StrokeElement): Path2D {
       [hw, -hh],
       [hw, hh],
       [-hw, hh],
-    ].map(([lx, ly]) => [q.x + lx * cos - ly * sin, q.y + lx * sin + ly * cos]);
+    ].map(([lx = 0, ly = 0]) => [
+      q.x + lx * cos - ly * sin,
+      q.y + lx * sin + ly * cos,
+    ]);
     path.moveTo(corners[0]![0], corners[0]![1]);
     for (const c of corners.slice(1)) path.lineTo(c[0], c[1]);
     path.closePath();

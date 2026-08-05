@@ -9,7 +9,7 @@ interface RunCodeProps {
   setIsRunning: (r: boolean) => void;
   code: string;
   language: Language;
-  notebookId?: string;
+  notebookId?: string | undefined;
 }
 
 type ExecStatus =

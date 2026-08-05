@@ -139,10 +139,12 @@ function PageRow({
   icon: React.ReactNode;
   active: boolean;
   expanded: boolean;
-  teamId?: string;
-  deleteTeamPage?: (teamId: string, pageId: string) => Promise<void>;
-  onDeleteTeamPage?: (teamId: string) => void;
-  onNavigate?: () => void;
+  teamId?: string | undefined;
+  deleteTeamPage?:
+    | ((teamId: string, pageId: string) => Promise<void>)
+    | undefined;
+  onDeleteTeamPage?: ((teamId: string) => void) | undefined;
+  onNavigate?: (() => void) | undefined;
 }) {
   const title = page.title || "Sem título";
 
@@ -168,7 +170,7 @@ function PageRow({
     >
       <Link
         href={`/notebook/${page.id}`}
-        onClick={onNavigate}
+        {...(onNavigate ? { onClick: onNavigate } : {})}
         className={cn(
           "flex h-10 min-w-0 flex-1 items-center gap-2.5 truncate rounded-lg px-2.5 text-sm transition-colors",
           active
@@ -208,10 +210,12 @@ function FolderSubgroup({
   collapsed: boolean;
   onToggle: () => void;
   pathname: string;
-  onNavigate?: () => void;
-  teamId?: string;
-  deleteTeamPage?: (teamId: string, pageId: string) => Promise<void>;
-  onDeleteTeamPage?: (teamId: string) => void;
+  onNavigate?: (() => void) | undefined;
+  teamId?: string | undefined;
+  deleteTeamPage?:
+    | ((teamId: string, pageId: string) => Promise<void>)
+    | undefined;
+  onDeleteTeamPage?: ((teamId: string) => void) | undefined;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -347,7 +351,7 @@ export function NotebookRail() {
         <Link
           href="/notebook"
           aria-label="Zeile"
-          onClick={onNavigate}
+          {...(onNavigate ? { onClick: onNavigate } : {})}
           className="flex items-center gap-2"
         >
           <Image src="/logo.png" alt="" width={26} height={26} />

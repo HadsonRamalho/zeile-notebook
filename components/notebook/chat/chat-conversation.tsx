@@ -501,21 +501,16 @@ export function ChatConversation({
                             <AnimatePresence initial={false}>
                               {isOpen && (
                                 <motion.div
-                                  initial={
-                                    reduceMotion
-                                      ? undefined
-                                      : { height: 0, opacity: 0 }
-                                  }
-                                  animate={
-                                    reduceMotion
-                                      ? undefined
-                                      : { height: "auto", opacity: 1 }
-                                  }
-                                  exit={
-                                    reduceMotion
-                                      ? undefined
-                                      : { height: 0, opacity: 0 }
-                                  }
+                                  {...(reduceMotion
+                                    ? {}
+                                    : {
+                                        initial: { height: 0, opacity: 0 },
+                                        animate: {
+                                          height: "auto",
+                                          opacity: 1,
+                                        },
+                                        exit: { height: 0, opacity: 0 },
+                                      })}
                                   transition={{
                                     duration: 0.2,
                                     ease: [0.22, 1, 0.36, 1],

@@ -12,8 +12,8 @@ export function SandpackManager({
   const { files, activeFile } = sandpack;
 
   useEffect(() => {
-    const currentCode = files[activeFile].code;
-    if (currentCode !== code) {
+    const currentCode = files[activeFile]?.code;
+    if (currentCode !== undefined && currentCode !== code) {
       onChange(currentCode);
     }
   }, [files, activeFile, onChange, code]);

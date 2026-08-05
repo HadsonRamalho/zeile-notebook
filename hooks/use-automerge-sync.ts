@@ -186,7 +186,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
       const blockIndex = d.blocks.findIndex((b) => b.id === blockId);
       if (blockIndex === -1) return;
 
-      const block = d.blocks[blockIndex];
+      const block = d.blocks[blockIndex]!;
       const currentContent = block.content;
 
       if (currentContent === newContent) return;

@@ -64,11 +64,11 @@ export function VideoShowcase() {
 
         <div className="flex w-full flex-col md:flex-row bg-black">
           <div className="relative w-full md:w-1/2 border-b md:border-b-0 md:border-r border-white/10">
-            <DemoPane id={DEMOS[0].id} title={DEMOS[0].title} />
+            <DemoPane id={DEMOS[0]!.id} title={DEMOS[0]!.title} />
           </div>
 
           <div className="relative w-full md:w-1/2">
-            <DemoPane id={DEMOS[1].id} title={DEMOS[1].title} />
+            <DemoPane id={DEMOS[1]!.id} title={DEMOS[1]!.title} />
           </div>
         </div>
       </div>

@@ -82,10 +82,10 @@ export function ChallengeSolve({
   onPersist,
 }: {
   detail: ChallengeDetail;
-  currentUserId?: string | null;
+  currentUserId?: string | null | undefined;
   canReview?: boolean;
   initialContent?: string;
-  onPersist?: (content: string) => void;
+  onPersist?: ((content: string) => void) | undefined;
 }) {
   const t = useTranslations("challenges");
   const challenge = detail.challenge;

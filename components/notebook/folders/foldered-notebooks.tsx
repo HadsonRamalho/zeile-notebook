@@ -58,7 +58,7 @@ function NotebookCard({
   folders: Folder[];
   canManage: boolean;
   onMove: (folderId: string | null) => void;
-  onSetTags?: (tags: string[]) => Promise<void> | void;
+  onSetTags?: ((tags: string[]) => Promise<void> | void) | undefined;
   onDragState?: (dragging: boolean) => void;
 }) {
   const tags = notebook.tags ?? [];
@@ -159,7 +159,7 @@ function FolderHeader({
   canManage: boolean;
   onRename: (name: string) => void;
   onDelete: () => void;
-  onSetTags?: (tags: string[]) => Promise<void> | void;
+  onSetTags?: ((tags: string[]) => Promise<void> | void) | undefined;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);

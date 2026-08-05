@@ -50,7 +50,7 @@ interface Shape {
   opacity: number;
   visible: boolean;
   locked: boolean;
-  text?: string;
+  text?: string | undefined;
   name: string;
 }
 

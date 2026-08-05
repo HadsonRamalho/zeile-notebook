@@ -18,9 +18,11 @@ import { useNotebookManager } from "./notebook/notebook-manager";
 interface DeletePageDialogProps {
   pageId: string;
   pageTitle: string;
-  teamId?: string;
-  deleteTeamPage?: (teamId: string, pageId: string) => Promise<void>;
-  onDeleteTeamPage?: (teamId: string) => void;
+  teamId?: string | undefined;
+  deleteTeamPage?:
+    | ((teamId: string, pageId: string) => Promise<void>)
+    | undefined;
+  onDeleteTeamPage?: ((teamId: string) => void) | undefined;
 }
 
 export function DeletePageDialog({

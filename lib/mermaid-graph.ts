@@ -43,7 +43,7 @@ const CONNECTOR_LABEL = /^\s*--\s+([^->|]+?)\s+-->\s*/;
 function parseNodeToken(token: string): NodeToken | null {
   const match = token.trim().match(NODE_AT_START);
   if (!match) return null;
-  const id = match[1];
+  const id = match[1]!;
   const wrapped = match[2];
   if (!wrapped) return { id };
   if (wrapped.startsWith("((")) {
@@ -105,7 +105,7 @@ export function mermaidToGraph(text: string): MermaidGraph {
   for (const line of lines) {
     const dir = line.match(/^(?:graph|flowchart)\s+(TB|TD|LR|RL|BT)\b/i);
     if (dir) {
-      const value = dir[1].toUpperCase();
+      const value = dir[1]!.toUpperCase();
       direction = value === "LR" || value === "RL" ? "LR" : "TD";
       continue;
     }
@@ -122,7 +122,7 @@ export function mermaidToGraph(text: string): MermaidGraph {
       let label: string | undefined;
       const labelled = CONNECTOR_LABEL.exec(rest);
       if (labelled) {
-        label = labelled[1].trim();
+        label = labelled[1]!.trim();
         rest = rest.slice(labelled[0].length);
       } else {
         const conn = CONNECTOR.exec(rest);
@@ -135,7 +135,11 @@ export function mermaidToGraph(text: string): MermaidGraph {
       const target = remember(nextMatch[0]);
       rest = rest.slice(nextMatch[0].length);
       if (prev && target) {
-        rawEdges.push({ source: prev, target, label });
+        rawEdges.push(
+          label !== undefined
+            ? { source: prev, target, label }
+            : { source: prev, target },
+        );
       }
       prev = target;
     }

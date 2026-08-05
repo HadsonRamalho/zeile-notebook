@@ -32,7 +32,7 @@ interface BlockEditorProps {
   language?: Language;
   onBlur: () => void;
   onChange: (val: string) => void;
-  onLanguageChange?: (lang: Language) => void;
+  onLanguageChange?: ((lang: Language) => void) | undefined;
   readOnly?: boolean;
   className?: string;
   minHeight?: string;

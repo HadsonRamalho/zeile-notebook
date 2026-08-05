@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 export interface PickerItem {
   id: string;
   primary: string;
-  secondary?: string;
-  badge?: string;
+  secondary?: string | undefined;
+  badge?: string | undefined;
   avatarUrl?: string | null;
   showAvatar?: boolean;
   disabled?: boolean;
@@ -20,7 +20,7 @@ export interface PickerItem {
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    return `${parts[0]![0]}${parts[parts.length - 1]![0]}`.toUpperCase();
   }
   return name.slice(0, 2).toUpperCase();
 }

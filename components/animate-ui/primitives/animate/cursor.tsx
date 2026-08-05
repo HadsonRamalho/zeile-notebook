@@ -28,7 +28,7 @@ const [LocalCursorProvider, useCursor] =
 
 type CursorProviderProps = {
   children: React.ReactNode;
-  global?: boolean;
+  global?: boolean | undefined;
 };
 
 function CursorProvider({ children, global = false }: CursorProviderProps) {
