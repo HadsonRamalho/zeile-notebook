@@ -35,3 +35,13 @@ next-env.d.ts
 rust-server/logs
 rust-server/files
 rust-server/.compilers
+
+# vendored agent/skill tooling — instalado localmente, não é código do produto
+.agents/skills
+.claude/skills
+.github/skills
+.github/hooks
+.codex
+
+# artefatos de build commitados por engano em pastas de backup de métricas
+docs/metrics-backup/**/target
