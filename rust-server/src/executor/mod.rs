@@ -209,19 +209,18 @@ pub async fn compile_rust_with_warnings(
 
     for line in stdout_str.lines() {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
-            if let Some(message) = val.get("message") {
-                if let Some(rendered) = message.get("rendered").and_then(|r| r.as_str()) {
-                    formatted_errors.push_str(rendered);
-                    formatted_errors.push('\n');
-                }
+            if let Some(message) = val.get("message")
+                && let Some(rendered) = message.get("rendered").and_then(|r| r.as_str())
+            {
+                formatted_errors.push_str(rendered);
+                formatted_errors.push('\n');
             }
-            if val.get("reason").and_then(|r| r.as_str()) == Some("compiler-artifact") {
-                if let Some(executable) = val.get("executable").and_then(|v| v.as_str()) {
-                    if let Some(name) = Path::new(executable).file_name() {
-                        let real_path = project_path.join("target/wasm32-wasip1/debug").join(name);
-                        exe_path = Some(real_path.to_string_lossy().to_string());
-                    }
-                }
+            if val.get("reason").and_then(|r| r.as_str()) == Some("compiler-artifact")
+                && let Some(executable) = val.get("executable").and_then(|v| v.as_str())
+                && let Some(name) = Path::new(executable).file_name()
+            {
+                let real_path = project_path.join("target/wasm32-wasip1/debug").join(name);
+                exe_path = Some(real_path.to_string_lossy().to_string());
             }
         }
     }
@@ -252,7 +251,7 @@ async fn compile_go(code: &str, safe_session: &str) -> Result<String, String> {
 
     let bin_name = format!("app_{}", safe_session);
     let user_dir = format!("files/go/{}", safe_session);
-    let _ = tokio::fs::create_dir_all(&user_dir).await;
+    tokio::fs::create_dir_all(&user_dir).await.ok();
 
     let file_path = Path::new(&user_dir).join("main.go");
     let bin_path = Path::new(&user_dir).join(&bin_name);
@@ -291,7 +290,7 @@ async fn compile_cpp(code: &str, safe_session: &str) -> Result<String, String> {
 
     let bin_name = format!("app_{}", safe_session);
     let user_dir = format!("files/cpp/{}", safe_session);
-    let _ = tokio::fs::create_dir_all(&user_dir).await;
+    tokio::fs::create_dir_all(&user_dir).await.ok();
 
     let file_path = Path::new(&user_dir).join("main.cpp");
     let bin_path = Path::new(&user_dir).join(&bin_name);
@@ -357,7 +356,7 @@ async fn compile_zig(code: &str, safe_session: &str) -> Result<String, String> {
 
     let bin_name = format!("app_{}", safe_session);
     let user_dir = format!("files/zig/{}", safe_session);
-    let _ = tokio::fs::create_dir_all(&user_dir).await;
+    tokio::fs::create_dir_all(&user_dir).await.ok();
 
     let file_path = Path::new(&user_dir).join("main.zig");
     let bin_path = Path::new(&user_dir).join(&bin_name);
@@ -460,7 +459,7 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
     impl Drop for Session {
         fn drop(&mut self) {
             for language in ["go", "cpp", "zig"] {
-                let _ = std::fs::remove_dir_all(self.dir(language));
+                std::fs::remove_dir_all(self.dir(language)).ok();
             }
         }
     }
@@ -506,8 +505,8 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
         let outside = test_envelope("touch", &["/usr/breach"]).await;
         assert!(!outside.status.success(), "/usr should be read-only");
 
-        let _ = std::fs::remove_file("files/test_envelope/allowed");
-        let _ = std::fs::remove_dir_all("files/test_envelope");
+        std::fs::remove_file("files/test_envelope/allowed").ok();
+        std::fs::remove_dir_all("files/test_envelope").ok();
     }
 
     #[tokio::test]
@@ -571,7 +570,7 @@ int main() { std::cout << "hello from the sandbox" << std::endl; }
         )
         .await;
 
-        let _ = std::fs::remove_dir_all(format!("files/{session}"));
+        std::fs::remove_dir_all(format!("files/{session}")).ok();
 
         assert!(bin.is_ok(), "rust should compile: {bin:?}");
     }

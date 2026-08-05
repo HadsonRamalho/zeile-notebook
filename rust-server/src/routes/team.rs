@@ -27,7 +27,7 @@ use crate::{
 };
 
 pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
-    let routes = OpenApiRouter::new()
+    OpenApiRouter::new()
         .route(
             "/{id}/chat/messages",
             get(api_list_team_messages).post(api_send_team_message),
@@ -80,7 +80,5 @@ pub async fn team_routes() -> OpenApiRouter<Arc<AppState>> {
             )),
         )
         .route("/", post(api_create_team))
-        .route("/", get(api_get_user_teams));
-
-    routes
+        .route("/", get(api_get_user_teams))
 }

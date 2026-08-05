@@ -88,8 +88,8 @@ impl<'ast> Visit<'ast> for PathChecker<'_> {
 
         if let Some(resolved) = resolve_path(node, self.aliases) {
             for forbidden in FORBIDDEN_ROOTS {
-                let matches = resolved == *forbidden
-                    || resolved.starts_with(&format!("{forbidden}::"));
+                let matches =
+                    resolved == *forbidden || resolved.starts_with(&format!("{forbidden}::"));
 
                 if matches {
                     self.error = Some(format!(
@@ -183,8 +183,7 @@ mod tests {
 
     #[test]
     fn an_aliased_use_of_a_forbidden_module_is_caught() {
-        let code =
-            "use std::fs as f;\nfn main() { f::write(\"x\", \"y\").unwrap(); }\n";
+        let code = "use std::fs as f;\nfn main() { f::write(\"x\", \"y\").unwrap(); }\n";
 
         assert!(
             verify_rust_ast(code).is_err(),
@@ -225,7 +224,8 @@ mod tests {
 
     #[test]
     fn a_chained_alias_is_caught() {
-        let code = "use std as s;\nuse s::fs as f;\nfn main() { f::write(\"x\", \"y\").unwrap(); }\n";
+        let code =
+            "use std as s;\nuse s::fs as f;\nfn main() { f::write(\"x\", \"y\").unwrap(); }\n";
 
         assert!(
             verify_rust_ast(code).is_err(),

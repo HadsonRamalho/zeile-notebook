@@ -681,7 +681,7 @@ pub async fn clone_notebook(
         for block in db_blocks {
             let mut block = block;
             block.id = Uuid::new_v4();
-            block.notebook_id = new_notebook_id.clone();
+            block.notebook_id = *new_notebook_id;
 
             new_db_blocks.push(block);
         }

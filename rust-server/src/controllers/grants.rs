@@ -37,9 +37,9 @@ fn to_catalog_target(kind: GrantTargetKind) -> TargetKind {
 }
 
 fn validate_grant(req: &CreateGrantRequest) -> Result<(), ApiError> {
-    let permission = catalog()
-        .get(&req.permission_key)
-        .ok_or_else(|| ApiError::Request(format!("Permissão desconhecida: {}", req.permission_key)))?;
+    let permission = catalog().get(&req.permission_key).ok_or_else(|| {
+        ApiError::Request(format!("Permissão desconhecida: {}", req.permission_key))
+    })?;
 
     let target = to_catalog_target(req.target_kind);
     let broad = matches!(target, TargetKind::Team | TargetKind::Global);
@@ -88,11 +88,7 @@ fn validate_grant(req: &CreateGrantRequest) -> Result<(), ApiError> {
     Ok(())
 }
 
-async fn role_belongs_to_team(
-    conn: &mut AsyncPgConnection,
-    role_id: Uuid,
-    team_id: Uuid,
-) -> bool {
+async fn role_belongs_to_team(conn: &mut AsyncPgConnection, role_id: Uuid, team_id: Uuid) -> bool {
     team_roles::table
         .filter(team_roles::id.eq(role_id))
         .filter(team_roles::team_id.eq(team_id))
@@ -131,7 +127,8 @@ async fn is_self_subject(
     match subject_kind {
         GrantSubjectKind::User => subject_id == Some(caller_id),
         GrantSubjectKind::Role => {
-            subject_id.is_some() && caller_role_in_team(conn, team_id, caller_id).await == subject_id
+            subject_id.is_some()
+                && caller_role_in_team(conn, team_id, caller_id).await == subject_id
         }
         GrantSubjectKind::Principal => false,
     }
@@ -302,9 +299,9 @@ pub async fn api_create_public_grant(
 
     require_notebook_owner(conn, notebook_id, user_id).await?;
 
-    let permission = catalog()
-        .get(&req.permission_key)
-        .ok_or_else(|| ApiError::Request(format!("Permissão desconhecida: {}", req.permission_key)))?;
+    let permission = catalog().get(&req.permission_key).ok_or_else(|| {
+        ApiError::Request(format!("Permissão desconhecida: {}", req.permission_key))
+    })?;
 
     if permission.tier != Tier::General {
         return Err(ApiError::Request(
@@ -402,7 +399,15 @@ mod tests {
 
     #[test]
     fn rejects_unknown_permission_key() {
-        assert!(validate_grant(&req("notebook.telepathy", GrantTargetKind::Team, None, None)).is_err());
+        assert!(
+            validate_grant(&req(
+                "notebook.telepathy",
+                GrantTargetKind::Team,
+                None,
+                None
+            ))
+            .is_err()
+        );
     }
 
     #[test]
@@ -421,8 +426,13 @@ mod tests {
     #[test]
     fn rejects_invalid_target_for_permission() {
         assert!(
-            validate_grant(&req("team.manage", GrantTargetKind::Block, Some(Uuid::nil()), None))
-                .is_err()
+            validate_grant(&req(
+                "team.manage",
+                GrantTargetKind::Block,
+                Some(Uuid::nil()),
+                None
+            ))
+            .is_err()
         );
     }
 

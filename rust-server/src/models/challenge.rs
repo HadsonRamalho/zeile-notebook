@@ -433,10 +433,9 @@ pub fn reference_map(challenge: &Challenge) -> serde_json::Map<String, Value> {
             let mut m = serde_json::Map::new();
             if let (Some(lang), Some(code)) =
                 (&challenge.reference_language, &challenge.reference_solution)
+                && !code.trim().is_empty()
             {
-                if !code.trim().is_empty() {
-                    m.insert(lang.clone(), Value::String(code.clone()));
-                }
+                m.insert(lang.clone(), Value::String(code.clone()));
             }
             m
         }
@@ -446,10 +445,10 @@ pub fn reference_map(challenge: &Challenge) -> serde_json::Map<String, Value> {
 pub fn pick_reference(challenge: &Challenge) -> Option<(String, String)> {
     let map = reference_map(challenge);
     for lang in ["rust", "go", "cpp", "zig"] {
-        if let Some(Value::String(code)) = map.get(lang) {
-            if !code.trim().is_empty() {
-                return Some((lang.to_string(), code.clone()));
-            }
+        if let Some(Value::String(code)) = map.get(lang)
+            && !code.trim().is_empty()
+        {
+            return Some((lang.to_string(), code.clone()));
         }
     }
     map.into_iter().find_map(|(lang, v)| match v {

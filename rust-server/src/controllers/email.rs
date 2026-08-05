@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub async fn send_email(transport: &SmtpTransport, email: &Message) -> Result<(), ApiError> {
-    match transport.send(&email) {
+    match transport.send(email) {
         Ok(_) => Ok(()),
         Err(_) => Err(ApiError::InvalidData),
     }

@@ -99,7 +99,9 @@ pub async fn send_push_to_user(
         if let Err(WebPushError::EndpointNotValid(_)) | Err(WebPushError::EndpointNotFound(_)) =
             result
         {
-            let _ = delete_push_subscription(&mut conn, &subscription.endpoint).await;
+            delete_push_subscription(&mut conn, &subscription.endpoint)
+                .await
+                .ok();
         } else if let Err(e) = result {
             tracing::warn!("Falha ao enviar push: {:?}", e);
         }

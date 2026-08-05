@@ -95,7 +95,8 @@ async fn unlinking_without_a_session_is_not_allowed() {
 
 #[tokio::test]
 async fn callback_without_a_valid_state_does_not_exchange_the_code() {
-    let (status, location) = destination("/api/user/auth/callback/google?code=x&state=forged").await;
+    let (status, location) =
+        destination("/api/user/auth/callback/google?code=x&state=forged").await;
 
     assert_eq!(status, StatusCode::SEE_OTHER);
     assert!(

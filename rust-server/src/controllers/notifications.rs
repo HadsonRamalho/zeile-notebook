@@ -13,8 +13,8 @@ use crate::{
     models::{
         error::ApiError,
         notification::{
-            self, NewNotification, Notification, create_notification, list_for_user,
-            mark_all_read, mark_read, unread_count,
+            self, NewNotification, Notification, create_notification, list_for_user, mark_all_read,
+            mark_read, unread_count,
         },
         notification_preference::{
             NotificationPreference, list_for_user as list_prefs, upsert_preference,
@@ -33,11 +33,7 @@ pub struct NotificationInput {
     pub team_id: Option<Uuid>,
 }
 
-pub async fn deliver_notification(
-    state: &Arc<AppState>,
-    user_id: Uuid,
-    input: &NotificationInput,
-) {
+pub async fn deliver_notification(state: &Arc<AppState>, user_id: Uuid, input: &NotificationInput) {
     let (scope_kind, scope_id) = if let Some(nb) = input.notebook_id {
         ("notebook", Some(nb))
     } else if let Some(team) = input.team_id {
@@ -69,7 +65,7 @@ pub async fn deliver_notification(
                 notebook_id: input.notebook_id,
                 team_id: input.team_id,
             };
-            let _ = create_notification(&mut conn, &row).await;
+            create_notification(&mut conn, &row).await.ok();
         }
 
         if !prefs.push {

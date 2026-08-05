@@ -77,6 +77,12 @@ pub struct PresenceRoom {
     pub gone: std::sync::Mutex<Vec<Uuid>>,
 }
 
+impl Default for PresenceRoom {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PresenceRoom {
     pub fn new() -> Self {
         Self {

@@ -143,7 +143,7 @@ async fn handle_socket(
         Ok(caps) => caps,
         Err(_) => {
             METRICS.ws_sync_connection_errors_total.inc();
-            let _ = socket.close().await;
+            socket.close().await.ok();
             return;
         }
     };
@@ -154,7 +154,7 @@ async fn handle_socket(
             notebook_id
         );
         METRICS.ws_sync_connection_errors_total.inc();
-        let _ = socket.close().await;
+        socket.close().await.ok();
         return;
     }
 
@@ -167,7 +167,7 @@ async fn handle_socket(
             Err(e) => {
                 tracing::error!("Pool unavailable while opening notebook {notebook_id}: {e}");
                 METRICS.ws_sync_connection_errors_total.inc();
-                let _ = socket.close().await;
+                socket.close().await.ok();
                 return;
             }
         };
@@ -216,7 +216,7 @@ async fn handle_socket(
                     None => break,
                 },
                 _ = shutdown_send.wait() => {
-                    let _ = sender.send(Message::Close(Some(shutdown_close_frame()))).await;
+                    sender.send(Message::Close(Some(shutdown_close_frame()))).await.ok();
                     break;
                 }
             }
@@ -433,12 +433,12 @@ async fn broadcast_pass(notebook: &Arc<ActiveNotebook>) -> (bool, bool) {
         let pid = *entry.key();
         match entry.value().tx.try_reserve() {
             Ok(permit) => {
-                if let Some(state) = peer_states.get_mut(&pid) {
-                    if let Some(msg) = doc.sync().generate_sync_message(state) {
-                        permit.send(msg.encode());
-                        generated += 1;
-                        progressed = true;
-                    }
+                if let Some(state) = peer_states.get_mut(&pid)
+                    && let Some(msg) = doc.sync().generate_sync_message(state)
+                {
+                    permit.send(msg.encode());
+                    generated += 1;
+                    progressed = true;
                 }
             }
             // full or closed channel: skip without mutating the peer's state
@@ -480,14 +480,14 @@ async fn handle_presence_socket(
         Ok(caps) => caps,
         Err(_) => {
             METRICS.ws_presence_connection_errors_total.inc();
-            let _ = socket.close().await;
+            socket.close().await.ok();
             return;
         }
     };
 
     if !permissions.can("notebook.view", &TargetCtx::default()) {
         METRICS.ws_presence_connection_errors_total.inc();
-        let _ = socket.close().await;
+        socket.close().await.ok();
         return;
     }
 
@@ -500,10 +500,13 @@ async fn handle_presence_socket(
 
     let (tx, mut rx) = mpsc::channel::<String>(PRESENCE_CHANNEL_CAP);
 
-    let _ = tx.try_send(serde_json::to_string(&WsServerMessage::Init {
+    tx.try_send(
+        serde_json::to_string(&WsServerMessage::Init {
             user_id: session_id,
         })
-        .expect("WsServerMessage::Init always serializes"));
+        .expect("WsServerMessage::Init always serializes"),
+    )
+    .ok();
 
     let registry = state.presence_registry.clone();
 
@@ -548,7 +551,7 @@ async fn handle_presence_socket(
                     None => break,
                 },
                 _ = shutdown_send.wait() => {
-                    let _ = sender.send(Message::Close(Some(shutdown_close_frame()))).await;
+                    sender.send(Message::Close(Some(shutdown_close_frame()))).await.ok();
                     break;
                 }
             }
@@ -598,29 +601,28 @@ async fn handle_presence_socket(
                         if !m.value().can_view_chat {
                             continue;
                         }
-                        let _ = m.value().tx.try_send(text.to_string());
+                        m.value().tx.try_send(text.to_string()).ok();
 
                         if let (Some(sender_name), Some(chat_text)) = (sender_name, chat_text) {
                             let mentioned_name = m.value().name.lock().unwrap().clone();
                             if let (Some(mentioned_user_id), Some(mentioned_name)) =
                                 (m.value().user_id, mentioned_name)
+                                && mentions_name(chat_text, &mentioned_name)
                             {
-                                if mentions_name(chat_text, &mentioned_name) {
-                                    let state_for_push = state_for_recv.clone();
-                                    let title = format!("{} mencionou você no chat", sender_name);
-                                    let body = chat_text.to_string();
-                                    let url = format!("/notebook/{}", notebook_id);
-                                    tokio::spawn(async move {
-                                        crate::controllers::push::send_push_to_user(
-                                            &state_for_push,
-                                            mentioned_user_id,
-                                            &title,
-                                            &body,
-                                            &url,
-                                        )
-                                        .await;
-                                    });
-                                }
+                                let state_for_push = state_for_recv.clone();
+                                let title = format!("{} mencionou você no chat", sender_name);
+                                let body = chat_text.to_string();
+                                let url = format!("/notebook/{}", notebook_id);
+                                tokio::spawn(async move {
+                                    crate::controllers::push::send_push_to_user(
+                                        &state_for_push,
+                                        mentioned_user_id,
+                                        &title,
+                                        &body,
+                                        &url,
+                                    )
+                                    .await;
+                                });
                             }
                         }
                     }
@@ -654,10 +656,10 @@ async fn presence_flush_loop(
 
         let mut updates: Vec<serde_json::Value> = Vec::new();
         for m in room.subscribers.iter() {
-            if m.value().changed.swap(false, Ordering::AcqRel) {
-                if let Some(v) = m.value().latest.lock().unwrap().clone() {
-                    updates.push(v);
-                }
+            if m.value().changed.swap(false, Ordering::AcqRel)
+                && let Some(v) = m.value().latest.lock().unwrap().clone()
+            {
+                updates.push(v);
             }
         }
         let gone: Vec<Uuid> = std::mem::take(&mut *room.gone.lock().unwrap());
@@ -681,7 +683,7 @@ async fn presence_flush_loop(
         .expect("WsServerMessage::PresenceBatch always serializes");
 
         for m in room.subscribers.iter() {
-            let _ = m.value().tx.try_send(batch.clone());
+            m.value().tx.try_send(batch.clone()).ok();
         }
     }
 }
@@ -709,7 +711,7 @@ pub fn broadcast_comment_event(state: &Arc<AppState>, notebook_id: Uuid, payload
         return;
     };
     for m in room.subscribers.iter() {
-        let _ = m.value().tx.try_send(payload.clone());
+        m.value().tx.try_send(payload.clone()).ok();
     }
 }
 
@@ -756,7 +758,7 @@ pub fn broadcast_chat_and_notify(
         if !m.value().can_view_chat {
             continue;
         }
-        let _ = m.value().tx.try_send(payload.clone());
+        m.value().tx.try_send(payload.clone()).ok();
 
         if let (Some(content), Some(sender_name)) = (content, sender_name) {
             let mentioned_name = m.value().name.lock().unwrap().clone();
@@ -855,28 +857,27 @@ async fn handle_presence_text(
                 if !m.value().can_view_chat {
                     continue;
                 }
-                let _ = m.value().tx.try_send(text.to_string());
+                m.value().tx.try_send(text.to_string()).ok();
                 if let (Some(sender_name), Some(chat_text)) = (sender_name, chat_text) {
                     let mentioned_name = m.value().name.lock().unwrap().clone();
                     if let (Some(mentioned_user_id), Some(mentioned_name)) =
                         (m.value().user_id, mentioned_name)
+                        && mentions_name(chat_text, &mentioned_name)
                     {
-                        if mentions_name(chat_text, &mentioned_name) {
-                            let state_for_push = state.clone();
-                            let title = format!("{} mencionou você no chat", sender_name);
-                            let body = chat_text.to_string();
-                            let url = format!("/notebook/{}", notebook_id);
-                            tokio::spawn(async move {
-                                crate::controllers::push::send_push_to_user(
-                                    &state_for_push,
-                                    mentioned_user_id,
-                                    &title,
-                                    &body,
-                                    &url,
-                                )
-                                .await;
-                            });
-                        }
+                        let state_for_push = state.clone();
+                        let title = format!("{} mencionou você no chat", sender_name);
+                        let body = chat_text.to_string();
+                        let url = format!("/notebook/{}", notebook_id);
+                        tokio::spawn(async move {
+                            crate::controllers::push::send_push_to_user(
+                                &state_for_push,
+                                mentioned_user_id,
+                                &title,
+                                &body,
+                                &url,
+                            )
+                            .await;
+                        });
                     }
                 }
             }
@@ -913,13 +914,13 @@ async fn handle_combined_socket(
         Ok(caps) => caps,
         Err(_) => {
             METRICS.ws_sync_connection_errors_total.inc();
-            let _ = socket.close().await;
+            socket.close().await.ok();
             return;
         }
     };
     if !permissions.can("notebook.view", &TargetCtx::default()) {
         METRICS.ws_sync_connection_errors_total.inc();
-        let _ = socket.close().await;
+        socket.close().await.ok();
         return;
     }
 
@@ -930,7 +931,7 @@ async fn handle_combined_socket(
             Ok(c) => c,
             Err(_) => {
                 METRICS.ws_sync_connection_errors_total.inc();
-                let _ = socket.close().await;
+                socket.close().await.ok();
                 return;
             }
         };
@@ -979,12 +980,15 @@ async fn handle_combined_socket(
         changed: std::sync::atomic::AtomicBool::new(false),
         can_view_chat: permissions.can("chat.view", &TargetCtx::default()),
     });
-    let _ = member
+    member
         .tx
-        .try_send(serde_json::to_string(&WsServerMessage::Init {
-            user_id: session_id,
-        })
-        .expect("WsServerMessage::Init always serializes"));
+        .try_send(
+            serde_json::to_string(&WsServerMessage::Init {
+                user_id: session_id,
+            })
+            .expect("WsServerMessage::Init always serializes"),
+        )
+        .ok();
     let room = join_presence_room(
         &state.presence_registry,
         notebook_id,
@@ -1009,7 +1013,7 @@ async fn handle_combined_socket(
                     None => break,
                 },
                 _ = shutdown_send.wait() => {
-                    let _ = sender.send(Message::Close(Some(shutdown_close_frame()))).await;
+                    sender.send(Message::Close(Some(shutdown_close_frame()))).await.ok();
                     break;
                 }
             }

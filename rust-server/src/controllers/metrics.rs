@@ -15,6 +15,12 @@ use crate::models::state::AppState;
 
 pub struct Counter(AtomicU64);
 
+impl Default for Counter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Counter {
     pub const fn new() -> Self {
         Self(AtomicU64::new(0))
@@ -34,6 +40,12 @@ impl Counter {
 }
 
 pub struct Gauge(AtomicI64);
+
+impl Default for Gauge {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Gauge {
     pub const fn new() -> Self {
@@ -69,6 +81,12 @@ pub struct Metrics {
     pub sync_broadcast_passes_total: Counter,
     pub sync_broadcast_skips_total: Counter,
     pub notebook_saves_total: Counter,
+}
+
+impl Default for Metrics {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Metrics {
@@ -250,7 +268,13 @@ pub async fn metrics_handler(
         .get::<ConnectInfo<SocketAddr>>()
         .map(|info| info.0);
 
-    if !authorized_to_scrape(&state.pool, &headers, peer.as_ref(), scrape_token().as_deref()).await
+    if !authorized_to_scrape(
+        &state.pool,
+        &headers,
+        peer.as_ref(),
+        scrape_token().as_deref(),
+    )
+    .await
     {
         tracing::warn!("metrics scrape refused");
         return StatusCode::NOT_FOUND.into_response();
