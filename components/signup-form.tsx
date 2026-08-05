@@ -69,8 +69,8 @@ export function SignupForm({
         { ...data, passwordHash: data.password },
         isDesktop ? accountType : undefined,
       );
-    } catch (err: any) {
-      setGlobalError(err.message || t("errors.default"));
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : t("errors.default"));
     } finally {
       setIsLoading(false);
     }

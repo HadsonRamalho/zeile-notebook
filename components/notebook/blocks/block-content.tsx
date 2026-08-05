@@ -113,8 +113,7 @@ export function useBlockPermissions(
 interface BlockContentProps {
   block: Block;
   isDragging: boolean;
-  // biome-ignore lint/suspicious/noExplicitAny: <needed to manage the files>
-  pageFiles: Record<string, any>;
+  pageFiles: Record<string, string>;
   pageBlocks: Block[];
   setBlocks: (b: Block[]) => void;
   updateBlock: (id: string, newContent: string) => void;
@@ -294,8 +293,7 @@ export function BlockContent({
         />
       ) : block.language === "generic" ? (
         (() => {
-          // biome-ignore lint/suspicious/noExplicitAny: <dynamic props of the generic block>
-          let currentProps: Record<string, any> = {};
+          let currentProps: Record<string, unknown> = {};
           if (block.metadata?.type === "generic" && block.metadata.props) {
             currentProps = block.metadata.props;
           }

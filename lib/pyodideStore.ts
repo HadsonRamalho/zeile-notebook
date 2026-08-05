@@ -1,11 +1,21 @@
 const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/";
 const PYODIDE_SCRIPT_URL = `${PYODIDE_INDEX_URL}pyodide.js`;
 
-let pyodidePromise: Promise<any> | null = null;
+interface PyodideInterface {
+  setStdout: (options: { batched: (str: string) => void }) => void;
+  loadPackagesFromImports: (code: string) => Promise<void>;
+  runPythonAsync: (code: string) => Promise<unknown>;
+}
+
+interface PyodideWindow extends Window {
+  loadPyodide?: (options: { indexURL: string }) => Promise<PyodideInterface>;
+}
+
+let pyodidePromise: Promise<PyodideInterface> | null = null;
 let scriptPromise: Promise<void> | null = null;
 
 function loadPyodideScript(): Promise<void> {
-  if ((window as any).loadPyodide) return Promise.resolve();
+  if ((window as PyodideWindow).loadPyodide) return Promise.resolve();
   if (scriptPromise) return scriptPromise;
 
   scriptPromise = new Promise<void>((resolve, reject) => {
@@ -30,7 +40,7 @@ export async function getSharedPyodide() {
 
   await loadPyodideScript();
 
-  const loadPyodide = (window as any).loadPyodide;
+  const loadPyodide = (window as PyodideWindow).loadPyodide;
   if (!loadPyodide) {
     throw new Error("Pyodide script not found on Window.");
   }

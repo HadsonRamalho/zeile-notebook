@@ -106,7 +106,7 @@ export function LoginForm({
 
     try {
       await signIn(data, isDesktop ? accountType : undefined);
-    } catch (err: any) {
+    } catch (err: unknown) {
       handleApiError({ err, t: a, setError });
     } finally {
       setIsLoading(false);

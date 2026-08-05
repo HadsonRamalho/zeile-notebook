@@ -29,13 +29,11 @@ const ExcalidrawCanvas = dynamic(
     }: ExcalidrawCanvasProps) {
       return (
         <Excalidraw
-          // biome-ignore lint/suspicious/noExplicitAny: API do Excalidraw
-          excalidrawAPI={excalidrawAPI as any}
+          excalidrawAPI={excalidrawAPI as never}
           initialData={initialData as never}
           theme={theme}
           viewModeEnabled={viewModeEnabled}
-          // biome-ignore lint/suspicious/noExplicitAny: elementos do Excalidraw
-          onChange={(els: any) => onChange(els as DrawingElement[])}
+          onChange={(els: unknown) => onChange(els as DrawingElement[])}
           UIOptions={{
             canvasActions: {
               changeViewBackgroundColor: false,

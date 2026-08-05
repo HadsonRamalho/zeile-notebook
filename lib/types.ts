@@ -124,7 +124,7 @@ export type BlockMetadata =
   | TemplateRefMetadata
   | TypstTemplateMetadata
   | ChartMetadata
-  | { type: "generic"; props?: Record<string, any> };
+  | { type: "generic"; props?: Record<string, unknown> };
 
 export interface Block {
   id: string;

@@ -60,7 +60,7 @@ export function ForgotPasswordForm({
       await api.post("/user/request-password-reset", data);
       setIsSuccess(true);
       toast.success(t("success_toast"));
-    } catch (err: any) {
+    } catch (err: unknown) {
       handleApiError({ err, t: a, setError });
     } finally {
       setIsLoading(false);

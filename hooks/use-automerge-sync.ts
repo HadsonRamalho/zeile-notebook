@@ -33,7 +33,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
 
   const docRef = useRef<Notebook | null>(null);
   const automerge = useRef<AutomergeLib | null>(null);
-  const syncState = useRef<any>(null);
+  const syncState = useRef<AutomergeType.SyncState | null>(null);
   const handleRef = useRef<NotebookSocketHandle | null>(null);
 
   useEffect(() => {
@@ -108,7 +108,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
 
         const [nextDoc, nextSyncState] = automerge.current.receiveSyncMessage(
           currentDoc,
-          syncState.current,
+          syncState.current!,
           binaryMessage,
         );
         syncState.current = nextSyncState;
@@ -149,7 +149,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
 
       const [nextSyncState, message] = automerge.current.generateSyncMessage(
         newDoc,
-        syncState.current,
+        syncState.current!,
       );
       syncState.current = nextSyncState;
 
@@ -170,9 +170,9 @@ export function useAutomergeSync(notebookId: string, token: string) {
       const newBlock: Block = {
         id: uuidv4(),
         title,
-        type: type as any,
+        type,
         content,
-        ...(language !== undefined ? { language: language as any } : {}),
+        ...(language !== undefined ? { language } : {}),
         ...(metadata !== undefined ? { metadata } : {}),
         ...(type === "drawing" ? { scene: { elements: {} } } : {}),
       };
@@ -217,7 +217,10 @@ export function useAutomergeSync(notebookId: string, token: string) {
     });
   };
 
-  const updateBlockMetadataSync = (blockId: string, meta: any) => {
+  const updateBlockMetadataSync = (
+    blockId: string,
+    meta: BlockMetadata | undefined,
+  ) => {
     updateDoc((d) => {
       const block = d.blocks.find((b) => b.id === blockId);
       if (block) {

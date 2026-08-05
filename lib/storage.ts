@@ -87,13 +87,13 @@ export async function restoreFullBackup(jsonString: string): Promise<boolean> {
     if (Array.isArray(currentIndex) && Array.isArray(backup.index)) {
       const indexMap = new Map();
 
-      currentIndex.forEach((item: any) => {
-        const key = item.id || item;
+      currentIndex.forEach((item: NotebookMeta | string) => {
+        const key = typeof item === "string" ? item : item.id;
         indexMap.set(key, item);
       });
 
-      backup.index.forEach((item: any) => {
-        const key = item.id || item;
+      backup.index.forEach((item: NotebookMeta | string) => {
+        const key = typeof item === "string" ? item : item.id;
         indexMap.set(key, item);
       });
 

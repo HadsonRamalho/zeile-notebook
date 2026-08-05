@@ -1,14 +1,20 @@
 import { ApiClientError } from "@/lib/api/base";
 import type { Block } from "@/lib/types";
 
+interface BabelGlobal {
+  transform: (
+    code: string,
+    options: { filename: string; presets: string[]; plugins: unknown[][] },
+  ) => { code: string };
+}
+
 export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
   if (typeof window === "undefined") {
     console.error("Window is not defined");
     return null;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <needed to access window>
-  const babel = (window as any).Babel;
+  const babel = (window as unknown as { Babel?: BabelGlobal }).Babel;
 
   if (!babel) {
     throw new ApiClientError(

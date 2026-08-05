@@ -20,12 +20,17 @@ import { EditorHeader } from "../default/editor-header";
 import { SandpackManager } from "./sandpack-manager";
 
 interface TsxEditorProps {
-  // biome-ignore lint/suspicious/noExplicitAny: <needed to store the files>
-  pageFiles: Record<string, any>;
+  pageFiles: Record<string, string>;
   block: Block;
   pageBlocks: Block[];
   setBlocksAction: (blocks: Block[]) => void;
   onCodeChange: (newContent: string) => void;
+}
+
+interface BabelWindow extends Window {
+  Babel?: unknown;
+  define?: unknown;
+  require?: unknown;
 }
 
 interface RenderPreviewProps {
@@ -71,12 +76,12 @@ export function TsxEditor({
   const { theme } = useTheme();
 
   const loadBabel = () => {
-    if ((window as any).Babel) {
+    if ((window as BabelWindow).Babel) {
       setBabelReady(true);
       return;
     }
 
-    const global = window as any;
+    const global = window as BabelWindow;
     const amdDefine = global.define;
     const amdRequire = global.require;
 

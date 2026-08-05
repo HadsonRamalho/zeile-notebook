@@ -42,10 +42,12 @@ function InviteProcessor() {
         setTimeout(() => {
           router.push("/docs");
         }, 3000);
-      } catch (error: any) {
+      } catch (error: unknown) {
         setStatus("error");
         setErrorMessage(
-          error.message || "Este convite é inválido ou já foi utilizado.",
+          error instanceof Error
+            ? error.message
+            : "Este convite é inválido ou já foi utilizado.",
         );
       }
     };

@@ -85,8 +85,12 @@ export function ProfileForm() {
       await updateProfile(data);
 
       toast.success(t("profile_card.profile_updated"));
-    } catch (error: any) {
-      toast.error(error.message || t("profile_card.profile_update_error"));
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("profile_card.profile_update_error"),
+      );
     } finally {
       setIsSaving(false);
     }

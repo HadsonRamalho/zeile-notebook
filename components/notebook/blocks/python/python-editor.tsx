@@ -37,7 +37,7 @@ export default function PythonSandbox({
       setStatus("error");
       clearCellResult(block.id);
     } else {
-      const text = res.output || res.result;
+      const text = res.output || res.result || "";
       setOutput(text);
       setStatus("success");
       const table = parseInlineTable(text);
