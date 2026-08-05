@@ -162,7 +162,9 @@ pub async fn api_refresh_session(
                 "reuse of rotated refresh token for user {}; revoking sessions",
                 current.user_id
             );
-            let _ = models::refresh_token::revoke_for_user(conn, current.user_id).await;
+            models::refresh_token::revoke_for_user(conn, current.user_id)
+                .await
+                .ok();
             state.sessions.invalidate(current.user_id);
         }
 
@@ -223,12 +225,9 @@ pub async fn api_update_user_data(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    match models::user::find_user_by_id(conn, &id).await {
-        Err(_) => {
-            return Err(ApiError::UserNotFound);
-        }
-        _ => {}
-    };
+    if models::user::find_user_by_id(conn, &id).await.is_err() {
+        return Err(ApiError::UserNotFound);
+    }
 
     match models::user::update_user_data(conn, &id, &user_input).await {
         Ok(_) => Ok(StatusCode::OK),
@@ -265,7 +264,7 @@ pub async fn api_delete_user(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let _ = models::user::delete_user(conn, &id).await?;
+    models::user::delete_user(conn, &id).await?;
 
     Ok(StatusCode::OK)
 }
@@ -328,18 +327,17 @@ pub async fn get_user_notebook_permissions(
     notebook_id: &Uuid,
     user_id: Option<Uuid>,
 ) -> Result<Json<TeamRoleView>, ApiError> {
-    let conn = &mut get_conn(&pool)
+    let conn = &mut get_conn(pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
     let notebook = models::notebook::find_notebook_by_id(conn, notebook_id).await?;
 
-    if let Some(notebook_user_id) = notebook.user_id {
-        if let Some(id) = user_id
-            && notebook_user_id == id
-        {
-            return Ok(Json(get_user_owner_permissions()));
-        }
+    if let Some(notebook_user_id) = notebook.user_id
+        && let Some(id) = user_id
+        && notebook_user_id == id
+    {
+        return Ok(Json(get_user_owner_permissions()));
     }
 
     let team_id = match notebook.team_id {

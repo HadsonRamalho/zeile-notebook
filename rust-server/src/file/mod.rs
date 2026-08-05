@@ -243,11 +243,11 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
         }
     };
 
-    if let Some(input) = stdin {
-        if let Some(mut sink) = child.stdin.take() {
-            let _ = sink.write_all(input.as_bytes()).await;
-            let _ = sink.flush().await;
-        }
+    if let Some(input) = stdin
+        && let Some(mut sink) = child.stdin.take()
+    {
+        sink.write_all(input.as_bytes()).await.ok();
+        sink.flush().await.ok();
     }
 
     let pid = child.id().expect("Falha ao obter PID");
@@ -260,9 +260,10 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
     .await
     {
         Ok(Ok(output)) => {
-            let _ = std::process::Command::new("kill")
+            std::process::Command::new("kill")
                 .args(["-9", &format!("-{}", pid)])
-                .output();
+                .output()
+                .ok();
 
             let stdout_str = String::from_utf8_lossy(&output.stdout).to_string();
             let stderr_str = String::from_utf8_lossy(&output.stderr).to_string();
@@ -286,9 +287,10 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
             }
         }
         Ok(Err(e)) => {
-            let _ = std::process::Command::new("kill")
+            std::process::Command::new("kill")
                 .args(["-9", &format!("-{}", pid)])
-                .output();
+                .output()
+                .ok();
             error!("ERRO de I/O no container: {}", e);
             RunOutcome {
                 stdout: "".into(),
@@ -392,7 +394,6 @@ pub async fn register_log(
 
     let mut file = OpenOptions::new()
         .create(true)
-        .write(true)
         .append(true)
         .open(file_path)?;
 

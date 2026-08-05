@@ -304,7 +304,7 @@ pub async fn verify_go_request(
     };
 
     let user_dir = format!("files/go/{}", safe_session);
-    let _ = tokio::fs::create_dir_all(&user_dir).await;
+    tokio::fs::create_dir_all(&user_dir).await.ok();
 
     let file_path = Path::new(&user_dir).join("main.go");
     let bin_path = Path::new(&user_dir).join(&bin_name);
@@ -414,7 +414,7 @@ pub async fn verify_cpp_request(
     };
 
     let user_dir = format!("files/cpp/{}", safe_session);
-    let _ = tokio::fs::create_dir_all(&user_dir).await;
+    tokio::fs::create_dir_all(&user_dir).await.ok();
 
     let file_path = Path::new(&user_dir).join("main.cpp");
     let bin_path = Path::new(&user_dir).join(&bin_name);
@@ -495,7 +495,7 @@ pub async fn verify_cpp_request(
             format!("Falha ao invocar compilador C++: {}", e),
         )),
         Err(_) => {
-            let _ = tokio::fs::remove_file(&file_path).await;
+            tokio::fs::remove_file(&file_path).await.ok();
             Json(failure(
                 ExecStatus::SecurityRejected,
                 "COMPILATION_TIMEOUT",
@@ -559,7 +559,7 @@ pub async fn verify_zig_request(
     };
 
     let user_dir = format!("files/zig/{}", safe_session);
-    let _ = tokio::fs::create_dir_all(&user_dir).await;
+    tokio::fs::create_dir_all(&user_dir).await.ok();
 
     let file_path = Path::new(&user_dir).join("main.zig");
     let bin_path = Path::new(&user_dir).join(&bin_name);

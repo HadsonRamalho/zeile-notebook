@@ -114,14 +114,14 @@ pub async fn resolve(
     scope_kind: &str,
     scope_id: Option<Uuid>,
 ) -> EffectivePrefs {
-    if scope_kind != "global" {
-        if let Ok(Some(row)) = find_pref(conn, param_user_id, scope_kind, scope_id).await {
-            return EffectivePrefs {
-                push: row.push_enabled,
-                inapp: row.inapp_enabled,
-                chat: row.chat_enabled,
-            };
-        }
+    if scope_kind != "global"
+        && let Ok(Some(row)) = find_pref(conn, param_user_id, scope_kind, scope_id).await
+    {
+        return EffectivePrefs {
+            push: row.push_enabled,
+            inapp: row.inapp_enabled,
+            chat: row.chat_enabled,
+        };
     }
     if let Ok(Some(row)) = find_pref(conn, param_user_id, "global", None).await {
         return EffectivePrefs {

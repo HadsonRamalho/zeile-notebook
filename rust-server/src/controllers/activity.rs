@@ -37,7 +37,7 @@ pub fn spawn_record(
         let Ok(mut conn) = get_conn(&state.pool).await else {
             return;
         };
-        let _ = models::activity::record_activity(
+        models::activity::record_activity(
             &mut conn,
             notebook_id,
             actor_id,
@@ -46,7 +46,8 @@ pub fn spawn_record(
             block_id,
             summary,
         )
-        .await;
+        .await
+        .ok();
     });
 }
 

@@ -14,7 +14,7 @@ const ONE_MINUTE: u64 = 60 * ONE_SECOND;
 pub fn validate_cpf(cpf: &str) -> bool {
     let cpf: Vec<u8> = cpf
         .chars()
-        .filter(|c| c.is_digit(10))
+        .filter(|c| c.is_ascii_digit())
         .map(|c| c.to_digit(10).unwrap() as u8)
         .collect();
 
@@ -46,7 +46,7 @@ pub fn validate_cpf(cpf: &str) -> bool {
 pub fn validate_cnpj(cnpj: &str) -> bool {
     let cnpj: Vec<u8> = cnpj
         .chars()
-        .filter(|c| c.is_digit(10))
+        .filter(|c| c.is_ascii_digit())
         .map(|c| c.to_digit(10).unwrap() as u8)
         .collect();
 
@@ -61,7 +61,11 @@ pub fn validate_cnpj(cnpj: &str) -> bool {
             .map(|(&d, &w)| (d as u32) * (w as u32))
             .sum();
         let remainder = sum % 11;
-        if remainder < 2 { 0 } else { (11 - remainder) as u8 }
+        if remainder < 2 {
+            0
+        } else {
+            (11 - remainder) as u8
+        }
     };
 
     let weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
@@ -91,7 +95,7 @@ pub fn format_cnpj(cnpj: &str) -> Result<String, String> {
 }
 
 pub fn format_cpf(cpf: &str) -> Result<String, String> {
-    let cpf: Vec<char> = cpf.chars().filter(|c: &char| c.is_digit(10)).collect();
+    let cpf: Vec<char> = cpf.chars().filter(|c: &char| c.is_ascii_digit()).collect();
     if cpf.len() != 11 {
         return Err("Invalid CPF length".to_string());
     }
@@ -165,8 +169,7 @@ pub fn hash_needs_migration(hash: &str) -> bool {
 }
 
 pub fn random_public_id() -> i32 {
-    let output = rand::thread_rng().gen_range(1000000..9999999);
-    output
+    rand::thread_rng().gen_range(1000000..9999999)
 }
 
 pub fn get_database_url_from_env() -> Result<String, (StatusCode, Json<String>)> {
@@ -174,12 +177,10 @@ pub fn get_database_url_from_env() -> Result<String, (StatusCode, Json<String>)>
 
     match env::var("DATABASE_URL") {
         Ok(secret) => Ok(secret),
-        Err(error) => {
-            return Err((
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(ApiError::DatabaseConnection(error.to_string()).to_string()),
-            ));
-        }
+        Err(error) => Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiError::DatabaseConnection(error.to_string()).to_string()),
+        )),
     }
 }
 
@@ -188,9 +189,7 @@ pub fn get_var_from_env(var: &str) -> Result<String, ApiError> {
 
     match env::var(var) {
         Ok(secret) => Ok(secret),
-        Err(_) => {
-            return Err(ApiError::MissingEnv(var.to_string()));
-        }
+        Err(_) => Err(ApiError::MissingEnv(var.to_string())),
     }
 }
 
@@ -199,12 +198,10 @@ pub fn get_frontend_url_from_env() -> Result<String, (StatusCode, Json<String>)>
 
     match env::var("FRONTEND_URL") {
         Ok(secret) => Ok(secret),
-        Err(_) => {
-            return Err((
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(ApiError::FrontendUrl.to_string()),
-            ));
-        }
+        Err(_) => Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiError::FrontendUrl.to_string()),
+        )),
     }
 }
 
@@ -259,18 +256,15 @@ pub async fn auto_delete_files() {
         while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
 
-            if path.is_dir() {
-                if let Ok(metadata) = tokio::fs::metadata(&path).await {
-                    if let Ok(modified) = metadata.modified() {
-                        if let Ok(age) = SystemTime::now().duration_since(modified) {
-                            if age > max_lifetime {
-                                println!("LOG: [GC] removing old folder: {:?}", path);
-                                if let Err(e) = tokio::fs::remove_dir_all(&path).await {
-                                    eprintln!("ERROR: [GC] failed to delete {:?}: {}", path, e);
-                                }
-                            }
-                        }
-                    }
+            if path.is_dir()
+                && let Ok(metadata) = tokio::fs::metadata(&path).await
+                && let Ok(modified) = metadata.modified()
+                && let Ok(age) = SystemTime::now().duration_since(modified)
+                && age > max_lifetime
+            {
+                println!("LOG: [GC] removing old folder: {:?}", path);
+                if let Err(e) = tokio::fs::remove_dir_all(&path).await {
+                    eprintln!("ERROR: [GC] failed to delete {:?}: {}", path, e);
                 }
             }
         }
@@ -316,12 +310,11 @@ pub async fn clean_old_logs(root: &str, retention: Duration) -> u64 {
         let path = session.path();
 
         if !path.is_dir() {
-            if let Ok(metadata) = tokio::fs::metadata(&path).await {
-                if age_of(&metadata).is_some_and(|age| age > retention)
-                    && tokio::fs::remove_file(&path).await.is_ok()
-                {
-                    removed += 1;
-                }
+            if let Ok(metadata) = tokio::fs::metadata(&path).await
+                && age_of(&metadata).is_some_and(|age| age > retention)
+                && tokio::fs::remove_file(&path).await.is_ok()
+            {
+                removed += 1;
             }
             continue;
         }
@@ -356,7 +349,7 @@ pub async fn clean_old_logs(root: &str, retention: Duration) -> u64 {
         }
 
         if remaining == 0 {
-            let _ = tokio::fs::remove_dir(&path).await;
+            tokio::fs::remove_dir(&path).await.ok();
         }
     }
 
@@ -365,7 +358,9 @@ pub async fn clean_old_logs(root: &str, retention: Duration) -> u64 {
 
 /// Removes expired refresh tokens. Without this the table grows forever with
 /// rows that no longer authorize anything.
-pub async fn auto_delete_refresh_tokens(pool: diesel_async::pooled_connection::deadpool::Pool<AsyncPgConnection>) {
+pub async fn auto_delete_refresh_tokens(
+    pool: diesel_async::pooled_connection::deadpool::Pool<AsyncPgConnection>,
+) {
     loop {
         tokio::time::sleep(ONE_DAY).await;
 
@@ -464,7 +459,8 @@ mod tests {
     const SHORT: Duration = Duration::from_millis(150);
 
     async fn temp_root(name: &str) -> std::path::PathBuf {
-        let root = std::env::temp_dir().join(format!("zeile_logs_{}_{}", name, uuid::Uuid::new_v4()));
+        let root =
+            std::env::temp_dir().join(format!("zeile_logs_{}_{}", name, uuid::Uuid::new_v4()));
         tokio::fs::create_dir_all(&root).await.expect("create root");
         root
     }
@@ -497,21 +493,28 @@ mod tests {
         tokio::fs::create_dir_all(&session).await.expect("session");
 
         let old = session.join("old.log");
-        tokio::fs::write(&old, "code submitted earlier").await.expect("write");
+        tokio::fs::write(&old, "code submitted earlier")
+            .await
+            .expect("write");
 
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         let recent = session.join("recent.log");
-        tokio::fs::write(&recent, "code from now").await.expect("write");
+        tokio::fs::write(&recent, "code from now")
+            .await
+            .expect("write");
 
         let removed = clean_old_logs(root.to_str().unwrap(), SHORT).await;
 
         assert_eq!(removed, 1, "should remove exactly the old record");
         assert!(!old.exists(), "record beyond retention should be gone");
-        assert!(recent.exists(), "record within retention should not be gone");
+        assert!(
+            recent.exists(),
+            "record within retention should not be gone"
+        );
         assert!(session.exists(), "the folder still has a live record");
 
-        let _ = tokio::fs::remove_dir_all(&root).await;
+        tokio::fs::remove_dir_all(&root).await.ok();
     }
 
     #[tokio::test]
@@ -519,7 +522,9 @@ mod tests {
         let root = temp_root("empty").await;
         let session = root.join("session_b");
         tokio::fs::create_dir_all(&session).await.expect("session");
-        tokio::fs::write(session.join("old.log"), "content").await.expect("write");
+        tokio::fs::write(session.join("old.log"), "content")
+            .await
+            .expect("write");
 
         tokio::time::sleep(Duration::from_millis(300)).await;
 
@@ -527,7 +532,7 @@ mod tests {
 
         assert!(!session.exists(), "empty session folder should be removed");
 
-        let _ = tokio::fs::remove_dir_all(&root).await;
+        tokio::fs::remove_dir_all(&root).await.ok();
     }
 
     #[tokio::test]
@@ -543,7 +548,7 @@ mod tests {
         assert_eq!(removed, 0);
         assert!(record.exists());
 
-        let _ = tokio::fs::remove_dir_all(&root).await;
+        tokio::fs::remove_dir_all(&root).await.ok();
     }
 
     #[tokio::test]

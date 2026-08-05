@@ -2,9 +2,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::middleware::rate_limit::{
-    GLOBAL_ORIGIN, OFF_VAR, exempt_path, global_limit_off,
-};
+use crate::middleware::rate_limit::{GLOBAL_ORIGIN, OFF_VAR, exempt_path, global_limit_off};
 use crate::routes::test_support::router_with_unreachable_database;
 
 fn anonymous(path: &str, peer: &str) -> Request<Body> {
@@ -21,7 +19,10 @@ fn anonymous(path: &str, peer: &str) -> Request<Body> {
 #[test]
 fn service_health_is_not_counted_against_the_quota() {
     for exempt in ["/health/live", "/health/ready", "/internal/shutdown"] {
-        assert!(exempt_path(exempt), "{exempt} should be exempt from the quota");
+        assert!(
+            exempt_path(exempt),
+            "{exempt} should be exempt from the quota"
+        );
     }
 
     assert!(!exempt_path("/api/notebook/create"));
@@ -138,5 +139,8 @@ async fn mass_registration_is_blocked() {
         }
     }
 
-    assert!(was_limited, "/register accepted mass registration without a quota");
+    assert!(
+        was_limited,
+        "/register accepted mass registration without a quota"
+    );
 }

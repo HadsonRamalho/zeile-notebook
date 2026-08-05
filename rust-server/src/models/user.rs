@@ -310,12 +310,13 @@ pub async fn link_provider_account(
     }
 
     if let Some(avatar) = avatar {
-        let _ = diesel::update(users)
+        diesel::update(users)
             .filter(id.eq(id_param))
             .filter(avatar_url.is_null())
             .set(avatar_url.eq(avatar))
             .execute(conn)
-            .await;
+            .await
+            .ok();
     }
 
     Ok(())

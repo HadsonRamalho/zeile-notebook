@@ -29,7 +29,7 @@ use crate::{
 pub fn get_default_roles(team_id: &Uuid) -> Vec<(NewTeamRole, RolePermissions)> {
     let admin_role = (
         NewTeamRole {
-            team_id: team_id.clone(),
+            team_id: *team_id,
             name: "Owner".to_string(),
         },
         RolePermissions::all(),
@@ -37,7 +37,7 @@ pub fn get_default_roles(team_id: &Uuid) -> Vec<(NewTeamRole, RolePermissions)> 
 
     let member_role = (
         NewTeamRole {
-            team_id: team_id.clone(),
+            team_id: *team_id,
             name: "Member".to_string(),
         },
         RolePermissions {
@@ -82,7 +82,7 @@ pub async fn api_create_team_page(
 
     let page_id = Uuid::new_v4();
     let new_page = NewNotebook {
-        id: page_id.clone(),
+        id: page_id,
         user_id: None,
         team_id: Some(team_id),
         title: "Nova Página".to_string(),
@@ -90,7 +90,7 @@ pub async fn api_create_team_page(
 
     crate::models::notebook::create_notebook(conn, &new_page)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
 
     Ok((StatusCode::OK, Json(page_id)))
 }
@@ -114,7 +114,7 @@ pub async fn api_get_team_pages(
 
     let pages = models::notebook::get_team_notebooks(conn, &team_id)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(pages))
 }
@@ -142,9 +142,7 @@ pub async fn api_update_team(
 
     require_team_permission(conn, user_id, team_id, "team.edit_name").await?;
 
-    let _ = models::team::update_team_data(conn, team_id, &payload)
-        .await
-        .map_err(|e| e)?;
+    let _ = models::team::update_team_data(conn, team_id, &payload).await?;
 
     Ok(StatusCode::OK)
 }
@@ -411,28 +409,22 @@ pub async fn api_create_team(
 
     let mut team_roles: Vec<TeamRole> = vec![];
     for (role, permissions) in default_roles.iter() {
-        match models::team::create_team_role(conn, role, *permissions).await {
-            Ok(t) => {
-                team_roles.push(t);
-            }
-            _ => {}
+        if let Ok(t) = models::team::create_team_role(conn, role, *permissions).await {
+            team_roles.push(t);
         }
     }
 
     let admin_role = team_roles.first().unwrap();
 
-    match models::team::add_user_to_team(
+    models::team::add_user_to_team(
         conn,
         &NewTeamMember {
-            team_id: team.id.clone(),
+            team_id: team.id,
             user_id,
             role_id: admin_role.id,
         },
     )
-    .await
-    {
-        _ => {}
-    }
+    .await?;
 
     Ok(Json(team))
 }

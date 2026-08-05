@@ -37,7 +37,7 @@ pub async fn api_create_notebook(
     let notebook_id = Uuid::new_v4();
 
     let new_notebook = NewNotebook {
-        id: notebook_id.clone(),
+        id: notebook_id,
         user_id: Some(id),
         team_id: None,
         title: "Nova Página".to_string(),
@@ -410,7 +410,7 @@ pub async fn api_clone_notebook(
     let new_notebook_title = format!("Cópia de \"{}\"", target_notebook.title);
 
     let new_notebook = NewNotebook {
-        id: new_notebook_id.clone(),
+        id: new_notebook_id,
         user_id: Some(id),
         team_id: None,
         title: "Nova Página".to_string(),
@@ -421,7 +421,7 @@ pub async fn api_clone_notebook(
         Err(e) => return Err(ApiError::Database(e)),
     }
 
-    let _ = models::notebook::clone_notebook(
+    models::notebook::clone_notebook(
         conn,
         &target_notebook.id,
         &new_notebook_id,

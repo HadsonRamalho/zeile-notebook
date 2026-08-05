@@ -62,7 +62,7 @@ impl Shutdown {
             return;
         }
 
-        let _ = rx.changed().await;
+        rx.changed().await.ok();
     }
 }
 

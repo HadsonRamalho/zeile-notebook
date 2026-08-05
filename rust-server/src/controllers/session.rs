@@ -62,13 +62,8 @@ impl SessionCache {
                 .retain(|_, e| now.saturating_duration_since(e.seen_at) < CACHE_TTL);
         }
 
-        self.entries.insert(
-            (user_id, iat),
-            Entry {
-                role,
-                seen_at: now,
-            },
-        );
+        self.entries
+            .insert((user_id, iat), Entry { role, seen_at: now });
     }
 
     pub fn invalidate(&self, user_id: Uuid) {
@@ -101,7 +96,10 @@ pub async fn validate_in_db(
 /// A token issued before the last password change no longer counts. An old
 /// token without `iat` can't be dated, so it survives until it expires — the
 /// reach of that ends once tokens issued before this version expire.
-pub fn session_revoked(claims: &Claims, password_changed_at: chrono::DateTime<chrono::Utc>) -> bool {
+pub fn session_revoked(
+    claims: &Claims,
+    password_changed_at: chrono::DateTime<chrono::Utc>,
+) -> bool {
     claims
         .iat
         .is_some_and(|iat| iat < password_changed_at.timestamp())

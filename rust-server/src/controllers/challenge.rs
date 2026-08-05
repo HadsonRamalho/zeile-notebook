@@ -271,10 +271,10 @@ pub async fn api_update_challenge(
     )
     .await?;
 
-    if let Some(mode) = &payload.judge_mode {
-        if !VALID_JUDGE_MODES.contains(&mode.as_str()) {
-            return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
-        }
+    if let Some(mode) = &payload.judge_mode
+        && !VALID_JUDGE_MODES.contains(&mode.as_str())
+    {
+        return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
     }
 
     let changes = UpdateChallenge {
