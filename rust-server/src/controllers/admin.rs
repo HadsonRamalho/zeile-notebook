@@ -18,9 +18,8 @@ use crate::{
         self,
         admin::{
             AdminNotebookView, AdminSearchResult, AdminSystemStats, AdminTeamView, AdminUserView,
-            PaginatedResponse, PaginationQuery, get_detailed_system_stats,
-            get_paginated_notebooks, get_paginated_teams, get_paginated_users, search_notebooks,
-            search_teams, search_users,
+            PaginatedResponse, PaginationQuery, get_detailed_system_stats, get_paginated_notebooks,
+            get_paginated_teams, get_paginated_users, search_notebooks, search_teams, search_users,
         },
         error::ApiError,
         state::AppState,
@@ -174,8 +173,7 @@ pub async fn api_admin_notify(
                 recipients.push(owner);
             }
             if let Some(tid) = notebook.team_id {
-                let members =
-                    models::team::find_team_members_with_roles(&mut conn, tid).await?;
+                let members = models::team::find_team_members_with_roles(&mut conn, tid).await?;
                 recipients.extend(members.into_iter().map(|(m, _)| m.user_id));
             }
         }

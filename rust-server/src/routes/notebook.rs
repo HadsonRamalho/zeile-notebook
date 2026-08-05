@@ -13,26 +13,24 @@ use crate::{
             api_send_notebook_message,
         },
         comments::{
-            api_create_thread, api_delete_comment, api_list_comments, api_reply,
-            api_update_thread,
+            api_create_thread, api_delete_comment, api_list_comments, api_reply, api_update_thread,
         },
         folder::{
-            api_create_folder, api_delete_folder, api_list_folders,
-            api_move_notebook_to_folder, api_rename_folder, api_update_folder_tags,
+            api_create_folder, api_delete_folder, api_list_folders, api_move_notebook_to_folder,
+            api_rename_folder, api_update_folder_tags,
         },
         grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
         notebook::{
             api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
-            api_get_public_notebooks, api_get_single_notebook, api_get_single_notebook_with_blocks,
-            api_get_public_notebook_by_slug, api_rename_notebook, api_save_notebook_content,
+            api_get_public_notebook_by_slug, api_get_public_notebooks, api_get_single_notebook,
+            api_get_single_notebook_with_blocks, api_rename_notebook, api_save_notebook_content,
             api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
             api_update_notebook_visibility,
         },
         permissions::api_get_notebook_capabilities,
         push::{api_subscribe_push, api_unsubscribe_push},
         snapshots::{
-            api_create_snapshot, api_delete_snapshot, api_list_snapshots,
-            api_restore_snapshot,
+            api_create_snapshot, api_delete_snapshot, api_list_snapshots, api_restore_snapshot,
         },
         user::api_get_user_notebook_permissions,
         websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
@@ -41,7 +39,7 @@ use crate::{
 };
 
 pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
-    let routes = OpenApiRouter::<Arc<AppState>>::new()
+    OpenApiRouter::<Arc<AppState>>::new()
         .route("/create", post(api_create_notebook))
         .route("/folders", get(api_list_folders).post(api_create_folder))
         .route(
@@ -111,23 +109,21 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
             "/{id}/snapshots/{snapshot_id}/restore",
             post(api_restore_snapshot),
         )
-        .route(
-            "/{id}/snapshots/{snapshot_id}",
-            delete(api_delete_snapshot),
-        )
+        .route("/{id}/snapshots/{snapshot_id}", delete(api_delete_snapshot))
         .route("/search/", get(api_search_notebooks))
         .route("/search/ranked/", get(api_search_notebooks_ranked))
         .route("/ws/{notebook_id}", get(websocket_handler))
         .route("/ws/presence/{id}", get(websocket_presence_handler))
         // combined socket: sync + presence on a single connection
-        .route("/ws/combined/{notebook_id}", get(websocket_combined_handler))
+        .route(
+            "/ws/combined/{notebook_id}",
+            get(websocket_combined_handler),
+        )
         .route("/all", get(api_get_notebooks))
         .route("/all/public", get(api_get_public_notebooks))
         .route("/public/{slug}", get(api_get_public_notebook_by_slug))
         .route(
             "/push/subscribe",
             post(api_subscribe_push).delete(api_unsubscribe_push),
-        );
-
-    routes
+        )
 }

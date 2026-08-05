@@ -150,24 +150,24 @@ pub async fn resolve_capabilities(
 
     let mut grants: Vec<PermissionGrant> = Vec::new();
 
-    if let (Some(team_id), Some(uid)) = (ctx.team_id, user_id) {
-        if let Ok((_, role)) = find_team_member_with_role(conn, team_id, uid).await {
-            let team_grants = permission_grants::table
-                .filter(permission_grants::scope_team_id.eq(team_id))
-                .filter(
-                    permission_grants::subject_kind
-                        .eq(GrantSubjectKind::Role)
-                        .and(permission_grants::subject_id.eq(role.id))
-                        .or(permission_grants::subject_kind
-                            .eq(GrantSubjectKind::User)
-                            .and(permission_grants::subject_id.eq(uid))),
-                )
-                .select(PermissionGrant::as_select())
-                .load(conn)
-                .await
-                .map_err(ApiError::from)?;
-            grants.extend(team_grants);
-        }
+    if let (Some(team_id), Some(uid)) = (ctx.team_id, user_id)
+        && let Ok((_, role)) = find_team_member_with_role(conn, team_id, uid).await
+    {
+        let team_grants = permission_grants::table
+            .filter(permission_grants::scope_team_id.eq(team_id))
+            .filter(
+                permission_grants::subject_kind
+                    .eq(GrantSubjectKind::Role)
+                    .and(permission_grants::subject_id.eq(role.id))
+                    .or(permission_grants::subject_kind
+                        .eq(GrantSubjectKind::User)
+                        .and(permission_grants::subject_id.eq(uid))),
+            )
+            .select(PermissionGrant::as_select())
+            .load(conn)
+            .await
+            .map_err(ApiError::from)?;
+        grants.extend(team_grants);
     }
 
     if ctx.is_public {
@@ -369,8 +369,10 @@ pub async fn capabilities(
 const CAPS_TTL: Duration = Duration::from_secs(30);
 const CAPS_CACHE_MAX: usize = 100_000;
 
-static CAPS_CACHE: LazyLock<DashMap<(Option<Uuid>, Uuid), (CapabilitySet, Instant)>> =
-    LazyLock::new(DashMap::new);
+type CapsCacheKey = (Option<Uuid>, Uuid);
+type CapsCacheEntry = (CapabilitySet, Instant);
+
+static CAPS_CACHE: LazyLock<DashMap<CapsCacheKey, CapsCacheEntry>> = LazyLock::new(DashMap::new);
 
 pub async fn capabilities_cached(
     pool: &Pool<AsyncPgConnection>,
@@ -378,10 +380,10 @@ pub async fn capabilities_cached(
     notebook_id: Uuid,
 ) -> Result<CapabilitySet, ApiError> {
     let key = (user_id, notebook_id);
-    if let Some(entry) = CAPS_CACHE.get(&key) {
-        if entry.1.elapsed() < CAPS_TTL {
-            return Ok(entry.0.clone());
-        }
+    if let Some(entry) = CAPS_CACHE.get(&key)
+        && entry.1.elapsed() < CAPS_TTL
+    {
+        return Ok(entry.0.clone());
     }
 
     let caps = capabilities(pool, user_id, notebook_id).await?;
@@ -418,7 +420,7 @@ pub async fn broadcast_capability_change_local(presence: &PresenceRegistry, note
     };
 
     for tx in txs {
-        let _ = tx.send(capabilities_updated_signal()).await;
+        tx.send(capabilities_updated_signal()).await.ok();
     }
 }
 
@@ -431,9 +433,10 @@ pub async fn broadcast_capability_change(
 
     // notify other nodes (best-effort); notebook_id is a validated uuid
     if let Ok(mut conn) = get_conn(pool).await {
-        let _ = diesel::sql_query(format!("SELECT pg_notify('zeile_caps', '{}')", notebook_id))
+        diesel::sql_query(format!("SELECT pg_notify('zeile_caps', '{}')", notebook_id))
             .execute(&mut conn)
-            .await;
+            .await
+            .ok();
     }
 }
 
@@ -462,7 +465,7 @@ async fn run_caps_listener(
             while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
                 match msg {
                     Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
-                        let _ = tx.send(n.payload().to_string());
+                        tx.send(n.payload().to_string()).ok();
                     }
                     Ok(_) => {}
                     Err(_) => break,
@@ -478,7 +481,7 @@ async fn run_caps_listener(
             while let Some(msg) = futures_util::StreamExt::next(&mut stream).await {
                 match msg {
                     Ok(tokio_postgres::AsyncMessage::Notification(n)) => {
-                        let _ = tx.send(n.payload().to_string());
+                        tx.send(n.payload().to_string()).ok();
                     }
                     Ok(_) => {}
                     Err(_) => break,

@@ -198,9 +198,7 @@ pub async fn enforce(State(config): State<RateLimit>, request: Request, next: Ne
         .check(config.bucket, &client, config.quota, Instant::now())
     {
         Decision::Allowed => next.run(request).await,
-        Decision::Limited { retry_after } => {
-            limited_response(config.bucket, &client, retry_after)
-        }
+        Decision::Limited { retry_after } => limited_response(config.bucket, &client, retry_after),
     }
 }
 

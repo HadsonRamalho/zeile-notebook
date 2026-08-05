@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
-    let routes = OpenApiRouter::new()
+    OpenApiRouter::new()
         .route("/me", get(api_get_logged_user))
         .route("/", delete(api_delete_user))
         .route(
@@ -64,7 +64,5 @@ pub async fn user_routes() -> OpenApiRouter<Arc<AppState>> {
         .route("/auth/methods", get(api_auth_methods))
         .route("/link/{provider}", post(api_link_start).delete(api_unlink))
         .route("/link/{provider}/callback", get(api_link_callback))
-        .route("/auth/callback/{provider}", get(api_oauth_callback));
-
-    routes
+        .route("/auth/callback/{provider}", get(api_oauth_callback))
 }

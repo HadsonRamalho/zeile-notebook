@@ -1,4 +1,4 @@
-use super::{Permission, Tier, TargetKind, ViewSensitivity};
+use super::{Permission, TargetKind, Tier, ViewSensitivity};
 
 const BLOCK_TYPES: &[&str] = &[
     "rust",
@@ -77,7 +77,11 @@ pub fn permissions() -> Vec<Permission> {
         perms.push(Permission {
             key: format!("notebook.blocks.{ty}.view"),
             tier: Tier::Granular,
-            targets: vec![TargetKind::BlockType, TargetKind::Block, TargetKind::Notebook],
+            targets: vec![
+                TargetKind::BlockType,
+                TargetKind::Block,
+                TargetKind::Notebook,
+            ],
             label: format!("perm.notebook.blocks.{ty}.view"),
             implied_by: vec!["notebook.blocks.view".to_string()],
             view: Some(ViewSensitivity::Cosmetic),
@@ -93,7 +97,11 @@ pub fn permissions() -> Vec<Permission> {
         perms.push(Permission {
             key: format!("notebook.blocks.{ty}.edit"),
             tier: Tier::Granular,
-            targets: vec![TargetKind::BlockType, TargetKind::Block, TargetKind::Notebook],
+            targets: vec![
+                TargetKind::BlockType,
+                TargetKind::Block,
+                TargetKind::Notebook,
+            ],
             label: format!("perm.notebook.blocks.{ty}.edit"),
             implied_by: vec!["notebook.blocks.edit".to_string()],
             view: None,
@@ -104,7 +112,11 @@ pub fn permissions() -> Vec<Permission> {
         perms.push(Permission {
             key: format!("notebook.blocks.{ty}.execute"),
             tier: Tier::Granular,
-            targets: vec![TargetKind::BlockType, TargetKind::Block, TargetKind::Notebook],
+            targets: vec![
+                TargetKind::BlockType,
+                TargetKind::Block,
+                TargetKind::Notebook,
+            ],
             label: format!("perm.notebook.blocks.{ty}.execute"),
             implied_by: vec!["notebook.blocks.execute".to_string()],
             view: None,

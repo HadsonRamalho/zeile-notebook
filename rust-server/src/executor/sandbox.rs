@@ -251,10 +251,12 @@ mod tests {
 
     #[test]
     fn compilation_has_a_wall_clock_watchdog() {
-        assert!(
-            COMPILE_LIMITS.wall_ms > 0,
-            "without wall_ms compilation could hang forever"
-        );
+        const {
+            assert!(
+                COMPILE_LIMITS.wall_ms > 0,
+                "without wall_ms compilation could hang forever"
+            );
+        }
     }
 
     #[tokio::test]
@@ -284,7 +286,7 @@ mod tests {
             .await
             .expect_err("the watchdog should interrupt");
 
-        let _ = std::fs::remove_dir_all(dir);
+        std::fs::remove_dir_all(dir).ok();
 
         assert!(error.contains("interrupted"), "{error}");
     }

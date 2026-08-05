@@ -114,10 +114,7 @@ fn go_literals(line: &str) -> Vec<ImportGo> {
             }
         }
 
-        literals.push(ImportGo {
-            path,
-            has_escape,
-        });
+        literals.push(ImportGo { path, has_escape });
     }
 
     literals
@@ -183,8 +180,7 @@ pub fn verify_go_code(code: &str) -> Result<(), String> {
         }
 
         for prefix in forbidden_prefixes {
-            let blocked = import.path == prefix
-                || import.path.starts_with(&format!("{}/", prefix));
+            let blocked = import.path == prefix || import.path.starts_with(&format!("{}/", prefix));
 
             if blocked {
                 return Err(format!(
@@ -252,8 +248,7 @@ fn contains_word(code: &str, target: &str) -> bool {
         let previous = pos.checked_sub(1).map(|i| bytes[i] as char);
         let next = bytes.get(pos + target.len()).map(|b| *b as char);
 
-        !previous.is_some_and(is_identifier_char)
-            && !next.is_some_and(is_identifier_char)
+        !previous.is_some_and(is_identifier_char) && !next.is_some_and(is_identifier_char)
     })
 }
 
@@ -637,7 +632,10 @@ func main() { fmt.Println("hello") }
     fn go_blocks_single_line_block_import() {
         let code = "package main\n\nimport ( \"fmt\"; \"syscall\" )\n";
 
-        assert!(verify_go_code(code).is_err(), "single-line import got through");
+        assert!(
+            verify_go_code(code).is_err(),
+            "single-line import got through"
+        );
     }
 
     #[test]
@@ -822,12 +820,12 @@ func main() { fmt.Println("hello") }
         }
 
         let dir = std::env::temp_dir().join("zeile_cpp_preprocess_test_macro");
-        let _ = std::fs::create_dir_all(&dir);
+        std::fs::create_dir_all(&dir).ok();
 
         let code = "#define RUN system\nint main(){ RUN(\"id\"); return 0; }\n";
         let result = scan_cpp_source(&dir, code);
 
-        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::remove_dir_all(&dir).ok();
 
         assert!(
             result.is_err(),
@@ -843,7 +841,7 @@ func main() { fmt.Println("hello") }
         }
 
         let dir = std::env::temp_dir().join("zeile_cpp_preprocess_test_line");
-        let _ = std::fs::create_dir_all(&dir);
+        std::fs::create_dir_all(&dir).ok();
 
         let code = concat!(
             "#define RUN system\n",
@@ -854,7 +852,7 @@ func main() { fmt.Println("hello") }
         );
         let result = scan_cpp_source(&dir, code);
 
-        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::remove_dir_all(&dir).ok();
 
         assert!(
             result.is_err(),
@@ -870,7 +868,7 @@ func main() { fmt.Println("hello") }
         }
 
         let dir = std::env::temp_dir().join("zeile_cpp_preprocess_test_raw_string");
-        let _ = std::fs::create_dir_all(&dir);
+        std::fs::create_dir_all(&dir).ok();
 
         let code = concat!(
             "#define RUN system\n",
@@ -881,7 +879,7 @@ func main() { fmt.Println("hello") }
         );
         let result = scan_cpp_source(&dir, code);
 
-        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::remove_dir_all(&dir).ok();
 
         assert!(
             result.is_err(),

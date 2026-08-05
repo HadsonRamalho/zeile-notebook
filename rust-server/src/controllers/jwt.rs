@@ -234,8 +234,14 @@ mod tests {
             let token = generate_reset_token(uuid::Uuid::new_v4()).expect("token");
             let claims = verify_reset_token(&token).expect("verify");
 
-            assert!(claims.iat > 0, "without iat there's no way to revoke the link");
-            assert!(claims.exp as i64 > claims.iat, "expiration must be in the future");
+            assert!(
+                claims.iat > 0,
+                "without iat there's no way to revoke the link"
+            );
+            assert!(
+                claims.exp as i64 > claims.iat,
+                "expiration must be in the future"
+            );
         });
     }
 

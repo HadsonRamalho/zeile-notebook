@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub async fn run_rust_routes() -> OpenApiRouter<Arc<AppState>> {
-    let routes = OpenApiRouter::new()
+    OpenApiRouter::new()
         .route("/capabilities", get(api_get_execution_capabilities))
         .route(
             "/run",
@@ -39,7 +39,5 @@ pub async fn run_rust_routes() -> OpenApiRouter<Arc<AppState>> {
                 "run-zig",
                 crate::middleware::rate_limit::JUDGE
             )),
-        );
-
-    routes
+        )
 }

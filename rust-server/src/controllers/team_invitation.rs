@@ -6,7 +6,6 @@ use chrono::{Duration, Utc};
 use hyper::{HeaderMap, StatusCode};
 use rand::{Rng, distributions::Alphanumeric};
 use std::sync::Arc;
-use tracing::error;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -37,7 +36,7 @@ pub async fn api_invite_member(
 
     let id = extract_claims_from_header(&headers).await?.1.id;
 
-    let mut conn = &mut get_conn(&state.pool)
+    let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
@@ -63,8 +62,7 @@ pub async fn api_invite_member(
         expires_at,
     };
 
-    if let Err(e) = crate::models::team_invitation::create_invitation(&mut conn, &new_invite).await
-    {
+    if let Err(e) = crate::models::team_invitation::create_invitation(conn, &new_invite).await {
         return Err(ApiError::Database(e));
     }
 
@@ -110,7 +108,7 @@ pub async fn api_accept_invite(
 
     let id = extract_claims_from_header(&headers).await?.1.id;
 
-    let mut conn = &mut get_conn(&state.pool)
+    let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
@@ -119,18 +117,18 @@ pub async fn api_accept_invite(
     // The invite is found, but not consumed on the way in: if it were consumed
     // first, whoever has the link would burn the invite for the person who
     // was actually invited.
-    let invitation = match crate::models::team_invitation::find_invitation_by_token(
-        &mut conn,
-        payload.token.trim(),
-    )
-    .await
-    {
-        Ok(inv) => inv,
-        Err(_) => return Err(ApiError::InvalidData),
-    };
+    let invitation =
+        match crate::models::team_invitation::find_invitation_by_token(conn, payload.token.trim())
+            .await
+        {
+            Ok(inv) => inv,
+            Err(_) => return Err(ApiError::InvalidData),
+        };
 
     if Utc::now().naive_utc() > invitation.expires_at {
-        let _ = crate::models::team_invitation::delete_invitation(&mut conn, invitation.id).await;
+        crate::models::team_invitation::delete_invitation(conn, invitation.id)
+            .await
+            .ok();
         return Err(ApiError::InvalidData);
     }
 
@@ -150,13 +148,13 @@ pub async fn api_accept_invite(
         role_id: invitation.role_id,
     };
 
-    if let Err(e) = models::team::add_user_to_team(&mut conn, &new_member).await {
-        return Err(ApiError::from(e));
-    }
+    models::team::add_user_to_team(conn, &new_member).await?;
 
     // Only consumed after joining the team: if the insert fails, the invite
     // is still valid for a new attempt.
-    let _ = crate::models::team_invitation::delete_invitation(&mut conn, invitation.id).await;
+    crate::models::team_invitation::delete_invitation(conn, invitation.id)
+        .await
+        .ok();
 
     Ok(StatusCode::OK)
 }

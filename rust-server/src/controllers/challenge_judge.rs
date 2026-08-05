@@ -67,7 +67,11 @@ fn generate_property_inputs(spec: &Value) -> Vec<String> {
             let count = line.get("count").and_then(|v| v.as_u64()).unwrap_or(1);
             let min = line.get("min").and_then(|v| v.as_i64()).unwrap_or(0);
             let max = line.get("max").and_then(|v| v.as_i64()).unwrap_or(100);
-            let span = if max >= min { (max - min + 1) as u64 } else { 1 };
+            let span = if max >= min {
+                (max - min + 1) as u64
+            } else {
+                1
+            };
             let mut nums = Vec::new();
             for _ in 0..count {
                 let r = lcg_next(&mut state);
@@ -116,7 +120,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         Ok(c) => c,
         Err(e) => {
             error!("judge: challenge not found: {}", e);
-            let _ = challenge::finalize_submission(
+            challenge::finalize_submission(
                 &mut conn,
                 submission_id,
                 "error",
@@ -125,12 +129,15 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                 0,
                 Some("Desafio indisponível"),
             )
-            .await;
+            .await
+            .ok();
             return;
         }
     };
 
-    let _ = challenge::set_submission_running(&mut conn, submission_id).await;
+    challenge::set_submission_running(&mut conn, submission_id)
+        .await
+        .ok();
 
     let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
     let needs_reference = ch.judge_mode == "reference" || ch.judge_mode == "property";
@@ -139,7 +146,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         Ok(t) => t,
         Err(e) => {
             error!("judge: failed to load cases: {}", e);
-            let _ = challenge::finalize_submission(
+            challenge::finalize_submission(
                 &mut conn,
                 submission_id,
                 "error",
@@ -148,7 +155,8 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                 0,
                 Some("Falha ao carregar casos de teste"),
             )
-            .await;
+            .await
+            .ok();
             return;
         }
     };
@@ -164,22 +172,22 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         })
         .collect();
 
-    if ch.judge_mode == "property" {
-        if let Some(spec) = &ch.property_spec {
-            for input in generate_property_inputs(spec) {
-                cases.push(JudgeCase {
-                    test_case_id: None,
-                    input,
-                    expected: None,
-                    weight: 1,
-                    is_hidden: true,
-                });
-            }
+    if ch.judge_mode == "property"
+        && let Some(spec) = &ch.property_spec
+    {
+        for input in generate_property_inputs(spec) {
+            cases.push(JudgeCase {
+                test_case_id: None,
+                input,
+                expected: None,
+                weight: 1,
+                is_hidden: true,
+            });
         }
     }
 
     if cases.is_empty() {
-        let _ = challenge::finalize_submission(
+        challenge::finalize_submission(
             &mut conn,
             submission_id,
             "error",
@@ -188,7 +196,8 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             0,
             Some("Desafio sem casos de teste"),
         )
-        .await;
+        .await
+        .ok();
         return;
     }
 
@@ -199,7 +208,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let user_bin = match compile_code(&submission.language, &submission.code, &user_session).await {
         Ok(path) => path,
         Err(msg) => {
-            let _ = challenge::finalize_submission(
+            challenge::finalize_submission(
                 &mut conn,
                 submission_id,
                 "compile_error",
@@ -208,14 +217,15 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                 0,
                 truncate(&msg, STDERR_SNIPPET_LIMIT).as_deref(),
             )
-            .await;
+            .await
+            .ok();
             return;
         }
     };
 
     let ref_bin = if needs_reference {
         let Some((ref_lang, ref_sol)) = challenge::pick_reference(&ch) else {
-            let _ = challenge::finalize_submission(
+            challenge::finalize_submission(
                 &mut conn,
                 submission_id,
                 "error",
@@ -224,14 +234,15 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                 0,
                 Some("Desafio sem solução de referência configurada"),
             )
-            .await;
+            .await
+            .ok();
             return;
         };
         match compile_code(&ref_lang, &ref_sol, &ref_session).await {
             Ok(path) => Some(path),
             Err(_) => {
                 error!("judge: reference solution does not compile");
-                let _ = challenge::finalize_submission(
+                challenge::finalize_submission(
                     &mut conn,
                     submission_id,
                     "error",
@@ -240,7 +251,8 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                     0,
                     Some("Solução de referência não compila"),
                 )
-                .await;
+                .await
+                .ok();
                 return;
             }
         }
@@ -269,7 +281,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                         idx + 1,
                         detail
                     );
-                    let _ = challenge::finalize_submission(
+                    challenge::finalize_submission(
                         &mut conn,
                         submission_id,
                         "error",
@@ -278,7 +290,8 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                         0,
                         Some(&msg),
                     )
-                    .await;
+                    .await
+                    .ok();
                     return;
                 }
                 let norm = normalize(&r.stdout);
@@ -327,7 +340,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         error!("judge: falha ao gravar resultados: {}", e);
     }
 
-    let _ = challenge::finalize_submission(
+    challenge::finalize_submission(
         &mut conn,
         submission_id,
         "done",
@@ -336,5 +349,6 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         total_runtime as i32,
         None,
     )
-    .await;
+    .await
+    .ok();
 }
