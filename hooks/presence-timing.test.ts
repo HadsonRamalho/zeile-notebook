@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CURSOR_THROTTLE_MS,
+  isStale,
   PRESENCE_HEARTBEAT_MS,
   PRESENCE_PRUNE_INTERVAL_MS,
   PRESENCE_STALE_MS,
-  isStale,
   shouldSendCursor,
 } from "./presence-timing";
 

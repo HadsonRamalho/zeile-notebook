@@ -7,10 +7,7 @@ import { toast } from "sonner";
 import { DifficultyBadge } from "@/components/challenges/difficulty-badge";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/api/auth-service";
-import {
-  createChallenge,
-  getChallengeById,
-} from "@/lib/api/challenge-service";
+import { createChallenge, getChallengeById } from "@/lib/api/challenge-service";
 import type { Block, BlockMetadata } from "@/lib/types";
 import type { ChallengeDetail } from "@/lib/types/challenge-types";
 import type { User } from "@/lib/types/user-types";
@@ -117,7 +114,9 @@ export function ChallengeBlock({
               </p>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">{t("not_found_title")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("not_found_title")}
+            </p>
           )}
         </div>
       </Shell>

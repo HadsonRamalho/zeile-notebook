@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  AlertCircle,
-  Check,
-  SettingsIcon,
-  Star,
-  X,
-} from "lucide-react";
-import { Loader } from "@/components/motion/loader";
+import { AlertCircle, Check, SettingsIcon, Star, X } from "lucide-react";
 import { type AnchorHTMLAttributes, useEffect, useState } from "react";
+import { Loader } from "@/components/motion/loader";
 import type { BlockMetadata } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { GithubIcon } from "./icons/github-icon";

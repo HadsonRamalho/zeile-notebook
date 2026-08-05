@@ -50,7 +50,9 @@ export function TextBlock({ content, onChange }: TextBlockProps) {
           {content}
         </Markdown>
       ) : (
-        <span className="text-muted-foreground italic">Clique para escrever...</span>
+        <span className="text-muted-foreground italic">
+          Clique para escrever...
+        </span>
       )}
     </div>
   );

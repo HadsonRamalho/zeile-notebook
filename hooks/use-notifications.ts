@@ -62,5 +62,13 @@ export function useNotifications() {
     apiDelete(id).catch(() => {});
   }, []);
 
-  return { items, unreadCount, loading, refresh, markRead, markAllRead, remove };
+  return {
+    items,
+    unreadCount,
+    loading,
+    refresh,
+    markRead,
+    markAllRead,
+    remove,
+  };
 }

@@ -176,8 +176,7 @@ export function TeamPermissions({
         : scopeSel.slice("notebook:".length);
 
   const selfUserId = authUser?.id;
-  const selfRoleId = members.find(([m]) => m.userId === selfUserId)?.[0]
-    .roleId;
+  const selfRoleId = members.find(([m]) => m.userId === selfUserId)?.[0].roleId;
 
   const matchesSelection = useCallback(
     (g: TeamGrant, key: string) =>

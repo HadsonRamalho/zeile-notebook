@@ -65,7 +65,9 @@ export function TOCItem({
   href,
   ref,
   ...props
-}: AnchorHTMLAttributes<HTMLAnchorElement> & { ref?: React.Ref<HTMLAnchorElement> }) {
+}: AnchorHTMLAttributes<HTMLAnchorElement> & {
+  ref?: React.Ref<HTMLAnchorElement>;
+}) {
   const active = useActiveAnchors();
   const isActive = active.includes((href ?? "").slice(1));
 

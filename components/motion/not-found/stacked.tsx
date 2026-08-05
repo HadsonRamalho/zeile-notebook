@@ -2,13 +2,13 @@
 // beui.dev/components/blocks/not-found
 
 import { motion, useReducedMotion } from "motion/react";
-import { SPRING_PANEL } from "@/lib/ease";
 import { useHoverCapable } from "@/hooks/use-hover-capable";
+import { SPRING_PANEL } from "@/lib/ease";
 import {
   NOT_FOUND_DEFAULTS,
   NotFoundActions,
-  NotFoundStage,
   type NotFoundProps,
+  NotFoundStage,
 } from "./shared";
 
 const CARD =
@@ -38,13 +38,19 @@ export function NotFoundStacked({
       >
         <motion.div
           aria-hidden
-          variants={{ rest: { rotate: 0, x: 0, y: 0 }, hover: { rotate: -9, x: -28, y: 8 } }}
+          variants={{
+            rest: { rotate: 0, x: 0, y: 0 },
+            hover: { rotate: -9, x: -28, y: 8 },
+          }}
           transition={SPRING_PANEL}
           className={CARD}
         />
         <motion.div
           aria-hidden
-          variants={{ rest: { rotate: 0, x: 0, y: 0 }, hover: { rotate: 9, x: 28, y: 8 } }}
+          variants={{
+            rest: { rotate: 0, x: 0, y: 0 },
+            hover: { rotate: 9, x: 28, y: 8 },
+          }}
           transition={SPRING_PANEL}
           className={CARD}
         />

@@ -2,7 +2,13 @@
 // beui.dev/components/motion/dock
 
 import { motion, useReducedMotion } from "motion/react";
-import { createContext, useContext, useId, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useId,
+  useMemo,
+} from "react";
 import { SPRING_LAYOUT } from "@/lib/ease";
 import { cn } from "@/lib/utils";
 

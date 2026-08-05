@@ -2,8 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { SubmissionView } from "@/lib/types/challenge-types";
 import { isTerminalStatus } from "@/lib/challenges/display";
+import type { SubmissionView } from "@/lib/types/challenge-types";
 import { cn } from "@/lib/utils";
 import { VerdictBadge } from "./verdict-badge";
 

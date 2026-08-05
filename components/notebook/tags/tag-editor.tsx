@@ -146,11 +146,7 @@ export function TagEditor({
             if (e.key === "Enter" || e.key === ",") {
               e.preventDefault();
               commitInput();
-            } else if (
-              e.key === "Backspace" &&
-              !input &&
-              draft.length > 0
-            ) {
+            } else if (e.key === "Backspace" && !input && draft.length > 0) {
               removeTag(draft[draft.length - 1]);
             }
           }}

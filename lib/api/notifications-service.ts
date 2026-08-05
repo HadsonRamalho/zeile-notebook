@@ -60,7 +60,9 @@ export async function fetchNotificationPreferences() {
   return api.get<NotificationPreferenceDTO[]>("/notifications/preferences");
 }
 
-export async function saveNotificationPreference(payload: SavePreferencePayload) {
+export async function saveNotificationPreference(
+  payload: SavePreferencePayload,
+) {
   return api.put<NotificationPreferenceDTO>(
     "/notifications/preferences",
     payload,

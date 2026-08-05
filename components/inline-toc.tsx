@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import type { Block } from "@/lib/types";
 import { AnchorProvider, TOCItem } from "@/lib/toc";
+import type { Block } from "@/lib/types";
 import { cn, extractTOCFromBlocks, type TOCItemType } from "@/lib/utils";
 
 interface InlineTOCProps {

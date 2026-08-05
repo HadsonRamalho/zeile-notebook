@@ -6,7 +6,6 @@ import { javascript } from "@codemirror/lang-javascript";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
-import { zig } from "codemirror-lang-zig";
 import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
@@ -15,6 +14,7 @@ import CodeMirror, {
   Prec,
   type ReactCodeMirrorRef,
 } from "@uiw/react-codemirror";
+import { zig } from "codemirror-lang-zig";
 import diff from "fast-diff";
 import { useTheme } from "next-themes";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";

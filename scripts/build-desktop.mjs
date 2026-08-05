@@ -50,7 +50,8 @@ function syncCargoVersion() {
   const lines = readFileSync(path, "utf8").split("\n");
   let inPackage = false;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim().startsWith("[")) inPackage = lines[i].trim() === "[package]";
+    if (lines[i].trim().startsWith("["))
+      inPackage = lines[i].trim() === "[package]";
     if (inPackage && /^version\s*=/.test(lines[i])) {
       lines[i] = `version = "${version}"`;
       break;
@@ -77,7 +78,9 @@ function collect(bundleDir, destDir) {
   return copied;
 }
 
-console.log(`> Zeile Desktop build — versão ${version}${target ? ` — target ${target}` : ""}`);
+console.log(
+  `> Zeile Desktop build — versão ${version}${target ? ` — target ${target}` : ""}`,
+);
 syncCargoVersion();
 
 const bundleDir = target
@@ -103,7 +106,9 @@ execSync(`pnpm ${tauriArgs.join(" ")}`, {
 });
 
 const artifacts = collect(bundleDir, destDir);
-console.log(`\n> ${artifacts.length} artefato(s) em dist/${version}/${target || hostTriple()}:`);
+console.log(
+  `\n> ${artifacts.length} artefato(s) em dist/${version}/${target || hostTriple()}:`,
+);
 for (const a of artifacts) {
   const mb = (statSync(a).size / 1024 / 1024).toFixed(1);
   console.log(`  ${a.slice(root.length + 1)}  (${mb}M)`);

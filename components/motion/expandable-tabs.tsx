@@ -8,12 +8,12 @@ import {
   type Variants,
 } from "motion/react";
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { EASE_OUT } from "@/lib/ease";
 import { cn } from "@/lib/utils";
@@ -101,7 +101,11 @@ const REDUCED_CONTENT_VARIANTS: Variants = {
   },
 };
 
-const CONTENT_SPRING = { type: "spring", duration: 0.46, bounce: 0.08 } as const;
+const CONTENT_SPRING = {
+  type: "spring",
+  duration: 0.46,
+  bounce: 0.08,
+} as const;
 
 function sameSize(a: Size | null | undefined, b: Size | null | undefined) {
   return a?.width === b?.width && a?.height === b?.height;

@@ -2,7 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Fragment, type ComponentProps, type ReactNode } from "react";
+import { type ComponentProps, Fragment, type ReactNode } from "react";
 import { useTreePath } from "@/lib/tree-context";
 import { cn, type TOCItemType } from "@/lib/utils";
 
@@ -31,7 +31,6 @@ export function PageBreadcrumb() {
 }
 
 export function DocsPage({
-  toc = [],
   children,
 }: {
   toc?: TOCItemType[];
@@ -49,7 +48,11 @@ export function DocsPage({
   );
 }
 
-export function DocsTitle({ children, className, ...props }: ComponentProps<"h1">) {
+export function DocsTitle({
+  children,
+  className,
+  ...props
+}: ComponentProps<"h1">) {
   return (
     <h1 {...props} className={cn("text-[1.75em] font-semibold", className)}>
       {children}
@@ -65,13 +68,20 @@ export function DocsDescription({
   if (children === undefined) return null;
 
   return (
-    <p {...props} className={cn("mb-8 text-lg text-fd-muted-foreground", className)}>
+    <p
+      {...props}
+      className={cn("mb-8 text-lg text-fd-muted-foreground", className)}
+    >
       {children}
     </p>
   );
 }
 
-export function DocsBody({ children, className, ...props }: ComponentProps<"div">) {
+export function DocsBody({
+  children,
+  className,
+  ...props
+}: ComponentProps<"div">) {
   return (
     <div {...props} className={cn("prose flex-1", className)}>
       {children}

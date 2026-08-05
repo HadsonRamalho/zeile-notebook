@@ -30,7 +30,22 @@ const ASCII_SETS: Record<string, string[]> = {
   ascii: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   "ascii-line": ["|", "/", "-", "\\"],
   "ascii-braille": ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
-  "ascii-blocks": ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂"],
+  "ascii-blocks": [
+    "▁",
+    "▂",
+    "▃",
+    "▄",
+    "▅",
+    "▆",
+    "▇",
+    "█",
+    "▇",
+    "▆",
+    "▅",
+    "▄",
+    "▃",
+    "▂",
+  ],
   "ascii-bounce": ["⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"],
 };
 
@@ -70,26 +85,43 @@ export function Loader({
         className,
       )}
     >
-      {variant === "spinner" && <Spinner size={size} speed={speed} reduce={reduce} />}
+      {variant === "spinner" && (
+        <Spinner size={size} speed={speed} reduce={reduce} />
+      )}
       {variant === "dots" && <Dots size={size} speed={speed} reduce={reduce} />}
       {variant === "bars" && <Bars size={size} speed={speed} reduce={reduce} />}
       {variant === "dot-matrix" && (
         <DotMatrix size={size} speed={speed} reduce={reduce} />
       )}
-      {variant === "dither" && <Dither size={size} speed={speed} reduce={reduce} />}
-      {ASCII_SETS[variant] && (
-        <Ascii frames={ASCII_SETS[variant]} size={size} speed={speed} reduce={reduce} />
+      {variant === "dither" && (
+        <Dither size={size} speed={speed} reduce={reduce} />
       )}
-      {variant === "morph" && <Morph size={size} speed={speed} reduce={reduce} />}
-      {variant === "comet" && <Comet size={size} speed={speed} reduce={reduce} />}
+      {ASCII_SETS[variant] && (
+        <Ascii
+          frames={ASCII_SETS[variant]}
+          size={size}
+          speed={speed}
+          reduce={reduce}
+        />
+      )}
+      {variant === "morph" && (
+        <Morph size={size} speed={speed} reduce={reduce} />
+      )}
+      {variant === "comet" && (
+        <Comet size={size} speed={speed} reduce={reduce} />
+      )}
       {variant === "scramble" && (
         <Scramble size={size} speed={speed} reduce={reduce} />
       )}
       {variant === "metaballs" && (
         <Metaballs size={size} speed={speed} reduce={reduce} />
       )}
-      {variant === "newton" && <Newton size={size} speed={speed} reduce={reduce} />}
-      {variant === "helix" && <Helix size={size} speed={speed} reduce={reduce} />}
+      {variant === "newton" && (
+        <Newton size={size} speed={speed} reduce={reduce} />
+      )}
+      {variant === "helix" && (
+        <Helix size={size} speed={speed} reduce={reduce} />
+      )}
       {variant === "percent" && (
         <Percent size={size} speed={speed} reduce={reduce} />
       )}
@@ -356,14 +388,22 @@ function Metaballs({ size, speed, reduce }: PartProps) {
           cy="50"
           r="15"
           animate={reduce ? { opacity: [0.4, 1, 0.4] } : { cx: [30, 70, 30] }}
-          transition={{ duration: speed * 1.6, ease: EASE_IN_OUT, repeat: Infinity }}
+          transition={{
+            duration: speed * 1.6,
+            ease: EASE_IN_OUT,
+            repeat: Infinity,
+          }}
           cx={reduce ? 40 : undefined}
         />
         <motion.circle
           cy="50"
           r="15"
           animate={reduce ? { opacity: [0.4, 1, 0.4] } : { cx: [70, 30, 70] }}
-          transition={{ duration: speed * 1.6, ease: EASE_IN_OUT, repeat: Infinity }}
+          transition={{
+            duration: speed * 1.6,
+            ease: EASE_IN_OUT,
+            repeat: Infinity,
+          }}
           cx={reduce ? 60 : undefined}
         />
       </g>
@@ -508,7 +548,10 @@ function Percent({ size, speed, reduce }: PartProps) {
 function Bars({ size, speed, reduce }: PartProps) {
   const bar = size * 0.16;
   return (
-    <span className="flex items-center" style={{ gap: size * 0.1, height: size }}>
+    <span
+      className="flex items-center"
+      style={{ gap: size * 0.1, height: size }}
+    >
       {[0, 1, 2, 3].map((i) => (
         <motion.span
           key={i}
@@ -572,9 +615,7 @@ function DotMatrix({ size, speed, reduce }: PartProps) {
 
 // Ordered Bayer 4x4 matrix — the classic dithering threshold pattern. Cells
 // light in this order, so the fill shimmers like a dissolving halftone.
-const BAYER_4 = [
-  0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5,
-];
+const BAYER_4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 function Dither({ size, speed, reduce }: PartProps) {
   const n = 4;
@@ -591,7 +632,9 @@ function Dither({ size, speed, reduce }: PartProps) {
           key={idx}
           className="bg-current"
           style={{ width: cell, height: cell }}
-          animate={reduce ? { opacity: [0.3, 1, 0.3] } : { opacity: [0.1, 1, 0.1] }}
+          animate={
+            reduce ? { opacity: [0.3, 1, 0.3] } : { opacity: [0.1, 1, 0.1] }
+          }
           transition={{
             duration: speed,
             ease: EASE_IN_OUT,

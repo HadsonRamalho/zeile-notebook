@@ -1,18 +1,16 @@
-import * as React from 'react';
-
 import {
-  CursorProvider as CursorProviderPrimitive,
-  Cursor as CursorPrimitive,
-  CursorFollow as CursorFollowPrimitive,
   CursorContainer as CursorContainerPrimitive,
-  type CursorProviderProps as CursorProviderPropsPrimitive,
   type CursorContainerProps as CursorContainerPropsPrimitive,
-  type CursorProps as CursorPropsPrimitive,
+  CursorFollow as CursorFollowPrimitive,
   type CursorFollowProps as CursorFollowPropsPrimitive,
-} from '@/components/animate-ui/primitives/animate/cursor';
-import { cn } from '@/lib/utils';
+  Cursor as CursorPrimitive,
+  type CursorProps as CursorPropsPrimitive,
+  CursorProvider as CursorProviderPrimitive,
+  type CursorProviderProps as CursorProviderPropsPrimitive,
+} from "@/components/animate-ui/primitives/animate/cursor";
+import { cn } from "@/lib/utils";
 
-type CursorProviderProps = Omit<CursorProviderPropsPrimitive, 'children'> &
+type CursorProviderProps = Omit<CursorProviderPropsPrimitive, "children"> &
   CursorContainerPropsPrimitive;
 
 function CursorProvider({ global, ...props }: CursorProviderProps) {
@@ -23,13 +21,13 @@ function CursorProvider({ global, ...props }: CursorProviderProps) {
   );
 }
 
-type CursorProps = Omit<CursorPropsPrimitive, 'children' | 'asChild'>;
+type CursorProps = Omit<CursorPropsPrimitive, "children" | "asChild">;
 
 function Cursor({ className, ...props }: CursorProps) {
   return (
     <CursorPrimitive asChild {...props}>
       <svg
-        className={cn('size-6 text-foreground', className)}
+        className={cn("size-6 text-foreground", className)}
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 40 40"
       >
@@ -42,7 +40,7 @@ function Cursor({ className, ...props }: CursorProps) {
   );
 }
 
-type CursorFollowProps = Omit<CursorFollowPropsPrimitive, 'asChild'>;
+type CursorFollowProps = Omit<CursorFollowPropsPrimitive, "asChild">;
 
 function CursorFollow({
   className,
@@ -60,7 +58,7 @@ function CursorFollow({
     >
       <div
         className={cn(
-          'bg-foreground rounded-md text-background px-2 py-1 text-sm',
+          "bg-foreground rounded-md text-background px-2 py-1 text-sm",
           className,
         )}
       >
@@ -71,10 +69,10 @@ function CursorFollow({
 }
 
 export {
-  CursorProvider,
   Cursor,
   CursorFollow,
-  type CursorProviderProps,
-  type CursorProps,
   type CursorFollowProps,
+  type CursorProps,
+  CursorProvider,
+  type CursorProviderProps,
 };

@@ -60,9 +60,7 @@ function RailButton({
 }) {
   const className = cn(
     "flex shrink-0 items-center rounded-lg text-sm transition-colors",
-    expanded
-      ? "h-10 w-full gap-2.5 px-2.5"
-      : "size-10 justify-center",
+    expanded ? "h-10 w-full gap-2.5 px-2.5" : "size-10 justify-center",
     active
       ? "bg-primary/10 text-primary"
       : "text-muted-foreground hover:bg-sidebar-accent hover:text-accent-foreground",
@@ -381,7 +379,11 @@ export function NotebookRail() {
         <Search size={18} className="shrink-0" />
       </RailButton>
 
-      <RailButton expanded={isExpanded} onClick={() => createPage()} label="Novo caderno">
+      <RailButton
+        expanded={isExpanded}
+        onClick={() => createPage()}
+        label="Novo caderno"
+      >
         <Plus size={18} className="shrink-0" />
       </RailButton>
 

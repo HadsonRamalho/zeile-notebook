@@ -1,9 +1,9 @@
 "use client";
 
-import { Callout } from "@/components/mdx/callout";
-import { Card } from "@/components/mdx/card";
 import { Banner } from "@/components/banner";
 import { GithubInfo } from "@/components/github-info";
+import { Callout } from "@/components/mdx/callout";
+import { Card } from "@/components/mdx/card";
 import type { Block, BlockMetadata } from "@/lib/types";
 import { TextBlock } from "../text/text-block";
 

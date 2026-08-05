@@ -5,13 +5,13 @@ import { go } from "@codemirror/lang-go";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
-import { zig } from "codemirror-lang-zig";
 import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
   type Extension,
   type ReactCodeMirrorRef,
 } from "@uiw/react-codemirror";
+import { zig } from "codemirror-lang-zig";
 import diff from "fast-diff";
 import { useTheme } from "next-themes";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
@@ -166,7 +166,6 @@ export const GenericBlockEditor = React.memo(
             disabled={readOnly}
           >
             <SelectTrigger className="h-6 text-[10px] uppercase font-bold tracking-tight border-none shadow-none bg-transparent hover:bg-muted/50 p-1">
-
               <SelectValue placeholder="Language" />
             </SelectTrigger>
             <SelectContent>

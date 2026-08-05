@@ -190,9 +190,7 @@ export function NotebookReferenceBlock({
           {target === null ? (
             <span className="inline-block h-4 w-40 animate-pulse rounded bg-muted align-middle" />
           ) : target === "error" ? (
-            <span className="text-muted-foreground">
-              Notebook indisponível
-            </span>
+            <span className="text-muted-foreground">Notebook indisponível</span>
           ) : (
             target.title || "Sem título"
           )}

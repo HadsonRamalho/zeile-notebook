@@ -1,6 +1,6 @@
 "use client";
-import type { ComponentProps } from "react";
 import { Search } from "lucide-react";
+import type { ComponentProps } from "react";
 import { useSearchContext } from "@/lib/search-context";
 import { cn } from "@/lib/utils";
 import { type ButtonProps, buttonVariants } from "../ui/fumadocs-button";
@@ -67,7 +67,10 @@ export function LargeSearchToggle({
       Buscar
       <div className="ms-auto inline-flex gap-0.5">
         {hotKey.map((k) => (
-          <kbd key={k.key} className="rounded-md border bg-fd-background px-1.5">
+          <kbd
+            key={k.key}
+            className="rounded-md border bg-fd-background px-1.5"
+          >
             {k.display}
           </kbd>
         ))}

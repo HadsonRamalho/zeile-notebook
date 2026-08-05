@@ -1,5 +1,5 @@
-import type { ComponentProps, ReactNode } from "react";
 import Link from "next/link";
+import type { ComponentProps, ReactNode } from "react";
 import type { LinkItemType } from "./link-item";
 
 export interface NavOptions {

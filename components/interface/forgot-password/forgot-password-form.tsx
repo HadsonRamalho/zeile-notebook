@@ -2,12 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Send } from "lucide-react";
-import { Loader } from "@/components/motion/loader";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { BackButton } from "@/components/interface/back-button";
+import { Loader } from "@/components/motion/loader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {

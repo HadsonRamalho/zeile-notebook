@@ -30,7 +30,9 @@ export function SearchContextProvider({ children }: { children: ReactNode }) {
 export function useSearchContext() {
   const context = use(SearchContext);
   if (!context) {
-    throw new Error("useSearchContext must be used under <SearchContextProvider />");
+    throw new Error(
+      "useSearchContext must be used under <SearchContextProvider />",
+    );
   }
   return context;
 }

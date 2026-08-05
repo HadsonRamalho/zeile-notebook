@@ -54,7 +54,9 @@ function ShareProcessor() {
         router.replace(`/notebook/${id}`);
       })
       .catch(() => {
-        setErrorMessage("Não foi possível criar um caderno com o conteúdo compartilhado.");
+        setErrorMessage(
+          "Não foi possível criar um caderno com o conteúdo compartilhado.",
+        );
       });
   }, [isAuthLoading, user, searchParams, router]);
 

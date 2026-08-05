@@ -8,8 +8,8 @@ import { BackButton } from "@/components/interface/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchPublicNotebooks } from "@/lib/api/notebook-service";
-import { cn } from "@/lib/utils";
 import type { PublicNotebookResponse } from "@/lib/types/notebook-types";
+import { cn } from "@/lib/utils";
 
 type Filter = "all" | "personal" | "team";
 

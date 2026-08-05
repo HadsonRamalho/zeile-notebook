@@ -30,7 +30,7 @@ export function extractTOCFromBlocks(blocks: Block[]): TOCItemType[] {
       while ((match = regex.exec(block.content)) !== null) {
         const depth = match[1].length;
         const title = match[2].trim();
-        const url = "#" + slugger.slug(title);
+        const url = `#${slugger.slug(title)}`;
 
         items.push({
           title,

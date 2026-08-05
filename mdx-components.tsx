@@ -1,15 +1,15 @@
+import Slugger from "github-slugger";
 import type { MDXComponents } from "mdx/types";
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ComponentProps } from "react";
-import Slugger from "github-slugger";
 import { codeToHtml } from "shiki";
 import { Banner } from "@/components/banner";
 import { GithubRepoMDX } from "@/components/github-info-mdx";
 import { Callout } from "@/components/mdx/callout";
 import { Card, Cards } from "@/components/mdx/card";
+import { PythonEditorMDX } from "@/components/notebook/blocks/python/python-editor-mdx";
 import { RustEditorMDX } from "@/components/notebook/blocks/rust/rust-editor-mdx";
 import { TsxEditorMDX } from "@/components/notebook/blocks/tsx/tsx-editor-mdx";
-import { PythonEditorMDX } from "@/components/notebook/blocks/python/python-editor-mdx";
 
 function heading(Tag: `h${1 | 2 | 3 | 4 | 5 | 6}`, slugger: Slugger) {
   return function Heading({ children, ...props }: ComponentProps<typeof Tag>) {
@@ -31,7 +31,9 @@ function A({ href = "", ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
 }
 
 function Pre({ children }: ComponentProps<"pre">) {
-  const code = (children as { props?: { children?: string; className?: string } })?.props;
+  const code = (
+    children as { props?: { children?: string; className?: string } }
+  )?.props;
   const raw = typeof code?.children === "string" ? code.children : "";
   const lang = code?.className?.replace("language-", "") || "text";
 
@@ -45,7 +47,9 @@ async function CodeBlock({ code, lang }: { code: string; lang: string }) {
   }).catch(() => `<pre><code>${code}</code></pre>`);
 
   // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki output is trusted, generated at build time
-  return <div className="not-prose" dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div className="not-prose" dangerouslySetInnerHTML={{ __html: html }} />
+  );
 }
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {

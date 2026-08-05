@@ -37,7 +37,10 @@ export function HelixPercentLoader({
   return (
     <span className={cn("flex flex-col items-center gap-2", className)}>
       <Loader variant="helix" size={size} speed={speed} label={label} />
-      <span aria-hidden className="font-mono text-sm tabular-nums text-muted-foreground">
+      <span
+        aria-hidden
+        className="font-mono text-sm tabular-nums text-muted-foreground"
+      >
         {percent}%
       </span>
     </span>

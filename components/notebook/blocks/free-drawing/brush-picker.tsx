@@ -41,7 +41,10 @@ function BrushPreview({ brush }: { brush: Brush }) {
     const color = getComputedStyle(canvas).color || "#0f172a";
 
     const cap = h * 0.42;
-    const scale = Math.min(1, cap / Math.max(brush.sizeStart, brush.sizeEnd, 1));
+    const scale = Math.min(
+      1,
+      cap / Math.max(brush.sizeStart, brush.sizeEnd, 1),
+    );
     const points = [];
     const N = 28;
     for (let i = 0; i <= N; i++) {
@@ -106,11 +109,7 @@ const NumberField = ({
   </div>
 );
 
-function CreateBrushForm({
-  onCreate,
-}: {
-  onCreate: (brush: Brush) => void;
-}) {
+function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
   const [name, setName] = useState("");
   const [shape, setShape] = useState<BrushShape>("pen");
   const [sizeStart, setSizeStart] = useState(8);

@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/auth-context";
+import { useNotifications } from "@/hooks/use-notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export function UserNav({ compact = false }: { compact?: boolean } = {}) {
@@ -41,7 +41,11 @@ export function UserNav({ compact = false }: { compact?: boolean } = {}) {
           size="icon"
           className="rounded-full"
         >
-          <Link href="/login" aria-label={t("nav.login")} title={t("nav.login")}>
+          <Link
+            href="/login"
+            aria-label={t("nav.login")}
+            title={t("nav.login")}
+          >
             <User />
           </Link>
         </Button>
