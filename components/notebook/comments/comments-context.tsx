@@ -5,7 +5,7 @@ import { type CommentsController, useComments } from "@/hooks/use-comments";
 
 type CommentsContextValue = CommentsController & {
   canComment: boolean;
-  currentUserId?: string;
+  currentUserId?: string | undefined;
 };
 
 const CommentsContext = createContext<CommentsContextValue | null>(null);
@@ -20,7 +20,7 @@ export function CommentsProvider({
   notebookId: string;
   token: string;
   canComment: boolean;
-  currentUserId?: string;
+  currentUserId?: string | undefined;
   children: ReactNode;
 }) {
   const controller = useComments(notebookId, token);

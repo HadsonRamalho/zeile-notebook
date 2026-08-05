@@ -6,15 +6,15 @@ import { SPRING_PRESS } from "@/lib/ease";
 import { cn } from "@/lib/utils";
 
 export interface NotFoundProps {
-  className?: string;
+  className?: string | undefined;
   /** The big status code. */
   code?: string;
   title?: string;
   description?: string;
-  homeHref?: string;
-  homeLabel?: string;
-  browseHref?: string;
-  browseLabel?: string;
+  homeHref?: string | undefined;
+  homeLabel?: string | undefined;
+  browseHref?: string | undefined;
+  browseLabel?: string | undefined;
 }
 
 export const NOT_FOUND_DEFAULTS = {
@@ -43,8 +43,8 @@ export function NotFoundActions({
 }: ActionsProps) {
   const reduce = useReducedMotion();
   const canHover = useHoverCapable();
-  const whileTap = reduce ? undefined : { scale: 0.96 };
-  const whileHover = reduce || !canHover ? undefined : { scale: 1.02 };
+  const tapProps = reduce ? {} : { whileTap: { scale: 0.96 } };
+  const hoverProps = reduce || !canHover ? {} : { whileHover: { scale: 1.02 } };
 
   return (
     <div
@@ -55,8 +55,8 @@ export function NotFoundActions({
     >
       <motion.a
         href={homeHref}
-        whileTap={whileTap}
-        whileHover={whileHover}
+        {...tapProps}
+        {...hoverProps}
         transition={SPRING_PRESS}
         className="inline-flex h-11 select-none items-center justify-center rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
@@ -64,8 +64,8 @@ export function NotFoundActions({
       </motion.a>
       <motion.a
         href={browseHref}
-        whileTap={whileTap}
-        whileHover={whileHover}
+        {...tapProps}
+        {...hoverProps}
         transition={SPRING_PRESS}
         className="inline-flex h-11 select-none items-center justify-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-primary/5"
       >
@@ -80,7 +80,7 @@ export function NotFoundStage({
   className,
   children,
 }: {
-  className?: string;
+  className?: string | undefined;
   children: React.ReactNode;
 }) {
   return (

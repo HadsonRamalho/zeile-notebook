@@ -5,7 +5,7 @@ interface EmptyStateProps {
   icon?: ReactNode;
   title: string;
   description?: string;
-  hint?: string;
+  hint?: string | undefined;
   children?: ReactNode;
   className?: string;
 }

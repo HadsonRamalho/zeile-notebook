@@ -32,7 +32,7 @@ function ThreadView({
 }: {
   thread: CommentThread;
   canComment: boolean;
-  currentUserId?: string;
+  currentUserId?: string | undefined;
   onReply: (body: string) => void;
   onResolve: (status: "open" | "resolved") => void;
   onRemove: (commentId: string) => void;

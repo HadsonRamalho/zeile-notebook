@@ -89,8 +89,9 @@ export function renderTitleNav(
   props: ComponentProps<"a">,
 ) {
   if (typeof title === "function") return title({ href: url, ...props });
+  const { href: _href, ...rest } = props;
   return (
-    <Link href={url} {...props}>
+    <Link href={url} {...(rest as Omit<ComponentProps<typeof Link>, "href">)}>
       {title}
     </Link>
   );

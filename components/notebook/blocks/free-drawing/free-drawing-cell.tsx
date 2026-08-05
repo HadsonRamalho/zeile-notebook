@@ -335,8 +335,7 @@ export function FreeDrawingCell({
     if (!next.some((e) => isLayer(e) && e.id === activeLayerId)) {
       setActiveLayerId(next.find(isLayer)?.id ?? null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, blockId]);
+  }, [doc, blockId, activeLayerId]);
 
   useEffect(() => {
     return () => {
@@ -885,7 +884,7 @@ export function FreeDrawingCell({
     toast("Camada excluída — Ctrl+Z para desfazer");
   };
 
-  const undo = () => {
+  const undo = useCallback(() => {
     const prev = undoStack.current.pop();
     if (!prev) return;
     redoStack.current = [...redoStack.current, elements];
@@ -893,9 +892,9 @@ export function FreeDrawingCell({
     const sig = sceneSignature(prev as unknown as DrawingElement[]);
     lastSyncedSig.current = sig;
     updateDrawingScene(blockId, prev as unknown as DrawingElement[]);
-  };
+  }, [elements, blockId, updateDrawingScene]);
 
-  const redo = () => {
+  const redo = useCallback(() => {
     const next = redoStack.current.pop();
     if (!next) return;
     undoStack.current = [...undoStack.current, elements];
@@ -903,7 +902,7 @@ export function FreeDrawingCell({
     const sig = sceneSignature(next as unknown as DrawingElement[]);
     lastSyncedSig.current = sig;
     updateDrawingScene(blockId, next as unknown as DrawingElement[]);
-  };
+  }, [elements, blockId, updateDrawingScene]);
 
   // Ctrl+Z desfaz, Ctrl+Shift+Z ou Ctrl+Y refaz (ou Cmd no mac); letras soltas
   // select tools (language-specific shortcuts). Only when the cursor is over
@@ -1334,7 +1333,7 @@ function ToolButton({
 }: {
   id: ToolKind;
   isActive: boolean;
-  shortcut?: string;
+  shortcut?: string | undefined;
   onClick: (t: ToolKind) => void;
 }) {
   const Icon = TOOL_ICONS[id];

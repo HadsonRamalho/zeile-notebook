@@ -26,7 +26,7 @@ function SidebarNodeList({
   onNavigate,
 }: {
   nodes: PageTreeNode[];
-  onNavigate?: () => void;
+  onNavigate?: (() => void) | undefined;
 }) {
   const pathname = usePathname();
 
@@ -39,7 +39,7 @@ function SidebarNodeList({
             <li key={node.url}>
               <Link
                 href={node.url}
-                onClick={onNavigate}
+                {...(onNavigate ? { onClick: onNavigate } : {})}
                 className={cn(
                   "block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                   active && "bg-accent font-medium text-primary",
@@ -56,7 +56,7 @@ function SidebarNodeList({
             {node.index ? (
               <Link
                 href={node.index.type === "page" ? node.index.url : "#"}
-                onClick={onNavigate}
+                {...(onNavigate ? { onClick: onNavigate } : {})}
                 className="block px-2 py-1 text-xs font-medium uppercase text-muted-foreground"
               >
                 {node.name}

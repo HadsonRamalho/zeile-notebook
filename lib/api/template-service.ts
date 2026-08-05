@@ -42,8 +42,8 @@ export interface PublicTemplate {
 export interface CreateTemplateInput {
   kind: TemplateKind;
   name: string;
-  teamId?: string;
-  sourceNotebookId?: string;
+  teamId?: string | undefined;
+  sourceNotebookId?: string | undefined;
 }
 
 export async function createTemplate(input: CreateTemplateInput) {

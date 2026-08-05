@@ -80,6 +80,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
     [notebookId],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: !!doc não é lido no corpo (que usa docRef.current), mas dispara a (re)conexão quando o doc fica disponível
   useEffect(() => {
     if (!notebookId || !automerge.current || !docRef.current) return;
 
@@ -185,7 +186,7 @@ export function useAutomergeSync(notebookId: string, token: string) {
       const blockIndex = d.blocks.findIndex((b) => b.id === blockId);
       if (blockIndex === -1) return;
 
-      const block = d.blocks[blockIndex];
+      const block = d.blocks[blockIndex]!;
       const currentContent = block.content;
 
       if (currentContent === newContent) return;

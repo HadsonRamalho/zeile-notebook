@@ -102,7 +102,7 @@ export function ActivityFeed({ notebookId }: { notebookId: string }) {
           const isNew = new Date(item.createdAt).getTime() > lastSeen;
           const prevNew =
             index > 0 &&
-            new Date(items[index - 1].createdAt).getTime() > lastSeen;
+            new Date(items[index - 1]!.createdAt).getTime() > lastSeen;
           const showDivider = index === 0 && isNew;
           const showSeenDivider = !isNew && (index === 0 || prevNew);
           return (

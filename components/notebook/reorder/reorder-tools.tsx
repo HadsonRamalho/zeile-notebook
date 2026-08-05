@@ -27,7 +27,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CppIcon } from "@/components/icons/cpp-icon";
 import { GithubIcon } from "@/components/icons/github-icon";
 import { GoIcon } from "@/components/icons/go-icon";
@@ -78,12 +78,12 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
   const [view, setView] = useState<string>("main");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const resetView = () => setView("main");
+  const resetView = useCallback(() => setView("main"), []);
 
-  const close = () => {
+  const close = useCallback(() => {
     setOpen(false);
     resetView();
-  };
+  }, [resetView]);
 
   // Fecha ao clicar/tocar fora ou apertar Escape — mesmo comportamento em
   // mouse e touch, sem depender de hover.
@@ -101,7 +101,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, close]);
 
   const menuRegistry: Record<
     string,
@@ -353,7 +353,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
     close();
   };
 
-  const currentMenu = menuRegistry[view];
+  const currentMenu = menuRegistry[view]!;
 
   return (
     <div

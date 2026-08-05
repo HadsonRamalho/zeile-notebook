@@ -63,7 +63,7 @@ export function TypstTemplateControls({
   updateBlockMetadata,
 }: {
   block: Block;
-  notebookId?: string;
+  notebookId?: string | undefined;
   pageBlocks: Block[];
   updateBlockMetadata: (id: string, metadata: BlockMetadata) => void;
 }) {

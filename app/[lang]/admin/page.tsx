@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Book, Shield, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminNotify } from "@/components/interface/admin/admin-notify";
 import { BackButton } from "@/components/interface/back-button";
 import {
@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
   const [notebooksPage, setNotebooksPage] = useState(1);
   const [notebooksTotalPages, setNotebooksTotalPages] = useState(1);
 
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
     try {
       const data = await fetchAdminStats();
       setStats(data);
@@ -71,9 +71,9 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoadingStats(false);
     }
-  }
+  }, []);
 
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     try {
       const data = await fetchAdminUsers(usersPage, 10);
       setUsers(data.data);
@@ -81,9 +81,9 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error(error);
     }
-  }
+  }, [usersPage]);
 
-  async function loadTeams() {
+  const loadTeams = useCallback(async () => {
     try {
       const data = await fetchAdminTeams(teamsPage, 10);
       setTeams(data.data);
@@ -91,9 +91,9 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error(error);
     }
-  }
+  }, [teamsPage]);
 
-  async function loadNotebooks() {
+  const loadNotebooks = useCallback(async () => {
     try {
       const data = await fetchAdminNotebooks(notebooksPage, 10);
       setNotebooks(data.data);
@@ -101,11 +101,23 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error(error);
     }
-  }
+  }, [notebooksPage]);
 
   useEffect(() => {
-    Promise.all([loadStats(), loadUsers(), loadNotebooks(), loadTeams()]);
-  }, []);
+    loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
+    loadTeams();
+  }, [loadTeams]);
+
+  useEffect(() => {
+    loadNotebooks();
+  }, [loadNotebooks]);
 
   if (user?.role !== "Admin") {
     return (

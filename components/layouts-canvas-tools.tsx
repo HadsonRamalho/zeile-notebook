@@ -17,7 +17,7 @@ import {
   Type,
   UnlockIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
@@ -50,7 +50,7 @@ interface Shape {
   opacity: number;
   visible: boolean;
   locked: boolean;
-  text?: string;
+  text?: string | undefined;
   name: string;
 }
 
@@ -169,14 +169,17 @@ export function LayoutsCanvasToolsShowcasePage() {
     );
   };
 
-  const screenToWorld = (clientX: number, clientY: number): Point => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return {
-      x: (clientX - rect.left - pan.x) / zoom,
-      y: (clientY - rect.top - pan.y) / zoom,
-    };
-  };
+  const screenToWorld = useCallback(
+    (clientX: number, clientY: number): Point => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return { x: 0, y: 0 };
+      return {
+        x: (clientX - rect.left - pan.x) / zoom,
+        y: (clientY - rect.top - pan.y) / zoom,
+      };
+    },
+    [pan.x, pan.y, zoom],
+  );
 
   const onCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -296,7 +299,7 @@ export function LayoutsCanvasToolsShowcasePage() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [drag, pan.x, pan.y, zoom, creationCount]);
+  }, [drag, creationCount, screenToWorld]);
 
   useEffect(() => {
     const isTypingTarget = (el: EventTarget | null) => {

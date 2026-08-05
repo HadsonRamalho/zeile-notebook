@@ -3,6 +3,7 @@
 import { AreaChart, BarChart3, LineChart, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import type { CellValue } from "@/lib/cellResultsStore";
 import {
   parseInlineTable,
   type TableResult,
@@ -61,7 +62,7 @@ function isNumericColumn(table: TableResult, colIndex: number) {
   const sample = table.rows
     .slice(0, 20)
     .map((row) => row[colIndex])
-    .filter((v) => v !== null && v !== "");
+    .filter((v): v is CellValue => v !== null && v !== "" && v !== undefined);
   if (sample.length === 0) return false;
   return sample.every((v) => Number.isFinite(toNumber(v)));
 }
@@ -116,7 +117,10 @@ export function ChartCell({
       labels: rows.map((row) => String(row[xIndex] ?? "")),
       series: yColumns.map((col) => {
         const idx = table.columns.indexOf(col);
-        return { name: col, values: rows.map((row) => toNumber(row[idx])) };
+        return {
+          name: col,
+          values: rows.map((row) => toNumber(row[idx] ?? null)),
+        };
       }),
     };
   }, [table, xColumn, yColumns]);
@@ -198,7 +202,7 @@ export function ChartCell({
               }
               onChange={(e) => {
                 if (e.target.value === "inline") {
-                  update({ sourceKind: "inline", sourceBlockId: undefined });
+                  update({ sourceKind: "inline" });
                 } else {
                   update({ sourceKind: "cell", sourceBlockId: e.target.value });
                 }

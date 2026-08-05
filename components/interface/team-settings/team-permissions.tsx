@@ -225,7 +225,7 @@ export function TeamPermissions({
             subjectId: subjectId,
             permissionKey: key,
             targetKind: targetKind,
-            targetId: targetId ?? undefined,
+            targetId: targetId,
             effect: next,
           });
         }
@@ -312,7 +312,7 @@ export function TeamPermissions({
       if (targetKind === "notebook" && !perm.targets.includes("notebook")) {
         continue;
       }
-      const module = perm.key.split(".")[0];
+      const module = perm.key.split(".")[0]!;
       let bucket = byModule.get(module);
       if (!bucket) {
         bucket = { general: [], granular: [] };

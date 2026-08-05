@@ -40,8 +40,8 @@ export interface CapabilitySnapshot {
 
 export interface PermissionTarget {
   notebookId: string;
-  blockId?: string | null;
-  blockType?: string | null;
+  blockId?: string | null | undefined;
+  blockType?: string | null | undefined;
 }
 
 export type GrantSubjectKind = "role" | "user" | "principal";

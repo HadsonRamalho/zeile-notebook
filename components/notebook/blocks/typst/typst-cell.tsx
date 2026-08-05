@@ -16,7 +16,7 @@ interface TypstCellProps {
   onChange: (content: string) => void;
   canWrite: boolean;
   block?: Block;
-  notebookId?: string;
+  notebookId?: string | undefined;
   pageBlocks?: Block[];
   updateBlockMetadata?: (id: string, metadata: BlockMetadata) => void;
 }

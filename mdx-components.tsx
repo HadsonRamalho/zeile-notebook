@@ -25,7 +25,12 @@ function heading(Tag: `h${1 | 2 | 3 | 4 | 5 | 6}`, slugger: Slugger) {
 
 function A({ href = "", ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   if (href.startsWith("/") || href.startsWith("#")) {
-    return <Link href={href} {...props} />;
+    return (
+      <Link
+        href={href}
+        {...(props as Omit<ComponentProps<typeof Link>, "href">)}
+      />
+    );
   }
   return <a href={href} target="_blank" rel="noreferrer" {...props} />;
 }

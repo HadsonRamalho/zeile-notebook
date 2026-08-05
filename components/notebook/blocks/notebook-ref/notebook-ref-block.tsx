@@ -47,7 +47,7 @@ function NotebookPicker({
   onPick,
   children,
 }: {
-  currentNotebookId?: string;
+  currentNotebookId?: string | undefined;
   onPick: (id: string) => void;
   children: React.ReactNode;
 }) {
@@ -125,7 +125,7 @@ export function NotebookReferenceBlock({
   updateBlockMetadata,
 }: {
   block: Block;
-  notebookId?: string;
+  notebookId?: string | undefined;
   canWrite: boolean;
   updateBlockMetadata: (id: string, metadata: BlockMetadata) => void;
 }) {

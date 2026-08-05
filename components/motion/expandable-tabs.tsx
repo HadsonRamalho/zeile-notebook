@@ -41,10 +41,10 @@ export type ExpandableTabsClassNames = {
 export interface ExpandableTabsProps {
   items: ExpandableTabsItem[];
   /** Active tab id, or null/undefined for the closed (bar-only) state. */
-  value?: string | null;
-  defaultValue?: string | null;
-  onValueChange?: (id: string | null) => void;
-  className?: string;
+  value?: string | null | undefined;
+  defaultValue?: string | null | undefined;
+  onValueChange?: ((id: string | null) => void) | undefined;
+  className?: string | undefined;
   classNames?: ExpandableTabsClassNames;
 }
 
@@ -276,11 +276,9 @@ export function ExpandableTabs({
       <motion.div
         ref={rootRef}
         initial={false}
-        animate={
-          targetSize
-            ? { width: targetSize.width, height: targetSize.height }
-            : undefined
-        }
+        {...(targetSize
+          ? { animate: { width: targetSize.width, height: targetSize.height } }
+          : {})}
         transition={reduce ? { duration: 0 } : SHELL_SPRING}
         style={{ transformOrigin: "bottom center" }}
         className={cn(
