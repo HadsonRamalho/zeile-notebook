@@ -1,17 +1,22 @@
-FROM rust:bookworm as builder
+FROM rust:bookworm AS builder
 
 WORKDIR /usr/src/app
 
 COPY Cargo.toml Cargo.lock ./
+COPY rust-server/Cargo.toml ./rust-server/Cargo.toml
+COPY src-tauri/Cargo.toml ./src-tauri/Cargo.toml
 
-RUN mkdir src && echo "fn main() {println!(\"dummy\")}" > src/main.rs
-RUN cargo build --release
+RUN mkdir -p rust-server/src src-tauri/src \
+    && echo "fn main() {println!(\"dummy\")}" > rust-server/src/main.rs \
+    && echo "fn main() {}" > src-tauri/src/main.rs \
+    && echo "" > src-tauri/src/lib.rs
+RUN cargo build --release -p rust-server
 
-COPY . .
+COPY rust-server ./rust-server
 
-RUN touch src/main.rs
+RUN touch rust-server/src/main.rs
 
-RUN cargo build --release
+RUN cargo build --release -p rust-server
 
 FROM debian:bookworm-slim
 
