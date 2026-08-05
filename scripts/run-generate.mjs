@@ -52,7 +52,7 @@ async function loadSpec(source) {
 }
 
 function jsonBlock(value) {
-  return "```json\n" + JSON.stringify(value, null, 2) + "\n```";
+  return `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
 }
 
 function paramsTable(parameters = []) {

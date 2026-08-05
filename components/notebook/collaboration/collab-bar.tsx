@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AutomergeHistoryEntry } from "@/hooks/use-automerge-sync";
-import { useIsTouchDevice } from "@/hooks/use-is-touch-device";
 import type { ChatMessage, Collaborator } from "@/hooks/use-presence";
 import { fetchNotebookMessageVersions } from "@/lib/api/chat-service";
 import { updateAppBadge } from "@/lib/appBadge";

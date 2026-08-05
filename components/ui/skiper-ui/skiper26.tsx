@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { GripHorizontal } from "lucide-react";
 import { useTheme } from "next-themes";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -469,7 +469,7 @@ export const useThemeToggle = ({
 
   const styleId = "theme-transition-styles";
 
-  const updateStyles = useCallback((css: string, name: string) => {
+  const updateStyles = useCallback((css: string, _name: string) => {
     if (typeof window === "undefined") return;
 
     let styleElement = document.getElementById(styleId) as HTMLStyleElement;
@@ -864,7 +864,7 @@ export const createAnimation = (
       `,
     };
   }
-  if (variant === "circle" && start == "center") {
+  if (variant === "circle" && start === "center") {
     return {
       name: `${variant}-${start}${blur ? "-blur" : ""}`,
       css: `

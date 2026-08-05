@@ -31,7 +31,6 @@ export function PageBreadcrumb() {
 }
 
 export function DocsPage({
-  toc = [],
   children,
 }: {
   toc?: TOCItemType[];

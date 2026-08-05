@@ -30,11 +30,10 @@ interface TsxEditorProps {
 
 interface RenderPreviewProps {
   id: string;
-  mode: TsMode;
   sandboxUrl: string | null;
 }
 
-function RenderPreview({ id, mode, sandboxUrl }: RenderPreviewProps) {
+function RenderPreview({ id, sandboxUrl }: RenderPreviewProps) {
   return (
     <div
       id={`preview-${id}`}
@@ -198,11 +197,7 @@ export function TsxEditor({
                 showPreview && mode === "simple" ? "block" : "hidden"
               }`}
             >
-              <RenderPreview
-                sandboxUrl={sandboxUrl}
-                id={block.id}
-                mode={mode}
-              />
+              <RenderPreview sandboxUrl={sandboxUrl} id={block.id} />
             </div>
           </SandpackLayout>
 

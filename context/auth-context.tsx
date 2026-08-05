@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteCookie, getCookie, setCookie } from "cookies-next";
+import { getCookie } from "cookies-next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
