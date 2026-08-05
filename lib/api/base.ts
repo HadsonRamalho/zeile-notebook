@@ -9,12 +9,12 @@ interface FetchOptions extends RequestInit {
 
 export class ApiClientError extends Error {
   code: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 
   constructor(
     message: string,
     code: string,
-    details: Record<string, any> = {},
+    details: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = "ApiClientError";
@@ -78,11 +78,20 @@ async function http<T>(
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const code = errorBody.code || "UNKNOWN_ERROR";
-    const details = errorBody.details || {};
+    const errorBody: unknown = await response.json().catch(() => ({}));
+    const body =
+      typeof errorBody === "object" && errorBody !== null
+        ? (errorBody as Record<string, unknown>)
+        : {};
+    const code = typeof body.code === "string" ? body.code : "UNKNOWN_ERROR";
+    const details =
+      typeof body.details === "object" && body.details !== null
+        ? (body.details as Record<string, unknown>)
+        : {};
     const errorMessage =
-      errorBody.message || errorBody.error || "Erro na requisição";
+      (typeof body.message === "string" && body.message) ||
+      (typeof body.error === "string" && body.error) ||
+      "Erro na requisição";
 
     throw new ApiClientError(errorMessage, code, details);
   }
@@ -97,14 +106,14 @@ export function createApi(capability: Capability) {
     get: <T>(path: string, config?: FetchOptions) =>
       http<T>(path, capability, { ...config, method: "GET" }),
 
-    post: <T>(path: string, body?: any, config?: FetchOptions) =>
+    post: <T>(path: string, body?: unknown, config?: FetchOptions) =>
       http<T>(path, capability, {
         ...config,
         method: "POST",
         body: JSON.stringify(body),
       }),
 
-    put: <T>(path: string, body: any, config?: FetchOptions) =>
+    put: <T>(path: string, body: unknown, config?: FetchOptions) =>
       http<T>(path, capability, {
         ...config,
         method: "PUT",
@@ -114,7 +123,7 @@ export function createApi(capability: Capability) {
     delete: <T>(path: string, config?: FetchOptions) =>
       http<T>(path, capability, { ...config, method: "DELETE" }),
 
-    patch: <T>(path: string, body?: any, config?: FetchOptions) =>
+    patch: <T>(path: string, body?: unknown, config?: FetchOptions) =>
       http<T>(path, capability, {
         ...config,
         method: "PATCH",

@@ -38,9 +38,12 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
   }, []);
 
   useEffect(() => {
-    const handleUpdate = async (e: any) => {
-      if (e.detail.id === pageId) {
-        setTitle(e.detail.title);
+    const handleUpdate = (e: Event) => {
+      const { id, title: newTitle } = (
+        e as CustomEvent<{ id: string; title: string }>
+      ).detail;
+      if (id === pageId) {
+        setTitle(newTitle);
       }
     };
 

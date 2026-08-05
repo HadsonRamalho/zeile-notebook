@@ -3,6 +3,9 @@ import { getSharedPyodide } from "@/lib/pyodideStore";
 export async function runPythonInSandbox(code: string) {
   try {
     const pyodide = await getSharedPyodide();
+    if (!pyodide) {
+      throw new Error("Pyodide is not available outside the browser.");
+    }
 
     let output = "";
     pyodide.setStdout({
@@ -16,9 +19,9 @@ export async function runPythonInSandbox(code: string) {
 
     return {
       output: output,
-      result: result?.toString(),
+      result: result === undefined ? undefined : String(result),
     };
-  } catch (err: any) {
-    return { error: err.message };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : String(err) };
   }
 }

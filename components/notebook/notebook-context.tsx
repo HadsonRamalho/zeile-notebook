@@ -93,8 +93,7 @@ export function NotebookProvider({
     if (pageId) {
       getCurrentNotebookWithBlocks(pageId).then((data) => {
         if (data) {
-          // biome-ignore lint/suspicious/noExplicitAny: <needed for legacy type compatibility>
-          setVisibility((data as any).isPublic ?? (data as any).is_public);
+          setVisibility(data.isPublic);
           setNotebook(data);
         }
       });

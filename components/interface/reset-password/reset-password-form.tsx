@@ -71,7 +71,7 @@ export function ResetPasswordForm({
       });
       toast.success(t("success_toast"));
       router.push("/login");
-    } catch (err: any) {
+    } catch (err: unknown) {
       handleApiError({ err, t: a, setError });
     } finally {
       setIsLoading(false);

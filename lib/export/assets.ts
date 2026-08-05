@@ -79,9 +79,9 @@ async function renderExcalidraw(
   const els = readSceneElements(notebook, block.id);
   if (els.length === 0) return null;
   const { exportToBlob } = await import("@excalidraw/excalidraw");
+  type ExportToBlobOpts = Parameters<typeof exportToBlob>[0];
   const blob = await exportToBlob({
-    // biome-ignore lint/suspicious/noExplicitAny: elements come from the CRDT without excalidraw types
-    elements: els as any,
+    elements: els as unknown as ExportToBlobOpts["elements"],
     files: null,
     mimeType: "image/png",
     appState: { exportBackground: true, viewBackgroundColor: "#ffffff" },

@@ -1,10 +1,7 @@
-import { notFound } from "next/navigation";
 import { getRequestConfig } from "next-intl/server";
 
 export default getRequestConfig(async ({ requestLocale }) => {
   let locale = await requestLocale;
-
-  if (!["pt-br", "en"].includes(locale as any)) return notFound();
 
   if (!locale || !["pt-br", "en"].includes(locale)) {
     locale = "pt-br";

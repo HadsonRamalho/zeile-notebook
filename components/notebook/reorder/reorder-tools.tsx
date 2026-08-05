@@ -26,6 +26,7 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { CppIcon } from "@/components/icons/cpp-icon";
 import { GithubIcon } from "@/components/icons/github-icon";
@@ -437,7 +438,15 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
   );
 }
 
-const ToolButton = ({ onClick, icon, label }: any) => (
+const ToolButton = ({
+  onClick,
+  icon,
+  label,
+}: {
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+}) => (
   <button
     type="button"
     onClick={onClick}

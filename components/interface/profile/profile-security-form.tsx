@@ -50,8 +50,12 @@ export function ProfileSecurityForm() {
       await updatePassword(data);
 
       toast.success(t("security_card.password_updated"));
-    } catch (error: any) {
-      toast.error(error.message || t("security_card.password_update_error"));
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("security_card.password_update_error"),
+      );
     } finally {
       setIsSaving(false);
     }

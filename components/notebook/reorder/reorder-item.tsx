@@ -14,7 +14,7 @@ interface ReorderItemProps {
   block: Block;
   isDragging: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: <needed to manage the files>
-  pageFiles: Record<string, any>;
+  pageFiles: Record<string, string>;
   pageBlocks: Block[];
   setBlocks: (b: Block[]) => void;
   setIsDragging: (d: boolean) => void;
