@@ -10,7 +10,10 @@ const outputFile = path.join(repoRoot, "lib/api/generated/error-codes.ts");
 const check = process.argv.includes("--check");
 
 function exportCodes() {
-  const specPath = path.join(os.tmpdir(), `zeile-error-codes-${Date.now()}.json`);
+  const specPath = path.join(
+    os.tmpdir(),
+    `zeile-error-codes-${Date.now()}.json`,
+  );
   execFileSync(
     "cargo",
     [
@@ -57,7 +60,9 @@ const formatted = fs.readFileSync(tmpFile, "utf-8");
 fs.rmSync(tmpFile);
 
 if (check) {
-  const current = fs.existsSync(outputFile) ? fs.readFileSync(outputFile, "utf-8") : null;
+  const current = fs.existsSync(outputFile)
+    ? fs.readFileSync(outputFile, "utf-8")
+    : null;
   if (current !== formatted) {
     console.error(
       `${path.relative(repoRoot, outputFile)} está divergente de ApiError::ALL_ERROR_CODES.`,

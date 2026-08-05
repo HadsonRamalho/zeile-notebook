@@ -71,5 +71,7 @@ export async function setTeamFolderTags(
   folderId: string,
   tags: string[],
 ) {
-  return api.patch<Folder>(`/team/${teamId}/folders/${folderId}/tags`, { tags });
+  return api.patch<Folder>(`/team/${teamId}/folders/${folderId}/tags`, {
+    tags,
+  });
 }

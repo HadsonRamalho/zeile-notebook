@@ -1,12 +1,15 @@
-import type { HTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
+import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Cards(props: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       {...props}
-      className={cn("my-4 grid grid-cols-1 gap-4 sm:grid-cols-2", props.className)}
+      className={cn(
+        "my-4 grid grid-cols-1 gap-4 sm:grid-cols-2",
+        props.className,
+      )}
     />
   );
 }

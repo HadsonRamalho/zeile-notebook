@@ -1,6 +1,7 @@
 import { createApi } from "./base";
 
 const api = createApi("challenges");
+
 import type {
   AuthoringTestCase,
   ChallengeDetail,
@@ -65,7 +66,9 @@ export async function getReferenceSolutions(id: string) {
 }
 
 export async function deleteReference(id: string, language: string) {
-  return api.delete<ReferenceSolutions>(`/challenge/${id}/reference/${language}`);
+  return api.delete<ReferenceSolutions>(
+    `/challenge/${id}/reference/${language}`,
+  );
 }
 
 export async function submitSolution(id: string, payload: SubmitPayload) {

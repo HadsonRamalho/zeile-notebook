@@ -25,7 +25,11 @@ import { cn } from "@/lib/utils";
 
 // Spring with bounce powers the unfold/separation; per-property timings in the
 // content choreograph it (see SelectContent). Mirrors bouncy-accordion's feel.
-const CHEVRON_TRANSITION: Transition = { type: "spring", duration: 0.4, bounce: 0.3 };
+const CHEVRON_TRANSITION: Transition = {
+  type: "spring",
+  duration: 0.4,
+  bounce: 0.3,
+};
 
 const LIST_VARIANTS: Variants = {
   hidden: {},
@@ -237,7 +241,10 @@ export function SelectValue({ placeholder, className }: SelectValueProps) {
   const label = ctx.labelFor(ctx.value);
   return (
     <span
-      className={cn(label ? "text-foreground" : "text-muted-foreground", className)}
+      className={cn(
+        label ? "text-foreground" : "text-muted-foreground",
+        className,
+      )}
     >
       {label ?? placeholder ?? "Select"}
     </span>

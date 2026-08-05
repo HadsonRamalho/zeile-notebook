@@ -19,14 +19,14 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/challenges/leaderboard-table";
 import { SolveEditor } from "@/components/challenges/solve-editor";
+import { SubmissionResults } from "@/components/challenges/submission-results";
+import { VerdictBadge } from "@/components/challenges/verdict-badge";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/motion/tabs";
-import { SubmissionResults } from "@/components/challenges/submission-results";
-import { VerdictBadge } from "@/components/challenges/verdict-badge";
 import { Button } from "@/components/ui/button";
 import {
   getLeaderboard,
@@ -59,7 +59,12 @@ function parseDraft(raw?: string): {
   if (!raw) return { byLang: {} };
   try {
     const d = JSON.parse(raw);
-    if (d && typeof d === "object" && d.byLang && typeof d.byLang === "object") {
+    if (
+      d &&
+      typeof d === "object" &&
+      d.byLang &&
+      typeof d.byLang === "object"
+    ) {
       return {
         language: typeof d.language === "string" ? d.language : undefined,
         byLang: d.byLang as Record<string, string>,
@@ -143,7 +148,10 @@ export function ChallengeSolve({
   }, []);
 
   const resetCode = useCallback(() => {
-    setCodeByLang((p) => ({ ...p, [language]: starter.current[language] ?? "" }));
+    setCodeByLang((p) => ({
+      ...p,
+      [language]: starter.current[language] ?? "",
+    }));
   }, [language]);
 
   const handleRun = useCallback(async () => {

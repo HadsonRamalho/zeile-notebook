@@ -1,12 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { setNotebookTags } from "@/lib/api/folders-service";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { getCurrentNotebook } from "@/lib/api/notebook-service";
-import { useTranslations } from "next-intl";
-import { TagEditor, TagList } from "./tags/tag-editor";
 import { useCan } from "./permissions/capabilities";
+import { TagEditor, TagList } from "./tags/tag-editor";
 
 export function NotebookTags({ pageId }: { pageId: string }) {
   const t = useTranslations("api_errors");

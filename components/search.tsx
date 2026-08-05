@@ -3,11 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useSearchContext } from "@/lib/search-context";
 
 interface SearchResult {

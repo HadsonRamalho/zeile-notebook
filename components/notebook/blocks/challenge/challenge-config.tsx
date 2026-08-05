@@ -135,7 +135,9 @@ export function ChallengeConfig({
     getReferenceSolutions(challenge.id)
       .then((ref) => {
         setRefByLang(ref.solutions ?? {});
-        const first = Object.keys(ref.solutions ?? {})[0] as Language | undefined;
+        const first = Object.keys(ref.solutions ?? {})[0] as
+          | Language
+          | undefined;
         if (first) {
           setRefLanguage(first);
           setRefCode(ref.solutions[first]);
@@ -453,7 +455,9 @@ export function ChallengeConfig({
 
       {needsReference && (
         <Section title={t("step_reference")}>
-          <p className="text-xs text-muted-foreground">{t("reference_intro")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("reference_intro")}
+          </p>
 
           {savedRefLangs.length > 0 && (
             <div className="flex flex-col gap-1.5">

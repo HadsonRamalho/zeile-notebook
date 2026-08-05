@@ -60,7 +60,10 @@ function materializeDanglingLinks(dir) {
         console.warn(`link sem alvo removido: ${relative(standalone, full)}`);
         continue;
       }
-      cpSync(realpathSync(source), full, { recursive: true, dereference: true });
+      cpSync(realpathSync(source), full, {
+        recursive: true,
+        dereference: true,
+      });
     } else if (entry.isDirectory()) {
       materializeDanglingLinks(full);
     }
@@ -69,13 +72,13 @@ function materializeDanglingLinks(dir) {
 
 materializeDanglingLinks(standalone);
 
-const tar = spawnSync(
-  "tar",
-  ["czf", nextArchive, "-C", standalone, "."],
-  { stdio: "inherit" },
-);
+const tar = spawnSync("tar", ["czf", nextArchive, "-C", standalone, "."], {
+  stdio: "inherit",
+});
 if (tar.status !== 0) {
-  console.error("falha ao criar next.tar.gz (tar ausente? Windows 10 1803+ tem tar.exe)");
+  console.error(
+    "falha ao criar next.tar.gz (tar ausente? Windows 10 1803+ tem tar.exe)",
+  );
   process.exit(tar.status ?? 1);
 }
 

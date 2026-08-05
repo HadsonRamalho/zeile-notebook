@@ -15,7 +15,9 @@ interface MessageVersionsProps {
 }
 
 export function MessageVersions({ load, trigger }: MessageVersionsProps) {
-  const [versions, setVersions] = useState<ChatMessageVersionDTO[] | null>(null);
+  const [versions, setVersions] = useState<ChatMessageVersionDTO[] | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   const handleOpenChange = (open: boolean) => {

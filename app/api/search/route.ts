@@ -73,10 +73,7 @@ function searchDocs(query: string) {
       type: "page" as const,
       url: page.url,
       content: page.frontmatter.title,
-      contentWithHighlights: generateHighlights(
-        page.frontmatter.title,
-        query,
-      ),
+      contentWithHighlights: generateHighlights(page.frontmatter.title, query),
     }));
 }
 

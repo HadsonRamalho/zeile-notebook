@@ -19,7 +19,12 @@ export interface DocPage {
 
 export type PageTreeNode =
   | { type: "page"; name: string; url: string }
-  | { type: "folder"; name: string; index?: PageTreeNode; children: PageTreeNode[] };
+  | {
+      type: "folder";
+      name: string;
+      index?: PageTreeNode;
+      children: PageTreeNode[];
+    };
 
 export interface PageTree {
   name: string;
@@ -45,7 +50,10 @@ function parseFrontmatter(raw: string): {
   }
 
   return {
-    frontmatter: { title: frontmatter.title ?? "", description: frontmatter.description },
+    frontmatter: {
+      title: frontmatter.title ?? "",
+      description: frontmatter.description,
+    },
     content,
   };
 }
@@ -67,7 +75,9 @@ function walk(dir: string, slugs: string[] = []): DocPage[] {
     const { frontmatter } = parseFrontmatter(raw);
 
     const isIndex = entry.name === "index.mdx";
-    const pageSlugs = isIndex ? slugs : [...slugs, entry.name.replace(/\.mdx$/, "")];
+    const pageSlugs = isIndex
+      ? slugs
+      : [...slugs, entry.name.replace(/\.mdx$/, "")];
 
     pages.push({
       slugs: pageSlugs,
@@ -108,7 +118,11 @@ function buildTree(pages: DocPage[]): PageTree {
 
   for (const page of sorted) {
     if (page.slugs.length === 0) {
-      root.index = { type: "page", name: page.frontmatter.title, url: page.url };
+      root.index = {
+        type: "page",
+        name: page.frontmatter.title,
+        url: page.url,
+      };
       continue;
     }
 

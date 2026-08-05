@@ -54,7 +54,10 @@ const relFiles = readAllFiles(tmpDir).sort();
 const generated = {};
 for (const rel of relFiles) {
   const outPath = path.join(outDir, rel);
-  const tmpFile = path.join(os.tmpdir(), `zeile-ws-fmt-${Date.now()}-${rel.replace(/[\\/]/g, "_")}`);
+  const tmpFile = path.join(
+    os.tmpdir(),
+    `zeile-ws-fmt-${Date.now()}-${rel.replace(/[\\/]/g, "_")}`,
+  );
   const raw = fs.readFileSync(path.join(tmpDir, rel), "utf-8");
   fs.writeFileSync(tmpFile, header + raw);
   execFileSync("pnpm", ["biome", "format", "--write", tmpFile], {
@@ -69,9 +72,13 @@ fs.rmSync(tmpDir, { recursive: true, force: true });
 if (check) {
   let ok = true;
   for (const [outPath, content] of Object.entries(generated)) {
-    const current = fs.existsSync(outPath) ? fs.readFileSync(outPath, "utf-8") : null;
+    const current = fs.existsSync(outPath)
+      ? fs.readFileSync(outPath, "utf-8")
+      : null;
     if (current !== content) {
-      console.error(`${path.relative(repoRoot, outPath)} está divergente dos tipos Rust.`);
+      console.error(
+        `${path.relative(repoRoot, outPath)} está divergente dos tipos Rust.`,
+      );
       ok = false;
     }
   }

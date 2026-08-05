@@ -13,32 +13,30 @@ export async function GET(
   if (!page) notFound();
 
   return new ImageResponse(
-    (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          width: "100%",
-          height: "100%",
-          padding: "80px",
-          background: "#0a0a0a",
-          color: "white",
-        }}
-      >
-        <div style={{ fontSize: 16, color: "#169e69", marginBottom: 16 }}>
-          Docs
-        </div>
-        <div style={{ fontSize: 64, fontWeight: 700 }}>
-          {page.frontmatter.title}
-        </div>
-        {page.frontmatter.description && (
-          <div style={{ fontSize: 28, color: "#a1a1aa", marginTop: 24 }}>
-            {page.frontmatter.description}
-          </div>
-        )}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        width: "100%",
+        height: "100%",
+        padding: "80px",
+        background: "#0a0a0a",
+        color: "white",
+      }}
+    >
+      <div style={{ fontSize: 16, color: "#169e69", marginBottom: 16 }}>
+        Docs
       </div>
-    ),
+      <div style={{ fontSize: 64, fontWeight: 700 }}>
+        {page.frontmatter.title}
+      </div>
+      {page.frontmatter.description && (
+        <div style={{ fontSize: 28, color: "#a1a1aa", marginTop: 24 }}>
+          {page.frontmatter.description}
+        </div>
+      )}
+    </div>,
     {
       width: 1200,
       height: 630,

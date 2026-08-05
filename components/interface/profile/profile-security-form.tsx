@@ -2,11 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock, Save } from "lucide-react";
-import { Loader } from "@/components/motion/loader";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { Loader } from "@/components/motion/loader";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -130,7 +130,9 @@ export function ProfileSecurityForm() {
               type="submit"
               disabled={isSaving || !form.formState.isDirty}
             >
-              {isSaving && <Loader variant="spinner" size={16} className="mr-2" />}
+              {isSaving && (
+                <Loader variant="spinner" size={16} className="mr-2" />
+              )}
               {!isSaving && <Save className="mr-2 h-4 w-4" />}
               {t("security_card.update_password")}
             </Button>

@@ -1,17 +1,19 @@
-'use client';
+"use client";
 
-import * as React from 'react';
 import {
-  motion,
-  useMotionValue,
-  useSpring,
   AnimatePresence,
   type HTMLMotionProps,
+  motion,
   type SpringOptions,
-} from 'motion/react';
-
-import { getStrictContext } from '@/lib/get-strict-context';
-import { Slot, type WithAsChild } from '@/components/animate-ui/primitives/animate/slot';
+  useMotionValue,
+  useSpring,
+} from "motion/react";
+import * as React from "react";
+import {
+  Slot,
+  type WithAsChild,
+} from "@/components/animate-ui/primitives/animate/slot";
+import { getStrictContext } from "@/lib/get-strict-context";
 
 type CursorContextType = {
   cursorPos: { x: number; y: number };
@@ -22,7 +24,7 @@ type CursorContextType = {
 };
 
 const [LocalCursorProvider, useCursor] =
-  getStrictContext<CursorContextType>('CursorContext');
+  getStrictContext<CursorContextType>("CursorContext");
 
 type CursorProviderProps = {
   children: React.ReactNode;
@@ -37,10 +39,10 @@ function CursorProvider({ children, global = false }: CursorProviderProps) {
   const cursorRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    const id = '__cursor_none_style__';
+    const id = "__cursor_none_style__";
     if (document.getElementById(id)) return;
 
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.id = id;
     style.textContent = `
       .animate-ui-cursor-none, .animate-ui-cursor-none * { cursor: none !important; }
@@ -64,24 +66,24 @@ function CursorProvider({ children, global = false }: CursorProviderProps) {
       };
 
       const handleVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') setActive(false);
+        if (document.visibilityState === "hidden") setActive(false);
       };
 
-      window.addEventListener('pointermove', handlePointerMove, {
+      window.addEventListener("pointermove", handlePointerMove, {
         passive: true,
       });
-      window.addEventListener('pointerout', handlePointerOut, {
+      window.addEventListener("pointerout", handlePointerOut, {
         passive: true,
       });
-      window.addEventListener('mouseout', handlePointerOut, { passive: true });
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener("mouseout", handlePointerOut, { passive: true });
+      document.addEventListener("visibilitychange", handleVisibilityChange);
 
       removeListeners = () => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerout', handlePointerOut);
-        window.removeEventListener('mouseout', handlePointerOut);
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerout", handlePointerOut);
+        window.removeEventListener("mouseout", handlePointerOut);
         document.removeEventListener(
-          'visibilitychange',
+          "visibilitychange",
           handleVisibilityChange,
         );
       };
@@ -91,8 +93,8 @@ function CursorProvider({ children, global = false }: CursorProviderProps) {
       const parent = containerRef.current.parentElement;
       if (!parent) return;
 
-      if (getComputedStyle(parent).position === 'static') {
-        parent.style.position = 'relative';
+      if (getComputedStyle(parent).position === "static") {
+        parent.style.position = "relative";
       }
 
       const handlePointerMove = (e: PointerEvent) => {
@@ -110,18 +112,18 @@ function CursorProvider({ children, global = false }: CursorProviderProps) {
         }
       };
 
-      parent.addEventListener('pointermove', handlePointerMove, {
+      parent.addEventListener("pointermove", handlePointerMove, {
         passive: true,
       });
-      parent.addEventListener('pointerout', handlePointerOut, {
+      parent.addEventListener("pointerout", handlePointerOut, {
         passive: true,
       });
-      parent.addEventListener('mouseout', handlePointerOut, { passive: true });
+      parent.addEventListener("mouseout", handlePointerOut, { passive: true });
 
       removeListeners = () => {
-        parent.removeEventListener('pointermove', handlePointerMove);
-        parent.removeEventListener('pointerout', handlePointerOut);
-        parent.removeEventListener('mouseout', handlePointerOut);
+        parent.removeEventListener("pointermove", handlePointerMove);
+        parent.removeEventListener("pointerout", handlePointerOut);
+        parent.removeEventListener("mouseout", handlePointerOut);
       };
     }
 
@@ -137,7 +139,7 @@ function CursorProvider({ children, global = false }: CursorProviderProps) {
   );
 }
 
-type CursorContainerProps = WithAsChild<HTMLMotionProps<'div'>>;
+type CursorContainerProps = WithAsChild<HTMLMotionProps<"div">>;
 
 function CursorContainer({
   ref,
@@ -161,7 +163,7 @@ function CursorContainer({
 }
 
 type CursorProps = WithAsChild<
-  HTMLMotionProps<'div'> & {
+  HTMLMotionProps<"div"> & {
     children: React.ReactNode;
   }
 >;
@@ -181,13 +183,13 @@ function Cursor({ ref, asChild = false, style, ...props }: CursorProps) {
     if (!target) return;
 
     if (active) {
-      target.classList.add('animate-ui-cursor-none');
+      target.classList.add("animate-ui-cursor-none");
     } else {
-      target.classList.remove('animate-ui-cursor-none');
+      target.classList.remove("animate-ui-cursor-none");
     }
 
     return () => {
-      target.classList.remove('animate-ui-cursor-none');
+      target.classList.remove("animate-ui-cursor-none");
     };
   }, [active, global, containerRef]);
 
@@ -207,10 +209,10 @@ function Cursor({ ref, asChild = false, style, ...props }: CursorProps) {
           data-global={global}
           data-active={active}
           style={{
-            transform: 'translate(-50%,-50%)',
-            pointerEvents: 'none',
+            transform: "translate(-50%,-50%)",
+            pointerEvents: "none",
             zIndex: 9999,
-            position: global ? 'fixed' : 'absolute',
+            position: global ? "fixed" : "absolute",
             top: y,
             left: x,
             ...style,
@@ -225,11 +227,11 @@ function Cursor({ ref, asChild = false, style, ...props }: CursorProps) {
   );
 }
 
-type CursorFollowSide = 'top' | 'right' | 'bottom' | 'left';
-type CursorFollowAlign = 'start' | 'center' | 'end';
+type CursorFollowSide = "top" | "right" | "bottom" | "left";
+type CursorFollowAlign = "start" | "center" | "end";
 
 type CursorFollowProps = WithAsChild<
-  Omit<HTMLMotionProps<'div'>, 'transition'> & {
+  Omit<HTMLMotionProps<"div">, "transition"> & {
     side?: CursorFollowSide;
     sideOffset?: number;
     align?: CursorFollowAlign;
@@ -242,9 +244,9 @@ type CursorFollowProps = WithAsChild<
 function CursorFollow({
   ref,
   asChild = false,
-  side = 'bottom',
+  side = "bottom",
   sideOffset = 0,
-  align = 'end',
+  align = "end",
   alignOffset = 0,
   style,
   transition = { stiffness: 500, damping: 50, bounce: 0 },
@@ -272,61 +274,61 @@ function CursorFollow({
     let offsetY = 0;
 
     switch (side) {
-      case 'top':
+      case "top":
         offsetY = height + sideOffset;
         switch (align) {
-          case 'start':
+          case "start":
             offsetX = width + alignOffset;
             break;
-          case 'center':
+          case "center":
             offsetX = width / 2;
             break;
-          case 'end':
+          case "end":
             offsetX = -alignOffset;
             break;
         }
         break;
 
-      case 'bottom':
+      case "bottom":
         offsetY = -sideOffset;
         switch (align) {
-          case 'start':
+          case "start":
             offsetX = width + alignOffset;
             break;
-          case 'center':
+          case "center":
             offsetX = width / 2;
             break;
-          case 'end':
+          case "end":
             offsetX = -alignOffset;
             break;
         }
         break;
 
-      case 'left':
+      case "left":
         offsetX = width + sideOffset;
         switch (align) {
-          case 'start':
+          case "start":
             offsetY = height + alignOffset;
             break;
-          case 'center':
+          case "center":
             offsetY = height / 2;
             break;
-          case 'end':
+          case "end":
             offsetY = -alignOffset;
             break;
         }
         break;
 
-      case 'right':
+      case "right":
         offsetX = -sideOffset;
         switch (align) {
-          case 'start':
+          case "start":
             offsetY = height + alignOffset;
             break;
-          case 'center':
+          case "center":
             offsetY = height / 2;
             break;
-          case 'end':
+          case "end":
             offsetY = -alignOffset;
             break;
         }
@@ -357,10 +359,10 @@ function CursorFollow({
           data-global={global}
           data-active={active}
           style={{
-            transform: 'translate(-50%,-50%)',
-            pointerEvents: 'none',
+            transform: "translate(-50%,-50%)",
+            pointerEvents: "none",
             zIndex: 9998,
-            position: global ? 'fixed' : 'absolute',
+            position: global ? "fixed" : "absolute",
             top: springY,
             left: springX,
             ...style,
@@ -376,16 +378,16 @@ function CursorFollow({
 }
 
 export {
-  CursorProvider,
   Cursor,
   CursorContainer,
-  CursorFollow,
-  useCursor,
-  type CursorProviderProps,
-  type CursorProps,
   type CursorContainerProps,
-  type CursorFollowProps,
-  type CursorFollowAlign,
-  type CursorFollowSide,
   type CursorContextType,
+  CursorFollow,
+  type CursorFollowAlign,
+  type CursorFollowProps,
+  type CursorFollowSide,
+  type CursorProps,
+  CursorProvider,
+  type CursorProviderProps,
+  useCursor,
 };

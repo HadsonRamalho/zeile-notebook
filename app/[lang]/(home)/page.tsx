@@ -1,4 +1,3 @@
-import { AppShell } from "@/components/layout/app-shell";
 import { BookSearch, Code, Lock, Puzzle, Sparkles, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +8,7 @@ import {
 } from "@/components/interface/home/languages";
 import { NotebooksCta } from "@/components/interface/home/notebooks-cta";
 import { VideoShowcase } from "@/components/interface/home/video-showcase";
+import { AppShell } from "@/components/layout/app-shell";
 import { RetroGrid } from "@/components/ui/retro-grid";
 import { baseOptions } from "@/lib/layout.shared";
 
@@ -180,4 +180,3 @@ const shortcuts = [
   { prefix: "01", title: "items.home", href: "/docs" },
   { prefix: "02", title: "nav.explore", href: "/explore" },
 ];
-

@@ -2,8 +2,8 @@
 
 import { NotebookPen } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/context/auth-context";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
+import { useAuth } from "@/context/auth-context";
 
 export function NotebooksCta({ label }: { label: string }) {
   const { user, isLoading } = useAuth();

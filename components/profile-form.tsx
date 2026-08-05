@@ -9,12 +9,17 @@ import {
   Settings,
   Upload,
 } from "lucide-react";
-import { Loader } from "@/components/motion/loader";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { Loader } from "@/components/motion/loader";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/motion/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,9 +56,9 @@ export function ProfileForm() {
 
   const { user, isLoading: isAuthLoading } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"general" | "security" | "account">(
-    "general",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "general" | "security" | "account"
+  >("general");
   const canEditEmail = user?.primaryProvider === "Email";
 
   const form = useForm<ProfileFormValues>({
@@ -123,17 +128,29 @@ export function ProfileForm() {
         className="w-full"
       >
         <TabsList className="w-fit">
-          <TabsTrigger value="general" className="gap-2" indicatorClassName="bg-primary">
+          <TabsTrigger
+            value="general"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
             <Settings size={16} />
             {t("tabs.general")}
           </TabsTrigger>
           {canEditEmail && (
-            <TabsTrigger value="security" className="gap-2" indicatorClassName="bg-primary">
+            <TabsTrigger
+              value="security"
+              className="gap-2"
+              indicatorClassName="bg-primary"
+            >
               <Lock size={16} />
               {t("tabs.security")}
             </TabsTrigger>
           )}
-          <TabsTrigger value="account" className="gap-2" indicatorClassName="bg-primary">
+          <TabsTrigger
+            value="account"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
             <AlertTriangle size={16} />
             {t("tabs.account")}
           </TabsTrigger>
@@ -148,7 +165,9 @@ export function ProfileForm() {
                     <Settings className="size-5" />
                     {t("profile_card.title")}
                   </CardTitle>
-                  <CardDescription>{t("profile_card.description")}</CardDescription>
+                  <CardDescription>
+                    {t("profile_card.description")}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex flex-col items-center gap-4 sm:flex-row">
@@ -165,7 +184,9 @@ export function ProfileForm() {
                     </div>
                     <div className="text-center sm:text-left">
                       <h3 className="font-medium text-lg">{user?.name}</h3>
-                      <p className="text-sm text-muted-foreground">{user?.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {user?.email}
+                      </p>
                       <Button
                         variant="outline"
                         size="sm"
@@ -247,7 +268,9 @@ export function ProfileForm() {
                     type="submit"
                     disabled={isSaving || !form.formState.isDirty}
                   >
-                    {isSaving && <Loader variant="spinner" size={16} className="mr-2" />}
+                    {isSaving && (
+                      <Loader variant="spinner" size={16} className="mr-2" />
+                    )}
                     {!isSaving && <Save className="mr-2 h-4 w-4" />}
                     {t("profile_card.save")}
                   </Button>
@@ -279,7 +302,9 @@ export function ProfileForm() {
             <CardContent>
               <div className="grid grid-cols-1 gap-4 md:flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="font-medium">{t("danger_card.delete_account")}</p>
+                  <p className="font-medium">
+                    {t("danger_card.delete_account")}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {t("danger_card.delete_account_description")}
                   </p>

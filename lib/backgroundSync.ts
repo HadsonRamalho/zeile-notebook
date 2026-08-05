@@ -56,8 +56,10 @@ export async function queueRequest(
 
   try {
     const registration = await navigator.serviceWorker.ready;
-    await (registration as unknown as { sync: { register: (tag: string) => Promise<void> } }).sync.register(
-      BACKGROUND_SYNC_TAG,
-    );
+    await (
+      registration as unknown as {
+        sync: { register: (tag: string) => Promise<void> };
+      }
+    ).sync.register(BACKGROUND_SYNC_TAG);
   } catch {}
 }

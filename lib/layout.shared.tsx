@@ -24,9 +24,7 @@ function IconWithTitle() {
         height={34}
         className="relative"
       />
-      <span className="relative text-lg font-bold hidden md:block">
-        Zeile
-      </span>
+      <span className="relative text-lg font-bold hidden md:block">Zeile</span>
     </Link>
   );
 }

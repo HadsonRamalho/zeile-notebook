@@ -1,13 +1,14 @@
 "use client";
+
 // beui.dev/components/blocks/not-found
 
-import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import {
   NOT_FOUND_DEFAULTS,
   NotFoundActions,
-  NotFoundStage,
   type NotFoundProps,
+  NotFoundStage,
 } from "./shared";
 
 const GLYPHS = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&@$?/\\";

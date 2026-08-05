@@ -57,9 +57,7 @@ const LOCAL_WS_HOST =
   parseWsEndpoint(process.env.NEXT_PUBLIC_LOCAL_WS).host || "127.0.0.1:3099";
 
 function pageIsSecure(): boolean {
-  return (
-    typeof window !== "undefined" && window.location.protocol === "https:"
-  );
+  return typeof window !== "undefined" && window.location.protocol === "https:";
 }
 
 function remoteWsHost(): string {

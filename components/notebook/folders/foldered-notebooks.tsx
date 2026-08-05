@@ -382,7 +382,8 @@ export function FolderedNotebooks({
         </div>
       )}
 
-      {(ungrouped.length > 0 || (canManage && dragging && folders.length > 0)) && (
+      {(ungrouped.length > 0 ||
+        (canManage && dragging && folders.length > 0)) && (
         <DropZone
           folderId={null}
           canManage={canManage}

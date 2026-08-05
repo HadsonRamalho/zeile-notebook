@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, type ReactNode, use, useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { createContext, type ReactNode, use, useMemo } from "react";
 import type { PageTree, PageTreeNode } from "./docs";
 
 interface TreeContextValue {
@@ -24,7 +24,9 @@ export function TreeContextProvider({
 export function useTreeContext() {
   const context = use(TreeContext);
   if (!context) {
-    throw new Error("useTreeContext must be used under <TreeContextProvider />");
+    throw new Error(
+      "useTreeContext must be used under <TreeContextProvider />",
+    );
   }
   return context;
 }
@@ -39,7 +41,11 @@ function findPath(
       return [...trail, node];
     }
     if (node.type === "folder") {
-      if (node.index && node.index.type === "page" && node.index.url === pathname) {
+      if (
+        node.index &&
+        node.index.type === "page" &&
+        node.index.url === pathname
+      ) {
         return [...trail, node, node.index];
       }
       const found = findPath(node.children, pathname, [...trail, node]);

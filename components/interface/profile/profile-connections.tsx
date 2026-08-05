@@ -137,7 +137,9 @@ export function ProfileConnections() {
         {disponiveis.map((provider) => {
           const Icone = ICONES[provider];
           const vinculado = metodos?.providers.includes(provider) ?? false;
-          const ultimoMetodo = vinculado && (metodos?.providers.length ?? 0) + (metodos?.password ? 1 : 0) < 2;
+          const ultimoMetodo =
+            vinculado &&
+            (metodos?.providers.length ?? 0) + (metodos?.password ? 1 : 0) < 2;
 
           return (
             <div

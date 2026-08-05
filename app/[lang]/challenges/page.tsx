@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listChallenges } from "@/lib/api/challenge-service";
 import {
   CHALLENGE_LANGUAGES,
-  difficultyKey,
   type DifficultyKey,
+  difficultyKey,
   languageLabel,
 } from "@/lib/challenges/display";
 import type { ChallengePublic } from "@/lib/types/challenge-types";
@@ -88,10 +88,7 @@ export default function ChallengesPage() {
     return challenges.filter((c) => {
       if (difficulty !== "all" && difficultyKey(c.difficulty) !== difficulty)
         return false;
-      if (
-        language !== "all" &&
-        !(c.languages as string[]).includes(language)
-      )
+      if (language !== "all" && !(c.languages as string[]).includes(language))
         return false;
       if (q) {
         const haystack = `${c.title} ${c.tags.join(" ")}`.toLowerCase();

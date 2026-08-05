@@ -1,5 +1,4 @@
 "use client";
-import { useMemo, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -7,22 +6,19 @@ import {
   ExternalLinkIcon,
   MessageCircleIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useCopyButton } from "@/lib/use-copy-button";
+import { useMemo, useState } from "react";
 import { buttonVariants } from "@/components/ui/fumadocs-button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useCopyButton } from "@/lib/use-copy-button";
+import { cn } from "@/lib/utils";
 
 const cache = new Map<string, string>();
 
-export function LLMCopyButton({
-  markdownUrl,
-}: {
-  markdownUrl: string;
-}) {
+export function LLMCopyButton({ markdownUrl }: { markdownUrl: string }) {
   const [isLoading, setLoading] = useState(false);
   const [checked, onClick] = useCopyButton(async () => {
     const cached = cache.get(markdownUrl);

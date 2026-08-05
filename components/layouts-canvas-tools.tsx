@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import {
   Circle as CircleIcon,
   EyeIcon,
@@ -18,6 +17,7 @@ import {
   Type,
   UnlockIcon,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
@@ -56,7 +56,12 @@ interface Shape {
 
 const SWATCHES = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444"];
 
-const TOOLS: { id: Tool; icon: typeof MousePointer2; label: string; shortcut: string }[] = [
+const TOOLS: {
+  id: Tool;
+  icon: typeof MousePointer2;
+  label: string;
+  shortcut: string;
+}[] = [
   { id: "move", icon: MousePointer2, label: "Move", shortcut: "V" },
   { id: "hand", icon: Hand, label: "Hand", shortcut: "H" },
   { id: "frame", icon: Square, label: "Frame", shortcut: "F" },
@@ -426,13 +431,14 @@ export function LayoutsCanvasToolsShowcasePage() {
         }
       : null;
 
-  const cursorClass = drag?.kind === "pan"
-    ? "cursor-grabbing"
-    : isPanGesture
-      ? "cursor-grab"
-      : tool === "frame" || tool === "ellipse" || tool === "text"
-        ? "cursor-crosshair"
-        : "cursor-default";
+  const cursorClass =
+    drag?.kind === "pan"
+      ? "cursor-grabbing"
+      : isPanGesture
+        ? "cursor-grab"
+        : tool === "frame" || tool === "ellipse" || tool === "text"
+          ? "cursor-crosshair"
+          : "cursor-default";
 
   return (
     <div className="relative h-svh w-full select-none overflow-hidden bg-foreground/[0.02] text-foreground">
@@ -472,7 +478,9 @@ export function LayoutsCanvasToolsShowcasePage() {
               <div
                 className={cn(
                   "size-full",
-                  previewRect.type === "ellipse" ? "rounded-full" : "rounded-md",
+                  previewRect.type === "ellipse"
+                    ? "rounded-full"
+                    : "rounded-md",
                 )}
                 style={{
                   backgroundColor: previewRect.fill,
@@ -554,9 +562,7 @@ function ShapeRender({
   tool: Tool;
 }) {
   const cursor =
-    shape.locked || tool !== "move"
-      ? "cursor-default"
-      : "cursor-move";
+    shape.locked || tool !== "move" ? "cursor-default" : "cursor-move";
   return (
     <div
       data-shape-id={shape.id}

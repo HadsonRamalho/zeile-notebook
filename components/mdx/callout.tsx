@@ -1,5 +1,11 @@
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  Lightbulb,
+  XCircle,
+} from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Info, Lightbulb, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type CalloutType =

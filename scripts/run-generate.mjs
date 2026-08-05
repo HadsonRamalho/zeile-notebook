@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { config } from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
+import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
@@ -81,7 +81,8 @@ function renderEndpoint(pathKey, methodKey, operation) {
 
   const requestBody =
     operation.requestBody?.content?.["application/json"]?.schema;
-  if (requestBody) parts.push("### Corpo da requisição", jsonBlock(requestBody));
+  if (requestBody)
+    parts.push("### Corpo da requisição", jsonBlock(requestBody));
 
   const responses = Object.entries(operation.responses ?? {});
   if (responses.length > 0) {

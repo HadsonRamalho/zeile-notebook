@@ -10,8 +10,8 @@ import { isActive } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "../../ui/button";
 import { AppFooter } from "../app-footer";
-import { type BaseLayoutProps } from "../shared";
 import { LargeSearchToggle, SearchToggle } from "../search-toggle";
+import type { BaseLayoutProps } from "../shared";
 
 export interface DocsLayoutProps extends BaseLayoutProps {
   tree: PageTree;

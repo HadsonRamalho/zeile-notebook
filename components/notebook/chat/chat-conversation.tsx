@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ChevronDown,
   CornerDownLeft,
@@ -12,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type KeyboardEvent,
   useEffect,
@@ -121,7 +121,8 @@ function MessageBody({ text, names }: { text: string; names: string[] }) {
       out.push({ mention: true, value: m[0] });
       last = m.index + m[0].length;
     }
-    if (last < text.length) out.push({ mention: false, value: text.slice(last) });
+    if (last < text.length)
+      out.push({ mention: false, value: text.slice(last) });
     return out;
   }, [text, names]);
 
@@ -304,8 +305,7 @@ export function ChatConversation({
     const canReply = !isReply && canSend && perms.reply;
     const canQuote = canSend && perms.quote;
     const canEditMsg = isMe && perms.edit;
-    const canDeleteMsg =
-      (isMe && perms.delete) || (!isMe && perms.deleteAny);
+    const canDeleteMsg = (isMe && perms.delete) || (!isMe && perms.deleteAny);
     const hasActions = canReply || canQuote || canEditMsg || canDeleteMsg;
 
     return (
@@ -473,7 +473,11 @@ export function ChatConversation({
                     const replies = repliesByParent.get(msg.id) ?? [];
                     const isOpen = activeThread === msg.id;
                     return (
-                      <motion.div key={msg.id} layout={!reduceMotion} {...rowMotion}>
+                      <motion.div
+                        key={msg.id}
+                        layout={!reduceMotion}
+                        {...rowMotion}
+                      >
                         {renderRow(msg)}
 
                         {(replies.length > 0 || (canSend && isOpen)) && (
@@ -632,9 +636,19 @@ function Composer({
   clearQuote: () => void;
 }) {
   const context = replyTo
-    ? { icon: <Reply className="size-3" />, label: "Respondendo a", target: replyTo, clear: clearReply }
+    ? {
+        icon: <Reply className="size-3" />,
+        label: "Respondendo a",
+        target: replyTo,
+        clear: clearReply,
+      }
     : quoting
-      ? { icon: <Quote className="size-3" />, label: "Citando", target: quoting, clear: clearQuote }
+      ? {
+          icon: <Quote className="size-3" />,
+          label: "Citando",
+          target: quoting,
+          clear: clearQuote,
+        }
       : null;
 
   const chipMotion = reduceMotion
