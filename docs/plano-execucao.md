@@ -178,17 +178,63 @@ branch local `tauri` (`aa268ac`) é ancestral de `main`; nada pendente para mesc
 - [x] `run-rust.ts`: backend devolve `{ status, errorCode, … }`; remover os `includes()` em texto de compilador (Q105) — `CodeResponse` ganha `ExecStatus` (11 variantes) e `errorCode`; `MODULE_NOT_FOUND` e a detecção de bomba de compilação em C++ já eram lidos no backend, só não saíam como código estável (PR #119). Frontend ramifica por `status`/`errorCode` em vez de string do compilador (PR #120)
 - [x] Sem `throw` raw no frontend (Q38) — único caso restante do padrão: `runTsxInSandbox` (era `lib/api.ts`, hoje `lib/sandbox/tsx-sandbox.ts`) lançava `Error` sem código e sem quem capturasse; virou `ApiClientError` com `BABEL_NOT_READY`, e `handleRunSimple` passou a capturar e mostrar por toast (PR #120)
 
-#### 13 · Limpeza, depois ligar o gate
+#### 13 · Limpeza, depois ligar o gate — [x] concluída
 
-- [ ] `noExplicitAny: error` + limpar os 45 usos (Q33) — `lib/api/base.ts` primeiro
-- [ ] `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `noImplicitOverride` + `noFallthroughCasesInSwitch` (Q35)
-- [ ] `no-console` permitindo `warn`/`error` (Q34) + conjunto explícito no `biome.json` (Q36)
-- [ ] PR de limpeza do clippy, **antes** de ligar `-D warnings` (Q53)
-- [ ] Revisar os 30 `biome-ignore` com justificativa concreta (Q13)
-- [ ] **Ligar o gate** (Q78/Q79): `biome check` 0 erro · `types:check` · `vitest run` · `validate:i18n` · `fmt --check` · `clippy -D warnings` · `cargo test` · `validate:types` · `validate:schema`
-- [ ] `main` protegida, tudo por PR (Q80)
-- [ ] Hook de commit `<type>: <descrição>` + branch `<área>/<tipo>/<slug>` (Q82/Q83)
-- [ ] Checklist curto no template de PR (Q84)
+Entregue como stack de PRs dependentes, não um PR único: cada regra do biome era um passo
+mecânico separado, e misturar tudo teria tornado a review de ~250 arquivos ilegível.
+
+- [x] `noExplicitAny: error` + limpar os usos (Q33) — eram 27 em arquivo rastreado, não 45
+  (a estimativa original contava arquivos fora do controle de versão). `lib/api/base.ts`
+  primeiro, como previsto; a maior parte do resto era `catch (e: any)` → `unknown` com
+  `instanceof Error`, e dois casos de `window as any` (Babel, Pyodide) que viraram interfaces
+  mínimas em vez de suprimidos
+- [x] `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `noImplicitOverride` +
+  `noFallthroughCasesInSwitch` (Q35) — 143 erros em 62 arquivos. Maioria mecânica (`!` onde a
+  guarda já provava não-nulo, `Record<string, any>` → `unknown`, prop opcional recebendo
+  `| undefined` explícito), mas revelou dois bugs reais: paginação do admin nunca recarregava
+  dados ao trocar de página (useEffect de mount único, corrigido com `useCallback` por seção),
+  e `i18n/request.ts` tinha um `notFound()` redundante que rodava *antes* do fallback pt-br,
+  fazendo locale ausente cair em 404 em vez de pt-br
+- [x] `no-console` permitindo `warn`/`error` (Q34) + conjunto explícito no `biome.json` (Q36) —
+  só um `console.log` real no app (`pwa-registration.tsx`, removido); `scripts/**` isento via
+  override, já que é ferramenta de build, não código do produto
+- [x] PR de limpeza do clippy antes de ligar `-D warnings` (Q53) — ~85 warnings, quase todos
+  `let _ =` sobre `Result` (auditoria do Q40 já tinha justificado o padrão: descarte
+  deliberado de efeito colateral best-effor); um caso não era — `api_create_team` descartava
+  o resultado de `add_user_to_team`, então um time criado sem erro podia ficar sem admin se
+  o insert falhasse. Virou `?`, propagando o erro como os outros passos da mesma função já
+  faziam
+- [x] Revisar os `biome-ignore` com justificativa concreta (Q13) — a maioria (sql-cell,
+  history-diff-view, os que já eram a referência do próprio Q13) já estava correta; achou dois
+  com texto-placeholder nunca preenchido (`<.>`) num `noStaticElementInteractions` de
+  `text-block.tsx` — virou fix real (`role="button"` + `onKeyDown`) em vez de reescrever a
+  desculpa
+- [x] **Ligar o gate** (Q78/Q79) — `biome check` (0 erro), `types:check`, `vitest run`,
+  `fmt --check`, `clippy -D warnings`, `cargo test` no `ci.yml`; `validate:types` (Q28b) e
+  `validate:schema` (Q56) já existiam via `generators.yml` e `check_schema.sh` desde a etapa
+  11, só não estavam documentados como parte do gate. **`validate:i18n` (Q45) não entrou** —
+  não existe ainda; depende da etapa 16 rodar primeiro. Cada job roda condicionalmente por
+  `paths` (`dorny/paths-filter`): PR só de frontend não dispara `rust-test` e vice-versa
+  - **Achado que quase virou incidente**: `git add -A` durante a limpeza varreu ~6500 arquivos
+    que nunca deveriam estar versionados — três cópias do skill `impeccable` (`.agents/`,
+    `.claude/`, `.github/skills/`), 574 MB de artefatos de build do Rust em
+    `docs/metrics-backup/`, e um `.env.bak` com segredos reais dentro de `backups/`. Nada
+    tinha sido *push*ado ainda, então o commit raiz da stack foi reescrito (sem rebase
+    interativo) antes de qualquer PR existir. `.gitignore` ganhou entradas para todo esse
+    tipo de conteúdo
+  - **`app/global.css` e `public/offline.html` não apareciam** na primeira verificação local
+    do gate porque o escopo só olhava `.ts/.tsx/.js` — o CI real (que roda sobre `git ls-files`
+    inteiro) achou 9 erros reais: `@apply`/`@custom-variant` do Tailwind precisam de
+    `css.parser.tailwindDirectives: true` no `biome.json`, e o HTML estático tinha
+    `lang="pt-br"` inválido e um SVG decorativo sem `aria-hidden`
+- [x] `main` protegida (Q80) — exige `frontend-test` e `rust-test` verdes antes do merge,
+  sem exigir review (solo dev), admin pode contornar em emergência, force-push e delete
+  bloqueados
+- [x] Hook de commit `<tipo>: <descrição>` + bloqueio de commit/push direto na `main` (Q82/Q83)
+  — já existia, fora do controle de versão de propósito (`~/.claude/hooks/zeile-guard.sh` +
+  `.git/hooks/commit-msg`); nada a fazer nesta etapa
+- [x] Checklist curto no template de PR (Q84) — já existia (`.github/pull_request_template.md`),
+  sem footer de referência como o Q84/Q85 pedia; nada a fazer
 
 #### 14 · Camadas do Rust
 
