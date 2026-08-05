@@ -10,7 +10,6 @@ import {
   Eye,
   FileText,
   GitCompareArrows,
-  Presentation,
   RotateCw,
   X,
 } from "lucide-react";
@@ -76,10 +75,14 @@ export default function RustInteractivePage({
   header,
 }: RustInteractivePageProps) {
   const tEmpty = useTranslations("empty_states");
-  const tPresent = useTranslations("presentation");
-  const [presenting, setPresenting] = useState(false);
   const { user } = useAuth();
-  const { isDragging, setIsDragging, setLiveNotebook } = useNotebook();
+  const {
+    isDragging,
+    setIsDragging,
+    setLiveNotebook,
+    presenting,
+    setPresenting,
+  } = useNotebook();
   const tokenX = getCookie(tokenCookieName());
   const token = tokenX?.toString() || "";
   const capabilities = useCapabilities(pageId);
@@ -513,19 +516,7 @@ export default function RustInteractivePage({
           <ScrollProgress />
 
           {!previewDoc && (
-            <button
-              type="button"
-              onClick={() => setPresenting(true)}
-              title={tPresent("present")}
-              className="fixed bottom-6 right-6 z-floating flex items-center gap-2 rounded-full border border-border bg-card/85 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg backdrop-blur-md transition-colors hover:text-primary print:hidden"
-            >
-              <Presentation className="size-4" />
-              {tPresent("present")}
-            </button>
-          )}
-
-          {!previewDoc && (
-            <div className="fixed bottom-6 left-6 z-floating flex items-center gap-2 print:hidden">
+            <div className="fixed bottom-6 right-6 z-floating flex items-center gap-2 print:hidden">
               <FollowBar
                 collaborators={collaborators}
                 followingId={followingId}
