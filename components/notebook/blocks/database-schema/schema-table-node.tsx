@@ -54,6 +54,7 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
 
   const removeField = (index: number) => {
     const removed = data.schema[index];
+    if (!removed) return;
     updateNodeData(id, { schema: data.schema.filter((_, i) => i !== index) });
     setEdges((edges) =>
       edges.filter(
@@ -67,7 +68,9 @@ export function SchemaTableNode({ id, data }: NodeProps<SchemaTableNode>) {
     const target = index + direction;
     if (target < 0 || target >= data.schema.length) return;
     const schema = [...data.schema];
-    [schema[index], schema[target]] = [schema[target], schema[index]];
+    const temp = schema[index]!;
+    schema[index] = schema[target]!;
+    schema[target] = temp;
     updateNodeData(id, { schema });
   };
 

@@ -18,9 +18,9 @@ export function LeaderboardTable({
   onSelect,
 }: {
   entries: LeaderboardEntry[];
-  currentUserId?: string | null;
+  currentUserId?: string | null | undefined;
   canReview?: boolean;
-  onSelect?: (submissionId: string) => void;
+  onSelect?: ((submissionId: string) => void) | undefined;
 }) {
   const t = useTranslations("challenges");
 

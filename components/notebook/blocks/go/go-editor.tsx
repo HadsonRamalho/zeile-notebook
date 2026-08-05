@@ -13,9 +13,9 @@ interface GoNotebookProps {
   block: Block;
   onCodeChange: (newCode: string) => void;
   isDragging?: boolean;
-  notebookId?: string;
+  notebookId?: string | undefined;
   canExecute?: boolean;
-  executionUnavailableReason?: string;
+  executionUnavailableReason?: string | undefined;
 }
 
 export function GoEditor({

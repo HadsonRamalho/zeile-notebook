@@ -361,7 +361,7 @@ export function SelectContent({ className, children }: SelectContentProps) {
     >
       <motion.div
         ref={innerRef}
-        variants={ctx.reduce ? undefined : LIST_VARIANTS}
+        {...(ctx.reduce ? {} : { variants: LIST_VARIANTS })}
         initial={false}
         animate={open ? "show" : "hidden"}
         className="p-1"
@@ -395,7 +395,7 @@ export function SelectItem({
   }, [ctx.register, ctx.unregister, value, label]);
 
   return (
-    <motion.li variants={ctx.reduce ? undefined : ITEM_VARIANTS}>
+    <motion.li {...(ctx.reduce ? {} : { variants: ITEM_VARIANTS })}>
       <button
         type="button"
         role="option"

@@ -353,7 +353,7 @@ export function ReorderTools({ index, addBlock }: ReorderToolsProps) {
     close();
   };
 
-  const currentMenu = menuRegistry[view];
+  const currentMenu = menuRegistry[view]!;
 
   return (
     <div

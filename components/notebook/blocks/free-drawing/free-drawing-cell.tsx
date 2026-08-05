@@ -1333,7 +1333,7 @@ function ToolButton({
 }: {
   id: ToolKind;
   isActive: boolean;
-  shortcut?: string;
+  shortcut?: string | undefined;
   onClick: (t: ToolKind) => void;
 }) {
   const Icon = TOOL_ICONS[id];

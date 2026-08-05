@@ -158,7 +158,7 @@ export function EditorHeader({
             </button>
           )}
           <Select
-            value={mode}
+            {...(mode !== undefined ? { value: mode } : {})}
             onValueChange={(e) => {
               setMode?.(e as TsMode);
             }}

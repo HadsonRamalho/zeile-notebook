@@ -7,7 +7,7 @@ const DOCS_DIR = path.join(process.cwd(), "content/docs");
 
 export interface DocFrontmatter {
   title: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 export interface DocPage {
@@ -41,7 +41,7 @@ function parseFrontmatter(raw: string): {
   const [, rawFrontmatter, content] = match;
   const frontmatter: Record<string, string> = {};
 
-  for (const line of rawFrontmatter.split("\n")) {
+  for (const line of rawFrontmatter!.split("\n")) {
     const idx = line.indexOf(":");
     if (idx === -1) continue;
     const key = line.slice(0, idx).trim();
@@ -54,7 +54,7 @@ function parseFrontmatter(raw: string): {
       title: frontmatter.title ?? "",
       description: frontmatter.description,
     },
-    content,
+    content: content ?? "",
   };
 }
 
@@ -141,7 +141,7 @@ function buildTree(pages: DocPage[]): PageTree {
       } else if (!folders.get(key)) {
         const folder: PageTreeNode & { type: "folder" } = {
           type: "folder",
-          name: page.slugs[i],
+          name: page.slugs[i]!,
           children: [],
         };
         folders.set(key, folder);

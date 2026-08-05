@@ -33,7 +33,7 @@ export function NotFoundStacked({
       <motion.div
         initial="rest"
         animate="rest"
-        whileHover={interactive ? "hover" : undefined}
+        {...(interactive ? { whileHover: "hover" } : {})}
         className="relative h-44 w-64"
       >
         <motion.div

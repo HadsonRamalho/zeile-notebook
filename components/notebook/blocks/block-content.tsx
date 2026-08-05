@@ -87,7 +87,7 @@ export function useBlockPermissions(
     can(
       permType ? `notebook.blocks.${permType}.view` : "notebook.blocks.view",
       {
-        blockType: permType ?? undefined,
+        blockType: permType,
       },
     );
   const execType = permType && EXEC_LANGS.includes(permType) ? permType : null;
@@ -96,15 +96,14 @@ export function useBlockPermissions(
     !execType ||
     can(`notebook.blocks.${execType}.execute`, { blockType: execType });
   const canDelete =
-    !ready ||
-    can("notebook.blocks.delete", { blockType: permType ?? undefined });
+    !ready || can("notebook.blocks.delete", { blockType: permType });
   const canReorder = !ready || can("notebook.blocks.reorder");
   const canEditContent =
     canWrite &&
     (!ready ||
       can(
         permType ? `notebook.blocks.${permType}.edit` : "notebook.blocks.edit",
-        { blockType: permType ?? undefined },
+        { blockType: permType },
       ));
 
   return { canView, canExecute, canEditContent, canReorder, canDelete };
@@ -120,7 +119,7 @@ interface BlockContentProps {
   updateBlockMetadata: (id: string, newMetadata: BlockMetadata) => void;
   updateDrawingScene: (id: string, elements: readonly DrawingElement[]) => void;
   doc: Notebook | null;
-  notebookId?: string;
+  notebookId?: string | undefined;
   canEditContent: boolean;
   canExecute: boolean;
 }

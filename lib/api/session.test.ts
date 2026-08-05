@@ -159,7 +159,7 @@ describe("client session", () => {
     await endSessionOnServer();
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0];
+    const [url, init] = fetchSpy.mock.calls[0]!;
     expect(url).toContain("/user/logout");
     expect(String(init.body)).toContain("refresh-open");
   });

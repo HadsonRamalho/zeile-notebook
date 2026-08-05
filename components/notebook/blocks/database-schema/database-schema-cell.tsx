@@ -97,8 +97,10 @@ function withStableFieldIds(graph: DatabaseSchemaGraph): DatabaseSchemaGraph {
   const edges = graph.edges.map((edge) => {
     const sourceKey = `${edge.source}:${edge.sourceHandle}`;
     const targetKey = `${edge.target}:${edge.targetHandle}`;
-    const sourceHandle = idByOldHandle.get(sourceKey) ?? edge.sourceHandle;
-    const targetHandle = idByOldHandle.get(targetKey) ?? edge.targetHandle;
+    const sourceHandle =
+      idByOldHandle.get(sourceKey) ?? edge.sourceHandle ?? null;
+    const targetHandle =
+      idByOldHandle.get(targetKey) ?? edge.targetHandle ?? null;
     return { ...edge, sourceHandle, targetHandle };
   });
 

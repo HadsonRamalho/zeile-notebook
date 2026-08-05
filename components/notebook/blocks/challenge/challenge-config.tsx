@@ -141,7 +141,7 @@ export function ChallengeConfig({
           | undefined;
         if (first) {
           setRefLanguage(first);
-          setRefCode(ref.solutions[first]);
+          setRefCode(ref.solutions[first] ?? "");
         }
       })
       .catch(() => {});

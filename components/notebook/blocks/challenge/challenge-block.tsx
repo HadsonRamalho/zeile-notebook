@@ -40,7 +40,7 @@ export function ChallengeBlock({
   updateBlockMetadata,
 }: {
   block: Block;
-  notebookId?: string;
+  notebookId?: string | undefined;
   canWrite: boolean;
   updateBlock: (id: string, content: string) => void;
   updateBlockMetadata: (id: string, metadata: BlockMetadata) => void;
