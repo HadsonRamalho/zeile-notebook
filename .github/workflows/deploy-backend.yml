@@ -5,6 +5,8 @@ on:
     branches: [prod]
     paths:
       - "rust-server/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
   workflow_dispatch: {}
 
 concurrency:
@@ -30,7 +32,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./rust-server
+          context: .
+          file: ./rust-server/Dockerfile
           push: true
           tags: |
             hadsonramalho/notebook-api:latest
