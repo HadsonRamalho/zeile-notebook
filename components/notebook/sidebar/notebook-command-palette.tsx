@@ -16,7 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DeletePageDialog } from "@/components/delete-page-dialog";
 import { useNotebookManager } from "@/components/notebook/notebook-manager";
 import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
@@ -122,12 +122,14 @@ export function NotebookCommandPalette({
     };
   }, [query]);
 
-  const matches = (title: string) =>
-    title.toLowerCase().includes(query.trim().toLowerCase());
+  const matches = useCallback(
+    (title: string) => title.toLowerCase().includes(query.trim().toLowerCase()),
+    [query],
+  );
 
   const filteredPages = useMemo(
     () => pages.filter((p) => matches(p.title || "Sem título")),
-    [pages, query],
+    [pages, matches],
   );
 
   const filteredTeams = useMemo(
@@ -140,7 +142,7 @@ export function NotebookCommandPalette({
           ),
         }))
         .filter(({ team, pages: p }) => matches(team.name) || p.length > 0),
-    [teams, teamPages, query],
+    [teams, teamPages, matches],
   );
 
   const globalActions: (FlatItem & { label: string; icon: React.ReactNode })[] =
@@ -264,6 +266,7 @@ export function NotebookCommandPalette({
     });
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: query não é lido no corpo, mas dispara o reset do índice ativo a cada nova busca
   useEffect(() => {
     setActiveIndex(0);
   }, [query]);

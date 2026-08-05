@@ -4,7 +4,13 @@ import { getCookie } from "cookies-next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { createApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
@@ -49,6 +55,7 @@ export function AuthProvider({
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hidratação de sessão deve rodar só uma vez, na montagem
   useEffect(() => {
     async function loadUserFromSession() {
       const current = getActiveAccount();
@@ -74,78 +81,84 @@ export function AuthProvider({
     loadUserFromSession();
   }, []);
 
-  const githubSignIn = async (token: string, refreshToken?: string) => {
-    setActiveAccount("cloud");
-    setAccount("cloud");
+  const githubSignIn = useCallback(
+    async (token: string, refreshToken?: string) => {
+      setActiveAccount("cloud");
+      setAccount("cloud");
 
-    storeSession(
-      {
-        accessToken: token,
-        refreshToken: refreshToken ?? "",
-        expiresInSecs: 15 * 60,
-      },
-      "cloud",
-    );
+      storeSession(
+        {
+          accessToken: token,
+          refreshToken: refreshToken ?? "",
+          expiresInSecs: 15 * 60,
+        },
+        "cloud",
+      );
 
-    const profile = await authApi.get<User>("/user/me");
+      const profile = await authApi.get<User>("/user/me");
 
-    setUser(profile);
-    router.push("/notebook");
-    router.refresh();
-  };
+      setUser(profile);
+      router.push("/notebook");
+      router.refresh();
+    },
+    [router],
+  );
 
-  const signIn = async (data: LoginUser, target: AccountType = account) => {
-    setActiveAccount(target);
-    setAccount(target);
+  const signIn = useCallback(
+    async (data: LoginUser, target: AccountType = account) => {
+      setActiveAccount(target);
+      setAccount(target);
 
-    const session = await authApi.post<Session>("/user/login", data);
+      const session = await authApi.post<Session>("/user/login", data);
 
-    storeSession(session, target);
+      storeSession(session, target);
 
-    const profile = await authApi.get<User>("/user/me");
+      const profile = await authApi.get<User>("/user/me");
 
-    setUser(profile);
-    router.push("/notebook");
-    router.refresh();
-  };
+      setUser(profile);
+      router.push("/notebook");
+      router.refresh();
+    },
+    [account, router],
+  );
 
-  const register = async (
-    data: RegisterUser,
-    target: AccountType = account,
-  ) => {
-    setActiveAccount(target);
-    setAccount(target);
+  const register = useCallback(
+    async (data: RegisterUser, target: AccountType = account) => {
+      setActiveAccount(target);
+      setAccount(target);
 
-    const session = await authApi.post<Session>("/user/register", {
-      ...data,
-      primaryProvider: "Email",
-    });
+      const session = await authApi.post<Session>("/user/register", {
+        ...data,
+        primaryProvider: "Email",
+      });
 
-    storeSession(session, target);
+      storeSession(session, target);
 
-    const profile = await authApi.get<User>("/user/me");
+      const profile = await authApi.get<User>("/user/me");
 
-    setUser(profile);
-    router.push("/notebook");
-    router.refresh();
-  };
+      setUser(profile);
+      router.push("/notebook");
+      router.refresh();
+    },
+    [account, router],
+  );
 
-  const deleteProfile = async () => {
+  const deleteProfile = useCallback(async () => {
     await deleteAccount();
 
     clearSession(account);
     setUser(null);
     router.push("/");
-  };
+  }, [account, router]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     // Revoke on the server before forgetting locally: without this the refresh
     // token would stay valid for thirty days for anyone holding a copy of it.
     await endSessionOnServer(account);
 
     clearSession(account);
     setUser(null);
-  };
+  }, [account]);
 
   return (
     <AuthContext.Provider
