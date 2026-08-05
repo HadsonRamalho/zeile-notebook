@@ -18,14 +18,9 @@ export function PWARegistration() {
       return;
     }
 
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => {
-        console.log("Service Worker registrado com sucesso:", reg.scope);
-      })
-      .catch((err) => {
-        console.error("Falha ao registrar Service Worker:", err);
-      });
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.error("Falha ao registrar Service Worker:", err);
+    });
 
     let reloaded = false;
     const handleControllerChange = () => {
