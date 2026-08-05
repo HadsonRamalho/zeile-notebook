@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import type { LeaderboardEntry } from "@/lib/types/challenge-types";
 import { cn } from "@/lib/utils";
 
-function displayName(name: string) {
+function displayName(name: string | undefined) {
+  if (!name) return "";
   const at = name.indexOf("@");
   return at === -1 ? name : name.slice(0, at);
 }
@@ -56,7 +57,8 @@ export function LeaderboardTable({
         </thead>
         <tbody>
           {entries.map((entry, index) => {
-            const isMe = currentUserId != null && entry.userId === currentUserId;
+            const isMe =
+              currentUserId != null && entry.userId === currentUserId;
             const reviewable = !!onSelect && (canReview || isMe);
             return (
               <tr
