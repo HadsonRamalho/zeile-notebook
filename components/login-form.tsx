@@ -5,7 +5,7 @@ import { AlertCircle, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Loader } from "@/components/motion/loader";
@@ -76,21 +76,24 @@ export function LoginForm({
     window.location.href = redirectUrl;
   };
 
-  const handleAuthError = (e: string) => {
-    const errorKey = `errors.${e}`;
-    const message = t(errorKey, {
-      defaultValue: t("login.errors.generic_github_error"),
-    });
+  const handleAuthError = useCallback(
+    (e: string) => {
+      const errorKey = `errors.${e}`;
+      const message = t(errorKey, {
+        defaultValue: t("login.errors.generic_github_error"),
+      });
 
-    setError(message);
-    toast.error(message);
-  };
+      setError(message);
+      toast.error(message);
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (authError) {
       handleAuthError(authError);
     }
-  }, [authError]);
+  }, [authError, handleAuthError]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

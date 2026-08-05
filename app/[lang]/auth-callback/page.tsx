@@ -28,7 +28,7 @@ function AuthContent() {
       router.push("/login?auth_error=auth_failed");
       return;
     }
-  }, [token]);
+  }, [token, refreshToken, error, router, githubSignIn]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center flex-col gap-4">

@@ -35,7 +35,7 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
     if (!originalTitle) {
       loadNotebook();
     }
-  }, []);
+  }, [pageId, t, originalTitle]);
 
   useEffect(() => {
     const handleUpdate = (e: Event) => {

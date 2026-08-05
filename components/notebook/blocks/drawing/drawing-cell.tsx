@@ -108,6 +108,7 @@ export function DrawingCell({
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resolvedTheme não é lido no corpo, mas dispara o re-cálculo da cor computada quando o tema muda
   useEffect(() => {
     const api = apiRef.current;
     if (!api || !wrapperRef.current) return;

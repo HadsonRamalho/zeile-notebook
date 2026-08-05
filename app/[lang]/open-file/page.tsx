@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
@@ -32,16 +32,19 @@ export default function OpenFilePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hasHandledLaunch = useRef(false);
 
-  const importFile = async (file: File) => {
-    try {
-      const text = await file.text();
-      const id = await createNotebook();
-      setPendingImport(text);
-      router.replace(`/notebook/${id}`);
-    } catch {
-      setErrorMessage("Não foi possível abrir esse arquivo.");
-    }
-  };
+  const importFile = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        const id = await createNotebook();
+        setPendingImport(text);
+        router.replace(`/notebook/${id}`);
+      } catch {
+        setErrorMessage("Não foi possível abrir esse arquivo.");
+      }
+    },
+    [router],
+  );
 
   useEffect(() => {
     if (isAuthLoading) return;
@@ -61,7 +64,7 @@ export default function OpenFilePage() {
       const file = await fileHandle.getFile();
       await importFile(file);
     });
-  }, [isAuthLoading, user, router]);
+  }, [isAuthLoading, user, router, importFile]);
 
   const handleManualPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
