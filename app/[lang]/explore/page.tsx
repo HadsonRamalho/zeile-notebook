@@ -13,14 +13,18 @@ import type { PublicNotebookResponse } from "@/lib/types/notebook-types";
 
 type Filter = "all" | "personal" | "team";
 
-function displayOwnerName(name: string) {
+function displayOwnerName(name: string | undefined) {
+  if (!name) return "";
   const at = name.indexOf("@");
   return at === -1 ? name : name.slice(0, at);
 }
 
 function AmbientGlow() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+    >
       <div className="animate-ambient-drift absolute -top-10 left-[8%] size-80 rounded-full bg-primary/15 blur-3xl md:size-96" />
       <div
         className="animate-ambient-drift absolute -top-16 right-[8%] size-72 rounded-full bg-accent-violet/15 blur-3xl md:size-80"
@@ -89,7 +93,9 @@ export default function PublicNotebooksPage() {
             <BookSearch className="h-8 w-8 text-primary" />
             {t("title")}
           </h1>
-          <p className="mt-2 text-lg text-muted-foreground">{t("description")}</p>
+          <p className="mt-2 text-lg text-muted-foreground">
+            {t("description")}
+          </p>
           <BackButton />
         </div>
       </div>
@@ -107,7 +113,10 @@ export default function PublicNotebooksPage() {
           </div>
 
           <div className="flex items-center gap-1">
-            <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>
+            <FilterButton
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+            >
               {t("filter_all")}
             </FilterButton>
             <FilterButton
@@ -116,7 +125,10 @@ export default function PublicNotebooksPage() {
             >
               {t("filter_personal")}
             </FilterButton>
-            <FilterButton active={filter === "team"} onClick={() => setFilter("team")}>
+            <FilterButton
+              active={filter === "team"}
+              onClick={() => setFilter("team")}
+            >
               {t("filter_team")}
             </FilterButton>
           </div>
@@ -149,7 +161,9 @@ export default function PublicNotebooksPage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {filtered.map((notebook) => {
             const isTeam = !!notebook.teamId;
-            const formattedDate = new Date(notebook.updatedAt).toLocaleDateString();
+            const formattedDate = new Date(
+              notebook.updatedAt,
+            ).toLocaleDateString();
 
             return (
               <Link key={notebook.id} href={`/notebook/${notebook.id}`}>

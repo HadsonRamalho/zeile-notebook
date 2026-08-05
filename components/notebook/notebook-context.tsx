@@ -33,6 +33,8 @@ interface NotebookContextType {
   setIsCloning: (c: boolean) => void;
   isCloning: boolean;
   triggerClone: () => Promise<void>;
+  presenting: boolean;
+  setPresenting: (v: boolean) => void;
 }
 
 const NotebookContext = createContext<NotebookContextType | undefined>(
@@ -56,6 +58,7 @@ export function NotebookProvider({
   const [liveNotebook, setLiveNotebook] = useState<Notebook | null>(null);
   const [isPublic, setVisibility] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const { clone, updateVisibility } = useNotebookManager();
 
   const triggerSave = () => setSaveSignal((prev) => prev + 1);
@@ -120,6 +123,8 @@ export function NotebookProvider({
         addBlockSignal,
         setIsCloning,
         isCloning,
+        presenting,
+        setPresenting,
       }}
     >
       {children}

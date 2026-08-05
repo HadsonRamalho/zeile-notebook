@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DOCS_PLAYGROUND_NOTEBOOK_ID } from "@/lib/docs-playground";
 import type { Block } from "@/lib/types";
 import { ZigEditor } from "./zig-editor";
 
@@ -30,6 +31,7 @@ export function ZigEditorMDX({
       block={block}
       onCodeChange={setCode}
       isDragging={false}
+      notebookId={DOCS_PLAYGROUND_NOTEBOOK_ID}
     />
   );
 }

@@ -1,4 +1,12 @@
-import { Copy, Globe, KeyRound, Lock, Share2, Users } from "lucide-react";
+import {
+  Copy,
+  Globe,
+  KeyRound,
+  Lock,
+  Presentation,
+  Share2,
+  Users,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { Loader } from "@/components/motion/loader";
@@ -16,6 +24,7 @@ export type ControlRules = {
   showExport: boolean;
   showPublicPerms: boolean;
   showTeamPerms: boolean;
+  showPresent: boolean;
 };
 
 interface ControlActionsProps {
@@ -25,6 +34,8 @@ interface ControlActionsProps {
   onToggleVisibility: (isPublic: boolean) => void;
   onClone: () => void;
   onShare: () => void;
+  onPresent: () => void;
+  presentLabel: string;
   exportMenu: ReactNode;
   onManagePublic: () => void;
   onManageTeamPerms: () => void;
@@ -73,6 +84,8 @@ export function ControlActions({
   onToggleVisibility,
   onClone,
   onShare,
+  onPresent,
+  presentLabel,
   exportMenu,
   onManagePublic,
   onManageTeamPerms,
@@ -86,7 +99,8 @@ export function ControlActions({
     rules.showShare ||
     rules.showExport ||
     rules.showPublicPerms ||
-    rules.showTeamPerms;
+    rules.showTeamPerms ||
+    rules.showPresent;
 
   if (!hasAny) return null;
 
@@ -148,6 +162,14 @@ export function ControlActions({
           icon={<Globe className="size-4" />}
           label={tp("public_permissions")}
           onClick={onManagePublic}
+        />
+      )}
+
+      {rules.showPresent && (
+        <DockAction
+          icon={<Presentation className="size-4" />}
+          label={presentLabel}
+          onClick={onPresent}
         />
       )}
     </Dock>

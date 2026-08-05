@@ -35,12 +35,14 @@ export function NotebookControls() {
     isPublic,
     triggerClone,
     isCloning,
+    setPresenting,
   } = useNotebook();
   const [meta, setMeta] = useState<NotebookMeta | null>(null);
   const [publicPermsOpen, setPublicPermsOpen] = useState(false);
   const [teamPermsOpen, setTeamPermsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const t = useTranslations("notebook_controls");
+  const tPresent = useTranslations("presentation");
 
   useEffect(() => {
     if (!notebook?.id) return;
@@ -128,6 +130,7 @@ export function NotebookControls() {
     showExport: exportOptions.length > 0,
     showPublicPerms: isPublic && can("notebook.manage_public"),
     showTeamPerms: !!meta?.teamId && can("team.roles.edit_role_permissions"),
+    showPresent: true,
   };
 
   return (
@@ -139,6 +142,8 @@ export function NotebookControls() {
         onToggleVisibility={handleToggleVisibility}
         onClone={triggerClone}
         onShare={handleShare}
+        onPresent={() => setPresenting(true)}
+        presentLabel={tPresent("present")}
         exportMenu={
           <ExportMenu
             options={exportOptions}
