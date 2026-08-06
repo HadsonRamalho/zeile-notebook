@@ -1,137 +1,60 @@
-import type { Language } from "@/types/block-types";
+import type { components } from "@/lib/api/generated/openapi-types";
 
-export type JudgeMode = "io" | "reference" | "property";
+type Schemas = components["schemas"];
 
-export type SubmissionStatus =
-  | "queued"
-  | "running"
-  | "done"
-  | "compile_error"
-  | "error";
+// Language de execução aceita pelo judge — só as 6 que o servidor sabe compilar
+// (rust/typescript/python/zig/go/cpp). Não confundir com o `Language` de
+// `types/block-types.ts`, que também admite "generic" (bloco de código sem execução).
+export type ChallengeLanguage = Schemas["Language"];
 
-export type Verdict = "AC" | "WA" | "TLE" | "RE" | "CE" | "SKIP";
+export type JudgeMode = Schemas["JudgeMode"];
+export type Verdict = Schemas["Verdict"];
+export type SubmissionStatus = Schemas["SubmissionStatus"];
+export type ChallengeDifficulty = Schemas["ChallengeDifficulty"];
 
-export interface ChallengePublic {
-  id: string;
-  slug: string;
-  title: string;
-  statementMd: string;
-  difficulty: string;
+export type ChallengePublic = Omit<
+  Schemas["ChallengePublic"],
+  "languages" | "tags" | "starterCode" | "propertySpec"
+> & {
   tags: string[];
-  languages: Language[];
-  judgeMode: JudgeMode;
-  timeLimitMs: number;
-  memLimitKb: number;
+  languages: ChallengeLanguage[];
   starterCode: Record<string, string> | null;
   propertySpec: unknown | null;
-  teamId: string | null;
-  notebookId: string | null;
-  blockId: string | null;
-  visibility: string;
-  createdAt: string;
-}
+};
 
-export interface AuthoringTestCase {
-  id: string;
-  input: string;
-  expected: string | null;
-  isHidden: boolean;
-  weight: number;
-  ord: number;
-}
+export type AuthoringTestCase = Schemas["TestCaseAuthoringView"];
 
-export interface TestCasePublic {
-  id: string;
-  input: string;
-  expected: string | null;
-  weight: number;
-  ord: number;
-}
+export type TestCasePublic = Schemas["TestCasePublic"];
 
-export interface ChallengeDetail {
+export type ChallengeDetail = {
   challenge: ChallengePublic;
   sampleTests: TestCasePublic[];
-}
+};
 
-export interface SubmissionResultView {
-  testCaseId: string | null;
-  verdict: Verdict;
-  runtimeMs: number;
-  isHidden: boolean;
-  stderrSnippet: string | null;
-  ord: number;
-}
+export type SubmissionResultView = Schemas["SubmissionResultView"];
 
-export interface ReferenceSolutions {
-  solutions: Record<string, string>;
-}
+export type ReferenceSolutions = Schemas["ReferenceSolutionsResponse"];
 
-export interface SubmissionView {
-  id: string;
-  challengeId: string;
-  userId: string | null;
-  language: Language;
-  code: string;
-  status: SubmissionStatus;
-  score: number;
-  maxScore: number;
-  runtimeMs: number;
-  errorMessage: string | null;
-  createdAt: string;
-  judgedAt: string | null;
-  results: SubmissionResultView[];
-}
+export type SubmissionView = Schemas["SubmissionView"];
 
-export interface SampleRunResult {
-  input: string;
-  expected: string | null;
-  stdout: string;
-  stderr: string | null;
-  verdict: Verdict;
-}
+export type SampleRunResult = Schemas["SampleResultView"];
 
-export interface SampleRunResponse {
-  compileError: string | null;
-  results: SampleRunResult[];
-}
+export type SampleRunResponse = Schemas["RunSamplesResponse"];
 
-export interface LeaderboardEntry {
-  submissionId: string;
-  userId: string;
-  authorName: string;
-  score: number;
-  maxScore: number;
-  runtimeMs: number;
-  createdAt: string;
-}
+export type LeaderboardEntry = Schemas["LeaderboardEntry"];
 
-export interface CreateChallengePayload {
-  notebookId: string;
-  blockId?: string;
-  slug: string;
-  title: string;
-  statementMd: string;
-  difficulty?: string;
-  tags?: string[];
-  languages: Language[];
-  judgeMode?: JudgeMode;
-  timeLimitMs?: number;
-  memLimitKb?: number;
+export type CreateChallengePayload = Omit<
+  Schemas["CreateChallengeRequest"],
+  "languages" | "starterCode" | "propertySpec"
+> & {
+  languages: ChallengeLanguage[];
   starterCode?: Record<string, string>;
   propertySpec?: unknown;
-  visibility?: string;
-  teamId?: string | null;
-}
+};
 
-export interface CreateTestCasePayload {
-  input: string;
-  expected?: string | null;
-  isHidden?: boolean;
-  weight?: number;
-  ord?: number;
-}
+export type UpdateChallengePayload = Schemas["UpdateChallengeRequest"];
 
-export interface SubmitPayload {
-  language: Language;
-  code: string;
-}
+export type CreateTestCasePayload = Schemas["CreateTestCaseRequest"];
+export type TestCaseCreatedResponse = Schemas["TestCaseCreatedResponse"];
+
+export type SubmitPayload = Schemas["SubmitRequest"];

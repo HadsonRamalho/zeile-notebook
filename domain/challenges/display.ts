@@ -1,11 +1,16 @@
-import type { Language } from "@/types/block-types";
 import type {
+  ChallengeLanguage,
   JudgeMode,
   SubmissionStatus,
   Verdict,
 } from "@/types/challenge-types";
 
-export const CHALLENGE_LANGUAGES: Language[] = ["rust", "go", "cpp", "zig"];
+export const CHALLENGE_LANGUAGES: ChallengeLanguage[] = [
+  "rust",
+  "go",
+  "cpp",
+  "zig",
+];
 
 const LANGUAGE_LABELS: Record<string, string> = {
   rust: "Rust",
