@@ -17,6 +17,7 @@ import {
   Type,
   UnlockIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -729,50 +730,51 @@ function ZoomControls({
   onOut: () => void;
   onFit: () => void;
 }) {
+  const t = useTranslations("layouts_canvas_tools");
   return (
     <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 rounded-full border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
       <Tooltip>
         <TooltipTrigger
-          aria-label="Zoom out"
+          aria-label={t("zoom_out")}
           onClick={onOut}
           className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
         >
           <MinusIcon className="size-3.5" />
         </TooltipTrigger>
-        <TooltipContent>Zoom out</TooltipContent>
+        <TooltipContent>{t("zoom_out")}</TooltipContent>
       </Tooltip>
       <span className="min-w-[42px] px-2 text-center font-mono text-foreground/80 text-xs tabular-nums">
         {Math.round(zoom * 100)}%
       </span>
       <Tooltip>
         <TooltipTrigger
-          aria-label="Zoom in"
+          aria-label={t("zoom_in")}
           onClick={onIn}
           className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
         >
           <PlusIcon className="size-3.5" />
         </TooltipTrigger>
-        <TooltipContent>Zoom in</TooltipContent>
+        <TooltipContent>{t("zoom_in")}</TooltipContent>
       </Tooltip>
       <Separator orientation="vertical" className="mx-1 h-5" />
       <Tooltip>
         <TooltipTrigger
-          aria-label="Fit to screen"
+          aria-label={t("fit_to_screen")}
           onClick={onFit}
           className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
         >
           <Maximize2 className="size-3.5" />
         </TooltipTrigger>
-        <TooltipContent>Fit to screen</TooltipContent>
+        <TooltipContent>{t("fit_to_screen")}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger
-          aria-label="Fullscreen"
+          aria-label={t("fullscreen")}
           className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
         >
           <Maximize className="size-3.5" />
         </TooltipTrigger>
-        <TooltipContent>Fullscreen</TooltipContent>
+        <TooltipContent>{t("fullscreen")}</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -813,10 +815,12 @@ function Inspector({
   onToggleLocked: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslations("layouts_canvas_tools");
+  const tabs = [t("tabs.design"), t("tabs.prototype"), t("tabs.inspect")];
   return (
     <div className="absolute right-3 bottom-3 z-10 w-72 overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur">
       <div className="flex border-border border-b px-1 pt-1">
-        {["Design", "Prototype", "Inspect"].map((tab, i) => (
+        {tabs.map((tab, i) => (
           <button
             key={tab}
             type="button"
@@ -836,16 +840,15 @@ function Inspector({
       {!shape ? (
         <div className="px-3 py-6 text-center">
           <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
-            No selection
+            {t("no_selection_title")}
           </div>
           <p className="mt-2 text-muted-foreground text-xs leading-relaxed">
-            Pick a shape on the canvas, or grab a tool (F, O, T) and drag to
-            create one.
+            {t("no_selection_hint")}
           </p>
         </div>
       ) : (
         <div className="space-y-3 px-3 py-2">
-          <InspectorSection title="Position">
+          <InspectorSection title={t("section.position")}>
             <div className="grid grid-cols-2 gap-2">
               <NumberField
                 label="X"
@@ -859,7 +862,7 @@ function Inspector({
               />
             </div>
           </InspectorSection>
-          <InspectorSection title="Size">
+          <InspectorSection title={t("section.size")}>
             <div className="grid grid-cols-2 gap-2">
               <NumberField
                 label="W"
@@ -873,14 +876,14 @@ function Inspector({
               />
             </div>
           </InspectorSection>
-          <InspectorSection title="Fill">
+          <InspectorSection title={t("section.fill")}>
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
                 {SWATCHES.map((c) => (
                   <button
                     key={c}
                     type="button"
-                    aria-label={`Fill ${c}`}
+                    aria-label={t("fill_swatch_aria", { color: c })}
                     onClick={() => onUpdate(shape.id, { fill: c })}
                     className={cn(
                       "size-5 rounded-md border transition-shadow",
@@ -918,7 +921,7 @@ function Inspector({
       <div className="px-3 py-2">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
-            Layers
+            {t("layers_title")}
           </span>
           {shape ? (
             <button
@@ -926,14 +929,14 @@ function Inspector({
               onClick={() => onDelete(shape.id)}
               className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em] hover:text-destructive"
             >
-              Delete
+              {t("delete")}
             </button>
           ) : null}
         </div>
         <div className="space-y-0.5">
           {shapes.length === 0 ? (
             <p className="px-1.5 py-2 text-muted-foreground text-[11px]">
-              No layers yet.
+              {t("no_layers")}
             </p>
           ) : (
             [...shapes].reverse().map((layer) => {
@@ -964,7 +967,7 @@ function Inspector({
                       e.stopPropagation();
                       onToggleVisible(layer.id);
                     }}
-                    aria-label={layer.visible ? "Hide" : "Show"}
+                    aria-label={layer.visible ? t("hide") : t("show")}
                     className="grid size-4 place-items-center text-foreground/50 hover:text-foreground"
                   >
                     {layer.visible ? (
@@ -981,7 +984,7 @@ function Inspector({
                       e.stopPropagation();
                       onToggleLocked(layer.id);
                     }}
-                    aria-label={layer.locked ? "Unlock" : "Lock"}
+                    aria-label={layer.locked ? t("unlock") : t("lock")}
                     className="grid size-4 place-items-center text-foreground/50 hover:text-foreground"
                   >
                     {layer.locked ? (

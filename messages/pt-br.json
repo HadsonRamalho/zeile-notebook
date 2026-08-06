@@ -829,5 +829,133 @@
     "confirm_restore": "Confirmar",
     "delete": "Excluir versão",
     "auto": "Automática"
+  },
+  "layouts_canvas_tools": {
+    "zoom_out": "Diminuir zoom",
+    "zoom_in": "Aumentar zoom",
+    "fit_to_screen": "Ajustar à tela",
+    "fullscreen": "Tela cheia",
+    "tabs": {
+      "design": "Design",
+      "prototype": "Prototipagem",
+      "inspect": "Inspecionar"
+    },
+    "no_selection_title": "Nenhuma seleção",
+    "no_selection_hint": "Escolha uma forma no canvas, ou selecione uma ferramenta (F, O, T) e arraste para criar uma.",
+    "section": {
+      "position": "Posição",
+      "size": "Tamanho",
+      "fill": "Preenchimento"
+    },
+    "fill_swatch_aria": "Preenchimento {color}",
+    "layers_title": "Camadas",
+    "delete": "Excluir",
+    "no_layers": "Ainda não há camadas.",
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "unlock": "Desbloquear",
+    "lock": "Bloquear"
+  },
+  "editor_header": {
+    "file_name_placeholder": "Nome do componente...",
+    "mode_placeholder": "Selecione o modo",
+    "mode_sandpack": "Modo Sandpack",
+    "mode_native": "Modo Nativo",
+    "run": "Executar",
+    "loading_compiler": "Carregando o Compilador...",
+    "hide_render": "Ocultar Renderização",
+    "show_render": "Exibir Renderização",
+    "hide_console": "Ocultar Console",
+    "show_console": "Exibir Console"
+  },
+  "run_rust": {
+    "execution_error_label": "Erro de Execução",
+    "run_success": "Código executado com sucesso.",
+    "module_not_found": "Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))",
+    "run_error": "Erro na execução.",
+    "network_error": "Erro: Não foi possível se comunicar com o servidor.",
+    "error_prefix": "Erro: {error}"
+  },
+  "free_drawing": {
+    "focus_mode": "Modo foco",
+    "exit_focus_mode": "Sair do modo foco",
+    "fullscreen": "Tela cheia",
+    "exit_fullscreen": "Sair da tela cheia",
+    "export_png": "Exportar como PNG",
+    "touch_gestures": "Gestos de toque",
+    "touch_gestures_description": "Escolha a ação disparada ao tocar com cada número de dedos.",
+    "fingers_count": "{count, plural, one {# dedo} other {# dedos}}",
+    "tools": {
+      "draw": "Pincel",
+      "eraser": "Borracha",
+      "bucket": "Balde de tinta",
+      "hand": "Mão (mover)",
+      "laser": "Laser (temporário)",
+      "shapes": "Formas"
+    },
+    "gestures": {
+      "none": "Nada",
+      "undo": "Desfazer",
+      "redo": "Refazer",
+      "fullscreen": "Tela cheia",
+      "focus": "Modo foco"
+    },
+    "shapes": {
+      "line": "Linha",
+      "rectangle": "Retângulo",
+      "ellipse": "Elipse",
+      "triangle": "Triângulo",
+      "arrow": "Seta"
+    },
+    "brushes_aria": "Pincéis ({name})",
+    "brushes_tooltip": "Pincéis — {name}",
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "custom_color": "Cor customizada",
+    "color_swatch_aria": "Cor {color}",
+    "size_in_pixels": "Tamanho em pixels",
+    "size_popover_aria": "Tamanho — {label} ({size}px)",
+    "zoom_out": "Diminuir zoom",
+    "zoom_in": "Aumentar zoom",
+    "fit_to_content": "Ajustar ao conteúdo",
+    "custom_background_color": "Cor de fundo customizada",
+    "follow_app_color": "Seguir cor da aplicação",
+    "layers_title": "Camadas",
+    "expand_layers": "Expandir camadas",
+    "new_layer": "Nova camada",
+    "minimize_layers": "Minimizar camadas",
+    "drag_to_reorder": "Arrastar para reordenar",
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "double_click_rename": "Duplo clique para renomear",
+    "unlock_action": "Destravar",
+    "lock_action": "Travar",
+    "delete_layer": "Excluir camada",
+    "default_layer_name": "Camada {n}",
+    "brush_shapes": {
+      "pencil": "Lápis",
+      "dot": "Ponto",
+      "pen": "Caneta",
+      "marker": "Marcador",
+      "airbrush": "Aerógrafo",
+      "watercolor": "Pincel de água",
+      "oil": "Óleo",
+      "charcoal": "Carvão",
+      "chalk": "Giz"
+    },
+    "brush_picker": {
+      "title": "Pincéis",
+      "description": "Escolha um pincel ou crie um novo com forma e afinamento próprios.",
+      "delete_brush_aria": "Excluir {name}",
+      "create_title": "Criar pincel",
+      "name_label": "Nome",
+      "shape_label": "Forma",
+      "new_brush_default_name": "Novo pincel",
+      "size_start": "Espessura início",
+      "size_end": "Espessura fim",
+      "opacity_start": "Opacidade início",
+      "opacity_end": "Opacidade fim",
+      "add_brush": "Adicionar pincel"
+    }
   }
 }

@@ -829,5 +829,133 @@
     "confirm_restore": "Confirm",
     "delete": "Delete version",
     "auto": "Automatic"
+  },
+  "layouts_canvas_tools": {
+    "zoom_out": "Zoom out",
+    "zoom_in": "Zoom in",
+    "fit_to_screen": "Fit to screen",
+    "fullscreen": "Fullscreen",
+    "tabs": {
+      "design": "Design",
+      "prototype": "Prototype",
+      "inspect": "Inspect"
+    },
+    "no_selection_title": "No selection",
+    "no_selection_hint": "Pick a shape on the canvas, or grab a tool (F, O, T) and drag to create one.",
+    "section": {
+      "position": "Position",
+      "size": "Size",
+      "fill": "Fill"
+    },
+    "fill_swatch_aria": "Fill {color}",
+    "layers_title": "Layers",
+    "delete": "Delete",
+    "no_layers": "No layers yet.",
+    "hide": "Hide",
+    "show": "Show",
+    "unlock": "Unlock",
+    "lock": "Lock"
+  },
+  "editor_header": {
+    "file_name_placeholder": "Component name...",
+    "mode_placeholder": "Select mode",
+    "mode_sandpack": "Sandpack Mode",
+    "mode_native": "Native Mode",
+    "run": "Run",
+    "loading_compiler": "Loading Compiler...",
+    "hide_render": "Hide Render",
+    "show_render": "Show Render",
+    "hide_console": "Hide Console",
+    "show_console": "Show Console"
+  },
+  "run_rust": {
+    "execution_error_label": "Execution Error",
+    "run_success": "Code executed successfully.",
+    "module_not_found": "Failure related to another module. Try compiling other blocks first :))",
+    "run_error": "Error running code.",
+    "network_error": "Error: Could not communicate with the server.",
+    "error_prefix": "Error: {error}"
+  },
+  "free_drawing": {
+    "focus_mode": "Focus mode",
+    "exit_focus_mode": "Exit focus mode",
+    "fullscreen": "Fullscreen",
+    "exit_fullscreen": "Exit fullscreen",
+    "export_png": "Export as PNG",
+    "touch_gestures": "Touch gestures",
+    "touch_gestures_description": "Choose the action triggered when touching with each number of fingers.",
+    "fingers_count": "{count, plural, one {# finger} other {# fingers}}",
+    "tools": {
+      "draw": "Brush",
+      "eraser": "Eraser",
+      "bucket": "Paint bucket",
+      "hand": "Hand (move)",
+      "laser": "Laser (temporary)",
+      "shapes": "Shapes"
+    },
+    "gestures": {
+      "none": "None",
+      "undo": "Undo",
+      "redo": "Redo",
+      "fullscreen": "Fullscreen",
+      "focus": "Focus mode"
+    },
+    "shapes": {
+      "line": "Line",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "triangle": "Triangle",
+      "arrow": "Arrow"
+    },
+    "brushes_aria": "Brushes ({name})",
+    "brushes_tooltip": "Brushes — {name}",
+    "undo": "Undo",
+    "redo": "Redo",
+    "custom_color": "Custom color",
+    "color_swatch_aria": "Color {color}",
+    "size_in_pixels": "Size in pixels",
+    "size_popover_aria": "Size — {label} ({size}px)",
+    "zoom_out": "Zoom out",
+    "zoom_in": "Zoom in",
+    "fit_to_content": "Fit to content",
+    "custom_background_color": "Custom background color",
+    "follow_app_color": "Follow app color",
+    "layers_title": "Layers",
+    "expand_layers": "Expand layers",
+    "new_layer": "New layer",
+    "minimize_layers": "Minimize layers",
+    "drag_to_reorder": "Drag to reorder",
+    "hide": "Hide",
+    "show": "Show",
+    "double_click_rename": "Double-click to rename",
+    "unlock_action": "Unlock",
+    "lock_action": "Lock",
+    "delete_layer": "Delete layer",
+    "default_layer_name": "Layer {n}",
+    "brush_shapes": {
+      "pencil": "Pencil",
+      "dot": "Dot",
+      "pen": "Pen",
+      "marker": "Marker",
+      "airbrush": "Airbrush",
+      "watercolor": "Watercolor",
+      "oil": "Oil",
+      "charcoal": "Charcoal",
+      "chalk": "Chalk"
+    },
+    "brush_picker": {
+      "title": "Brushes",
+      "description": "Choose a brush or create a new one with its own shape and taper.",
+      "delete_brush_aria": "Delete {name}",
+      "create_title": "Create brush",
+      "name_label": "Name",
+      "shape_label": "Shape",
+      "new_brush_default_name": "New brush",
+      "size_start": "Start thickness",
+      "size_end": "End thickness",
+      "opacity_start": "Start opacity",
+      "opacity_end": "End opacity",
+      "add_brush": "Add brush"
+    }
   }
 }
