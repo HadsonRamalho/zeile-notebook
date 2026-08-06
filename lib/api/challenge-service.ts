@@ -5,6 +5,7 @@ const api = createResultApi("challenges");
 import type {
   AuthoringTestCase,
   ChallengeDetail,
+  ChallengeLanguage,
   ChallengePublic,
   CreateChallengePayload,
   CreateTestCasePayload,
@@ -13,6 +14,8 @@ import type {
   SampleRunResponse,
   SubmissionView,
   SubmitPayload,
+  TestCaseCreatedResponse,
+  UpdateChallengePayload,
 } from "@/types/challenge-types";
 
 export async function listChallenges() {
@@ -41,19 +44,22 @@ export async function createChallenge(payload: CreateChallengePayload) {
 
 export async function updateChallenge(
   id: string,
-  payload: Partial<CreateChallengePayload>,
+  payload: UpdateChallengePayload,
 ) {
   return api.put<ChallengePublic>(`/challenge/${id}`, payload);
 }
 
 export async function addTestCase(id: string, payload: CreateTestCasePayload) {
-  return api.post<{ id: string }>(`/challenge/${id}/test-cases`, payload);
+  return api.post<TestCaseCreatedResponse>(
+    `/challenge/${id}/test-cases`,
+    payload,
+  );
 }
 
 export async function setReferenceSolution(
   id: string,
   solution: string,
-  language: string,
+  language: ChallengeLanguage,
 ) {
   return api.post<ChallengePublic>(`/challenge/${id}/reference`, {
     solution,
@@ -65,7 +71,7 @@ export async function getReferenceSolutions(id: string) {
   return api.get<ReferenceSolutions>(`/challenge/${id}/reference`);
 }
 
-export async function deleteReference(id: string, language: string) {
+export async function deleteReference(id: string, language: ChallengeLanguage) {
   return api.delete<ReferenceSolutions>(
     `/challenge/${id}/reference/${language}`,
   );

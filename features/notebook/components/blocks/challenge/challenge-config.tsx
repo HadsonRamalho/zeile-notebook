@@ -34,9 +34,10 @@ import {
   updateChallenge,
 } from "@/lib/api/challenge-service";
 import { cn } from "@/lib/utils";
-import type { Language } from "@/types/block-types";
 import type {
   AuthoringTestCase,
+  ChallengeDifficulty,
+  ChallengeLanguage,
   ChallengePublic,
   JudgeMode,
 } from "@/types/challenge-types";
@@ -95,9 +96,13 @@ export function ChallengeConfig({
 
   const [title, setTitle] = useState(challenge.title);
   const [statement, setStatement] = useState(challenge.statementMd);
-  const [difficulty, setDifficulty] = useState(challenge.difficulty);
+  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>(
+    challenge.difficulty,
+  );
   const [judgeMode, setJudgeMode] = useState<JudgeMode>(challenge.judgeMode);
-  const [languages, setLanguages] = useState<Language[]>(challenge.languages);
+  const [languages, setLanguages] = useState<ChallengeLanguage[]>(
+    challenge.languages,
+  );
   const [timeLimit, setTimeLimit] = useState(challenge.timeLimitMs);
   const [memLimit, setMemLimit] = useState(
     Math.round(challenge.memLimitKb / 1024),
@@ -117,7 +122,7 @@ export function ChallengeConfig({
   const [addingCase, setAddingCase] = useState(false);
 
   const [refByLang, setRefByLang] = useState<Record<string, string>>({});
-  const [refLanguage, setRefLanguage] = useState<Language>("rust");
+  const [refLanguage, setRefLanguage] = useState<ChallengeLanguage>("rust");
   const [refCode, setRefCode] = useState("");
   const [savingRef, setSavingRef] = useState(false);
 
@@ -139,7 +144,9 @@ export function ChallengeConfig({
       if (result.isErr()) return;
       const ref = result.data;
       setRefByLang(ref.solutions ?? {});
-      const first = Object.keys(ref.solutions ?? {})[0] as Language | undefined;
+      const first = Object.keys(ref.solutions ?? {})[0] as
+        | ChallengeLanguage
+        | undefined;
       if (first) {
         setRefLanguage(first);
         setRefCode(ref.solutions[first] ?? "");
@@ -147,7 +154,7 @@ export function ChallengeConfig({
     });
   }, [challenge.id]);
 
-  const toggleLanguage = (lang: Language) => {
+  const toggleLanguage = (lang: ChallengeLanguage) => {
     setLanguages((prev) =>
       prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang],
     );
@@ -215,7 +222,7 @@ export function ChallengeConfig({
     }
   };
 
-  const selectRefLanguage = (lang: Language) => {
+  const selectRefLanguage = (lang: ChallengeLanguage) => {
     setRefLanguage(lang);
     setRefCode(refByLang[lang] ?? "");
   };
@@ -238,7 +245,10 @@ export function ChallengeConfig({
   };
 
   const removeReference = async (lang: string) => {
-    const result = await deleteReference(challenge.id, lang);
+    const result = await deleteReference(
+      challenge.id,
+      lang as ChallengeLanguage,
+    );
     if (result.isErr()) {
       toast.error(t("error_generic"));
     } else {
@@ -259,7 +269,10 @@ export function ChallengeConfig({
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
           <Field label={t("field_difficulty")}>
-            <Select value={difficulty} onValueChange={setDifficulty}>
+            <Select
+              value={difficulty}
+              onValueChange={(v) => setDifficulty(v as ChallengeDifficulty)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -481,7 +494,9 @@ export function ChallengeConfig({
                   >
                     <button
                       type="button"
-                      onClick={() => selectRefLanguage(lang as Language)}
+                      onClick={() =>
+                        selectRefLanguage(lang as ChallengeLanguage)
+                      }
                     >
                       {languageLabel(lang)}
                     </button>
@@ -505,7 +520,9 @@ export function ChallengeConfig({
               onChange={setRefCode}
               language={refLanguage}
               languages={CHALLENGE_LANGUAGES}
-              onLanguageChange={selectRefLanguage}
+              onLanguageChange={(lang) =>
+                selectRefLanguage(lang as ChallengeLanguage)
+              }
             />
           </div>
           <div className="flex">

@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import type { Language } from "@/types/block-types";
 import type {
   ChallengeDetail,
+  ChallengeLanguage,
   LeaderboardEntry,
   SampleRunResult,
   SubmissionView,
@@ -98,8 +99,10 @@ export function ChallengeSolve({
   const draftRef = useRef(parseDraft(initialContent));
 
   const [tab, setTab] = useState<Tab>("statement");
-  const [language, setLanguage] = useState<Language>(
-    (draftRef.current.language ?? challenge.languages[0] ?? "rust") as Language,
+  const [language, setLanguage] = useState<ChallengeLanguage>(
+    (draftRef.current.language ??
+      challenge.languages[0] ??
+      "rust") as ChallengeLanguage,
   );
   const [codeByLang, setCodeByLang] = useState<Record<string, string>>(
     () => draftRef.current.byLang,
@@ -146,9 +149,12 @@ export function ChallengeSolve({
   }, [codeByLang, language, onPersist]);
 
   const handleLanguageChange = useCallback((next: Language) => {
-    setLanguage(next);
+    const challengeLang = next as ChallengeLanguage;
+    setLanguage(challengeLang);
     setCodeByLang((prev) =>
-      next in prev ? prev : { ...prev, [next]: starter.current[next] ?? "" },
+      challengeLang in prev
+        ? prev
+        : { ...prev, [challengeLang]: starter.current[challengeLang] ?? "" },
     );
   }, []);
 
@@ -170,7 +176,7 @@ export function ChallengeSolve({
       setResult({
         kind: "samples",
         data: result.data.results,
-        compileError: result.data.compileError,
+        compileError: result.data.compileError ?? null,
       });
     }
     setRunning(false);
