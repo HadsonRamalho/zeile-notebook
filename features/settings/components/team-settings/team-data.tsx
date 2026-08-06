@@ -81,17 +81,14 @@ export function TeamData({
 
   async function onTeamSubmit(data: TeamFormValues) {
     setIsSaving(true);
-    const result = await updateTeam(teamId, data);
+    const description = data.description ?? null;
+    const result = await updateTeam(teamId, { ...data, description });
     if (result.isErr()) {
       handleApiError({ err: result.error, t });
     } else {
       toast.success(a("team_updated"));
 
-      setTeam(
-        team
-          ? { ...team, name: data.name, description: data.description }
-          : null,
-      );
+      setTeam(team ? { ...team, name: data.name, description } : null);
 
       form.reset(data);
     }

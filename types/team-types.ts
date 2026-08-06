@@ -1,88 +1,29 @@
 import type z from "zod";
+import type { components } from "@/lib/api/generated/openapi-types";
 import type { getTeamFormSchema } from "../schemas/team-schemas";
 
-export interface Team {
-  id: string;
-  name: string;
-  description?: string | undefined;
-  imageUrl?: string;
-  createdAt: string;
-}
+type Schemas = components["schemas"];
 
-export interface NewTeam {
-  name: string;
-  description?: string | undefined;
-}
+export type Team = Schemas["Team"];
 
-export interface TeamRole {
-  id: string;
-  teamId: string;
-  name: string;
-  canRead: boolean;
-  canWrite: boolean;
-  canManagePrivacy: boolean;
-  canManageClones: boolean;
-  canInviteUsers: boolean;
-  canRemoveUsers: boolean;
-  canManagePermissions: boolean;
-  canManageTeam: boolean;
-}
+export type NewTeam = Schemas["NewTeam"];
 
-export interface TeamMember {
-  id: string;
-  teamId: string;
-  userId: string;
-  roleId: string;
-  joinedAt: string;
-}
+// Sem createdAt: dois call sites montam um TeamRole no cliente (papel sintético
+// de admin ao criar um time, snapshot de permissões calculado localmente) sem
+// vir de resposta de rede, e createdAt não faz sentido nesses casos.
+export type TeamRole = Omit<Schemas["TeamRoleView"], "createdAt">;
 
-export interface TeamMemberWithUserData {
-  id: string;
+export type TeamMember = Schemas["TeamMember"];
 
-  name: string;
-  email: string;
-  avatarUrl: string | null;
+export type TeamMemberWithUserData = Schemas["TeamMemberResponse"];
 
-  teamId: string;
-  userId: string;
-  roleId: string;
-  joinedAt: string;
-}
+export type UpdateTeamRole = Schemas["UpdateTeamRole"];
 
-export interface UpdateTeamRole {
-  id: string;
-  name?: string;
-  canRead?: boolean;
-  canWrite?: boolean;
-  canManagePrivacy?: boolean;
-  canManageClones?: boolean;
-  canInviteUsers?: boolean;
-  canRemoveUsers?: boolean;
-  canManagePermissions?: boolean;
-}
+export type NewTeamRoleRequest = Schemas["NewTeamRoleRequest"];
 
-export interface NewTeamRoleRequest {
-  name: string;
-  canRead: boolean;
-  canWrite: boolean;
-  canManagePrivacy: boolean;
-  canManageClones: boolean;
-  canInviteUsers: boolean;
-  canRemoveUsers: boolean;
-  canManagePermissions: boolean;
-  canManageTeam: boolean;
-}
+export type UpdateTeam = Schemas["UpdateTeam"];
 
-export interface UpdateTeam {
-  name?: string;
-  description?: string | undefined;
-  imageUrl?: string;
-}
-
-export interface InviteTeamMember {
-  email: string;
-  roleId: string;
-}
+export type InviteTeamMember = Schemas["InviteRequest"];
 
 export interface TeamMemberWithRole {
   member: TeamMember;

@@ -1,3 +1,4 @@
+import type { components } from "@/lib/api/generated/openapi-types";
 import type { Notebook } from "@/types/notebook-types";
 import type {
   InviteTeamMember,
@@ -12,6 +13,8 @@ import type {
   UpdateTeamRole,
 } from "@/types/team-types";
 import { createResultApi } from "./base";
+
+type UpdateMemberRoleRequest = components["schemas"]["UpdateMemberRoleRequest"];
 
 const api = createResultApi("teams");
 
@@ -33,7 +36,7 @@ export async function fetchTeamMembers(id: string) {
 
 export async function updateMemberRole(
   teamId: string,
-  body: { userId: string; roleId: string },
+  body: UpdateMemberRoleRequest,
 ) {
   return await api.patch(`/team/${teamId}/members`, body);
 }
@@ -53,7 +56,7 @@ export async function createTeamRole(teamId: string, role: NewTeamRoleRequest) {
 }
 
 export async function createTeamPage(teamId: string, title: string) {
-  return await api.post(`/team/${teamId}/notebooks`, { title });
+  return await api.post<string>(`/team/${teamId}/notebooks`, { title });
 }
 
 export async function fetchTeamPages(teamId: string) {

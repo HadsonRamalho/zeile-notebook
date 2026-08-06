@@ -47,7 +47,7 @@ export function CreateTeamDialog({
     setIsCreating(true);
     const result = await createTeamApi({
       name: newTeamName,
-      description: newTeamDesc || undefined,
+      description: newTeamDesc || null,
     });
     if (result.isErr()) {
       handleApiError({ err: result.error, t });
