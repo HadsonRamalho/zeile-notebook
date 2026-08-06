@@ -1,3 +1,10 @@
+import {
+  type AsyncResult,
+  catchError,
+  catchErrorSync,
+  err,
+  ok,
+} from "@catcherjs/core";
 import { renewSession } from "@/lib/api/session";
 import { queueRequest } from "@/lib/background-sync";
 import { type Capability, resolve } from "@/lib/runtime/router";
@@ -31,12 +38,12 @@ const SESSION_ROUTES = [
   "/user/logout",
 ];
 
-async function http<T>(
+async function httpResult<T>(
   path: string,
   capability: Capability,
   config?: FetchOptions,
   alreadyRenewed = false,
-): Promise<T> {
+): AsyncResult<T, ApiClientError | Error> {
   const { capability: override, ...rest } = config ?? {};
   const target = resolve(override ?? capability);
   const url = `${target.baseUrl}${path}`;
@@ -50,20 +57,21 @@ async function http<T>(
     },
   };
 
-  let response: Response;
-  try {
-    response = await fetch(url, init);
-  } catch (err) {
+  const fetchResult = await catchError(fetch(url, init));
+
+  if (fetchResult.isErr()) {
     const method = (init.method ?? "GET").toUpperCase();
     if (
       typeof window !== "undefined" &&
-      err instanceof TypeError &&
+      fetchResult.error instanceof TypeError &&
       method !== "GET"
     ) {
       await queueRequest(url, init).catch(() => {});
     }
-    throw err;
+    return err(fetchResult.error);
   }
+
+  const response = fetchResult.data;
 
   if (
     response.status === 401 &&
@@ -73,12 +81,13 @@ async function http<T>(
     const newToken = await renewSession();
 
     if (newToken) {
-      return http<T>(path, capability, config, true);
+      return httpResult<T>(path, capability, config, true);
     }
   }
 
   if (!response.ok) {
-    const errorBody: unknown = await response.json().catch(() => ({}));
+    const bodyResult = await catchError(response.json());
+    const errorBody: unknown = bodyResult.getOrElse({});
     const body =
       typeof errorBody === "object" && errorBody !== null
         ? (errorBody as Record<string, unknown>)
@@ -93,41 +102,67 @@ async function http<T>(
       (typeof body.error === "string" && body.error) ||
       "Erro na requisição";
 
-    throw new ApiClientError(errorMessage, code, details);
+    return err(new ApiClientError(errorMessage, code, details));
   }
 
-  const text = await response.text();
+  const textResult = await catchError(response.text());
+  if (textResult.isErr()) return err(textResult.error);
 
-  return text ? JSON.parse(text) : (null as unknown as T);
+  const text = textResult.data;
+  if (!text) return ok(null as unknown as T);
+
+  const parseResult = catchErrorSync(() => JSON.parse(text));
+  if (parseResult.isErr()) return err(parseResult.error);
+
+  return ok(parseResult.data as T);
 }
 
-export function createApi(capability: Capability) {
+export function createResultApi(capability: Capability) {
   return {
     get: <T>(path: string, config?: FetchOptions) =>
-      http<T>(path, capability, { ...config, method: "GET" }),
+      httpResult<T>(path, capability, { ...config, method: "GET" }),
 
     post: <T>(path: string, body?: unknown, config?: FetchOptions) =>
-      http<T>(path, capability, {
+      httpResult<T>(path, capability, {
         ...config,
         method: "POST",
         body: JSON.stringify(body),
       }),
 
     put: <T>(path: string, body: unknown, config?: FetchOptions) =>
-      http<T>(path, capability, {
+      httpResult<T>(path, capability, {
         ...config,
         method: "PUT",
         body: JSON.stringify(body),
       }),
 
     delete: <T>(path: string, config?: FetchOptions) =>
-      http<T>(path, capability, { ...config, method: "DELETE" }),
+      httpResult<T>(path, capability, { ...config, method: "DELETE" }),
 
     patch: <T>(path: string, body?: unknown, config?: FetchOptions) =>
-      http<T>(path, capability, {
+      httpResult<T>(path, capability, {
         ...config,
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+  };
+}
+
+// Two facades over the same Result: createApi throws (the contract every not-yet-migrated
+// service still relies on, Q109/etapa 19) and createResultApi returns the Result directly, so
+// services can migrate one at a time without breaking the ones that haven't yet.
+export function createApi(capability: Capability) {
+  const result = createResultApi(capability);
+  return {
+    get: <T>(path: string, config?: FetchOptions) =>
+      result.get<T>(path, config).then((r) => r.unwrap()),
+    post: <T>(path: string, body?: unknown, config?: FetchOptions) =>
+      result.post<T>(path, body, config).then((r) => r.unwrap()),
+    put: <T>(path: string, body: unknown, config?: FetchOptions) =>
+      result.put<T>(path, body, config).then((r) => r.unwrap()),
+    delete: <T>(path: string, config?: FetchOptions) =>
+      result.delete<T>(path, config).then((r) => r.unwrap()),
+    patch: <T>(path: string, body?: unknown, config?: FetchOptions) =>
+      result.patch<T>(path, body, config).then((r) => r.unwrap()),
   };
 }

@@ -364,8 +364,12 @@ Incremental, arquivo por arquivo — sem prazo de tolerância para `try/catch` c
 **novo ou tocado**; código legado intocado *também* é migrado, por estar fora do padrão —
 mutirão em ondas, não uma exceção permanente como `components/vendor/*` (Q21).
 
-- [ ] `lib/api/base.ts` primeiro — é onde `fetch` é envolvido à mão hoje; vira a borda que
-  devolve `Result<T, ApiClientError>` para todo `lib/api/*-service.ts`
+- [x] `lib/api/base.ts` primeiro — é onde `fetch` é envolvido à mão hoje; vira a borda que
+  devolve `Result<T, ApiClientError>` para todo `lib/api/*-service.ts`. `createApi` (lançando)
+  continua existindo, agora implementado por cima de `createResultApi` via `.unwrap()` — os 18
+  consumidores atuais (15 `*-service.ts` + `auth-context.tsx` + os 2 formulários de senha) não
+  mudam nesta PR; é `createResultApi` que o próximo bullet vai migrar para consumir, serviço a
+  serviço
 - [ ] `lib/api/*-service.ts` (auth, notebook, teams, admin, user, run-rust) — cada chamada
   passa a devolver `Result`, chamador decide `isOk()`/`isErr()` em vez de `try/catch`
 - [ ] `lib/api/handle-api-error.ts` — passa a consumir o lado `Err` do `Result` em vez de
