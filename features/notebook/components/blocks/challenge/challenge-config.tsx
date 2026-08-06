@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CHALLENGE_LANGUAGES,
+  JUDGE_MODE_LABEL_KEYS,
   JUDGE_MODES,
   languageLabel,
 } from "@/domain/challenges/display";
@@ -291,7 +292,7 @@ export function ChallengeConfig({
               <SelectContent>
                 {JUDGE_MODES.map((m) => (
                   <SelectItem key={m} value={m}>
-                    {tc(`judge_mode.${m}`)}
+                    {tc(JUDGE_MODE_LABEL_KEYS[m])}
                   </SelectItem>
                 ))}
               </SelectContent>

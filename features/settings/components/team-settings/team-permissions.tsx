@@ -67,6 +67,12 @@ type Effect = GrantEffect | "none";
 
 const MODULE_ORDER = ["notebook", "team", "chat"];
 
+const MODULE_LABEL_KEYS: Record<string, string> = {
+  notebook: "modules.notebook",
+  team: "modules.team",
+  chat: "modules.chat",
+};
+
 const BLANK_ROLE = {
   canRead: false,
   canWrite: false,
@@ -586,7 +592,10 @@ export function TeamPermissions({
         modules.map(([module, buckets]) => (
           <section key={module} className="space-y-3">
             <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {tr.has(`modules.${module}`) ? tr(`modules.${module}`) : module}
+              {(() => {
+                const key = MODULE_LABEL_KEYS[module];
+                return key ? tr(key) : module;
+              })()}
             </h4>
 
             <div className="divide-y divide-border overflow-hidden rounded-lg border">

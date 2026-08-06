@@ -20,6 +20,13 @@ const KIND_ICON: Record<string, typeof Pencil> = {
   publish: Globe,
 };
 
+const KIND_LABEL_KEYS: Record<string, string> = {
+  edit: "kind_edit",
+  comment: "kind_comment",
+  snapshot: "kind_snapshot",
+  publish: "kind_publish",
+};
+
 function seenKey(notebookId: string) {
   return `zeile-activity-seen-${notebookId}`;
 }
@@ -127,7 +134,7 @@ export function ActivityFeed({ notebookId }: { notebookId: string }) {
                 <div className="flex flex-1 flex-col">
                   <span className="text-xs text-foreground">
                     <span className="font-medium">{item.actorName}</span>{" "}
-                    {t(`kind_${item.kind}`)}
+                    {t(KIND_LABEL_KEYS[item.kind] ?? "kind_edit")}
                   </span>
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {timeLabel(item.createdAt)}
