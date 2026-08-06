@@ -1,3 +1,4 @@
+import type { components } from "@/lib/api/generated/openapi-types";
 import type { Language, RunStatus } from "@/types/block-types";
 import { createResultApi } from "./base";
 
@@ -15,25 +16,8 @@ interface RunCodeProps {
   t: RunCodeTranslate;
 }
 
-type ExecStatus =
-  | "ok"
-  | "compile_error"
-  | "runtime_error"
-  | "timeout"
-  | "security_rejected"
-  | "unauthenticated"
-  | "permission_denied"
-  | "invalid_request"
-  | "server_busy"
-  | "toolchain_unavailable"
-  | "internal";
-
-interface RunCodeApiResponse {
-  status: ExecStatus;
-  errorCode: string | null;
-  stdout: string;
-  stderr: string;
-}
+type CodeRequest = components["schemas"]["CodeRequest"];
+type CodeResponse = components["schemas"]["CodeResponse"];
 
 function formatCombinedOutput({
   stdout,
@@ -65,10 +49,8 @@ export async function RunCode({
 
   const endpoint = language === "rust" ? "/run" : `/run/${language}`;
 
-  const result = await api.post<RunCodeApiResponse>(endpoint, {
-    code,
-    notebookId,
-  });
+  const payload: CodeRequest = { code, notebookId: notebookId ?? null };
+  const result = await api.post<CodeResponse>(endpoint, payload);
 
   if (result.isErr()) {
     console.error(result.error);
