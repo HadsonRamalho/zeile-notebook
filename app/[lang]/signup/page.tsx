@@ -4,7 +4,7 @@ import {
   useMessages,
   useTranslations,
 } from "next-intl";
-import { SignupForm } from "@/components/signup-form";
+import { SignupForm } from "@/features/auth/components/signup-form";
 
 export default function SignupPage() {
   const t = useTranslations("docs");

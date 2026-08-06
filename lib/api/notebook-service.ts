@@ -1,10 +1,12 @@
-import type { Block, Notebook, NotebookMeta } from "../types";
+import type { Block } from "@/types/block-types";
 import type {
+  Notebook,
+  NotebookMeta,
   PublicNotebookDoc,
   PublicNotebookResponse,
   RankedSearchItem,
-} from "../types/notebook-types";
-import type { TeamRole } from "../types/team-types";
+} from "@/types/notebook-types";
+import type { TeamRole } from "@/types/team-types";
 import { createApi } from "./base";
 
 const api = createApi("notebook-crud");

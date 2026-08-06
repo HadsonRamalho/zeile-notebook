@@ -1,5 +1,5 @@
 import { ApiClientError } from "@/lib/api/base";
-import type { Block } from "@/lib/types";
+import type { Block } from "@/types/block-types";
 
 interface BabelGlobal {
   transform: (

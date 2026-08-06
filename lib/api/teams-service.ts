@@ -1,4 +1,4 @@
-import type { Notebook } from "../types";
+import type { Notebook } from "@/types/notebook-types";
 import type {
   InviteTeamMember,
   NewTeam,
@@ -10,7 +10,7 @@ import type {
   TeamWithUserRole,
   UpdateTeam,
   UpdateTeamRole,
-} from "../types/team-types";
+} from "@/types/team-types";
 import { createApi } from "./base";
 
 const api = createApi("teams");

@@ -3,13 +3,13 @@ import type { MDXComponents } from "mdx/types";
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ComponentProps } from "react";
 import { codeToHtml } from "shiki";
-import { Banner } from "@/components/banner";
-import { GithubRepoMDX } from "@/components/github-info-mdx";
-import { Callout } from "@/components/mdx/callout";
-import { Card, Cards } from "@/components/mdx/card";
-import { PythonEditorMDX } from "@/components/notebook/blocks/python/python-editor-mdx";
-import { RustEditorMDX } from "@/components/notebook/blocks/rust/rust-editor-mdx";
-import { TsxEditorMDX } from "@/components/notebook/blocks/tsx/tsx-editor-mdx";
+import { Banner } from "@/components/docs/banner";
+import { GithubRepoMDX } from "@/components/docs/github-info-mdx";
+import { Callout } from "@/components/docs/mdx/callout";
+import { Card, Cards } from "@/components/docs/mdx/card";
+import { PythonEditorMDX } from "@/features/notebook/components/blocks/python/python-editor-mdx";
+import { RustEditorMDX } from "@/features/notebook/components/blocks/rust/rust-editor-mdx";
+import { TsxEditorMDX } from "@/features/notebook/components/blocks/tsx/tsx-editor-mdx";
 
 function heading(Tag: `h${1 | 2 | 3 | 4 | 5 | 6}`, slugger: Slugger) {
   return function Heading({ children, ...props }: ComponentProps<typeof Tag>) {

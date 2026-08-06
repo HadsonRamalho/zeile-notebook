@@ -4,12 +4,12 @@ import { BookSearch, Calendar, Search, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
-import { BackButton } from "@/components/interface/back-button";
+import { BackButton } from "@/components/layout/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchPublicNotebooks } from "@/lib/api/notebook-service";
-import type { PublicNotebookResponse } from "@/lib/types/notebook-types";
 import { cn } from "@/lib/utils";
+import type { PublicNotebookResponse } from "@/types/notebook-types";
 
 type Filter = "all" | "personal" | "team";
 

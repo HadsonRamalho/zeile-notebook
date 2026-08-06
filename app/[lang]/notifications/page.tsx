@@ -11,10 +11,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { BackButton } from "@/components/interface/back-button";
-import { NotificationPreferences } from "@/components/interface/notifications/notification-preferences";
+import { BackButton } from "@/components/layout/back-button";
 import { Button } from "@/components/ui/button";
-import { useNotifications } from "@/hooks/use-notifications";
+import { NotificationPreferences } from "@/features/notifications/components/notification-preferences";
+import { useNotifications } from "@/features/notifications/hooks/use-notifications";
 import type { NotificationDTO } from "@/lib/api/notifications-service";
 import { cn } from "@/lib/utils";
 

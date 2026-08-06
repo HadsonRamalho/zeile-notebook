@@ -3,13 +3,13 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
-import { InlineTOC } from "@/components/inline-toc";
+import { InlineTOC } from "@/components/docs/inline-toc";
 import {
   DocsBody,
   DocsDescription,
   DocsPage,
   DocsTitle,
-} from "@/components/layout/docs/page";
+} from "@/components/docs/layout-page";
 import { getDocPage, getDocPages, getDocSource, getHeadings } from "@/lib/docs";
 import { getMDXComponents } from "@/mdx-components";
 

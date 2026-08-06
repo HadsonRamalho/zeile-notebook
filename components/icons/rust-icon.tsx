@@ -1,4 +1,4 @@
-import GenericSvg from "../generic-svg";
+import GenericSvg from "@/components/docs/generic-svg";
 
 interface RustIconProps {
   style?: "original" | "primary";

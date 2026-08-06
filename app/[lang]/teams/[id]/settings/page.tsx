@@ -1,5 +1,5 @@
 import { use } from "react";
-import TeamSettingsForm from "@/components/interface/team-settings/team-settings-form";
+import TeamSettingsForm from "@/features/settings/components/team-settings/team-settings-form";
 
 interface PageProps {
   params: Promise<{ id: string }>;

@@ -9,7 +9,7 @@ import {
   BACKGROUND_SYNC_TAG,
   getQueuedRequests,
   removeQueuedRequest,
-} from "@/lib/backgroundSync";
+} from "@/lib/background-sync";
 
 declare global {
   interface ServiceWorkerGlobalScope extends SerwistGlobalConfig {

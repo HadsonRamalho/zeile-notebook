@@ -1,7 +1,7 @@
 "use client";
 import { Search } from "lucide-react";
 import type { ComponentProps } from "react";
-import { useSearchContext } from "@/lib/search-context";
+import { useSearchContext } from "@/context/search-context";
 import { cn } from "@/lib/utils";
 import { type ButtonProps, buttonVariants } from "../ui/fumadocs-button";
 

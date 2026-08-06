@@ -4,7 +4,7 @@ import type {
   AdminTeamView,
   AdminUserView,
   PaginatedResponse,
-} from "../types/admin-types";
+} from "@/types/admin-types";
 import { createApi } from "./base";
 
 const api = createApi("admin");

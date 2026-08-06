@@ -258,16 +258,34 @@ domínios de `controllers/`/`models/` (team, user, chat, challenge, etc.) ainda 
 `domain/<nome>/`; ficam para entregas seguintes desta mesma etapa, repetindo o padrão aqui
 estabelecido.
 
-#### 15 · `features/` e pastas de topo — o maior diff
+#### 15 · `features/` e pastas de topo — o maior diff — [x] concluída
 
-- [ ] `features/<domínio>/` com `components/`, `hooks/`, `types/` co-locados (Q20)
-- [ ] `components/vendor/` isolada e isenta, com README de origem (Q21)
-- [ ] `lib/` = infra sem estado e sem React; `types/`, `schemas/`, `stores/`, `domain/`, `context/` sobem (Q24)
-- [ ] Dissolver `interface/` e a raiz solta de `components/`
-- [ ] Fronteiras de import por lint + `@/` ao cruzar topo (Q26/Q27) — inclui inverter `lib/types.ts` → `@/components/banner`
-- [ ] kebab-case + sufixo de papel; renomear os 8 camelCase (Q14)
-- [ ] camelCase em função exportada: `RunTsxInSandbox` → `runTsxInSandbox` (Q19)
-- [ ] Um componente público por arquivo; tipos por domínio coeso (Q16/Q18)
+- [x] `features/<domínio>/` com `components/`, `hooks/`, `types/` co-locados (Q20) — sete features:
+  `notebook`, `challenges`, `admin`, `home`, `notifications`, `settings`, `auth`
+- [x] `components/vendor/` isolada e isenta, com README de origem (Q21) — `skiper-ui/` e `animate-ui/`
+- [x] `lib/` = infra sem estado e sem React; `types/`, `schemas/`, `stores/`, `domain/`, `context/` sobem (Q24)
+- [x] Dissolver `interface/` e a raiz solta de `components/`
+- [x] Fronteiras de import por lint + `@/` ao cruzar topo (Q26/Q27) — `biome.json`: `types/`+`domain/`+`lib/`
+  não importam `components/`/`features/`; `components/ui/` não importa `features/`; cada `features/<x>/`
+  não importa de outra feature (`noRestrictedImports` com padrão negado por feature, já que o Biome não
+  tem noção nativa de "própria pasta"). Inclui inverter `lib/types.ts` → `@/components/banner`: os tipos
+  (`BannerVariant`, `CalloutContainerProps` etc.) viraram `types/block-types.ts`, e os componentes passam a
+  importar de lá
+- [x] kebab-case + sufixo de papel; renomear os 8 camelCase (Q14) — `formatFullDate`, `appBadge`,
+  `cellResultsStore`, `backgroundSync`, `pendingImport`, `sqlDbStore`, `typstStore`, `pyodideStore`
+- [x] camelCase em função exportada: `RunTsxInSandbox` → `runTsxInSandbox` (Q19) — já resolvido em etapa
+  anterior; nenhuma ocorrência restante nesta auditoria
+- [x] Um componente público por arquivo; tipos por domínio coeso (Q16/Q18) — `lib/types.ts` (o mau exemplo
+  citado no catálogo) dissolvido em `types/block-types.ts` e `types/notebook-types.ts`
+
+**Achado no caminho, fora da letra literal do Q20/Q24**: mover árvores inteiras de diretório expôs quatro
+acoplamentos cross-feature que já existiam (só ficavam invisíveis com tudo em `components/`/`lib/` plano):
+`chat-conversation` (notebook + settings) foi para `components/chat/`; `DifficultyBadge` (notebook +
+challenges) foi para `components/challenges/`; `languageLabel`/`verdictTone`/etc. (lógica pura, notebook +
+challenges) foi para `domain/challenges/`; `queueRequest` (usado por `lib/api/base.ts`, que é infra, não
+feature) voltou de `features/notebook/lib/` para `lib/background-sync.ts`. `SolveEditor`, `VerdictBadge`,
+`LeaderboardTable` e `SubmissionResults` eram só consumidos pelo bloco de challenge do notebook — moveram
+para dentro de `features/notebook/components/blocks/challenge/`, não para `features/challenges/`.
 
 #### 16 · i18n em ondas
 

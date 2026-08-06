@@ -1,4 +1,4 @@
-import type { Activity } from "../types/activity-types";
+import type { Activity } from "@/types/activity-types";
 import { createApi } from "./base";
 
 const api = createApi("activity");

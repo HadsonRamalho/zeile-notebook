@@ -1,8 +1,8 @@
 import { NextIntlClientProvider, useMessages } from "next-intl";
-import { DocsLayout } from "@/components/layout/docs";
-import { GoToNotebooksButton } from "@/components/notebook/go-to-notebooks-button";
+import { DocsLayout } from "@/components/docs/layout-index";
+import { useBaseOptions } from "@/components/docs/layout-shared";
+import { GoToNotebooksButton } from "@/features/notebook/components/go-to-notebooks-button";
 import { getPageTree } from "@/lib/docs";
-import { useBaseOptions } from "@/lib/layout.shared";
 
 export default function Layout({ children }: LayoutProps<"/[lang]/docs">) {
   const messages = useMessages();

@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import Slugger from "github-slugger";
 import { twMerge } from "tailwind-merge";
-import type { Block } from "./types";
+import type { Block } from "@/types/block-types";
 
 export interface TOCItemType {
   title: string;

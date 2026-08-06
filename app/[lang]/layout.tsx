@@ -2,7 +2,7 @@ import { NextIntlClientProvider, useMessages } from "next-intl";
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 import { AppRailShell } from "@/components/layout/app-rail-shell";
-import { PWARegistration } from "@/components/pwa-registration";
+import { PWARegistration } from "@/components/layout/pwa-registration";
 import { AuthProvider } from "@/context/auth-context";
 import { Provider } from "../search-provider";
 

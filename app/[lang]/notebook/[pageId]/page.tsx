@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { NotebookProvider } from "@/components/notebook/notebook-context";
-import { NotebookControls } from "@/components/notebook/notebook-controls";
-import RustInteractivePage from "@/components/notebook/notebook-page";
-import { NotebookTags } from "@/components/notebook/notebook-tags";
-import { NotebookTitle } from "@/components/notebook/notebook-title";
+import { NotebookControls } from "@/features/notebook/components/notebook-controls";
+import RustInteractivePage from "@/features/notebook/components/notebook-page";
+import { NotebookTags } from "@/features/notebook/components/notebook-tags";
+import { NotebookTitle } from "@/features/notebook/components/notebook-title";
+import { NotebookProvider } from "@/features/notebook/context/notebook-context";
 
 export default async function Page(
   props: PageProps<"/[lang]/notebook/[pageId]">,

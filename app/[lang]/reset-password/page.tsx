@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider, useMessages } from "next-intl";
-import { ResetPasswordForm } from "@/components/interface/reset-password/reset-password-form";
+import { ResetPasswordForm } from "@/features/auth/components/reset-password/reset-password-form";
 
 export const metadata: Metadata = {
   title: "Redefinir Senha",

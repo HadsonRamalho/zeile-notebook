@@ -13,7 +13,7 @@ import type {
   SampleRunResponse,
   SubmissionView,
   SubmitPayload,
-} from "@/lib/types/challenge-types";
+} from "@/types/challenge-types";
 
 export async function listChallenges() {
   return api.get<ChallengePublic[]>("/challenge/list");

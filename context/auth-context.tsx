@@ -26,7 +26,7 @@ import {
   setActiveAccount,
   tokenCookieName,
 } from "@/lib/runtime/router";
-import type { LoginUser, RegisterUser, User } from "@/lib/types/user-types";
+import type { LoginUser, RegisterUser, User } from "@/types/user-types";
 
 const authApi = createApi("auth");
 

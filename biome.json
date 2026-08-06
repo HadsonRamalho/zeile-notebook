@@ -57,7 +57,187 @@
       }
     },
     {
-      "includes": ["components/ui/skiper-ui/skiper26.tsx"],
+      "includes": ["types/**", "domain/**", "lib/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/components/**", "@/features/**"],
+                    "message": "types/, domain/ e lib/ são infraestrutura: não podem depender de components/ nem de features/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/ui/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**"],
+                    "message": "components/ui/ é a base compartilhada: não pode depender de features/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/admin/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/admin/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/auth/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/auth/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/challenges/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/challenges/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/home/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/home/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/notebook/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/notebook/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/notifications/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/notifications/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["features/settings/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "!@/features/settings/**"],
+                    "message": "uma feature não importa de outra feature diretamente — o que é genuinamente transversal sobe para domain/, lib/ ou context/ (Q26)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/vendor/skiper-ui/skiper26.tsx"],
       "linter": {
         "rules": {
           "a11y": {
