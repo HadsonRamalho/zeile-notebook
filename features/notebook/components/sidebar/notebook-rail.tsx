@@ -33,7 +33,7 @@ import { fetchUserTeams } from "@/lib/api/teams-service";
 import { readStorage, writeStorage } from "@/lib/safe-storage";
 import { cn } from "@/lib/utils";
 import type { NotebookMeta } from "@/types/notebook-types";
-import type { Team, TeamRole } from "@/types/team-types";
+import type { TeamWithUserRole } from "@/types/team-types";
 import { NotebookCommandPalette } from "./notebook-command-palette";
 
 const EXPANDED_STORAGE_KEY = "notebook-rail-expanded";
@@ -265,7 +265,7 @@ export function NotebookRail() {
   const { pages, createPage } = useNotebookManager();
   const { teamPages, createTeamPage, deleteTeamPage, refreshTeamPages } =
     useTeamNotebookManager();
-  const [teams, setTeams] = useState<[Team, TeamRole][]>([]);
+  const [teams, setTeams] = useState<TeamWithUserRole[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [teamFolders, setTeamFolders] = useState<Record<string, Folder[]>>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -315,7 +315,7 @@ export function NotebookRail() {
     fetchUserTeams().then((result) => {
       const data = result.isOk() ? result.data : [];
       setTeams(data);
-      for (const [team] of data) {
+      for (const { team } of data) {
         refreshTeamPages(team.id);
         fetchTeamFolders(team.id).then((foldersResult) =>
           setTeamFolders((prev) => ({
@@ -478,7 +478,7 @@ export function NotebookRail() {
             );
           })()}
 
-        {teams.map(([team]) => {
+        {teams.map(({ team }) => {
           const pagesOfTeam = teamPages[team.id] ?? [];
           if (!isExpanded) {
             return pagesOfTeam.map((page) => (
@@ -650,7 +650,7 @@ export function NotebookRail() {
         onOpenChange={setCreateTeamOpen}
         onCreated={(newTeam) => {
           setTeams((prev) => [...prev, newTeam]);
-          refreshTeamPages(newTeam[0].id);
+          refreshTeamPages(newTeam.team.id);
         }}
       />
     </>

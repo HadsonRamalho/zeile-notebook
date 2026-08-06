@@ -16,12 +16,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { createTeam as createTeamApi } from "@/lib/api/teams-service";
-import type { Team, TeamRole } from "@/types/team-types";
+import type { TeamRole, TeamWithUserRole } from "@/types/team-types";
 
 interface CreateTeamDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: (team: [Team, TeamRole]) => void;
+  onCreated: (team: TeamWithUserRole) => void;
 }
 
 export function CreateTeamDialog({
@@ -67,7 +67,7 @@ export function CreateTeamDialog({
         canManageTeam: true,
       };
 
-      onCreated([newTeam, newRole]);
+      onCreated({ team: newTeam, role: newRole });
       reset();
       onOpenChange(false);
     }

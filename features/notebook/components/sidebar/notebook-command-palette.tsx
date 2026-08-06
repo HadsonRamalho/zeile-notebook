@@ -31,7 +31,7 @@ import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { searchNotebooksRanked } from "@/lib/api/notebook-service";
 import { cn } from "@/lib/utils";
 import type { NotebookMeta, RankedSearchItem } from "@/types/notebook-types";
-import type { Team, TeamRole } from "@/types/team-types";
+import type { TeamWithUserRole } from "@/types/team-types";
 
 const HL_START = "‹";
 const HL_END = "›";
@@ -62,7 +62,7 @@ function renderSnippet(snippet: string): React.ReactNode[] {
 interface NotebookCommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  teams: [Team, TeamRole][];
+  teams: TeamWithUserRole[];
   onRequestCreateTeam: () => void;
 }
 
@@ -132,7 +132,7 @@ export function NotebookCommandPalette({
   const filteredTeams = useMemo(
     () =>
       teams
-        .map(([team]) => ({
+        .map(({ team }) => ({
           team,
           pages: (teamPages[team.id] ?? []).filter((p) =>
             matches(p.title || "Sem título"),

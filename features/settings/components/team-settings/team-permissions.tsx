@@ -186,7 +186,8 @@ export function TeamPermissions({
         : scopeSel.slice("notebook:".length);
 
   const selfUserId = authUser?.id;
-  const selfRoleId = members.find(([m]) => m.userId === selfUserId)?.[0].roleId;
+  const selfRoleId = members.find(({ member: m }) => m.userId === selfUserId)
+    ?.member.roleId;
 
   const matchesSelection = useCallback(
     (g: TeamGrant, key: string) =>
@@ -352,7 +353,7 @@ export function TeamPermissions({
 
   const memberItems = useMemo<PickerItem[]>(
     () =>
-      members.map(([m]) => {
+      members.map(({ member: m }) => {
         const role = roles.find((r) => r.id === m.roleId);
         return {
           id: m.userId,
