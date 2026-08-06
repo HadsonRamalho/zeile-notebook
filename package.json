@@ -13,6 +13,7 @@
     "generate:error-codes": "node scripts/generate-error-codes.mjs",
     "generate:error-codes:check": "node scripts/generate-error-codes.mjs --check",
     "check:no-duplicate-fields": "node scripts/check-no-duplicate-fields.mjs",
+    "validate:i18n": "node scripts/validate-i18n.mjs",
     "build": "next build && npx serwist build serwist.config.mjs",
     "dev": "next dev",
     "start": "next start",

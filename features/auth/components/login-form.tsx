@@ -79,9 +79,9 @@ export function LoginForm({
   const handleAuthError = useCallback(
     (e: string) => {
       const errorKey = `errors.${e}`;
-      const message = t(errorKey, {
-        defaultValue: t("login.errors.generic_github_error"),
-      });
+      const message = t.has(errorKey)
+        ? t(errorKey)
+        : t("errors.generic_github_error");
 
       setError(message);
       toast.error(message);

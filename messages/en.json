@@ -17,7 +17,13 @@
     "MISSING_ENV_VAR": "System configuration error: Missing environment variable {env_var}.",
     "PASSWORDS_DO_NOT_MATCH": "The provided passwords do not match.",
     "UNKNOWN_ERROR": "An unexpected error occurred. Please try again.",
-    "RATE_LIMITED": "Too many attempts. Please wait a moment and try again."
+    "RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
+    "ERROR_SENDING_EMAIL": "Could not send the email. Please try again later.",
+    "PERMISSION_DENIED": "You don't have permission to perform this action.",
+    "LAST_LOGIN_METHOD": "You can't remove the only login method on your account.",
+    "UNIQUE_VIOLATION": "A record with this data already exists.",
+    "FOREIGN_KEY_VIOLATION": "This action can't be completed because the item is referenced elsewhere.",
+    "NOT_FOUND": "We couldn't find what you're looking for."
   },
   "loading": {
     "loading": "Loading..."
@@ -81,7 +87,6 @@
     "email_label": "Email",
     "email_placeholder": "Your email",
     "password_label": "Password",
-    "password_placeholder": "Your password",
     "forgot_password": "Forgot password?",
     "submit_button": "Login",
     "no_account": "Don't have an account?",
@@ -163,7 +168,6 @@
       "current_password": "Current password",
       "new_password": "New Password",
       "confirm_password": "Confirm New Password",
-      "new_password_hint": "Password must be at least 8 characters long",
       "update_password": "Update Password",
       "password_updated": "Password updated",
       "password_update_error": "Error updating password"
@@ -275,12 +279,9 @@
   },
   "notebook_controls": {
     "clone": "Make a copy",
-    "visibility": "Visibility",
     "private": "Private",
     "public": "Public",
     "save": "Save",
-    "saving": "Saving...",
-    "saved": "Saved!",
     "share": "Share",
     "export": "Export",
     "export_markdown": "Markdown (.md)",
@@ -298,21 +299,13 @@
     "new_page": "New page",
     "go_to_notebooks": "Go to my notebooks",
     "empty_notebook_desc": "Create a new notebook or select one from the sidebar to get started.",
-    "backup_title": "Settings and backup",
-    "manage_data": "Manage data",
-    "download_all": "Export All (.json)",
-    "import": "Import Backup",
-    "confirm_import": "This will also overwrite all your duplicate pages with the backup. Do you want to continue?",
-    "my_teams": "My Teams",
-    "new_team": "New Team",
     "new_team_title": "Create New Team",
     "new_team_description": "Fill in the details to create a new collaborative workspace.",
     "team_name": "Team Name",
     "team_description": "Description (Optional)",
     "cancel_button": "Cancel",
     "create_button": "Create",
-    "creating_button": "Creating...",
-    "no_teams_found": "No teams found."
+    "creating_button": "Creating..."
   },
   "team_settings": {
     "team_form": {
@@ -376,18 +369,6 @@
       "title": "Roles and Permissions",
       "description": "Configure access and control levels for members.",
       "new_role_button": "New Role",
-      "edit_role_button": "Edit",
-      "roles": {
-        "can_write": "Write/Edit",
-        "can_manage_privacy": "Manage Notebook Privacy",
-        "can_invite_users": "Invite New Members",
-        "can_manage_permissions": "Manage Permissions",
-        "can_manage_clones": "Manage Notebook Clones",
-        "can_manage_team": "Manage Entire Team",
-        "can_remove_users": "Remove Users"
-      },
-      "active": "Yes",
-      "inactive": "No",
       "defaults": {
         "owner": "Owner",
         "member": "Member"
@@ -411,11 +392,8 @@
         "team": "Team",
         "chat": "Chat"
       },
-      "subject_label": "Subject",
       "scope_label": "Scope",
       "scope_team": "Entire team",
-      "subject_role_prefix": "Role",
-      "subject_user_prefix": "Member",
       "public_permissions": "Public permissions",
       "public_permissions_hint": "Set what any logged-in user can do in this public notebook.",
       "notebook_permissions": "Notebook permissions",
@@ -430,9 +408,6 @@
       "notebook_search_empty": "No notebooks found.",
       "select_subject_hint": "Select a subject (and a notebook, if applicable) to configure permissions."
     }
-  },
-  "team_sidebar": {
-    "empty_notebooks": "Empty"
   },
   "public_notebooks": {
     "title": "Explore Notebooks",
@@ -630,10 +605,8 @@
   "challenges": {
     "title": "Challenges",
     "description": "Solve coding problems with instant, sandboxed judging.",
-    "nav_label": "Challenges",
     "search_placeholder": "Search challenges…",
     "count": "{count, plural, one {# challenge} other {# challenges}}",
-    "new_button": "New challenge",
     "loading": "Loading challenges…",
     "filter_all": "All",
     "difficulty": {
@@ -652,22 +625,17 @@
     "no_results_description": "Try a different search or clear the filters.",
     "not_found_title": "Challenge not found",
     "not_found_description": "This challenge may have been removed or made private.",
-    "back_to_list": "Back to challenges",
     "tab_statement": "Statement",
     "tab_submissions": "Submissions",
     "tab_leaderboard": "Leaderboard",
     "samples_title": "Sample tests",
     "sample_input": "Input",
     "sample_expected": "Expected output",
-    "no_samples": "This challenge has no public sample tests.",
-    "limits": "{time} ms · {mem} MB",
     "run_samples": "Run samples",
     "submit": "Submit",
-    "judging": "Judging…",
     "queued": "Queued…",
     "reset_code": "Reset",
     "login_required": "Sign in to submit your solution.",
-    "login_cta": "Sign in",
     "result_title": "Result",
     "score": "Score",
     "runtime": "Runtime",
@@ -691,8 +659,6 @@
     },
     "case_label": "Case {n}",
     "hidden_case": "Hidden case {n}",
-    "passed_cases": "{passed}/{total} cases",
-    "no_submissions_title": "No submissions yet",
     "no_submissions_description": "Your submissions for this challenge will appear here.",
     "leaderboard_empty_title": "No entries yet",
     "leaderboard_empty_description": "Be the first to land a passing submission.",
@@ -703,17 +669,11 @@
     "authoring": {
       "title": "New challenge",
       "description": "Define the problem, its test cases, and how it is judged.",
-      "back": "Back to challenges",
-      "not_logged_title": "Sign in to create challenges",
-      "not_logged_description": "You need an account to author and publish challenges.",
       "step_details": "Details",
       "step_tests": "Test cases",
       "step_reference": "Reference",
-      "field_slug": "Slug",
-      "field_slug_hint": "Lowercase letters, numbers and hyphens.",
       "field_title": "Title",
       "field_statement": "Statement (Markdown)",
-      "field_statement_placeholder": "Describe the problem, input format, and output format…",
       "field_difficulty": "Difficulty",
       "field_languages": "Allowed languages",
       "field_judge_mode": "Judge mode",
@@ -721,7 +681,6 @@
       "field_mem_limit": "Memory limit (MB)",
       "create": "Save challenge",
       "creating": "Creating…",
-      "created": "Challenge created — now add its test cases.",
       "tests_intro": "Add at least one test case. Hidden cases are never sent to solvers.",
       "test_input": "Input (stdin)",
       "test_expected": "Expected output (stdout)",
@@ -729,19 +688,14 @@
       "test_hidden": "Hidden",
       "test_weight": "Weight",
       "add_test": "Add test case",
-      "adding": "Adding…",
-      "tests_count": "{count, plural, =0 {No test cases yet} one {# test case} other {# test cases}}",
       "reference_intro": "Required for reference and property judge modes. The reference solution is never exposed to solvers.",
       "reference_saved_langs": "Saved references",
+      "remove_reference_aria": "Remove reference",
       "property_spec": "Case spec (JSON)",
       "property_intro": "Generates deterministic random inputs (by seed). Each line becomes a line of integers within the given range.",
       "invalid_json": "Invalid JSON in the case spec.",
-      "reference_language": "Reference language",
-      "reference_solution": "Reference solution code",
       "save_reference": "Save reference solution",
-      "saving": "Saving…",
       "reference_saved": "Reference solution saved.",
-      "finish": "Open challenge",
       "next": "Next",
       "error_generic": "Something went wrong. Please try again."
     }

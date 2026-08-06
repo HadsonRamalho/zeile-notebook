@@ -489,7 +489,7 @@ export function ChallengeConfig({
                       type="button"
                       onClick={() => removeReference(lang)}
                       className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
-                      aria-label="Remover referência"
+                      aria-label={t("remove_reference_aria")}
                     >
                       <X size={12} />
                     </button>
