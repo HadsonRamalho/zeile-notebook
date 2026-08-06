@@ -18,3 +18,9 @@ passam a ser a referência a citar em review quando existirem.
 
 O diagnóstico inicial do repositório, que motivou estas decisões, foi descartado ao ser
 superado pela execução das etapas 1 a 6.
+
+## Bibliotecas de terceiros adotadas como padrão
+
+| Biblioteca | Uso | Decisão | Consulta |
+|---|---|---|---|
+| [`@catcherjs/core`](https://github.com/AfranioCaires/catcher) | Tratamento de erro no frontend via `Result<T, E>` (`ok`/`err`, `catchError`) | [Q109](decisoes.md#padronização-do-tratamento-de-erros-no-frontend) | skill `catcher` (`.claude/skills/catcher`) |

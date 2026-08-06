@@ -29,6 +29,7 @@
   "dependencies": {
     "@automerge/automerge": "^3.2.3",
     "@base-ui/react": "^1.6.0",
+    "@catcherjs/core": "^1.0.4",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-go": "^6.0.1",
     "@codemirror/lang-javascript": "^6.2.4",

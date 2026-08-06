@@ -292,6 +292,23 @@ Independentes entre si e do resto da ordem:
 - [ ] `wait_for_port` → `health/ready` com erro visível ao usuário em vez de tela branca
 - [ ] `unsafe { set_var }` em `embedded_pg.rs`; `dotenvy::dotenv()` em segundo lugar; `BASE_URL` residual em `lib/api/base.ts`
 
+#### 19 · Migração para Catcher (Q109)
+
+Incremental, arquivo por arquivo — sem prazo de tolerância para `try/catch` cru em código
+**novo ou tocado**; código legado intocado *também* é migrado, por estar fora do padrão —
+mutirão em ondas, não uma exceção permanente como `components/vendor/*` (Q21).
+
+- [ ] `lib/api/base.ts` primeiro — é onde `fetch` é envolvido à mão hoje; vira a borda que
+  devolve `Result<T, ApiClientError>` para todo `lib/api/*-service.ts`
+- [ ] `lib/api/*-service.ts` (auth, notebook, teams, admin, user, run-rust) — cada chamada
+  passa a devolver `Result`, chamador decide `isOk()`/`isErr()` em vez de `try/catch`
+- [ ] `lib/api/handle-api-error.ts` — passa a consumir o lado `Err` do `Result` em vez de
+  receber uma exceção capturada
+- [ ] Pontos que hoje reimplementam o padrão Q38 manualmente (`runTsxInSandbox` e afins) —
+  ver se `catchErrorSync`/`catchError` substitui o `ApiClientError` construído à mão
+- [ ] Levantar todo `try/catch` restante em `hooks/` e `components/notebook/`, mesmo fora do
+  escopo de outras etapas, e migrar em onda própria — não fica pendente indefinidamente
+
 ### Questões ainda abertas
 
 Não são pendências de decisão sua — são pontos que só fecham ao redigir cada doc ou ao
