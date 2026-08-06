@@ -1,4 +1,5 @@
 import { deleteCookie, getCookie, setCookie } from "cookies-next";
+import type { components } from "@/lib/api/generated/openapi-types";
 import {
   type AccountType,
   getActiveAccount,
@@ -8,11 +9,7 @@ import {
   tokenCookieName,
 } from "@/lib/runtime/router";
 
-export interface Session {
-  accessToken: string;
-  refreshToken: string;
-  expiresInSecs: number;
-}
+export type Session = components["schemas"]["SessionResponse"];
 
 /// Margin to renew before expiry: the access token cookie expires a bit
 /// before the token itself, so the client never gets to send an expired token.

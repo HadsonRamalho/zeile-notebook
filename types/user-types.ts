@@ -1,67 +1,34 @@
 import type z from "zod";
+import type { components } from "@/lib/api/generated/openapi-types";
 import type {
   profilePasswordSchema,
   profileSchema,
 } from "../schemas/user-schemas";
 
-export type UserRole = "Admin" | "User";
+type Schemas = components["schemas"];
 
-export type AuthProvider = "Email" | "Google" | "Github";
+export type UserRole = Schemas["UserRole"];
 
+export type AuthProvider = Schemas["AuthProvider"];
+
+// O slug de provedor OAuth ("github"/"google") não é um enum real no Rust:
+// no limite HTTP (rota /user/link/{provider} e ProvidersResponse.providers)
+// ele é só String. Fica local, não deriva de openapi-types.ts.
 export type OAuthProviderSlug = "github" | "google";
 
-export interface AuthMethods {
-  password: boolean;
+export type AuthMethods = Omit<Schemas["AuthMethodsResponse"], "providers"> & {
   providers: OAuthProviderSlug[];
-  primaryProvider: AuthProvider;
-}
+};
 
-export interface User {
-  id: string;
-  publicId: number;
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-  primaryProvider: AuthProvider;
-  role: UserRole;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-}
+export type User = Schemas["User"];
 
-export interface UserAuthInfo {
-  id: string;
-  public_id: number;
-  email: string;
-  role: UserRole;
-}
+export type LoginUser = Schemas["LoginUser"];
 
-export interface LoginUser {
-  email: string;
-  password: string;
-}
+export type UpdateUser = Schemas["UpdateUser"];
 
-export interface UpdateUser {
-  name: string;
-  email: string;
-}
-
-export interface RegisterUser {
-  name: string;
-  email: string;
+export type RegisterUser = Pick<Schemas["NewUser"], "name" | "email"> & {
   passwordHash: string;
-}
-
-export interface NewUserInternal {
-  name: string;
-  email: string;
-  passwordHash: string | null;
-  primaryProvider: AuthProvider;
-  githubId: string | null;
-  googleId: string | null;
-  avatarUrl: string | null;
-}
+};
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;
 
