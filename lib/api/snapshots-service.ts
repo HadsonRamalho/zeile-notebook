@@ -1,7 +1,7 @@
 import type { SnapshotMeta } from "@/types/snapshot-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("snapshots");
+const api = createResultApi("snapshots");
 
 export async function listSnapshots(notebookId: string) {
   return api.get<SnapshotMeta[]>(`/notebook/${notebookId}/snapshots`);

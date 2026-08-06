@@ -63,44 +63,43 @@ export default function AdminDashboardPage() {
   const [notebooksTotalPages, setNotebooksTotalPages] = useState(1);
 
   const loadStats = useCallback(async () => {
-    try {
-      const data = await fetchAdminStats();
-      setStats(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoadingStats(false);
+    const result = await fetchAdminStats();
+    if (result.isErr()) {
+      console.error(result.error);
+    } else {
+      setStats(result.data);
     }
+    setIsLoadingStats(false);
   }, []);
 
   const loadUsers = useCallback(async () => {
-    try {
-      const data = await fetchAdminUsers(usersPage, 10);
-      setUsers(data.data);
-      setUsersTotalPages(data.totalPages);
-    } catch (error) {
-      console.error(error);
+    const result = await fetchAdminUsers(usersPage, 10);
+    if (result.isErr()) {
+      console.error(result.error);
+      return;
     }
+    setUsers(result.data.data);
+    setUsersTotalPages(result.data.totalPages);
   }, [usersPage]);
 
   const loadTeams = useCallback(async () => {
-    try {
-      const data = await fetchAdminTeams(teamsPage, 10);
-      setTeams(data.data);
-      setTeamsTotalPages(data.totalPages);
-    } catch (error) {
-      console.error(error);
+    const result = await fetchAdminTeams(teamsPage, 10);
+    if (result.isErr()) {
+      console.error(result.error);
+      return;
     }
+    setTeams(result.data.data);
+    setTeamsTotalPages(result.data.totalPages);
   }, [teamsPage]);
 
   const loadNotebooks = useCallback(async () => {
-    try {
-      const data = await fetchAdminNotebooks(notebooksPage, 10);
-      setNotebooks(data.data);
-      setNotebooksTotalPages(data.totalPages);
-    } catch (error) {
-      console.error(error);
+    const result = await fetchAdminNotebooks(notebooksPage, 10);
+    if (result.isErr()) {
+      console.error(result.error);
+      return;
     }
+    setNotebooks(result.data.data);
+    setNotebooksTotalPages(result.data.totalPages);
   }, [notebooksPage]);
 
   useEffect(() => {

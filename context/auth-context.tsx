@@ -11,7 +11,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { createApi } from "@/lib/api/base";
+import { createResultApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import {
   clearSession,
@@ -28,7 +28,9 @@ import {
 } from "@/lib/runtime/router";
 import type { LoginUser, RegisterUser, User } from "@/types/user-types";
 
-const authApi = createApi("auth");
+// .unwrap() keeps this context's public contract throwing (Q109/etapa 19 doesn't
+// migrate context/auth-context.tsx's own signature, only lib/api/*-service.ts).
+const authApi = createResultApi("auth");
 
 interface AuthContextType {
   user: User | null;
@@ -68,7 +70,7 @@ export function AuthProvider({
       }
 
       try {
-        const profile = await authApi.get<User>("/user/me");
+        const profile = (await authApi.get<User>("/user/me")).unwrap();
         setUser(profile);
       } catch (err) {
         handleApiError({ err, t });
@@ -95,7 +97,7 @@ export function AuthProvider({
         "cloud",
       );
 
-      const profile = await authApi.get<User>("/user/me");
+      const profile = (await authApi.get<User>("/user/me")).unwrap();
 
       setUser(profile);
       router.push("/notebook");
@@ -109,11 +111,13 @@ export function AuthProvider({
       setActiveAccount(target);
       setAccount(target);
 
-      const session = await authApi.post<Session>("/user/login", data);
+      const session = (
+        await authApi.post<Session>("/user/login", data)
+      ).unwrap();
 
       storeSession(session, target);
 
-      const profile = await authApi.get<User>("/user/me");
+      const profile = (await authApi.get<User>("/user/me")).unwrap();
 
       setUser(profile);
       router.push("/notebook");
@@ -127,14 +131,16 @@ export function AuthProvider({
       setActiveAccount(target);
       setAccount(target);
 
-      const session = await authApi.post<Session>("/user/register", {
-        ...data,
-        primaryProvider: "Email",
-      });
+      const session = (
+        await authApi.post<Session>("/user/register", {
+          ...data,
+          primaryProvider: "Email",
+        })
+      ).unwrap();
 
       storeSession(session, target);
 
-      const profile = await authApi.get<User>("/user/me");
+      const profile = (await authApi.get<User>("/user/me")).unwrap();
 
       setUser(profile);
       router.push("/notebook");
@@ -144,7 +150,7 @@ export function AuthProvider({
   );
 
   const deleteProfile = useCallback(async () => {
-    await deleteAccount();
+    (await deleteAccount()).unwrap();
 
     clearSession(account);
     setUser(null);

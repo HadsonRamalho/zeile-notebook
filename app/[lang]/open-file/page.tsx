@@ -39,13 +39,14 @@ export default function OpenFilePage() {
     async (file: File) => {
       try {
         const text = await file.text();
-        const id = await createNotebook({
+        const result = await createNotebook({
           title: d("title"),
           blockTitle: d("block_title"),
           blockContent: d("block_content"),
         });
+        if (result.isErr()) throw result.error;
         setPendingImport(text);
-        router.replace(`/notebook/${id}`);
+        router.replace(`/notebook/${result.data}`);
       } catch {
         setErrorMessage(t("error_message"));
       }

@@ -58,9 +58,10 @@ export function usePushSubscription() {
         ) as BufferSource,
       });
 
-      await subscribeToPush(
+      const subscribeResult = await subscribeToPush(
         subscription.toJSON() as unknown as PushSubscriptionPayload,
       );
+      subscribeResult.unwrap();
       setIsSubscribed(true);
     } finally {
       setIsLoading(false);
@@ -75,7 +76,8 @@ export function usePushSubscription() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await unsubscribeFromPush(subscription.endpoint);
+        const result = await unsubscribeFromPush(subscription.endpoint);
+        result.unwrap();
         await subscription.unsubscribe();
       }
       setIsSubscribed(false);

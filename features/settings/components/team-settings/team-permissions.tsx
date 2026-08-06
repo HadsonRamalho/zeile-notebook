@@ -134,12 +134,16 @@ export function TeamPermissions({
       fetchTeamMembers(teamId),
       fetchTeamPages(teamId),
     ])
-      .then(([cat, grs, mbs, nbs]) => {
+      .then(([catResult, grantsResult, membersResult, pagesResult]) => {
         if (!active) return;
-        setCatalog(cat);
-        setGrants(grs);
-        setMembers(mbs);
-        setNotebooks(nbs);
+        if (catResult.isErr()) throw catResult.error;
+        if (grantsResult.isErr()) throw grantsResult.error;
+        if (membersResult.isErr()) throw membersResult.error;
+        if (pagesResult.isErr()) throw pagesResult.error;
+        setCatalog(catResult.data);
+        setGrants(grantsResult.data);
+        setMembers(membersResult.data);
+        setNotebooks(pagesResult.data);
       })
       .catch((err) => handleApiError({ err, t: te }))
       .finally(() => active && setLoading(false));
@@ -223,19 +227,21 @@ export function TeamPermissions({
 
       try {
         for (const grant of existing) {
-          await deleteTeamGrant(teamId, grant.id);
+          (await deleteTeamGrant(teamId, grant.id)).unwrap();
         }
         if (next !== "none") {
-          await createTeamGrant(teamId, {
-            subjectKind: subjectKind,
-            subjectId: subjectId,
-            permissionKey: key,
-            targetKind: targetKind,
-            targetId: targetId,
-            effect: next,
-          });
+          (
+            await createTeamGrant(teamId, {
+              subjectKind: subjectKind,
+              subjectId: subjectId,
+              permissionKey: key,
+              targetKind: targetKind,
+              targetId: targetId,
+              effect: next,
+            })
+          ).unwrap();
         }
-        setGrants(await getTeamGrants(teamId));
+        setGrants((await getTeamGrants(teamId)).unwrap());
       } catch (err) {
         handleApiError({ err, t: te });
       } finally {
@@ -285,8 +291,8 @@ export function TeamPermissions({
     try {
       if (editorMode === "create") {
         const before = new Set(roles.map((r) => r.id));
-        await createTeamRole(teamId, { name, ...BLANK_ROLE });
-        const fresh = await fetchTeamRoles(teamId);
+        (await createTeamRole(teamId, { name, ...BLANK_ROLE })).unwrap();
+        const fresh = (await fetchTeamRoles(teamId)).unwrap();
         setRoles(fresh);
         const created = fresh.find((r) => !before.has(r.id));
         if (created) {
@@ -295,8 +301,8 @@ export function TeamPermissions({
         }
         toast.success(tr("role_created"));
       } else if (editorMode === "rename") {
-        await updateRole(teamId, { id: subjectId, name });
-        setRoles(await fetchTeamRoles(teamId));
+        (await updateRole(teamId, { id: subjectId, name })).unwrap();
+        setRoles((await fetchTeamRoles(teamId)).unwrap());
         toast.success(tr("role_renamed"));
       }
       onRolesChanged();

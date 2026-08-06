@@ -13,15 +13,13 @@ function load(): Promise<CapabilitiesReport> {
   if (cache) return Promise.resolve(cache);
   if (!inFlight) {
     inFlight = fetchExecutionCapabilities()
-      .then((report) => {
+      .then((result) => {
+        // fails open: an unreachable /capabilities must not block every exec block
+        const report = result.isOk()
+          ? result.data
+          : { sandbox: true, languages: [] };
         cache = report;
         return report;
-      })
-      .catch(() => {
-        // fails open: an unreachable /capabilities must not block every exec block
-        const fallback: CapabilitiesReport = { sandbox: true, languages: [] };
-        cache = fallback;
-        return fallback;
       })
       .finally(() => {
         inFlight = null;

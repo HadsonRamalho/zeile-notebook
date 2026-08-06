@@ -54,16 +54,15 @@ export function TeamNotebookManagerProvider({
   const refreshTeamPages = useCallback(
     async (teamId: string) => {
       if (!user) return;
-      try {
-        const data = await fetchTeamPages(teamId);
-
-        setTeamPages((prev) => ({
-          ...prev,
-          [teamId]: data,
-        }));
-      } catch (err) {
-        console.error(`Error fetching pages for team ${teamId}:`, err);
+      const result = await fetchTeamPages(teamId);
+      if (result.isErr()) {
+        console.error(`Error fetching pages for team ${teamId}:`, result.error);
+        return;
       }
+      setTeamPages((prev) => ({
+        ...prev,
+        [teamId]: result.data,
+      }));
     },
     [user],
   );
@@ -72,15 +71,13 @@ export function TeamNotebookManagerProvider({
     async (teamId: string) => {
       if (!user) return;
 
-      try {
-        const newId = await createTeamPage(teamId, d("title"));
-
-        await refreshTeamPages(teamId);
-
-        router.push(`/notebook/${newId}`);
-      } catch (err) {
-        handleApiError({ err, t });
+      const result = await createTeamPage(teamId, d("title"));
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
       }
+      await refreshTeamPages(teamId);
+      router.push(`/notebook/${result.data}`);
     },
     [user, refreshTeamPages, router, t, d],
   );
@@ -89,19 +86,17 @@ export function TeamNotebookManagerProvider({
     async (teamId: string, pageId: string, newTitle: string) => {
       if (!user || !newTitle.trim()) return;
 
-      try {
-        await updateNotebookTitle(pageId, newTitle);
-
-        window.dispatchEvent(
-          new CustomEvent("notebook-title-updated", {
-            detail: { id: pageId, title: newTitle },
-          }),
-        );
-
-        await refreshTeamPages(teamId);
-      } catch (err) {
-        handleApiError({ err, t });
+      const result = await updateNotebookTitle(pageId, newTitle);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
       }
+      window.dispatchEvent(
+        new CustomEvent("notebook-title-updated", {
+          detail: { id: pageId, title: newTitle },
+        }),
+      );
+      await refreshTeamPages(teamId);
     },
     [user, refreshTeamPages, t],
   );
@@ -110,12 +105,12 @@ export function TeamNotebookManagerProvider({
     async (teamId: string, pageId: string, isVisible: boolean) => {
       if (!user) return;
 
-      try {
-        await updateNotebookVisibility(pageId, isVisible);
-        await refreshTeamPages(teamId);
-      } catch (err) {
-        handleApiError({ err, t });
+      const result = await updateNotebookVisibility(pageId, isVisible);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
       }
+      await refreshTeamPages(teamId);
     },
     [user, refreshTeamPages, t],
   );
@@ -124,17 +119,15 @@ export function TeamNotebookManagerProvider({
     async (teamId: string, pageId: string) => {
       if (!user) return;
 
-      try {
-        const wasOnDeletedPage = pathname.endsWith(`/notebook/${pageId}`);
-
-        await deleteNotebook(pageId);
-        await refreshTeamPages(teamId);
-
-        if (wasOnDeletedPage) {
-          router.push("/notebook");
-        }
-      } catch (err) {
-        handleApiError({ err, t });
+      const wasOnDeletedPage = pathname.endsWith(`/notebook/${pageId}`);
+      const result = await deleteNotebook(pageId);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
+      }
+      await refreshTeamPages(teamId);
+      if (wasOnDeletedPage) {
+        router.push("/notebook");
       }
     },
     [user, refreshTeamPages, router, pathname, t],

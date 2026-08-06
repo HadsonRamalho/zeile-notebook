@@ -18,13 +18,12 @@ export function useNotifications() {
 
   const refresh = useCallback(() => {
     return fetchNotifications()
-      .then((data) => {
-        if (data) {
-          setItems(data.items);
-          setUnreadCount(data.unreadCount);
+      .then((result) => {
+        if (result.isOk()) {
+          setItems(result.data.items);
+          setUnreadCount(result.data.unreadCount);
         }
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -43,14 +42,14 @@ export function useNotifications() {
       ),
     );
     setUnreadCount((c) => Math.max(0, c - 1));
-    markNotificationRead(id).catch(() => {});
+    markNotificationRead(id);
   }, []);
 
   const markAllRead = useCallback(() => {
     const now = new Date().toISOString();
     setItems((prev) => prev.map((n) => (n.readAt ? n : { ...n, readAt: now })));
     setUnreadCount(0);
-    markAllNotificationsRead().catch(() => {});
+    markAllNotificationsRead();
   }, []);
 
   const remove = useCallback((id: string) => {
@@ -59,7 +58,7 @@ export function useNotifications() {
       if (target && !target.readAt) setUnreadCount((c) => Math.max(0, c - 1));
       return prev.filter((n) => n.id !== id);
     });
-    apiDelete(id).catch(() => {});
+    apiDelete(id);
   }, []);
 
   return {

@@ -3,9 +3,9 @@ import type {
   CommentThread,
   CommentThreadStatus,
 } from "@/types/comment-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("comments");
+const api = createResultApi("comments");
 
 export async function listComments(notebookId: string) {
   return api.get<CommentThread[]>(`/notebook/${notebookId}/comments`);

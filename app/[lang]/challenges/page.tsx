@@ -72,13 +72,10 @@ export default function ChallengesPage() {
 
   useEffect(() => {
     let active = true;
-    listChallenges()
-      .then((data) => {
-        if (active) setChallenges(data);
-      })
-      .catch(() => {
-        if (active) setChallenges([]);
-      });
+    listChallenges().then((result) => {
+      if (!active) return;
+      setChallenges(result.isOk() ? result.data : []);
+    });
     return () => {
       active = false;
     };

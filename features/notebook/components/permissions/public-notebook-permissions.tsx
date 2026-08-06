@@ -51,10 +51,12 @@ export function PublicNotebookPermissions({
     let active = true;
     setLoading(true);
     Promise.all([getPermissionCatalog(), getPublicGrants(notebookId)])
-      .then(([cat, grs]) => {
+      .then(([catResult, grantsResult]) => {
         if (!active) return;
-        setCatalog(cat);
-        setGrants(grs);
+        if (catResult.isErr()) throw catResult.error;
+        if (grantsResult.isErr()) throw grantsResult.error;
+        setCatalog(catResult.data);
+        setGrants(grantsResult.data);
       })
       .catch((err) => handleApiError({ err, t: te }))
       .finally(() => active && setLoading(false));
@@ -87,15 +89,17 @@ export function PublicNotebookPermissions({
       const existing = grants.filter((g) => g.permissionKey === key);
       try {
         for (const grant of existing) {
-          await deletePublicGrant(notebookId, grant.id);
+          (await deletePublicGrant(notebookId, grant.id)).unwrap();
         }
         if (next !== "none") {
-          await createPublicGrant(notebookId, {
-            permissionKey: key,
-            effect: next,
-          });
+          (
+            await createPublicGrant(notebookId, {
+              permissionKey: key,
+              effect: next,
+            })
+          ).unwrap();
         }
-        setGrants(await getPublicGrants(notebookId));
+        setGrants((await getPublicGrants(notebookId)).unwrap());
       } catch (err) {
         handleApiError({ err, t: te });
       } finally {

@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("chat");
+const api = createResultApi("chat");
 
 export interface ChatMessageDTO {
   id: string;

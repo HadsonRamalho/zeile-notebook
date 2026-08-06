@@ -55,14 +55,14 @@ function ShareProcessor() {
       title: d("title"),
       blockTitle: d("block_title"),
       blockContent: d("block_content"),
-    })
-      .then((id) => {
-        setPendingImport(content);
-        router.replace(`/notebook/${id}`);
-      })
-      .catch(() => {
+    }).then((result) => {
+      if (result.isErr()) {
         setErrorMessage(t("create_error"));
-      });
+      } else {
+        setPendingImport(content);
+        router.replace(`/notebook/${result.data}`);
+      }
+    });
   }, [isAuthLoading, user, searchParams, router, t, d]);
 
   if (errorMessage) {

@@ -1,7 +1,7 @@
 import type { Language, RunStatus } from "@/types/block-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("exec-compiled");
+const api = createResultApi("exec-compiled");
 
 type RunCodeTranslate = (key: string) => string;
 
@@ -63,37 +63,38 @@ export async function RunCode({
   setStatus("idle");
   setOutput("");
 
-  try {
-    const endpoint = language === "rust" ? "/run" : `/run/${language}`;
+  const endpoint = language === "rust" ? "/run" : `/run/${language}`;
 
-    const data: RunCodeApiResponse = await api.post(endpoint, {
-      code,
-      notebookId,
-    });
+  const result = await api.post<RunCodeApiResponse>(endpoint, {
+    code,
+    notebookId,
+  });
 
-    const { status, errorCode, stdout, stderr } = data;
-
-    if (status === "ok") {
-      setStatus("success");
-      setOutput(
-        formatCombinedOutput({ stdout, stderr, t }) || t("run_success"),
-      );
-      return;
-    }
-
-    setStatus("error");
-
-    if (errorCode === "MODULE_NOT_FOUND") {
-      setOutput(`${t("module_not_found")}\n\n${stderr}`);
-      return;
-    }
-
-    setOutput(formatCombinedOutput({ stdout, stderr, t }) || t("run_error"));
-  } catch (err) {
-    console.error(err);
+  if (result.isErr()) {
+    console.error(result.error);
     setStatus("error");
     setOutput(t("network_error"));
-  } finally {
     setIsRunning(false);
+    return;
   }
+
+  const { status, errorCode, stdout, stderr } = result.data;
+
+  if (status === "ok") {
+    setStatus("success");
+    setOutput(formatCombinedOutput({ stdout, stderr, t }) || t("run_success"));
+    setIsRunning(false);
+    return;
+  }
+
+  setStatus("error");
+
+  if (errorCode === "MODULE_NOT_FOUND") {
+    setOutput(`${t("module_not_found")}\n\n${stderr}`);
+    setIsRunning(false);
+    return;
+  }
+
+  setOutput(formatCombinedOutput({ stdout, stderr, t }) || t("run_error"));
+  setIsRunning(false);
 }

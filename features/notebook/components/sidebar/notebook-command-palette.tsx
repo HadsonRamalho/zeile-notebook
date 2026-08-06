@@ -105,13 +105,11 @@ export function NotebookCommandPalette({
 
     let cancelled = false;
     const handle = setTimeout(async () => {
-      try {
-        const results = await searchNotebooksRanked(term);
-        if (!cancelled) {
-          setBlockResults(results.filter((r) => r.kind === "block"));
-        }
-      } catch {
-        if (!cancelled) setBlockResults([]);
+      const result = await searchNotebooksRanked(term);
+      if (!cancelled) {
+        setBlockResults(
+          result.isOk() ? result.data.filter((r) => r.kind === "block") : [],
+        );
       }
     }, 150);
 

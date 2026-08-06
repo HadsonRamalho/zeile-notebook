@@ -47,9 +47,9 @@ export function ActivityFeed({ notebookId }: { notebookId: string }) {
   const [lastSeen, setLastSeen] = useState<number>(0);
 
   const load = useCallback(() => {
-    listActivity(notebookId)
-      .then((data) => setItems(data ?? []))
-      .catch(() => {});
+    listActivity(notebookId).then((result) => {
+      if (result.isOk()) setItems(result.data ?? []);
+    });
   }, [notebookId]);
 
   useEffect(() => {

@@ -75,20 +75,20 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
   };
 
   const reloadTeamRoles = async () => {
-    try {
-      const tempRoles = await fetchTeamRoles(teamId);
-      setRoles(tempRoles);
-    } catch (err) {
-      handleApiError({ err, t });
+    const result = await fetchTeamRoles(teamId);
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
+      setRoles(result.data);
     }
   };
 
   const reloadTeamMembers = async () => {
-    try {
-      const tempMembers = await fetchTeamMembers(teamId);
-      setMembers(tempMembers);
-    } catch (err) {
-      handleApiError({ err, t });
+    const result = await fetchTeamMembers(teamId);
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
+      setMembers(result.data);
     }
   };
 
@@ -100,36 +100,45 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
       fetchTeam(teamId),
       fetchTeamMembers(teamId),
     ])
-      .then(async ([snapshot, catalog, teamData, m]) => {
-        const implied = buildImpliedIndex(catalog);
-        const teamCan = (key: string) =>
-          evalCan(snapshot, implied, key, { notebookId: "" });
+      .then(
+        async ([snapshotResult, catalogResult, teamResult, membersResult]) => {
+          if (snapshotResult.isErr()) throw snapshotResult.error;
+          if (catalogResult.isErr()) throw catalogResult.error;
+          if (teamResult.isErr()) throw teamResult.error;
+          if (membersResult.isErr()) throw membersResult.error;
+          const teamData = teamResult.data;
+          const m = membersResult.data;
+          const implied = buildImpliedIndex(catalogResult.data);
+          const teamCan = (key: string) =>
+            evalCan(snapshotResult.data, implied, key, { notebookId: "" });
 
-        const perms: TeamRole = {
-          id: "",
-          teamId: teamId,
-          name: "",
-          canRead: teamCan("notebook.view"),
-          canWrite: teamCan("notebook.edit"),
-          canManagePrivacy: teamCan("notebook.manage_privacy"),
-          canManageClones: teamCan("notebook.manage_clones"),
-          canInviteUsers: teamCan("team.invite_users"),
-          canRemoveUsers: teamCan("team.remove_users"),
-          canManagePermissions: teamCan("team.roles.edit_role_permissions"),
-          canManageTeam: teamCan("team.edit_name"),
-        };
+          const perms: TeamRole = {
+            id: "",
+            teamId: teamId,
+            name: "",
+            canRead: teamCan("notebook.view"),
+            canWrite: teamCan("notebook.edit"),
+            canManagePrivacy: teamCan("notebook.manage_privacy"),
+            canManageClones: teamCan("notebook.manage_clones"),
+            canInviteUsers: teamCan("team.invite_users"),
+            canRemoveUsers: teamCan("team.remove_users"),
+            canManagePermissions: teamCan("team.roles.edit_role_permissions"),
+            canManageTeam: teamCan("team.edit_name"),
+          };
 
-        setUserPermissions(perms);
-        setTeam(teamData);
-        setMembers(m);
+          setUserPermissions(perms);
+          setTeam(teamData);
+          setMembers(m);
 
-        if (perms.canManagePermissions) {
-          const r = await fetchTeamRoles(teamId);
-          setRoles(r);
-        } else {
-          setRoles([]);
-        }
-      })
+          if (perms.canManagePermissions) {
+            const rolesResult = await fetchTeamRoles(teamId);
+            if (rolesResult.isErr()) throw rolesResult.error;
+            setRoles(rolesResult.data);
+          } else {
+            setRoles([]);
+          }
+        },
+      )
       .catch(() => {
         toast.error(t("load_error"));
       })

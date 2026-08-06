@@ -323,7 +323,9 @@ function ChatPanel({
         }
         onEdit={editMessage}
         onDelete={deleteMessage}
-        loadVersions={(id) => fetchNotebookMessageVersions(notebookId, id)}
+        loadVersions={(id) =>
+          fetchNotebookMessageVersions(notebookId, id).then((r) => r.unwrap())
+        }
         emptyHint="Converse com quem está neste notebook em tempo real."
       />
     </div>

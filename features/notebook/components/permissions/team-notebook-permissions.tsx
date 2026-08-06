@@ -75,10 +75,14 @@ export function TeamNotebookPermissions({
       getTeamGrants(teamId),
       fetchTeamRoles(teamId),
     ])
-      .then(([cat, grs, rls]) => {
+      .then(([catResult, grantsResult, rolesResult]) => {
         if (!active) return;
-        setCatalog(cat);
-        setGrants(grs);
+        if (catResult.isErr()) throw catResult.error;
+        if (grantsResult.isErr()) throw grantsResult.error;
+        if (rolesResult.isErr()) throw rolesResult.error;
+        const rls = rolesResult.data;
+        setCatalog(catResult.data);
+        setGrants(grantsResult.data);
         setRoles(rls);
         setRoleId((current) => current || rls[0]?.id || "");
       })
@@ -136,19 +140,21 @@ export function TeamNotebookPermissions({
       );
       try {
         for (const grant of existing) {
-          await deleteTeamGrant(teamId, grant.id);
+          (await deleteTeamGrant(teamId, grant.id)).unwrap();
         }
         if (next !== "none") {
-          await createTeamGrant(teamId, {
-            subjectKind: "role",
-            subjectId: roleId,
-            permissionKey: key,
-            targetKind: "notebook",
-            targetId: notebookId,
-            effect: next,
-          });
+          (
+            await createTeamGrant(teamId, {
+              subjectKind: "role",
+              subjectId: roleId,
+              permissionKey: key,
+              targetKind: "notebook",
+              targetId: notebookId,
+              effect: next,
+            })
+          ).unwrap();
         }
-        setGrants(await getTeamGrants(teamId));
+        setGrants((await getTeamGrants(teamId)).unwrap());
       } catch (err) {
         handleApiError({ err, t: te });
       } finally {

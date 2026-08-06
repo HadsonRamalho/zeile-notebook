@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("challenges");
+const api = createResultApi("challenges");
 
 import type {
   AuthoringTestCase,
@@ -100,10 +100,11 @@ export async function pollSubmission(
   const maxAttempts = options.maxAttempts ?? 60;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const submission = await getSubmission(submissionId);
-    onUpdate(submission);
-    if (submission.status !== "queued" && submission.status !== "running") {
-      return submission;
+    const result = await getSubmission(submissionId);
+    if (result.isErr()) return result;
+    onUpdate(result.data);
+    if (result.data.status !== "queued" && result.data.status !== "running") {
+      return result;
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }

@@ -7,10 +7,10 @@ import type {
   RankedSearchItem,
 } from "@/types/notebook-types";
 import type { TeamRole } from "@/types/team-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("notebook-crud");
-const publicApi = createApi("public");
+const api = createResultApi("notebook-crud");
+const publicApi = createResultApi("public");
 
 export async function searchNotebooksRanked(query: string, limit = 16) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
@@ -70,8 +70,8 @@ export async function saveNotebookData(
   title: string,
   blocks: Block[],
   isPublic: boolean,
-): Promise<void> {
-  return api.put(`/notebook/${id}/content`, {
+) {
+  return api.put<void>(`/notebook/${id}/content`, {
     title,
     blocks,
     isPublic,

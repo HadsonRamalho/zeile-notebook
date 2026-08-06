@@ -67,7 +67,9 @@ export default function PublicNotebooksPage() {
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      fetchPublicNotebooks(query).then(setNotebooks);
+      fetchPublicNotebooks(query).then((result) =>
+        setNotebooks(result.isOk() ? result.data : []),
+      );
     }, 300);
     return () => clearTimeout(handle);
   }, [query]);

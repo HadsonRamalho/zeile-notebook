@@ -55,12 +55,12 @@ export function NotebookManagerProvider({
     if (!user) {
       return;
     }
-    try {
-      const data = await getMyNotebooks();
-      setPages(data);
-    } catch (err) {
-      console.error("Failed to refresh pages:", err);
+    const result = await getMyNotebooks();
+    if (result.isErr()) {
+      console.error("Failed to refresh pages:", result.error);
+      return;
     }
+    setPages(result.data);
   }, [user]);
 
   useEffect(() => {
@@ -74,19 +74,17 @@ export function NotebookManagerProvider({
       }
       if (!newTitle.trim()) return;
 
-      try {
-        await updateNotebookTitle(id, newTitle);
-
-        window.dispatchEvent(
-          new CustomEvent("notebook-title-updated", {
-            detail: { id, title: newTitle },
-          }),
-        );
-
-        await refreshPages();
-      } catch (err) {
-        handleApiError({ err, t });
+      const result = await updateNotebookTitle(id, newTitle);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
       }
+      window.dispatchEvent(
+        new CustomEvent("notebook-title-updated", {
+          detail: { id, title: newTitle },
+        }),
+      );
+      await refreshPages();
     },
     [user, refreshPages, t],
   );
@@ -95,76 +93,68 @@ export function NotebookManagerProvider({
     if (!user) {
       return;
     }
-    try {
-      const newId = await createNotebook({
-        title: d("title"),
-        blockTitle: d("block_title"),
-        blockContent: d("block_content"),
-      });
-
-      await refreshPages();
-
-      router.push(`/notebook/${newId}`);
-    } catch (err) {
-      handleApiError({ err, t });
+    const result = await createNotebook({
+      title: d("title"),
+      blockTitle: d("block_title"),
+      blockContent: d("block_content"),
+    });
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+      return;
     }
+    await refreshPages();
+    router.push(`/notebook/${result.data}`);
   }, [user, refreshPages, router, t, d]);
 
   const clone = useCallback(
     async (id: string) => {
-      try {
-        if (!user) {
-          return;
-        }
-        const original = pages.find((p) => p.id === id);
-        const title = d("clone_title", {
-          title: original?.title ?? d("title"),
-        });
-        const newId = await cloneNotebook(id, title);
-
-        await refreshPages();
-
-        router.push(`/notebook/${newId}`);
-      } catch (err) {
-        handleApiError({ err, t });
+      if (!user) {
+        return;
       }
+      const original = pages.find((p) => p.id === id);
+      const title = d("clone_title", {
+        title: original?.title ?? d("title"),
+      });
+      const result = await cloneNotebook(id, title);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
+      }
+      await refreshPages();
+      router.push(`/notebook/${result.data}`);
     },
     [user, pages, refreshPages, router, t, d],
   );
 
   const updateVisibility = useCallback(
     async (id: string, isVisible: boolean) => {
-      try {
-        if (!user) {
-          return;
-        }
-        await updateNotebookVisibility(id, isVisible);
-
-        await refreshPages();
-      } catch (err) {
-        handleApiError({ err, t });
+      if (!user) {
+        return;
       }
+      const result = await updateNotebookVisibility(id, isVisible);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
+      }
+      await refreshPages();
     },
     [user, refreshPages, t],
   );
 
   const deletePage = useCallback(
     async (id: string) => {
-      try {
-        if (!user) {
-          return;
-        }
-        const wasOnDeletedPage = pathname.endsWith(`/notebook/${id}`);
-
-        await deleteNotebook(id);
-
-        await refreshPages();
-
-        if (wasOnDeletedPage) {
-          router.push("/notebook");
-        }
-      } catch (err) {
-        handleApiError({ err, t });
+      if (!user) {
+        return;
+      }
+      const wasOnDeletedPage = pathname.endsWith(`/notebook/${id}`);
+      const result = await deleteNotebook(id);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
+        return;
+      }
+      await refreshPages();
+      if (wasOnDeletedPage) {
+        router.push("/notebook");
       }
     },
     [user, refreshPages, router, pathname, t],
@@ -174,7 +164,12 @@ export function NotebookManagerProvider({
     if (!user) {
       return;
     }
-    const pages = await getMyNotebooks();
+    const result = await getMyNotebooks();
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+      return;
+    }
+    const pages = result.data;
     const json = JSON.stringify(pages, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -188,7 +183,7 @@ export function NotebookManagerProvider({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [user]);
+  }, [user, t]);
 
   const uploadBackup = useCallback(
     async (file: File) => {

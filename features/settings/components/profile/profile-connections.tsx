@@ -45,19 +45,17 @@ export function ProfileConnections() {
   const [emAcao, setEmAcao] = useState<OAuthProviderSlug | null>(null);
 
   const carregar = useCallback(async () => {
-    try {
-      const [providers, methods] = await Promise.all([
-        getAuthProviders(),
-        getAuthMethods(),
-      ]);
-
-      setDisponiveis(providers.providers);
-      setMetodos(methods);
-    } catch {
+    const [providersResult, methodsResult] = await Promise.all([
+      getAuthProviders(),
+      getAuthMethods(),
+    ]);
+    if (providersResult.isErr() || methodsResult.isErr()) {
       setDisponiveis([]);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setDisponiveis(providersResult.data.providers);
+      setMetodos(methodsResult.data);
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -87,28 +85,29 @@ export function ProfileConnections() {
 
   const vincular = async (provider: OAuthProviderSlug) => {
     setEmAcao(provider);
-    try {
-      const { url } = await startProviderLink(provider);
-      window.location.href = url;
-    } catch {
+    const result = await startProviderLink(provider);
+    if (result.isErr()) {
       toast.error(t("errors.link_failed"));
       setEmAcao(null);
+    } else {
+      window.location.href = result.data.url;
     }
   };
 
   const desvincular = async (provider: OAuthProviderSlug) => {
     setEmAcao(provider);
-    try {
-      await unlinkProvider(provider);
-      toast.success(t("unlinked_success", { provider: NOMES[provider] }));
-      await carregar();
-    } catch (err) {
+    const result = await unlinkProvider(provider);
+    if (result.isErr()) {
+      const err = result.error;
       if (err instanceof ApiClientError && err.code === "LAST_LOGIN_METHOD") {
         toast.error(t("errors.last_login_method"));
       } else {
         toast.error(t("errors.unlink_failed"));
       }
-    } finally {
+      setEmAcao(null);
+    } else {
+      toast.success(t("unlinked_success", { provider: NOMES[provider] }));
+      await carregar();
       setEmAcao(null);
     }
   };

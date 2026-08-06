@@ -35,12 +35,14 @@ async function loadScopedNotebooks(
   currentNotebookId?: string,
 ): Promise<Notebook[]> {
   if (currentNotebookId) {
-    const meta = await getNotebookMeta(currentNotebookId).catch(() => null);
-    if (meta?.teamId) {
-      return (await fetchTeamPages(meta.teamId)) ?? [];
+    const metaResult = await getNotebookMeta(currentNotebookId);
+    if (metaResult.isOk() && metaResult.data.teamId) {
+      const result = await fetchTeamPages(metaResult.data.teamId);
+      return result.isOk() ? result.data : [];
     }
   }
-  return (await getMyNotebooks()) ?? [];
+  const result = await getMyNotebooks();
+  return result.isOk() ? result.data : [];
 }
 
 function NotebookPicker({
@@ -144,9 +146,9 @@ export function NotebookReferenceBlock({
     lastFetched.current = refId;
     setTarget(null);
     let active = true;
-    getCurrentNotebook(refId)
-      .then((n) => active && setTarget(n ?? "error"))
-      .catch(() => active && setTarget("error"));
+    getCurrentNotebook(refId).then(
+      (result) => active && setTarget(result.isOk() ? result.data : "error"),
+    );
     return () => {
       active = false;
     };

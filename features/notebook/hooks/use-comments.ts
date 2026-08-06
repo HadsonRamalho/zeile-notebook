@@ -15,9 +15,9 @@ export function useComments(notebookId: string, token: string) {
   const [threads, setThreads] = useState<CommentThread[]>([]);
 
   const refresh = useCallback(() => {
-    listComments(notebookId)
-      .then((data) => setThreads(data ?? []))
-      .catch(() => {});
+    listComments(notebookId).then((result) => {
+      if (result.isOk()) setThreads(result.data ?? []);
+    });
   }, [notebookId]);
 
   useEffect(() => {

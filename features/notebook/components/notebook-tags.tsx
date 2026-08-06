@@ -14,19 +14,18 @@ export function NotebookTags({ pageId }: { pageId: string }) {
   const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
-    getCurrentNotebook(pageId)
-      .then((nb) => setTags(nb.tags ?? []))
-      .catch(() => {});
+    getCurrentNotebook(pageId).then((result) =>
+      setTags(result.isOk() ? (result.data.tags ?? []) : []),
+    );
   }, [pageId]);
 
   const save = async (next: string[]) => {
     const previous = tags;
     setTags(next);
-    try {
-      await setNotebookTags(pageId, next);
-    } catch (err) {
+    const result = await setNotebookTags(pageId, next);
+    if (result.isErr()) {
       setTags(previous);
-      handleApiError({ err, t });
+      handleApiError({ err: result.error, t });
     }
   };
 

@@ -23,14 +23,14 @@ export function NotebookTitle({ pageId }: NotebookTitleProps) {
 
   useEffect(() => {
     const loadNotebook = async () => {
-      try {
-        const notebook = await getCurrentNotebook(pageId);
-        setOriginalTitle(notebook.title);
-        setTitle(notebook.title);
-      } catch (err) {
-        handleApiError({ err, t });
+      const result = await getCurrentNotebook(pageId);
+      if (result.isErr()) {
+        handleApiError({ err: result.error, t });
         setTitle("...");
+        return;
       }
+      setOriginalTitle(result.data.title);
+      setTitle(result.data.title);
     };
     if (!originalTitle) {
       loadNotebook();

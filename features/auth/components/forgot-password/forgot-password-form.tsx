@@ -26,13 +26,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { createApi } from "@/lib/api/base";
+import { createResultApi } from "@/lib/api/base";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { cn } from "@/lib/utils";
 import { getRequestResetSchema } from "@/schemas/auth-schemas";
 import type { RequestResetFormValues } from "@/types/auth-types";
 
-const api = createApi("auth");
+const api = createResultApi("auth");
 
 export function ForgotPasswordForm({
   className,
@@ -56,15 +56,14 @@ export function ForgotPasswordForm({
     setError("");
     setIsSuccess(false);
 
-    try {
-      await api.post("/user/request-password-reset", data);
+    const result = await api.post("/user/request-password-reset", data);
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t: a, setError });
+    } else {
       setIsSuccess(true);
       toast.success(t("success_toast"));
-    } catch (err: unknown) {
-      handleApiError({ err, t: a, setError });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }
 
   return (

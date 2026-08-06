@@ -36,23 +36,16 @@ export function useCapabilities(
 
   const refetch = useCallback(async () => {
     if (!notebookId) return;
-    try {
-      const snap = await getNotebookCapabilities(notebookId);
-      setSnapshot(snap);
-    } catch {
-      setSnapshot({ all: false, grants: [] });
-    }
+    const result = await getNotebookCapabilities(notebookId);
+    setSnapshot(result.isOk() ? result.data : { all: false, grants: [] });
   }, [notebookId]);
 
   useEffect(() => {
     let active = true;
     (async () => {
       if (!catalogCache) {
-        try {
-          catalogCache = await getPermissionCatalog();
-        } catch {
-          catalogCache = { permissions: [] };
-        }
+        const result = await getPermissionCatalog();
+        catalogCache = result.isOk() ? result.data : { permissions: [] };
       }
       if (active) setCatalog(catalogCache);
     })();

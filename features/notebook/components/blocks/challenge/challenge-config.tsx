@@ -124,9 +124,9 @@ export function ChallengeConfig({
   const needsExpected = judgeMode === "io";
 
   const refreshCases = useCallback(() => {
-    listTestCases(challenge.id)
-      .then(setCases)
-      .catch(() => setCases([]));
+    listTestCases(challenge.id).then((result) =>
+      setCases(result.isOk() ? result.data : []),
+    );
   }, [challenge.id]);
 
   useEffect(() => {
@@ -134,18 +134,16 @@ export function ChallengeConfig({
   }, [refreshCases]);
 
   useEffect(() => {
-    getReferenceSolutions(challenge.id)
-      .then((ref) => {
-        setRefByLang(ref.solutions ?? {});
-        const first = Object.keys(ref.solutions ?? {})[0] as
-          | Language
-          | undefined;
-        if (first) {
-          setRefLanguage(first);
-          setRefCode(ref.solutions[first] ?? "");
-        }
-      })
-      .catch(() => {});
+    getReferenceSolutions(challenge.id).then((result) => {
+      if (result.isErr()) return;
+      const ref = result.data;
+      setRefByLang(ref.solutions ?? {});
+      const first = Object.keys(ref.solutions ?? {})[0] as Language | undefined;
+      if (first) {
+        setRefLanguage(first);
+        setRefCode(ref.solutions[first] ?? "");
+      }
+    });
   }, [challenge.id]);
 
   const toggleLanguage = (lang: Language) => {
@@ -168,53 +166,51 @@ export function ChallengeConfig({
     }
 
     setSavingDetails(true);
-    try {
-      const updated = await updateChallenge(challenge.id, {
-        title: title.trim(),
-        statementMd: statement,
-        difficulty,
-        judgeMode,
-        languages,
-        timeLimitMs: timeLimit,
-        memLimitKb: memLimit * 1024,
-        ...(judgeMode === "property" ? { propertySpec: parsedSpec } : {}),
-      });
-      onUpdated(updated);
-      toast.success(t("reference_saved"));
-    } catch {
+    const result = await updateChallenge(challenge.id, {
+      title: title.trim(),
+      statementMd: statement,
+      difficulty,
+      judgeMode,
+      languages,
+      timeLimitMs: timeLimit,
+      memLimitKb: memLimit * 1024,
+      ...(judgeMode === "property" ? { propertySpec: parsedSpec } : {}),
+    });
+    if (result.isErr()) {
       toast.error(t("error_generic"));
-    } finally {
-      setSavingDetails(false);
+    } else {
+      onUpdated(result.data);
+      toast.success(t("reference_saved"));
     }
+    setSavingDetails(false);
   };
 
   const addCase = async () => {
     if (addingCase) return;
     setAddingCase(true);
-    try {
-      await addTestCase(challenge.id, {
-        input,
-        expected: needsExpected && expected.length > 0 ? expected : null,
-        isHidden: hidden,
-        weight,
-        ord: cases?.length ?? 0,
-      });
+    const result = await addTestCase(challenge.id, {
+      input,
+      expected: needsExpected && expected.length > 0 ? expected : null,
+      isHidden: hidden,
+      weight,
+      ord: cases?.length ?? 0,
+    });
+    if (result.isErr()) {
+      toast.error(t("error_generic"));
+    } else {
       setInput("");
       setExpected("");
       refreshCases();
-    } catch {
-      toast.error(t("error_generic"));
-    } finally {
-      setAddingCase(false);
     }
+    setAddingCase(false);
   };
 
   const removeCase = async (caseId: string) => {
-    try {
-      await deleteTestCase(challenge.id, caseId);
-      setCases((prev) => prev?.filter((c) => c.id !== caseId) ?? null);
-    } catch {
+    const result = await deleteTestCase(challenge.id, caseId);
+    if (result.isErr()) {
       toast.error(t("error_generic"));
+    } else {
+      setCases((prev) => prev?.filter((c) => c.id !== caseId) ?? null);
     }
   };
 
@@ -226,24 +222,27 @@ export function ChallengeConfig({
   const saveReference = async () => {
     if (savingRef || refCode.trim().length === 0) return;
     setSavingRef(true);
-    try {
-      await setReferenceSolution(challenge.id, refCode, refLanguage);
+    const result = await setReferenceSolution(
+      challenge.id,
+      refCode,
+      refLanguage,
+    );
+    if (result.isErr()) {
+      toast.error(t("error_generic"));
+    } else {
       setRefByLang((prev) => ({ ...prev, [refLanguage]: refCode }));
       toast.success(t("reference_saved"));
-    } catch {
-      toast.error(t("error_generic"));
-    } finally {
-      setSavingRef(false);
     }
+    setSavingRef(false);
   };
 
   const removeReference = async (lang: string) => {
-    try {
-      const res = await deleteReference(challenge.id, lang);
-      setRefByLang(res.solutions ?? {});
-      if (lang === refLanguage) setRefCode("");
-    } catch {
+    const result = await deleteReference(challenge.id, lang);
+    if (result.isErr()) {
       toast.error(t("error_generic"));
+    } else {
+      setRefByLang(result.data.solutions ?? {});
+      if (lang === refLanguage) setRefCode("");
     }
   };
 

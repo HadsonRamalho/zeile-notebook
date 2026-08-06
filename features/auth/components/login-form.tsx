@@ -66,9 +66,9 @@ export function LoginForm({
   }, [account]);
 
   useEffect(() => {
-    getAuthProviders()
-      .then((resposta) => setProviders(resposta.providers))
-      .catch(() => setProviders([]));
+    getAuthProviders().then((result) =>
+      setProviders(result.isOk() ? result.data.providers : []),
+    );
   }, []);
 
   const handleOAuthLogin = (provider: OAuthProviderSlug) => {
