@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use super::entity::TeamRole;
+use super::entity::{Team, TeamMember, TeamRole};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -104,7 +104,7 @@ pub struct UpdateTeamRole {
     pub can_manage_team: Option<bool>,
 }
 
-#[derive(Queryable, Serialize, Deserialize, Debug)]
+#[derive(Queryable, Serialize, Deserialize, Debug, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TeamMemberResponse {
     pub id: Uuid,
@@ -149,4 +149,25 @@ pub struct CreateTeamPageRequest {
         message = "Title must be between 1 and 300 characters"
     ))]
     pub title: String,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TeamWithUserRoleView {
+    pub team: Team,
+    pub role: TeamRoleView,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TeamMemberWithRoleView {
+    pub member: TeamMemberResponse,
+    pub role: TeamRoleView,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserTeamMemberWithRoleView {
+    pub member: TeamMember,
+    pub role: TeamRoleView,
 }

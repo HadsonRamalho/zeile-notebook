@@ -21,10 +21,11 @@ use crate::{
 
 use super::dto::{
     AcceptInviteRequest, CreateTeamPageRequest, InviteRequest, NewTeamRoleRequest,
-    TeamMemberResponse, TeamRoleView, UpdateMemberRoleRequest, UpdateTeamRole,
+    TeamMemberWithRoleView, TeamRoleView, TeamWithUserRoleView, UpdateMemberRoleRequest,
+    UpdateTeamRole, UserTeamMemberWithRoleView,
 };
 use super::entity::{
-    NewTeam, NewTeamInvitation, NewTeamMember, NewTeamRole, Team, TeamMember, TeamRole, UpdateTeam,
+    NewTeam, NewTeamInvitation, NewTeamMember, NewTeamRole, Team, TeamRole, UpdateTeam,
 };
 use super::repository;
 use super::service::{email_matches, get_default_roles, get_team_member};
@@ -165,11 +166,11 @@ pub async fn api_create_team_role(
     }
 }
 
-#[utoipa::path(get, path = "/team/", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/team/", responses((status = OK, body = Vec<TeamWithUserRoleView>), (status = 401, body = ApiError)))]
 pub async fn api_get_user_teams(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-) -> Result<Json<Vec<(Team, TeamRoleView)>>, ApiError> {
+) -> Result<Json<Vec<TeamWithUserRoleView>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
 
     let conn = &mut get_conn(&state.pool)
@@ -177,7 +178,11 @@ pub async fn api_get_user_teams(
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
     match repository::find_user_teams(conn, user_id).await {
-        Ok(t) => Ok(Json(t)),
+        Ok(t) => Ok(Json(
+            t.into_iter()
+                .map(|(team, role)| TeamWithUserRoleView { team, role })
+                .collect(),
+        )),
         Err(e) => Err(e),
     }
 }
@@ -300,12 +305,12 @@ pub async fn api_update_member_role(
     Ok(StatusCode::OK)
 }
 
-#[utoipa::path(get, path = "/team/{id}/members", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/team/{id}/members", responses((status = OK, body = Vec<TeamMemberWithRoleView>), (status = 401, body = ApiError)))]
 pub async fn api_get_team_members(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<Vec<(TeamMemberResponse, TeamRoleView)>>, ApiError> {
+) -> Result<Json<Vec<TeamMemberWithRoleView>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -314,7 +319,12 @@ pub async fn api_get_team_members(
     let _ = get_team_member(conn, team_id, user_id).await?;
 
     match repository::find_team_members_with_roles(conn, team_id).await {
-        Ok(members) => Ok(Json(members)),
+        Ok(members) => Ok(Json(
+            members
+                .into_iter()
+                .map(|(member, role)| TeamMemberWithRoleView { member, role })
+                .collect(),
+        )),
         Err(e) => Err(e),
     }
 }
@@ -401,12 +411,12 @@ pub async fn api_create_team(
     Ok(Json(team))
 }
 
-#[utoipa::path(get, path = "/team/{id}/members/permissions", responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/team/{id}/members/permissions", responses((status = OK, body = UserTeamMemberWithRoleView), (status = 401, body = ApiError)))]
 pub async fn api_get_user_team_permissions(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<(TeamMember, TeamRoleView)>, ApiError> {
+) -> Result<Json<UserTeamMemberWithRoleView>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -415,7 +425,7 @@ pub async fn api_get_user_team_permissions(
     let (member, role) = get_team_member(conn, team_id, user_id).await?;
     let view = repository::build_role_view(conn, &role).await?;
 
-    Ok(Json((member, view)))
+    Ok(Json(UserTeamMemberWithRoleView { member, role: view }))
 }
 
 #[utoipa::path(post, path = "/team/{id}/invites", request_body = InviteRequest, responses((status = CREATED), (status = 401, body = ApiError)))]

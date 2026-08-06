@@ -558,7 +558,7 @@ pub async fn broadcast_capability_change_for_team(
     }
 }
 
-#[utoipa::path(get, path = "/permissions/catalog", responses((status = OK)))]
+#[utoipa::path(get, path = "/permissions/catalog", responses((status = OK, body = crate::sec::catalog::Catalog)))]
 pub async fn api_get_permission_catalog()
 -> (StatusCode, Json<&'static crate::sec::catalog::Catalog>) {
     (StatusCode::OK, Json(catalog()))

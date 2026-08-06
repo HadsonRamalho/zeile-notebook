@@ -81,7 +81,7 @@ pub async fn api_oauth_login(Path(slug): Path<String>) -> Response {
     }
 }
 
-#[utoipa::path(post, path = "/user/link/{provider}", responses((status = CREATED), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/user/link/{provider}", responses((status = CREATED, body = crate::domain::user::LinkStartResponse), (status = 401, body = ApiError)))]
 pub async fn api_link_start(
     Path(slug): Path<String>,
     headers: HeaderMap,

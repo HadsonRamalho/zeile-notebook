@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, State},
 };
 use hyper::{HeaderMap, StatusCode};
-use serde_json::{Value, json};
+use serde_json::json;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -18,9 +18,10 @@ use crate::models::error::ApiError;
 use crate::models::state::AppState;
 
 use super::dto::{
-    ChallengePublic, CreateChallengeRequest, CreateTestCaseRequest, LeaderboardEntry,
-    RunSamplesResponse, SampleResultView, SetReferenceRequest, SubmissionView, SubmitRequest,
-    TestCaseAuthoringView, TestCasePublic, UpdateChallengeRequest,
+    ChallengeDetail, ChallengePublic, CreateChallengeRequest, CreateTestCaseRequest,
+    LeaderboardEntry, ReferenceSolutionsResponse, RunSamplesResponse, SampleResultView,
+    SetReferenceRequest, SubmissionView, SubmitRequest, TestCaseAuthoringView,
+    TestCaseCreatedResponse, TestCasePublic, UpdateChallengeRequest,
 };
 use super::entity::{Challenge, NewChallenge, NewSubmission, NewTestCase, UpdateChallenge};
 use super::judge::{judge_submission, limits_for, normalize};
@@ -51,7 +52,7 @@ async fn challenge_detail(
     state: &AppState,
     headers: &HeaderMap,
     ch: Challenge,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<ChallengeDetail>, ApiError> {
     let user_id = extract_claims_from_header(headers)
         .await
         .ok()
@@ -59,32 +60,33 @@ async fn challenge_detail(
     require_notebook(state, &ch, user_id, "notebook.view", &TargetCtx::default()).await?;
 
     let mut conn = conn_from(state).await?;
-    let samples: Vec<TestCasePublic> = repository::list_public_test_cases(&mut conn, ch.id).await?;
-    let public = ChallengePublic::from(ch);
-    Ok(Json(json!({
-        "challenge": public,
-        "sampleTests": samples,
-    })))
+    let sample_tests: Vec<TestCasePublic> =
+        repository::list_public_test_cases(&mut conn, ch.id).await?;
+    let challenge = ChallengePublic::from(ch);
+    Ok(Json(ChallengeDetail {
+        challenge,
+        sample_tests,
+    }))
 }
 
-#[utoipa::path(get, path = "/challenge/slug/{slug}", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/challenge/slug/{slug}", responses((status = OK, body = ChallengeDetail), (status = 401, body = ApiError)))]
 pub async fn api_get_challenge(
     State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,
     headers: HeaderMap,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<ChallengeDetail>, ApiError> {
     let mut conn = conn_from(&state).await?;
     let ch = repository::get_challenge_by_slug(&mut conn, &slug).await?;
     drop(conn);
     challenge_detail(&state, &headers, ch).await
 }
 
-#[utoipa::path(get, path = "/challenge/{id}", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/challenge/{id}", responses((status = OK, body = ChallengeDetail), (status = 401, body = ApiError)))]
 pub async fn api_get_challenge_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<ChallengeDetail>, ApiError> {
     let mut conn = conn_from(&state).await?;
     let ch = repository::get_challenge_by_id(&mut conn, id).await?;
     drop(conn);
@@ -203,13 +205,13 @@ pub async fn api_update_challenge(
     Ok(Json(ChallengePublic::from(updated)))
 }
 
-#[utoipa::path(post, path = "/challenge/{id}/test-cases", request_body = CreateTestCaseRequest, responses((status = CREATED, body = Value), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/challenge/{id}/test-cases", request_body = CreateTestCaseRequest, responses((status = CREATED, body = TestCaseCreatedResponse), (status = 401, body = ApiError)))]
 pub async fn api_add_test_case(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
     Json(payload): Json<CreateTestCaseRequest>,
-) -> Result<(StatusCode, Json<Value>), ApiError> {
+) -> Result<(StatusCode, Json<TestCaseCreatedResponse>), ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let existing = repository::get_challenge_by_id(&mut conn, id).await?;
@@ -232,7 +234,10 @@ pub async fn api_add_test_case(
         ord: payload.ord.unwrap_or(0),
     };
     let created = repository::create_test_case(&mut conn, &new_case).await?;
-    Ok((StatusCode::CREATED, Json(json!({ "id": created.id }))))
+    Ok((
+        StatusCode::CREATED,
+        Json(TestCaseCreatedResponse { id: created.id }),
+    ))
 }
 
 #[utoipa::path(post, path = "/challenge/{id}/reference", request_body = SetReferenceRequest, responses((status = CREATED, body = ChallengePublic), (status = 401, body = ApiError)))]
@@ -259,12 +264,12 @@ pub async fn api_set_reference(
     Ok(Json(ChallengePublic::from(updated)))
 }
 
-#[utoipa::path(get, path = "/challenge/{id}/reference", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/challenge/{id}/reference", responses((status = OK, body = ReferenceSolutionsResponse), (status = 401, body = ApiError)))]
 pub async fn api_get_reference(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<ReferenceSolutionsResponse>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let ch = repository::get_challenge_by_id(&mut conn, id).await?;
@@ -276,17 +281,17 @@ pub async fn api_get_reference(
         &TargetCtx::default(),
     )
     .await?;
-    Ok(Json(json!({
-        "solutions": super::service::reference_map(&ch),
-    })))
+    Ok(Json(ReferenceSolutionsResponse {
+        solutions: super::service::reference_map(&ch),
+    }))
 }
 
-#[utoipa::path(delete, path = "/challenge/{id}/reference/{language}", responses((status = OK, body = Value), (status = 401, body = ApiError)))]
+#[utoipa::path(delete, path = "/challenge/{id}/reference/{language}", responses((status = OK, body = ReferenceSolutionsResponse), (status = 401, body = ApiError)))]
 pub async fn api_delete_reference(
     State(state): State<Arc<AppState>>,
     Path((id, language)): Path<(Uuid, String)>,
     headers: HeaderMap,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<ReferenceSolutionsResponse>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
     let ch = repository::get_challenge_by_id(&mut conn, id).await?;
@@ -299,9 +304,9 @@ pub async fn api_delete_reference(
     )
     .await?;
     let updated = repository::delete_reference(&mut conn, id, &language).await?;
-    Ok(Json(json!({
-        "solutions": super::service::reference_map(&updated),
-    })))
+    Ok(Json(ReferenceSolutionsResponse {
+        solutions: super::service::reference_map(&updated),
+    }))
 }
 
 #[utoipa::path(get, path = "/challenge/{id}/test-cases", responses((status = OK, body = Vec<TestCaseAuthoringView>), (status = 401, body = ApiError)))]

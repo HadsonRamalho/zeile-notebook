@@ -52,13 +52,30 @@ impl From<Challenge> for ChallengePublic {
     }
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct TestCasePublic {
     pub id: Uuid,
     pub input: String,
     pub expected: Option<String>,
     pub weight: i32,
     pub ord: i32,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChallengeDetail {
+    pub challenge: ChallengePublic,
+    pub sample_tests: Vec<TestCasePublic>,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct TestCaseCreatedResponse {
+    pub id: Uuid,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct ReferenceSolutionsResponse {
+    pub solutions: std::collections::HashMap<String, String>,
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]

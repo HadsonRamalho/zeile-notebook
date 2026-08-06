@@ -121,7 +121,7 @@ pub struct ProvidersResponse {
     pub providers: Vec<&'static str>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkStartResponse {
     pub url: String,

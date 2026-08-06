@@ -55,7 +55,7 @@ pub struct NewTeamRole {
     pub name: String,
 }
 
-#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
+#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::team_members)]
 #[serde(rename_all = "camelCase")]
 pub struct TeamMember {
