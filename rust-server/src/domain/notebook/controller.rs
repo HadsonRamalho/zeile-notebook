@@ -11,18 +11,16 @@ use validator::Validate;
 use crate::{
     controllers::{jwt::extract_claims_from_header, utils::get_conn},
     extractors::{AuthUser, DbConn},
-    models::{
-        self,
-        error::ApiError,
-        notebook::{
-            BlockRequest, NewBlock, NewNotebook, Notebook, NotebookResponse, PublicNotebookDoc,
-            PublicNotebookResponse, PublicSearchQuery, RankedSearchItem, RankedSearchQuery,
-            SearchQuery, SearchResult, SyncNotebookRequest, UpdateNotebookTitle,
-            UpdateNotebookVisibility, delete_notebook, get_public_notebooks, update_notebook_title,
-        },
-        state::AppState,
-    },
+    models::{error::ApiError, state::AppState},
 };
+
+use super::dto::{
+    NotebookDto, NotebookResponse, PublicNotebookDoc, PublicNotebookResponse, PublicSearchQuery,
+    RankedSearchItem, RankedSearchQuery, SearchQuery, SearchResult, SyncNotebookRequest,
+    UpdateNotebookTitle, UpdateNotebookVisibility, UpdateTagsRequest,
+};
+use super::entity::{BlockType, NewBlock, NewNotebook};
+use super::{repository, service};
 
 #[utoipa::path(post, path = "/notebook/create", responses((status = OK, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_create_notebook(
@@ -44,44 +42,47 @@ pub async fn api_create_notebook(
         id: Uuid::new_v4(),
         title: "Novo Bloco".to_string(),
         notebook_id,
-        block_type: models::notebook::BlockType::Text,
+        block_type: BlockType::Text,
         language: None,
         content: "# Notas\nComece a editar...".to_string(),
         metadata: None,
         position: 0,
     };
 
-    match models::notebook::create_notebook(conn, &new_notebook).await {
+    match repository::create_notebook(conn, &new_notebook).await {
         Ok(_) => {}
         Err(e) => return Err(ApiError::Database(e)),
     }
 
-    models::notebook::create_block(conn, &new_block)
+    repository::create_block(conn, &new_block)
         .await
         .map_err(ApiError::Database)?;
 
     Ok((StatusCode::OK, Json(notebook_id)))
 }
 
-#[utoipa::path(get, path = "/notebook/all", responses((status = OK, body = Vec<Notebook>), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/notebook/all", responses((status = OK, body = Vec<NotebookDto>), (status = 401, body = ApiError)))]
 pub async fn api_get_notebooks(
     AuthUser(id): AuthUser,
     DbConn(mut conn): DbConn,
-) -> Result<(StatusCode, Json<Vec<Notebook>>), ApiError> {
-    match models::notebook::get_all_notebooks(&mut conn, &id).await {
-        Ok(notebooks) => Ok((StatusCode::OK, Json(notebooks))),
+) -> Result<(StatusCode, Json<Vec<NotebookDto>>), ApiError> {
+    match repository::get_all_notebooks(&mut conn, &id).await {
+        Ok(notebooks) => Ok((
+            StatusCode::OK,
+            Json(notebooks.into_iter().map(NotebookDto::from).collect()),
+        )),
         Err(e) => Err(ApiError::Database(e)),
     }
 }
 
-#[utoipa::path(get, path = "/notebook/{id}", responses((status = OK, body = Notebook), (status = 401, body = ApiError)))]
+#[utoipa::path(get, path = "/notebook/{id}", responses((status = OK, body = NotebookDto), (status = 401, body = ApiError)))]
 pub async fn api_get_single_notebook(
     Path(notebook_id): Path<Uuid>,
     DbConn(mut conn): DbConn,
-) -> Result<(StatusCode, Json<Notebook>), ApiError> {
-    let notebook = models::notebook::find_notebook_by_id(&mut conn, &notebook_id).await?;
+) -> Result<(StatusCode, Json<NotebookDto>), ApiError> {
+    let notebook = repository::find_notebook_by_id(&mut conn, &notebook_id).await?;
 
-    Ok((StatusCode::OK, Json(notebook)))
+    Ok((StatusCode::OK, Json(NotebookDto::from(notebook))))
 }
 
 #[utoipa::path(patch, path = "/notebook/{id}/title", request_body = UpdateNotebookTitle, responses((status = OK), (status = 401, body = ApiError)))]
@@ -94,21 +95,21 @@ pub async fn api_rename_notebook(
         return Err(ApiError::Request(errors.to_string()));
     }
 
-    match update_notebook_title(&mut conn, notebook_id, payload.title).await {
+    match repository::update_notebook_title(&mut conn, notebook_id, payload.title).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(ApiError::Database(e)),
     }
 }
 
-#[utoipa::path(patch, path = "/notebook/{id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK), (status = 401, body = ApiError)))]
+#[utoipa::path(patch, path = "/notebook/{id}/tags", request_body = UpdateTagsRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_notebook_tags(
     Path(notebook_id): Path<Uuid>,
     DbConn(mut conn): DbConn,
-    Json(payload): Json<models::notebook::UpdateTagsRequest>,
+    Json(payload): Json<UpdateTagsRequest>,
 ) -> Result<StatusCode, ApiError> {
-    let tags = models::notebook::normalize_tags(&payload.tags)?;
+    let tags = service::normalize_tags(&payload.tags)?;
 
-    models::notebook::set_notebook_tags(&mut conn, notebook_id, &tags).await?;
+    repository::set_notebook_tags(&mut conn, notebook_id, &tags).await?;
     Ok(StatusCode::OK)
 }
 
@@ -118,9 +119,7 @@ pub async fn api_update_notebook_visibility(
     DbConn(mut conn): DbConn,
     Json(payload): Json<UpdateNotebookVisibility>,
 ) -> Result<StatusCode, ApiError> {
-    match models::notebook::update_notebook_visibility(&mut conn, notebook_id, payload.is_visible)
-        .await
-    {
+    match repository::update_notebook_visibility(&mut conn, notebook_id, payload.is_visible).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(ApiError::Database(e)),
     }
@@ -131,7 +130,7 @@ pub async fn api_delete_notebook(
     Path(notebook_id): Path<Uuid>,
     DbConn(mut conn): DbConn,
 ) -> Result<StatusCode, ApiError> {
-    match delete_notebook(&mut conn, &notebook_id).await {
+    match repository::delete_notebook(&mut conn, &notebook_id).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(ApiError::Database(e)),
     }
@@ -142,67 +141,11 @@ pub async fn api_get_single_notebook_with_blocks(
     Path(notebook_id): Path<Uuid>,
     DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<NotebookResponse>), ApiError> {
-    let notebook = models::notebook::get_notebook_with_blocks(&mut conn, &notebook_id)
+    let notebook = repository::get_notebook_with_blocks(&mut conn, &notebook_id)
         .await
         .map_err(ApiError::Database)?;
 
     Ok((StatusCode::OK, Json(notebook)))
-}
-
-pub const MAX_BLOCKS: usize = 1000;
-
-pub const MAX_BYTES_PER_BLOCK: usize = 512 * 1024;
-
-pub const MAX_TOTAL_BYTES: usize = 8 * 1024 * 1024;
-
-fn block_weight(block: &BlockRequest) -> usize {
-    let metadata = block
-        .metadata
-        .as_ref()
-        .and_then(|m| serde_json::to_vec(m).ok())
-        .map(|v| v.len())
-        .unwrap_or(0);
-
-    block.title.len() + block.content.len() + metadata
-}
-
-/// The route's body ceiling blocks a giant payload, but doesn't distinguish a
-/// thousand small blocks from one huge block, and doesn't even look at
-/// metadata — which is client-supplied Jsonb and would be a side door to the
-/// same abuse.
-pub fn validate_content(payload: &SyncNotebookRequest) -> Result<(), ApiError> {
-    if payload.blocks.len() > MAX_BLOCKS {
-        return Err(ApiError::Request(format!(
-            "Notebook acima do limite de {} blocos (recebidos {}).",
-            MAX_BLOCKS,
-            payload.blocks.len()
-        )));
-    }
-
-    let mut total = payload.title.len();
-
-    for (index, block) in payload.blocks.iter().enumerate() {
-        let weight = block_weight(block);
-
-        if weight > MAX_BYTES_PER_BLOCK {
-            return Err(ApiError::Request(format!(
-                "Bloco {} acima do limite de {} KB.",
-                index + 1,
-                MAX_BYTES_PER_BLOCK / 1024
-            )));
-        }
-
-        total += weight;
-
-        if total > MAX_TOTAL_BYTES {
-            return Err(ApiError::Request(format!(
-                "Conteúdo do notebook acima do limite de {} MB.",
-                MAX_TOTAL_BYTES / (1024 * 1024)
-            )));
-        }
-    }
-
-    Ok(())
 }
 
 #[utoipa::path(put, path = "/notebook/{id}/content", request_body = SyncNotebookRequest, responses((status = OK), (status = 401, body = ApiError)))]
@@ -211,7 +154,7 @@ pub async fn api_save_notebook_content(
     DbConn(mut conn): DbConn,
     Json(payload): Json<SyncNotebookRequest>,
 ) -> Result<StatusCode, ApiError> {
-    validate_content(&payload)?;
+    service::validate_content(&payload)?;
 
     let blocks_to_insert: Vec<NewBlock> = payload
         .blocks
@@ -233,7 +176,7 @@ pub async fn api_save_notebook_content(
         })
         .collect();
 
-    match models::notebook::sync_notebook_content(
+    match repository::sync_notebook_content(
         &mut conn,
         notebook_id,
         payload.title,
@@ -246,6 +189,7 @@ pub async fn api_save_notebook_content(
         Err(e) => Err(ApiError::Database(e)),
     }
 }
+
 #[utoipa::path(post, path = "/notebook/{id}/clone", responses((status = CREATED, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_clone_notebook(
     State(state): State<Arc<AppState>>,
@@ -258,7 +202,7 @@ pub async fn api_clone_notebook(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let target_notebook = models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
+    let target_notebook = repository::find_notebook_by_id(conn, &notebook_id).await?;
 
     if !target_notebook.is_public {
         crate::controllers::permissions::require(
@@ -281,12 +225,12 @@ pub async fn api_clone_notebook(
         title: "Nova Página".to_string(),
     };
 
-    match models::notebook::create_notebook(conn, &new_notebook).await {
+    match repository::create_notebook(conn, &new_notebook).await {
         Ok(_) => {}
         Err(e) => return Err(ApiError::Database(e)),
     }
 
-    models::notebook::clone_notebook(
+    repository::clone_notebook(
         conn,
         &target_notebook.id,
         &new_notebook_id,
@@ -309,7 +253,7 @@ pub async fn api_search_notebooks(
 
     let search_term = format!("%{}%", params.q);
 
-    let results = models::notebook::search_user_blocks(&mut conn, id, &search_term).await?;
+    let results = repository::search_user_blocks(&mut conn, id, &search_term).await?;
 
     Ok((StatusCode::OK, Json(results)))
 }
@@ -327,7 +271,7 @@ pub async fn api_search_notebooks_ranked(
 
     let limit = params.limit.unwrap_or(16).clamp(1, 50);
 
-    let results = models::notebook::search_notebooks_ranked(&mut conn, id, term, limit).await?;
+    let results = repository::search_notebooks_ranked(&mut conn, id, term, limit).await?;
 
     Ok((StatusCode::OK, Json(results)))
 }
@@ -337,7 +281,7 @@ pub async fn api_get_public_notebook_by_slug(
     Path(slug): Path<String>,
     DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<PublicNotebookDoc>), ApiError> {
-    let doc = models::notebook::get_public_notebook_by_slug(&mut conn, &slug).await?;
+    let doc = repository::get_public_notebook_by_slug(&mut conn, &slug).await?;
     Ok((StatusCode::OK, Json(doc)))
 }
 
@@ -350,89 +294,6 @@ pub async fn api_get_public_notebooks(
 
     Ok((
         StatusCode::OK,
-        Json(get_public_notebooks(&mut conn, q).await?),
+        Json(repository::get_public_notebooks(&mut conn, q).await?),
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use models::notebook::{BlockType, SyncNotebookRequest};
-
-    fn block(content: &str) -> BlockRequest {
-        BlockRequest {
-            id: Uuid::new_v4(),
-            title: "block".to_string(),
-            block_type: BlockType::Text,
-            content: content.to_string(),
-            language: None,
-            metadata: None,
-        }
-    }
-
-    fn request(blocks: Vec<BlockRequest>) -> SyncNotebookRequest {
-        SyncNotebookRequest {
-            title: "notebook".to_string(),
-            blocks,
-            is_public: false,
-        }
-    }
-
-    #[test]
-    fn an_ordinary_notebook_passes() {
-        let blocks = (0..50).map(|i| block(&format!("content {i}"))).collect();
-
-        assert!(validate_content(&request(blocks)).is_ok());
-    }
-
-    #[test]
-    fn blocks_a_single_giant_block() {
-        let fat = "x".repeat(MAX_BYTES_PER_BLOCK + 1);
-
-        let error = validate_content(&request(vec![block(&fat)]))
-            .expect_err("block above the ceiling should be refused");
-
-        assert!(error.to_string().contains("Bloco 1"), "{error}");
-    }
-
-    #[test]
-    fn blocks_too_many_blocks() {
-        let blocks = (0..MAX_BLOCKS + 1).map(|_| block("hi")).collect();
-
-        let error = validate_content(&request(blocks)).expect_err("excess of blocks got through");
-
-        assert!(error.to_string().contains("blocos"), "{error}");
-    }
-
-    #[test]
-    fn blocks_the_sum_of_small_blocks() {
-        let chunk = "y".repeat(MAX_BYTES_PER_BLOCK / 2);
-        let how_many = MAX_TOTAL_BYTES / chunk.len() + 2;
-        let blocks = (0..how_many).map(|_| block(&chunk)).collect();
-
-        let error = validate_content(&request(blocks))
-            .expect_err("many valid blocks summing above the total should be refused");
-
-        assert!(error.to_string().contains("MB"), "{error}");
-    }
-
-    #[test]
-    fn metadata_is_not_a_side_door() {
-        let mut b = block("small");
-        b.metadata = serde_json::from_str(&format!(
-            "{{\"type\":\"generic\",\"junk\":\"{}\"}}",
-            "z".repeat(MAX_BYTES_PER_BLOCK)
-        ))
-        .ok();
-
-        assert!(
-            b.metadata.is_some(),
-            "the test needs metadata filled in to be meaningful"
-        );
-
-        let error = validate_content(&request(vec![b]))
-            .expect_err("giant metadata should count toward the block's weight");
-
-        assert!(error.to_string().contains("Bloco 1"), "{error}");
-    }
 }

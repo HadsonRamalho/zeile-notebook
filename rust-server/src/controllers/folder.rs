@@ -93,15 +93,15 @@ pub async fn api_rename_folder(
     Ok((StatusCode::OK, Json(updated)))
 }
 
-#[utoipa::path(patch, path = "/notebook/folders/{folder_id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
+#[utoipa::path(patch, path = "/notebook/folders/{folder_id}/tags", request_body = crate::domain::notebook::UpdateTagsRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_update_folder_tags(
     State(state): State<Arc<AppState>>,
     Path(folder_id): Path<Uuid>,
     headers: HeaderMap,
-    Json(payload): Json<models::notebook::UpdateTagsRequest>,
+    Json(payload): Json<crate::domain::notebook::UpdateTagsRequest>,
 ) -> Result<(StatusCode, Json<Folder>), ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
-    let tags = models::notebook::normalize_tags(&payload.tags)?;
+    let tags = crate::domain::notebook::normalize_tags(&payload.tags)?;
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
@@ -153,7 +153,7 @@ pub async fn api_move_notebook_to_folder(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let notebook = models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
+    let notebook = crate::domain::notebook::find_notebook_by_id(conn, &notebook_id).await?;
 
     if let Some(folder_id) = payload.folder_id {
         let folder = models::folder::get_folder(conn, folder_id).await?;
@@ -247,15 +247,15 @@ pub async fn api_rename_team_folder(
     Ok((StatusCode::OK, Json(updated)))
 }
 
-#[utoipa::path(patch, path = "/team/{id}/folders/{folder_id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
+#[utoipa::path(patch, path = "/team/{id}/folders/{folder_id}/tags", request_body = crate::domain::notebook::UpdateTagsRequest, responses((status = OK, body = Folder), (status = 401, body = ApiError)))]
 pub async fn api_update_team_folder_tags(
     State(state): State<Arc<AppState>>,
     Path((team_id, folder_id)): Path<(Uuid, Uuid)>,
     headers: HeaderMap,
-    Json(payload): Json<models::notebook::UpdateTagsRequest>,
+    Json(payload): Json<crate::domain::notebook::UpdateTagsRequest>,
 ) -> Result<(StatusCode, Json<Folder>), ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
-    let tags = models::notebook::normalize_tags(&payload.tags)?;
+    let tags = crate::domain::notebook::normalize_tags(&payload.tags)?;
     let conn = &mut get_conn(&state.pool)
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;

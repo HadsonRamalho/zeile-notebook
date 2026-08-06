@@ -387,7 +387,7 @@ pub async fn capabilities(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let notebook = crate::models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
+    let notebook = crate::domain::notebook::find_notebook_by_id(conn, &notebook_id).await?;
 
     let ctx = NotebookCtx {
         notebook_id,

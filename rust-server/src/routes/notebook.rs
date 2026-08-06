@@ -20,13 +20,6 @@ use crate::{
             api_rename_folder, api_update_folder_tags,
         },
         grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
-        notebook::{
-            api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
-            api_get_public_notebook_by_slug, api_get_public_notebooks, api_get_single_notebook,
-            api_get_single_notebook_with_blocks, api_rename_notebook, api_save_notebook_content,
-            api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
-            api_update_notebook_visibility,
-        },
         permissions::{api_get_notebook_capabilities, require_permission},
         push::{api_subscribe_push, api_unsubscribe_push},
         snapshots::{
@@ -34,6 +27,13 @@ use crate::{
         },
         user::api_get_user_notebook_permissions,
         websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
+    },
+    domain::notebook::controller::{
+        api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
+        api_get_public_notebook_by_slug, api_get_public_notebooks, api_get_single_notebook,
+        api_get_single_notebook_with_blocks, api_rename_notebook, api_save_notebook_content,
+        api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
+        api_update_notebook_visibility,
     },
     models::state::AppState,
 };

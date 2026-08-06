@@ -331,7 +331,7 @@ pub async fn get_user_notebook_permissions(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let notebook = models::notebook::find_notebook_by_id(conn, notebook_id).await?;
+    let notebook = crate::domain::notebook::find_notebook_by_id(conn, notebook_id).await?;
 
     if let Some(notebook_user_id) = notebook.user_id
         && let Some(id) = user_id

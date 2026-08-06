@@ -8,6 +8,7 @@ use crate::bootstrap::BootError;
 pub mod bootstrap;
 pub mod controllers;
 pub mod db_migrations;
+pub mod domain;
 #[cfg(feature = "embedded-pg")]
 pub mod embedded_pg;
 pub mod executor;

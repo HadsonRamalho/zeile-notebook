@@ -11,7 +11,6 @@ pub mod grants;
 pub mod health;
 pub mod jwt;
 pub mod metrics;
-pub mod notebook;
 pub mod notifications;
 pub mod oauth;
 pub mod permissions;

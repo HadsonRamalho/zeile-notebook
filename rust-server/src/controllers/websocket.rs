@@ -31,11 +31,8 @@ use crate::{
             PRESENCE_CHANNEL_CAP, PeerHandle, PresenceMember, PresenceRoom, SyncRegistry,
         },
     },
-    models::{
-        notebook::{checkpoint_notebook_data, extract_search_text, load_notebook_data},
-        state::AppState,
-        ws_message::WsServerMessage,
-    },
+    domain::notebook::{checkpoint_notebook_data, extract_search_text, load_notebook_data},
+    models::{state::AppState, ws_message::WsServerMessage},
     shutdown::Shutdown,
 };
 

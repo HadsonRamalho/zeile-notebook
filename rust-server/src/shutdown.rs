@@ -4,7 +4,7 @@ use tokio::sync::watch;
 use uuid::Uuid;
 
 use crate::controllers::sync::ActiveNotebook;
-use crate::models::notebook::{checkpoint_notebook_data, extract_search_text};
+use crate::domain::notebook::{checkpoint_notebook_data, extract_search_text};
 use crate::models::state::AppState;
 
 const DEFAULT_GRACE_SECS: u64 = 5;

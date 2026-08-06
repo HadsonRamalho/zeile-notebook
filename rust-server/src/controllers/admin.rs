@@ -168,7 +168,7 @@ pub async fn api_admin_notify(
         "notebook" => {
             notebook_id = Some(payload.target_id);
             let notebook =
-                models::notebook::find_notebook_by_id(&mut conn, &payload.target_id).await?;
+                crate::domain::notebook::find_notebook_by_id(&mut conn, &payload.target_id).await?;
             if let Some(owner) = notebook.user_id {
                 recipients.push(owner);
             }
