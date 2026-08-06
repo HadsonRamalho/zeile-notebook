@@ -238,10 +238,25 @@ mecânico separado, e misturar tudo teria tornado a review de ~250 arquivos ileg
 
 #### 14 · Camadas do Rust
 
-- [ ] Três camadas: controller fino · regra de negócio e autorização · acesso a banco isolado (Q47)
-- [ ] DTO de request/response separado do struct Diesel (Q48) — dissolve `models/notebook.rs` (1175 linhas) por responsabilidade
-- [ ] Extractors `AuthUser` + `DbConn` (Q49)
-- [ ] `require_permission(...)` como layer por rota — conserta por construção a ordem de `api_get_single_notebook` (Q51)
+- [x] Três camadas: controller fino · regra de negócio e autorização · acesso a banco isolado (Q47)
+- [x] DTO de request/response separado do struct Diesel (Q48) — dissolve `models/notebook.rs` (1175 linhas) por responsabilidade
+- [x] Extractors `AuthUser` + `DbConn` (Q49)
+- [x] `require_permission(...)` como layer por rota — conserta por construção a ordem de `api_get_single_notebook` (Q51)
+
+Entregue como stack de 3 PRs dependentes (#136/#137/#138): extractors primeiro (base), depois o
+layer de permissão (que já usa os extractors e corrige `api_get_single_notebook` e
+`api_get_single_notebook_with_blocks`, que buscavam o recurso antes de checar acesso), depois a
+migração de `notebook` para `domain/notebook/{controller,service,repository,dto,entity}.rs` — raiz
+por **módulo** (Q47/Q48 em aberto, decidido nesta entrega). `Notebook` (entidade Diesel) deixou de
+ser serializado como resposta de API direta; `NotebookDto` é a fronteira nova, e
+`lib/api/generated/openapi-types.ts` foi regenerado.
+
+**Escopo real desta entrega**: as quatro camadas foram provadas no domínio `notebook` — o mesmo
+citado no catálogo (Q17/Q19) como o arquivo de 1175 linhas a dissolver — e os extractors +
+`require_permission` já são infraestrutura reaproveitável por qualquer domínio. Os outros ~15
+domínios de `controllers/`/`models/` (team, user, chat, challenge, etc.) ainda não migraram para
+`domain/<nome>/`; ficam para entregas seguintes desta mesma etapa, repetindo o padrão aqui
+estabelecido.
 
 #### 15 · `features/` e pastas de topo — o maior diff
 
