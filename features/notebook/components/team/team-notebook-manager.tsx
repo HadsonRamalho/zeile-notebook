@@ -42,6 +42,7 @@ export function TeamNotebookManagerProvider({
   children: React.ReactNode;
 }) {
   const t = useTranslations("api_errors");
+  const d = useTranslations("notebook_defaults");
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -72,7 +73,7 @@ export function TeamNotebookManagerProvider({
       if (!user) return;
 
       try {
-        const newId = await createTeamPage(teamId);
+        const newId = await createTeamPage(teamId, d("title"));
 
         await refreshTeamPages(teamId);
 
@@ -81,7 +82,7 @@ export function TeamNotebookManagerProvider({
         handleApiError({ err, t });
       }
     },
-    [user, refreshTeamPages, router, t],
+    [user, refreshTeamPages, router, t, d],
   );
 
   const renameTeamPage = useCallback(

@@ -17,7 +17,13 @@
     "MISSING_ENV_VAR": "Erro de configuração interna: Falta a variável {env_var}.",
     "PASSWORDS_DO_NOT_MATCH": "As senhas informadas não conferem.",
     "UNKNOWN_ERROR": "Ocorreu um erro inesperado. Tente novamente.",
-    "RATE_LIMITED": "Tentativas demais. Aguarde um instante e tente novamente."
+    "RATE_LIMITED": "Tentativas demais. Aguarde um instante e tente novamente.",
+    "ERROR_SENDING_EMAIL": "Não foi possível enviar o e-mail. Tente novamente mais tarde.",
+    "PERMISSION_DENIED": "Você não tem permissão para realizar esta ação.",
+    "LAST_LOGIN_METHOD": "Não é possível remover o único método de login da sua conta.",
+    "UNIQUE_VIOLATION": "Já existe um registro com esses dados.",
+    "FOREIGN_KEY_VIOLATION": "Esta ação não pode ser concluída porque o item está referenciado em outro lugar.",
+    "NOT_FOUND": "Não foi possível encontrar o que você procura."
   },
   "loading": {
     "loading": "Carregando..."
@@ -81,7 +87,6 @@
     "email_label": "Email",
     "email_placeholder": "Seu e-mail",
     "password_label": "Senha",
-    "password_placeholder": "Sua senha",
     "forgot_password": "Esqueceu a senha?",
     "submit_button": "Login",
     "no_account": "Não tem uma conta?",
@@ -163,7 +168,6 @@
       "current_password": "Senha atual",
       "new_password": "Nova Senha",
       "confirm_password": "Confirme a Nova Senha",
-      "new_password_hint": "A senha deve ter pelo menos 8 caracteres",
       "update_password": "Atualizar Senha",
       "password_updated": "Senha atualizada",
       "password_update_error": "Erro ao atualizar a senha"
@@ -173,7 +177,11 @@
       "description": "Ações irreversíveis relacionadas à sua conta.",
       "delete_account": "Deletar Conta",
       "delete_account_description": "Isso excluirá permanentemente sua conta e todos os seus dados.",
-      "delete_account_button": "Deletar Conta"
+      "delete_account_button": "Deletar Conta",
+      "confirm_title": "Você tem certeza?",
+      "confirm_description": "Esta ação não pode ser desfeita. Isso excluirá permanentemente todos os seus dados na plataforma.",
+      "confirm_cancel": "Cancelar",
+      "confirm_action": "Sim, deletar minha conta"
     },
     "connections": {
       "title": "Conexões",
@@ -271,12 +279,9 @@
   },
   "notebook_controls": {
     "clone": "Fazer uma cópia",
-    "visibility": "Visibilidade",
     "private": "Privado",
     "public": "Público",
     "save": "Salvar",
-    "saving": "Salvando...",
-    "saved": "Salvo!",
     "share": "Compartilhar",
     "export": "Exportar",
     "export_markdown": "Markdown (.md)",
@@ -294,21 +299,13 @@
     "new_page": "Nova página",
     "go_to_notebooks": "Ir para meus cadernos",
     "empty_notebook_desc": "Crie um novo caderno ou selecione um na barra lateral para começar.",
-    "backup_title": "Configurações e backup",
-    "manage_data": "Gerenciar dados",
-    "download_all": "Exportar Tudo (.json)",
-    "import": "Importar Backup",
-    "confirm_import": "Isso também substituirá todas as suas páginas duplicadas pelo backup. Deseja continuar?",
-    "my_teams": "Meus Times",
-    "new_team": "Novo Time",
     "new_team_title": "Criar Novo Time",
     "new_team_description": "Preencha os detalhes para criar um novo espaço de trabalho colaborativo.",
     "team_name": "Nome do Time",
     "team_description": "Descrição (Opcional)",
     "cancel_button": "Cancelar",
     "create_button": "Criar",
-    "creating_button": "Criando...",
-    "no_teams_found": "Nenhum time encontrado."
+    "creating_button": "Criando..."
   },
   "team_settings": {
     "team_form": {
@@ -372,18 +369,6 @@
       "title": "Cargos e Permissões",
       "description": "Configure os níveis de acesso e controle dos membros.",
       "new_role_button": "Novo Cargo",
-      "edit_role_button": "Editar",
-      "roles": {
-        "can_write": "Escrever/Editar",
-        "can_manage_privacy": "Gerenciar Privacidade de Notebooks",
-        "can_invite_users": "Convidar Novos Membros",
-        "can_manage_permissions": "Gerenciar Permissões",
-        "can_manage_clones": "Gerenciar Clones de Notebook",
-        "can_manage_team": "Gerenciar Todo o Time",
-        "can_remove_users": "Remover Usuários"
-      },
-      "active": "Sim",
-      "inactive": "Não",
       "defaults": {
         "owner": "Proprietário",
         "member": "Membro"
@@ -407,11 +392,8 @@
         "team": "Time",
         "chat": "Chat"
       },
-      "subject_label": "Sujeito",
       "scope_label": "Escopo",
       "scope_team": "Time inteiro",
-      "subject_role_prefix": "Cargo",
-      "subject_user_prefix": "Membro",
       "public_permissions": "Permissões públicas",
       "public_permissions_hint": "Defina o que qualquer usuário logado pode fazer neste notebook público.",
       "notebook_permissions": "Permissões do notebook",
@@ -426,9 +408,6 @@
       "notebook_search_empty": "Nenhum notebook encontrado.",
       "select_subject_hint": "Selecione um sujeito (e um notebook, se aplicável) para configurar as permissões."
     }
-  },
-  "team_sidebar": {
-    "empty_notebooks": "Vazio"
   },
   "public_notebooks": {
     "title": "Explorar Notebooks",
@@ -455,6 +434,7 @@
     "success_message": "Verifique sua caixa de entrada. Enviamos um link seguro para a redefinição da sua senha.",
     "back_to_login": "Voltar para o login",
     "errors": {
+      "title": "Erro",
       "invalid_email": "Insira um email válido."
     }
   },
@@ -469,6 +449,7 @@
     "success_toast": "Senha atualizada com sucesso.",
     "request_new_link": "Solicitar novo link",
     "errors": {
+      "title": "Erro",
       "missing_token": "Identificador de redefinição ausente.",
       "invalid_link_title": "Link Inválido ou Expirado",
       "invalid_link_desc": "O link de redefinição de senha não é mais válido. Por favor, solicite um novo.",
@@ -624,10 +605,8 @@
   "challenges": {
     "title": "Desafios",
     "description": "Resolva problemas de código com avaliação instantânea e isolada.",
-    "nav_label": "Desafios",
     "search_placeholder": "Buscar desafios…",
     "count": "{count, plural, one {# desafio} other {# desafios}}",
-    "new_button": "Novo desafio",
     "loading": "Carregando desafios…",
     "filter_all": "Todos",
     "difficulty": {
@@ -646,22 +625,17 @@
     "no_results_description": "Tente outra busca ou limpe os filtros.",
     "not_found_title": "Desafio não encontrado",
     "not_found_description": "Este desafio pode ter sido removido ou tornado privado.",
-    "back_to_list": "Voltar aos desafios",
     "tab_statement": "Enunciado",
     "tab_submissions": "Submissões",
     "tab_leaderboard": "Ranking",
     "samples_title": "Casos de exemplo",
     "sample_input": "Entrada",
     "sample_expected": "Saída esperada",
-    "no_samples": "Este desafio não tem casos de exemplo públicos.",
-    "limits": "{time} ms · {mem} MB",
     "run_samples": "Rodar exemplos",
     "submit": "Submeter",
-    "judging": "Avaliando…",
     "queued": "Na fila…",
     "reset_code": "Restaurar",
     "login_required": "Entre para submeter sua solução.",
-    "login_cta": "Entrar",
     "result_title": "Resultado",
     "score": "Pontuação",
     "runtime": "Tempo",
@@ -685,8 +659,6 @@
     },
     "case_label": "Caso {n}",
     "hidden_case": "Caso oculto {n}",
-    "passed_cases": "{passed}/{total} casos",
-    "no_submissions_title": "Nenhuma submissão ainda",
     "no_submissions_description": "Suas submissões para este desafio aparecerão aqui.",
     "leaderboard_empty_title": "Sem entradas ainda",
     "leaderboard_empty_description": "Seja o primeiro a conseguir uma submissão aprovada.",
@@ -697,17 +669,11 @@
     "authoring": {
       "title": "Novo desafio",
       "description": "Defina o problema, seus casos de teste e como ele é avaliado.",
-      "back": "Voltar aos desafios",
-      "not_logged_title": "Entre para criar desafios",
-      "not_logged_description": "Você precisa de uma conta para criar e publicar desafios.",
       "step_details": "Detalhes",
       "step_tests": "Casos de teste",
       "step_reference": "Referência",
-      "field_slug": "Slug",
-      "field_slug_hint": "Letras minúsculas, números e hífens.",
       "field_title": "Título",
       "field_statement": "Enunciado (Markdown)",
-      "field_statement_placeholder": "Descreva o problema, o formato de entrada e o de saída…",
       "field_difficulty": "Dificuldade",
       "field_languages": "Linguagens permitidas",
       "field_judge_mode": "Modo de avaliação",
@@ -715,7 +681,6 @@
       "field_mem_limit": "Limite de memória (MB)",
       "create": "Salvar desafio",
       "creating": "Criando…",
-      "created": "Desafio criado — agora adicione os casos de teste.",
       "tests_intro": "Adicione ao menos um caso de teste. Casos ocultos nunca são enviados a quem resolve.",
       "test_input": "Entrada (stdin)",
       "test_expected": "Saída esperada (stdout)",
@@ -723,19 +688,14 @@
       "test_hidden": "Oculto",
       "test_weight": "Peso",
       "add_test": "Adicionar caso",
-      "adding": "Adicionando…",
-      "tests_count": "{count, plural, =0 {Nenhum caso ainda} one {# caso de teste} other {# casos de teste}}",
       "reference_intro": "Obrigatória para os modos referência e propriedade. A solução de referência nunca é exposta a quem resolve.",
       "reference_saved_langs": "Referências salvas",
+      "remove_reference_aria": "Remover referência",
       "property_spec": "Especificação de casos (JSON)",
       "property_intro": "Gera entradas aleatórias determinísticas (por seed). Cada linha vira uma linha de inteiros na faixa definida.",
       "invalid_json": "JSON inválido na especificação de casos.",
-      "reference_language": "Linguagem da referência",
-      "reference_solution": "Código da solução de referência",
       "save_reference": "Salvar solução de referência",
-      "saving": "Salvando…",
       "reference_saved": "Solução de referência salva.",
-      "finish": "Abrir desafio",
       "next": "Próximo",
       "error_generic": "Algo deu errado. Tente novamente."
     }
@@ -823,5 +783,154 @@
     "confirm_restore": "Confirmar",
     "delete": "Excluir versão",
     "auto": "Automática"
+  },
+  "layouts_canvas_tools": {
+    "zoom_out": "Diminuir zoom",
+    "zoom_in": "Aumentar zoom",
+    "fit_to_screen": "Ajustar à tela",
+    "fullscreen": "Tela cheia",
+    "tabs": {
+      "design": "Design",
+      "prototype": "Prototipagem",
+      "inspect": "Inspecionar"
+    },
+    "no_selection_title": "Nenhuma seleção",
+    "no_selection_hint": "Escolha uma forma no canvas, ou selecione uma ferramenta (F, O, T) e arraste para criar uma.",
+    "section": {
+      "position": "Posição",
+      "size": "Tamanho",
+      "fill": "Preenchimento"
+    },
+    "fill_swatch_aria": "Preenchimento {color}",
+    "layers_title": "Camadas",
+    "delete": "Excluir",
+    "no_layers": "Ainda não há camadas.",
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "unlock": "Desbloquear",
+    "lock": "Bloquear"
+  },
+  "editor_header": {
+    "file_name_placeholder": "Nome do componente...",
+    "mode_placeholder": "Selecione o modo",
+    "mode_sandpack": "Modo Sandpack",
+    "mode_native": "Modo Nativo",
+    "run": "Executar",
+    "loading_compiler": "Carregando o Compilador...",
+    "hide_render": "Ocultar Renderização",
+    "show_render": "Exibir Renderização",
+    "hide_console": "Ocultar Console",
+    "show_console": "Exibir Console"
+  },
+  "run_rust": {
+    "execution_error_label": "Erro de Execução",
+    "run_success": "Código executado com sucesso.",
+    "module_not_found": "Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))",
+    "run_error": "Erro na execução.",
+    "network_error": "Erro: Não foi possível se comunicar com o servidor.",
+    "error_prefix": "Erro: {error}"
+  },
+  "free_drawing": {
+    "focus_mode": "Modo foco",
+    "exit_focus_mode": "Sair do modo foco",
+    "fullscreen": "Tela cheia",
+    "exit_fullscreen": "Sair da tela cheia",
+    "export_png": "Exportar como PNG",
+    "touch_gestures": "Gestos de toque",
+    "touch_gestures_description": "Escolha a ação disparada ao tocar com cada número de dedos.",
+    "fingers_count": "{count, plural, one {# dedo} other {# dedos}}",
+    "tools": {
+      "draw": "Pincel",
+      "eraser": "Borracha",
+      "bucket": "Balde de tinta",
+      "hand": "Mão (mover)",
+      "laser": "Laser (temporário)",
+      "shapes": "Formas"
+    },
+    "gestures": {
+      "none": "Nada",
+      "undo": "Desfazer",
+      "redo": "Refazer",
+      "fullscreen": "Tela cheia",
+      "focus": "Modo foco"
+    },
+    "shapes": {
+      "line": "Linha",
+      "rectangle": "Retângulo",
+      "ellipse": "Elipse",
+      "triangle": "Triângulo",
+      "arrow": "Seta"
+    },
+    "brushes_aria": "Pincéis ({name})",
+    "brushes_tooltip": "Pincéis — {name}",
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "custom_color": "Cor customizada",
+    "color_swatch_aria": "Cor {color}",
+    "size_in_pixels": "Tamanho em pixels",
+    "size_popover_aria": "Tamanho — {label} ({size}px)",
+    "zoom_out": "Diminuir zoom",
+    "zoom_in": "Aumentar zoom",
+    "fit_to_content": "Ajustar ao conteúdo",
+    "custom_background_color": "Cor de fundo customizada",
+    "follow_app_color": "Seguir cor da aplicação",
+    "layers_title": "Camadas",
+    "expand_layers": "Expandir camadas",
+    "new_layer": "Nova camada",
+    "minimize_layers": "Minimizar camadas",
+    "drag_to_reorder": "Arrastar para reordenar",
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "double_click_rename": "Duplo clique para renomear",
+    "unlock_action": "Destravar",
+    "lock_action": "Travar",
+    "delete_layer": "Excluir camada",
+    "default_layer_name": "Camada {n}",
+    "brush_shapes": {
+      "pencil": "Lápis",
+      "dot": "Ponto",
+      "pen": "Caneta",
+      "marker": "Marcador",
+      "airbrush": "Aerógrafo",
+      "watercolor": "Pincel de água",
+      "oil": "Óleo",
+      "charcoal": "Carvão",
+      "chalk": "Giz"
+    },
+    "brush_picker": {
+      "title": "Pincéis",
+      "description": "Escolha um pincel ou crie um novo com forma e afinamento próprios.",
+      "delete_brush_aria": "Excluir {name}",
+      "create_title": "Criar pincel",
+      "name_label": "Nome",
+      "shape_label": "Forma",
+      "new_brush_default_name": "Novo pincel",
+      "size_start": "Espessura início",
+      "size_end": "Espessura fim",
+      "opacity_start": "Opacidade início",
+      "opacity_end": "Opacidade fim",
+      "add_brush": "Adicionar pincel"
+    }
+  },
+  "notebook_defaults": {
+    "title": "Nova Página",
+    "block_title": "Novo Bloco",
+    "block_content": "# Notas\nComece a editar...",
+    "clone_title": "Cópia de \"{title}\""
+  },
+  "open_file": {
+    "error_message": "Não foi possível abrir esse arquivo.",
+    "back_to_notebooks": "Ir para meus cadernos",
+    "opening_file": "Abrindo arquivo",
+    "importing_markdown": "Importando arquivo Markdown..."
+  },
+  "share": {
+    "nothing_shared": "Nada para compartilhar foi recebido.",
+    "create_error": "Não foi possível criar um caderno com o conteúdo compartilhado.",
+    "back_to_notebooks": "Ir para meus cadernos",
+    "importing_shared_content": "Importando conteúdo compartilhado",
+    "creating_notebook": "Criando um novo caderno...",
+    "loading": "Carregando",
+    "loading_ellipsis": "Carregando..."
   }
 }

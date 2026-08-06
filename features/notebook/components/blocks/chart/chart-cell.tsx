@@ -50,6 +50,12 @@ const CHART_TYPES: { type: ChartType; icon: typeof BarChart3 }[] = [
   { type: "area", icon: AreaChart },
 ];
 
+const CHART_TYPE_LABEL_KEYS: Record<ChartType, string> = {
+  bar: "type_bar",
+  line: "type_line",
+  area: "type_area",
+};
+
 function readConfig(block: Block) {
   if (block.metadata?.type === "chart") return block.metadata.props;
   return {
@@ -157,8 +163,8 @@ export function ChartCell({
               type="button"
               disabled={!canWrite}
               onClick={() => update({ chartType: type })}
-              aria-label={t(`type_${type}`)}
-              title={t(`type_${type}`)}
+              aria-label={t(CHART_TYPE_LABEL_KEYS[type])}
+              title={t(CHART_TYPE_LABEL_KEYS[type])}
               className={cn(
                 "rounded-md p-1.5 transition-colors disabled:opacity-40",
                 config.chartType === type

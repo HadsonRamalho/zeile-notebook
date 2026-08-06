@@ -9,8 +9,10 @@ import { BackButton } from "@/components/layout/back-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CHALLENGE_LANGUAGES,
+  DIFFICULTY_LABEL_KEYS,
   type DifficultyKey,
   difficultyKey,
+  JUDGE_MODE_LABEL_KEYS,
   languageLabel,
 } from "@/domain/challenges/display";
 import { AmbientGlow } from "@/features/challenges/components/ambient-glow";
@@ -145,7 +147,7 @@ export default function ChallengesPage() {
                 active={difficulty === d}
                 onClick={() => setDifficulty(d)}
               >
-                {t(`difficulty.${d}`)}
+                {t(DIFFICULTY_LABEL_KEYS[d])}
               </FilterChip>
             ))}
             <span className="mx-1 h-5 w-px bg-border" aria-hidden />
@@ -241,7 +243,7 @@ export default function ChallengesPage() {
                     ))}
                   </div>
                   <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    {t(`judge_mode.${challenge.judgeMode}`)}
+                    {t(JUDGE_MODE_LABEL_KEYS[challenge.judgeMode])}
                   </span>
                 </CardContent>
               </Card>

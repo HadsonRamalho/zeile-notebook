@@ -17,7 +17,13 @@
     "MISSING_ENV_VAR": "System configuration error: Missing environment variable {env_var}.",
     "PASSWORDS_DO_NOT_MATCH": "The provided passwords do not match.",
     "UNKNOWN_ERROR": "An unexpected error occurred. Please try again.",
-    "RATE_LIMITED": "Too many attempts. Please wait a moment and try again."
+    "RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
+    "ERROR_SENDING_EMAIL": "Could not send the email. Please try again later.",
+    "PERMISSION_DENIED": "You don't have permission to perform this action.",
+    "LAST_LOGIN_METHOD": "You can't remove the only login method on your account.",
+    "UNIQUE_VIOLATION": "A record with this data already exists.",
+    "FOREIGN_KEY_VIOLATION": "This action can't be completed because the item is referenced elsewhere.",
+    "NOT_FOUND": "We couldn't find what you're looking for."
   },
   "loading": {
     "loading": "Loading..."
@@ -81,7 +87,6 @@
     "email_label": "Email",
     "email_placeholder": "Your email",
     "password_label": "Password",
-    "password_placeholder": "Your password",
     "forgot_password": "Forgot password?",
     "submit_button": "Login",
     "no_account": "Don't have an account?",
@@ -163,7 +168,6 @@
       "current_password": "Current password",
       "new_password": "New Password",
       "confirm_password": "Confirm New Password",
-      "new_password_hint": "Password must be at least 8 characters long",
       "update_password": "Update Password",
       "password_updated": "Password updated",
       "password_update_error": "Error updating password"
@@ -173,7 +177,11 @@
       "description": "Irreversible actions related to your account.",
       "delete_account": "Delete Account",
       "delete_account_description": "This will permanently delete your account and all your data.",
-      "delete_account_button": "Delete Account"
+      "delete_account_button": "Delete Account",
+      "confirm_title": "Are you sure?",
+      "confirm_description": "This action cannot be undone. It will permanently delete all your data on the platform.",
+      "confirm_cancel": "Cancel",
+      "confirm_action": "Yes, delete my account"
     },
     "connections": {
       "title": "Connections",
@@ -271,12 +279,9 @@
   },
   "notebook_controls": {
     "clone": "Make a copy",
-    "visibility": "Visibility",
     "private": "Private",
     "public": "Public",
     "save": "Save",
-    "saving": "Saving...",
-    "saved": "Saved!",
     "share": "Share",
     "export": "Export",
     "export_markdown": "Markdown (.md)",
@@ -294,21 +299,13 @@
     "new_page": "New page",
     "go_to_notebooks": "Go to my notebooks",
     "empty_notebook_desc": "Create a new notebook or select one from the sidebar to get started.",
-    "backup_title": "Settings and backup",
-    "manage_data": "Manage data",
-    "download_all": "Export All (.json)",
-    "import": "Import Backup",
-    "confirm_import": "This will also overwrite all your duplicate pages with the backup. Do you want to continue?",
-    "my_teams": "My Teams",
-    "new_team": "New Team",
     "new_team_title": "Create New Team",
     "new_team_description": "Fill in the details to create a new collaborative workspace.",
     "team_name": "Team Name",
     "team_description": "Description (Optional)",
     "cancel_button": "Cancel",
     "create_button": "Create",
-    "creating_button": "Creating...",
-    "no_teams_found": "No teams found."
+    "creating_button": "Creating..."
   },
   "team_settings": {
     "team_form": {
@@ -372,18 +369,6 @@
       "title": "Roles and Permissions",
       "description": "Configure access and control levels for members.",
       "new_role_button": "New Role",
-      "edit_role_button": "Edit",
-      "roles": {
-        "can_write": "Write/Edit",
-        "can_manage_privacy": "Manage Notebook Privacy",
-        "can_invite_users": "Invite New Members",
-        "can_manage_permissions": "Manage Permissions",
-        "can_manage_clones": "Manage Notebook Clones",
-        "can_manage_team": "Manage Entire Team",
-        "can_remove_users": "Remove Users"
-      },
-      "active": "Yes",
-      "inactive": "No",
       "defaults": {
         "owner": "Owner",
         "member": "Member"
@@ -407,11 +392,8 @@
         "team": "Team",
         "chat": "Chat"
       },
-      "subject_label": "Subject",
       "scope_label": "Scope",
       "scope_team": "Entire team",
-      "subject_role_prefix": "Role",
-      "subject_user_prefix": "Member",
       "public_permissions": "Public permissions",
       "public_permissions_hint": "Set what any logged-in user can do in this public notebook.",
       "notebook_permissions": "Notebook permissions",
@@ -426,9 +408,6 @@
       "notebook_search_empty": "No notebooks found.",
       "select_subject_hint": "Select a subject (and a notebook, if applicable) to configure permissions."
     }
-  },
-  "team_sidebar": {
-    "empty_notebooks": "Empty"
   },
   "public_notebooks": {
     "title": "Explore Notebooks",
@@ -455,6 +434,7 @@
     "success_message": "Check your inbox. We have sent a secure link to reset your password.",
     "back_to_login": "Back to login",
     "errors": {
+      "title": "Error",
       "invalid_email": "Enter a valid email address."
     }
   },
@@ -469,6 +449,7 @@
     "success_toast": "Password updated successfully.",
     "request_new_link": "Request new link",
     "errors": {
+      "title": "Error",
       "missing_token": "Missing reset identifier.",
       "invalid_link_title": "Invalid or Expired Link",
       "invalid_link_desc": "The password reset link is no longer valid. Please request a new one.",
@@ -624,10 +605,8 @@
   "challenges": {
     "title": "Challenges",
     "description": "Solve coding problems with instant, sandboxed judging.",
-    "nav_label": "Challenges",
     "search_placeholder": "Search challenges…",
     "count": "{count, plural, one {# challenge} other {# challenges}}",
-    "new_button": "New challenge",
     "loading": "Loading challenges…",
     "filter_all": "All",
     "difficulty": {
@@ -646,22 +625,17 @@
     "no_results_description": "Try a different search or clear the filters.",
     "not_found_title": "Challenge not found",
     "not_found_description": "This challenge may have been removed or made private.",
-    "back_to_list": "Back to challenges",
     "tab_statement": "Statement",
     "tab_submissions": "Submissions",
     "tab_leaderboard": "Leaderboard",
     "samples_title": "Sample tests",
     "sample_input": "Input",
     "sample_expected": "Expected output",
-    "no_samples": "This challenge has no public sample tests.",
-    "limits": "{time} ms · {mem} MB",
     "run_samples": "Run samples",
     "submit": "Submit",
-    "judging": "Judging…",
     "queued": "Queued…",
     "reset_code": "Reset",
     "login_required": "Sign in to submit your solution.",
-    "login_cta": "Sign in",
     "result_title": "Result",
     "score": "Score",
     "runtime": "Runtime",
@@ -685,8 +659,6 @@
     },
     "case_label": "Case {n}",
     "hidden_case": "Hidden case {n}",
-    "passed_cases": "{passed}/{total} cases",
-    "no_submissions_title": "No submissions yet",
     "no_submissions_description": "Your submissions for this challenge will appear here.",
     "leaderboard_empty_title": "No entries yet",
     "leaderboard_empty_description": "Be the first to land a passing submission.",
@@ -697,17 +669,11 @@
     "authoring": {
       "title": "New challenge",
       "description": "Define the problem, its test cases, and how it is judged.",
-      "back": "Back to challenges",
-      "not_logged_title": "Sign in to create challenges",
-      "not_logged_description": "You need an account to author and publish challenges.",
       "step_details": "Details",
       "step_tests": "Test cases",
       "step_reference": "Reference",
-      "field_slug": "Slug",
-      "field_slug_hint": "Lowercase letters, numbers and hyphens.",
       "field_title": "Title",
       "field_statement": "Statement (Markdown)",
-      "field_statement_placeholder": "Describe the problem, input format, and output format…",
       "field_difficulty": "Difficulty",
       "field_languages": "Allowed languages",
       "field_judge_mode": "Judge mode",
@@ -715,7 +681,6 @@
       "field_mem_limit": "Memory limit (MB)",
       "create": "Save challenge",
       "creating": "Creating…",
-      "created": "Challenge created — now add its test cases.",
       "tests_intro": "Add at least one test case. Hidden cases are never sent to solvers.",
       "test_input": "Input (stdin)",
       "test_expected": "Expected output (stdout)",
@@ -723,19 +688,14 @@
       "test_hidden": "Hidden",
       "test_weight": "Weight",
       "add_test": "Add test case",
-      "adding": "Adding…",
-      "tests_count": "{count, plural, =0 {No test cases yet} one {# test case} other {# test cases}}",
       "reference_intro": "Required for reference and property judge modes. The reference solution is never exposed to solvers.",
       "reference_saved_langs": "Saved references",
+      "remove_reference_aria": "Remove reference",
       "property_spec": "Case spec (JSON)",
       "property_intro": "Generates deterministic random inputs (by seed). Each line becomes a line of integers within the given range.",
       "invalid_json": "Invalid JSON in the case spec.",
-      "reference_language": "Reference language",
-      "reference_solution": "Reference solution code",
       "save_reference": "Save reference solution",
-      "saving": "Saving…",
       "reference_saved": "Reference solution saved.",
-      "finish": "Open challenge",
       "next": "Next",
       "error_generic": "Something went wrong. Please try again."
     }
@@ -823,5 +783,154 @@
     "confirm_restore": "Confirm",
     "delete": "Delete version",
     "auto": "Automatic"
+  },
+  "layouts_canvas_tools": {
+    "zoom_out": "Zoom out",
+    "zoom_in": "Zoom in",
+    "fit_to_screen": "Fit to screen",
+    "fullscreen": "Fullscreen",
+    "tabs": {
+      "design": "Design",
+      "prototype": "Prototype",
+      "inspect": "Inspect"
+    },
+    "no_selection_title": "No selection",
+    "no_selection_hint": "Pick a shape on the canvas, or grab a tool (F, O, T) and drag to create one.",
+    "section": {
+      "position": "Position",
+      "size": "Size",
+      "fill": "Fill"
+    },
+    "fill_swatch_aria": "Fill {color}",
+    "layers_title": "Layers",
+    "delete": "Delete",
+    "no_layers": "No layers yet.",
+    "hide": "Hide",
+    "show": "Show",
+    "unlock": "Unlock",
+    "lock": "Lock"
+  },
+  "editor_header": {
+    "file_name_placeholder": "Component name...",
+    "mode_placeholder": "Select mode",
+    "mode_sandpack": "Sandpack Mode",
+    "mode_native": "Native Mode",
+    "run": "Run",
+    "loading_compiler": "Loading Compiler...",
+    "hide_render": "Hide Render",
+    "show_render": "Show Render",
+    "hide_console": "Hide Console",
+    "show_console": "Show Console"
+  },
+  "run_rust": {
+    "execution_error_label": "Execution Error",
+    "run_success": "Code executed successfully.",
+    "module_not_found": "Failure related to another module. Try compiling other blocks first :))",
+    "run_error": "Error running code.",
+    "network_error": "Error: Could not communicate with the server.",
+    "error_prefix": "Error: {error}"
+  },
+  "free_drawing": {
+    "focus_mode": "Focus mode",
+    "exit_focus_mode": "Exit focus mode",
+    "fullscreen": "Fullscreen",
+    "exit_fullscreen": "Exit fullscreen",
+    "export_png": "Export as PNG",
+    "touch_gestures": "Touch gestures",
+    "touch_gestures_description": "Choose the action triggered when touching with each number of fingers.",
+    "fingers_count": "{count, plural, one {# finger} other {# fingers}}",
+    "tools": {
+      "draw": "Brush",
+      "eraser": "Eraser",
+      "bucket": "Paint bucket",
+      "hand": "Hand (move)",
+      "laser": "Laser (temporary)",
+      "shapes": "Shapes"
+    },
+    "gestures": {
+      "none": "None",
+      "undo": "Undo",
+      "redo": "Redo",
+      "fullscreen": "Fullscreen",
+      "focus": "Focus mode"
+    },
+    "shapes": {
+      "line": "Line",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "triangle": "Triangle",
+      "arrow": "Arrow"
+    },
+    "brushes_aria": "Brushes ({name})",
+    "brushes_tooltip": "Brushes — {name}",
+    "undo": "Undo",
+    "redo": "Redo",
+    "custom_color": "Custom color",
+    "color_swatch_aria": "Color {color}",
+    "size_in_pixels": "Size in pixels",
+    "size_popover_aria": "Size — {label} ({size}px)",
+    "zoom_out": "Zoom out",
+    "zoom_in": "Zoom in",
+    "fit_to_content": "Fit to content",
+    "custom_background_color": "Custom background color",
+    "follow_app_color": "Follow app color",
+    "layers_title": "Layers",
+    "expand_layers": "Expand layers",
+    "new_layer": "New layer",
+    "minimize_layers": "Minimize layers",
+    "drag_to_reorder": "Drag to reorder",
+    "hide": "Hide",
+    "show": "Show",
+    "double_click_rename": "Double-click to rename",
+    "unlock_action": "Unlock",
+    "lock_action": "Lock",
+    "delete_layer": "Delete layer",
+    "default_layer_name": "Layer {n}",
+    "brush_shapes": {
+      "pencil": "Pencil",
+      "dot": "Dot",
+      "pen": "Pen",
+      "marker": "Marker",
+      "airbrush": "Airbrush",
+      "watercolor": "Watercolor",
+      "oil": "Oil",
+      "charcoal": "Charcoal",
+      "chalk": "Chalk"
+    },
+    "brush_picker": {
+      "title": "Brushes",
+      "description": "Choose a brush or create a new one with its own shape and taper.",
+      "delete_brush_aria": "Delete {name}",
+      "create_title": "Create brush",
+      "name_label": "Name",
+      "shape_label": "Shape",
+      "new_brush_default_name": "New brush",
+      "size_start": "Start thickness",
+      "size_end": "End thickness",
+      "opacity_start": "Start opacity",
+      "opacity_end": "End opacity",
+      "add_brush": "Add brush"
+    }
+  },
+  "notebook_defaults": {
+    "title": "New Page",
+    "block_title": "New Block",
+    "block_content": "# Notes\nStart editing...",
+    "clone_title": "Copy of \"{title}\""
+  },
+  "open_file": {
+    "error_message": "Could not open this file.",
+    "back_to_notebooks": "Go to my notebooks",
+    "opening_file": "Opening file",
+    "importing_markdown": "Importing Markdown file..."
+  },
+  "share": {
+    "nothing_shared": "Nothing to share was received.",
+    "create_error": "Could not create a notebook with the shared content.",
+    "back_to_notebooks": "Go to my notebooks",
+    "importing_shared_content": "Importing shared content",
+    "creating_notebook": "Creating a new notebook...",
+    "loading": "Loading",
+    "loading_ellipsis": "Loading..."
   }
 }

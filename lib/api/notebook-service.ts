@@ -21,8 +21,14 @@ export async function getPublicNotebookBySlug(slug: string) {
   return publicApi.get<PublicNotebookDoc>(`/notebook/public/${slug}`);
 }
 
-export async function createNotebook() {
-  return api.post<string>("/notebook/create");
+export interface CreateNotebookPayload {
+  title: string;
+  blockTitle: string;
+  blockContent: string;
+}
+
+export async function createNotebook(payload: CreateNotebookPayload) {
+  return api.post<string>("/notebook/create", payload);
 }
 
 export async function getMyNotebooks() {
@@ -55,8 +61,8 @@ export async function deleteNotebook(id: string) {
   return api.delete(`/notebook/${id}`);
 }
 
-export async function cloneNotebook(id: string) {
-  return api.post<string>(`/notebook/${id}/clone`);
+export async function cloneNotebook(id: string, title: string) {
+  return api.post<string>(`/notebook/${id}/clone`, { title });
 }
 
 export async function saveNotebookData(

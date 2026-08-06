@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import { RunCode } from "@/lib/api/run-rust";
 import type { Block, RunStatus } from "@/types/block-types";
@@ -26,6 +27,7 @@ export function GoEditor({
   isDragging = false,
   executionUnavailableReason,
 }: GoNotebookProps) {
+  const t = useTranslations("run_rust");
   const [output, setOutput] = useState(executionUnavailableReason ?? "");
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState<RunStatus>(
@@ -40,6 +42,7 @@ export function GoEditor({
       code: block.content,
       notebookId,
       language: "go",
+      t,
     });
   }
 

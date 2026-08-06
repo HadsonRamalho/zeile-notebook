@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { type Brush, brushSize, makeCustomBrush } from "./brushes";
 import {
-  BRUSH_SHAPE_LABELS,
+  BRUSH_SHAPE_LABEL_KEYS,
   BRUSH_SHAPES,
   type BrushShape,
   drawStroke,
@@ -110,6 +111,7 @@ const NumberField = ({
 );
 
 function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
+  const t = useTranslations("free_drawing");
   const [name, setName] = useState("");
   const [shape, setShape] = useState<BrushShape>("pen");
   const [sizeStart, setSizeStart] = useState(8);
@@ -119,7 +121,7 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
 
   const preview: Brush = {
     id: "draft",
-    name: name || "Novo pincel",
+    name: name || t("brush_picker.new_brush_default_name"),
     shape,
     sizeStart,
     sizeEnd,
@@ -130,7 +132,7 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
   const submit = () => {
     onCreate(
       makeCustomBrush({
-        name: name.trim() || BRUSH_SHAPE_LABELS[shape],
+        name: name.trim() || t(BRUSH_SHAPE_LABEL_KEYS[shape]),
         shape,
         sizeStart,
         sizeEnd,
@@ -144,7 +146,7 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
       <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-        Criar pincel
+        {t("brush_picker.create_title")}
       </span>
 
       <div className="rounded-md border border-border bg-card">
@@ -152,17 +154,21 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label className="text-[11px] text-muted-foreground">Nome</Label>
+        <Label className="text-[11px] text-muted-foreground">
+          {t("brush_picker.name_label")}
+        </Label>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={BRUSH_SHAPE_LABELS[shape]}
+          placeholder={t(BRUSH_SHAPE_LABEL_KEYS[shape])}
           className="h-8"
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label className="text-[11px] text-muted-foreground">Forma</Label>
+        <Label className="text-[11px] text-muted-foreground">
+          {t("brush_picker.shape_label")}
+        </Label>
         <div className="grid grid-cols-3 gap-1">
           {BRUSH_SHAPES.map((s) => (
             <button
@@ -176,7 +182,7 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
                   : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              {BRUSH_SHAPE_LABELS[s]}
+              {t(BRUSH_SHAPE_LABEL_KEYS[s])}
             </button>
           ))}
         </div>
@@ -184,28 +190,28 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
 
       <div className="grid grid-cols-2 gap-2">
         <NumberField
-          label="Espessura início"
+          label={t("brush_picker.size_start")}
           value={sizeStart}
           min={1}
           max={120}
           onChange={setSizeStart}
         />
         <NumberField
-          label="Espessura fim"
+          label={t("brush_picker.size_end")}
           value={sizeEnd}
           min={1}
           max={120}
           onChange={setSizeEnd}
         />
         <NumberField
-          label="Opacidade início"
+          label={t("brush_picker.opacity_start")}
           value={opacityStart}
           min={1}
           max={100}
           onChange={setOpacityStart}
         />
         <NumberField
-          label="Opacidade fim"
+          label={t("brush_picker.opacity_end")}
           value={opacityEnd}
           min={1}
           max={100}
@@ -215,7 +221,7 @@ function CreateBrushForm({ onCreate }: { onCreate: (brush: Brush) => void }) {
 
       <Button type="button" size="sm" onClick={submit} className="gap-1.5">
         <Plus className="size-4" />
-        Adicionar pincel
+        {t("brush_picker.add_brush")}
       </Button>
     </div>
   );
@@ -238,14 +244,13 @@ export function BrushPicker({
   onCreate: (brush: Brush) => void;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslations("free_drawing");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 max-md:top-auto max-md:bottom-0 max-md:translate-y-0 max-md:rounded-b-none max-md:max-w-full sm:max-w-md">
         <DialogHeader className="shrink-0 border-b border-border p-4">
-          <DialogTitle>Pincéis</DialogTitle>
-          <DialogDescription>
-            Escolha um pincel ou crie um novo com forma e afinamento próprios.
-          </DialogDescription>
+          <DialogTitle>{t("brush_picker.title")}</DialogTitle>
+          <DialogDescription>{t("brush_picker.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -277,7 +282,9 @@ export function BrushPicker({
                   <button
                     type="button"
                     onClick={() => onDelete(brush.id)}
-                    aria-label={`Excluir ${brush.name}`}
+                    aria-label={t("brush_picker.delete_brush_aria", {
+                      name: brush.name,
+                    })}
                     className="absolute right-1 top-1 grid size-6 place-items-center rounded-md bg-card/80 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/brush:opacity-100"
                   >
                     <Trash2 className="size-3.5" />

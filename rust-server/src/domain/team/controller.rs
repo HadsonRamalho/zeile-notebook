@@ -20,8 +20,8 @@ use crate::{
 };
 
 use super::dto::{
-    AcceptInviteRequest, InviteRequest, NewTeamRoleRequest, TeamMemberResponse, TeamRoleView,
-    UpdateMemberRoleRequest, UpdateTeamRole,
+    AcceptInviteRequest, CreateTeamPageRequest, InviteRequest, NewTeamRoleRequest,
+    TeamMemberResponse, TeamRoleView, UpdateMemberRoleRequest, UpdateTeamRole,
 };
 use super::entity::{
     NewTeam, NewTeamInvitation, NewTeamMember, NewTeamRole, Team, TeamMember, TeamRole, UpdateTeam,
@@ -32,13 +32,19 @@ use super::service::{email_matches, get_default_roles, get_team_member};
 #[utoipa::path(
     post,
     path = "/team/{id}/notebooks",
+    request_body = CreateTeamPageRequest,
     responses((status = OK, body = Uuid), (status = 401, body = ApiError))
 )]
 pub async fn api_create_team_page(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
+    Json(payload): Json<CreateTeamPageRequest>,
 ) -> Result<(StatusCode, Json<Uuid>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -51,7 +57,7 @@ pub async fn api_create_team_page(
         id: page_id,
         user_id: None,
         team_id: Some(team_id),
-        title: "Nova Página".to_string(),
+        title: payload.title,
     };
 
     crate::domain::notebook::create_notebook(conn, &new_page)

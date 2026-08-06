@@ -325,7 +325,7 @@ pub async fn get_notebook_with_blocks(
         .await
     {
         Ok(b) => b,
-        Err(e) => return Err(format!("Erro ao buscar blocos: {}", e)),
+        Err(e) => return Err(format!("Error fetching blocks: {}", e)),
     };
 
     let api_blocks: Vec<super::dto::BlockResponse> = db_blocks
@@ -336,7 +336,7 @@ pub async fn get_notebook_with_blocks(
                     .and_then(|json_val| match serde_json::from_value(json_val) {
                         Ok(meta) => Some(meta),
                         Err(e) => {
-                            println!("Erro ao desserializar metadata do bloco {}: {}", b.id, e);
+                            println!("Error deserializing metadata for block {}: {}", b.id, e);
                             None
                         }
                     });

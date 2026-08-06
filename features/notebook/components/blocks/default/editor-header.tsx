@@ -1,4 +1,5 @@
 import { Clock, Eye, EyeClosed, Play, Terminal } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,7 @@ function RenderFileName({
   block,
   setBlocksAction,
 }: RenderFileNameProps) {
+  const t = useTranslations("editor_header");
   return (
     <input
       value={name}
@@ -57,7 +59,7 @@ function RenderFileName({
         setBlocksAction(newBlocks);
       }}
       className="bg-transparent text-muted-foreground text-sm font-mono focus:outline-none focus:text-primary h-full"
-      placeholder="Nome do componente..."
+      placeholder={t("file_name_placeholder")}
     />
   );
 }
@@ -91,6 +93,7 @@ export function EditorHeader({
   showConsole,
   setShowConsole,
 }: EditorHeaderProps) {
+  const t = useTranslations("editor_header");
   let fileName = getTsxFileName();
   switch (block.language) {
     case "cpp":
@@ -148,11 +151,11 @@ export function EditorHeader({
             >
               {babelReady ? (
                 <>
-                  <Play className="size-3.5 fill-current" /> Executar
+                  <Play className="size-3.5 fill-current" /> {t("run")}
                 </>
               ) : (
                 <>
-                  <Clock className="size-3.5" /> Carregar o Compilador...
+                  <Clock className="size-3.5" /> {t("loading_compiler")}
                 </>
               )}
             </button>
@@ -164,11 +167,11 @@ export function EditorHeader({
             }}
           >
             <SelectTrigger className="bg-transparent py-1.5 w-full justify-center md:w-44 border-none rounded text-foreground">
-              <SelectValue placeholder="Selecione o modo" />
+              <SelectValue placeholder={t("mode_placeholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="advanced">Modo Sandpack</SelectItem>
-              <SelectItem value="simple">Modo Nativo</SelectItem>
+              <SelectItem value="advanced">{t("mode_sandpack")}</SelectItem>
+              <SelectItem value="simple">{t("mode_native")}</SelectItem>
             </SelectContent>
           </Select>
           <button
@@ -178,12 +181,12 @@ export function EditorHeader({
           >
             {showPreview ? (
               <>
-                <Eye className="size-4" /> Ocultar Renderização
+                <Eye className="size-4" /> {t("hide_render")}
               </>
             ) : (
               <>
                 <EyeClosed className="size-4" />
-                Exibir Renderização
+                {t("show_render")}
               </>
             )}
           </button>
@@ -194,7 +197,7 @@ export function EditorHeader({
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <Terminal className="size-4" />
-              {showConsole ? "Ocultar Console" : "Exibir Console"}
+              {showConsole ? t("hide_console") : t("show_console")}
             </button>
           )}
         </div>

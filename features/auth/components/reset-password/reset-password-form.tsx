@@ -112,7 +112,7 @@ export function ResetPasswordForm({
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Erro</AlertTitle>
+                <AlertTitle>{t("errors.title")}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}

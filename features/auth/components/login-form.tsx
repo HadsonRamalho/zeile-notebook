@@ -79,9 +79,9 @@ export function LoginForm({
   const handleAuthError = useCallback(
     (e: string) => {
       const errorKey = `errors.${e}`;
-      const message = t(errorKey, {
-        defaultValue: t("login.errors.generic_github_error"),
-      });
+      const message = t.has(errorKey)
+        ? t(errorKey)
+        : t("errors.generic_github_error");
 
       setError(message);
       toast.error(message);
@@ -195,7 +195,7 @@ export function LoginForm({
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Erro</AlertTitle>
+                <AlertTitle>{t("errors.title")}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -210,7 +210,7 @@ export function LoginForm({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("email_label")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("email_placeholder")}

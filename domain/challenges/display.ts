@@ -34,7 +34,27 @@ export const DIFFICULTY_DOT: Record<DifficultyKey, string> = {
   hard: "bg-rose-500",
 };
 
+export const DIFFICULTY_LABEL_KEYS: Record<DifficultyKey, string> = {
+  easy: "difficulty.easy",
+  medium: "difficulty.medium",
+  hard: "difficulty.hard",
+};
+
 export const JUDGE_MODES: JudgeMode[] = ["io", "reference", "property"];
+
+export const JUDGE_MODE_LABEL_KEYS: Record<JudgeMode, string> = {
+  io: "judge_mode.io",
+  reference: "judge_mode.reference",
+  property: "judge_mode.property",
+};
+
+export const SUBMISSION_STATUS_LABEL_KEYS: Record<SubmissionStatus, string> = {
+  queued: "status.queued",
+  running: "status.running",
+  done: "status.done",
+  compile_error: "status.compile_error",
+  error: "status.error",
+};
 
 const PASS_VERDICTS: ReadonlySet<Verdict> = new Set<Verdict>(["AC", "SKIP"]);
 

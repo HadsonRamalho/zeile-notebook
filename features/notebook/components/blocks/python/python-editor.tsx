@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import {
   clearCellResult,
@@ -23,6 +24,7 @@ export default function PythonSandbox({
   isDragging,
   block,
 }: PythonSandboxProps) {
+  const t = useTranslations("run_rust");
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState<RunStatus>("idle");
@@ -33,7 +35,7 @@ export default function PythonSandbox({
     const res = await runPythonInSandbox(block.content);
 
     if (res.error) {
-      setOutput(`Erro: ${res.error}`);
+      setOutput(t("error_prefix", { error: res.error }));
       setStatus("error");
       clearCellResult(block.id);
     } else {

@@ -54,6 +54,8 @@ jobs:
 
       - run: pnpm test
 
+      - run: pnpm validate:i18n
+
   rust-test:
     needs: changes
     if: needs.changes.outputs.rust == 'true'

@@ -134,7 +134,7 @@ async fn run() -> Result<(), BootError> {
             source,
         })?;
 
-    tracing::info!("Servidor rodando em http://{addr}");
+    tracing::info!("Server running at http://{addr}");
 
     let signal = state.shutdown.clone();
     tokio::spawn(async move {
@@ -176,7 +176,7 @@ fn join_result(
     match finished {
         Ok(result) => result,
         Err(join_error) => {
-            tracing::error!("shutdown: a task do servidor encerrou de forma anormal: {join_error}");
+            tracing::error!("shutdown: server task ended abnormally: {join_error}");
             Ok(())
         }
     }

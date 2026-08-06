@@ -52,8 +52,8 @@ export async function createTeamRole(teamId: string, role: NewTeamRoleRequest) {
   return await api.post(`/team/${teamId}/roles`, role);
 }
 
-export async function createTeamPage(teamId: string) {
-  return await api.post(`/team/${teamId}/notebooks`);
+export async function createTeamPage(teamId: string, title: string) {
+  return await api.post(`/team/${teamId}/notebooks`, { title });
 }
 
 export async function fetchTeamPages(teamId: string) {

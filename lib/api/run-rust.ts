@@ -3,6 +3,8 @@ import { createApi } from "./base";
 
 const api = createApi("exec-compiled");
 
+type RunCodeTranslate = (key: string) => string;
+
 interface RunCodeProps {
   setOutput: (o: string) => void;
   setStatus: (s: RunStatus) => void;
@@ -10,6 +12,7 @@ interface RunCodeProps {
   code: string;
   language: Language;
   notebookId?: string | undefined;
+  t: RunCodeTranslate;
 }
 
 type ExecStatus =
@@ -35,12 +38,14 @@ interface RunCodeApiResponse {
 function formatCombinedOutput({
   stdout,
   stderr,
+  t,
 }: {
   stdout?: string;
   stderr?: string;
+  t: RunCodeTranslate;
 }) {
   if (stdout && stderr) {
-    return `${stdout}\n\n--- Erro de Execução ---\n${stderr}`;
+    return `${stdout}\n\n--- ${t("execution_error_label")} ---\n${stderr}`;
   }
   return stdout || stderr || "";
 }
@@ -52,6 +57,7 @@ export async function RunCode({
   code,
   language,
   notebookId,
+  t,
 }: RunCodeProps) {
   setIsRunning(true);
   setStatus("idle");
@@ -70,8 +76,7 @@ export async function RunCode({
     if (status === "ok") {
       setStatus("success");
       setOutput(
-        formatCombinedOutput({ stdout, stderr }) ||
-          "Código executado com sucesso.",
+        formatCombinedOutput({ stdout, stderr, t }) || t("run_success"),
       );
       return;
     }
@@ -79,17 +84,15 @@ export async function RunCode({
     setStatus("error");
 
     if (errorCode === "MODULE_NOT_FOUND") {
-      setOutput(
-        `Falha relacionada a outro módulo. Tente compilar outros blocos primeiro :))\n\n${stderr}`,
-      );
+      setOutput(`${t("module_not_found")}\n\n${stderr}`);
       return;
     }
 
-    setOutput(formatCombinedOutput({ stdout, stderr }) || "Erro na execução.");
+    setOutput(formatCombinedOutput({ stdout, stderr, t }) || t("run_error"));
   } catch (err) {
     console.error(err);
     setStatus("error");
-    setOutput("Erro: Não foi possível se comunicar com o servidor.");
+    setOutput(t("network_error"));
   } finally {
     setIsRunning(false);
   }

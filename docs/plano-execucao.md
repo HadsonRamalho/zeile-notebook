@@ -287,14 +287,17 @@ feature) voltou de `features/notebook/lib/` para `lib/background-sync.ts`. `Solv
 `LeaderboardTable` e `SubmissionResults` eram só consumidos pelo bloco de challenge do notebook — moveram
 para dentro de `features/notebook/components/blocks/challenge/`, não para `features/challenges/`.
 
-#### 16 · i18n em ondas
+#### 16 · i18n em ondas — [x] concluída
 
-- [ ] Onda 1 — telas que o usuário sempre vê: auth, teams, settings, notificações (Q42)
-- [ ] Onda 2 — editor e canvas: free-drawing, `layouts-canvas-tools`, `editor-header`, `run-rust`
-- [ ] Servidor não produz texto de UI: `"Nova Página"`, `"Novo Bloco"`, `"# Notas…"` (Q43)
-- [ ] Logs do servidor em en-US (Q44)
-- [ ] ICU + chaves estáticas; mapa de enum→chave em objeto `as const` (Q46)
-- [ ] **Ligar os 3 checks de i18n** (Q45): paridade · órfãs · todo `errorCode` com chave nos 2 locales
+Entregue como stack de 3 PRs dependentes (#145/#146/#147).
+
+- [x] Onda 1 — telas que o usuário sempre vê: auth, teams, settings, notificações (Q42, PR #145). Textos hardcoded restantes eram pequenos: `AlertTitle` de erro em login/forgot-password/reset-password (a chave já existia, só não era usada) e o diálogo de confirmação de exclusão de conta
+- [x] Onda 2 — editor e canvas: free-drawing (célula, engine, seletor de pincéis), `layouts-canvas-tools`, `editor-header`, `run-rust` (PR #146). Os mapas `TOOL_LABELS`/`GESTURE_ACTION_LABELS`/`GEO_SHAPE_LABELS`/`BRUSH_SHAPE_LABELS` guardavam texto já traduzido — passaram a guardar a **chave** (Q46), resolvida com `useTranslations` no ponto de uso
+- [x] Servidor não produz texto de UI (Q43, PR #146): `api_create_notebook`, `api_create_team_page` e `api_clone_notebook` recebem título/conteúdo do bloco inicial no corpo da requisição, traduzidos no cliente, em vez de decidir `"Nova Página"`/`"Novo Bloco"`/`"# Notas…"`. Resolvido pela opção (b) do Q43 (front manda o texto já traduzido) — mais simples que introduzir `title: null` e um fallback de renderização em todo lugar que lista notebooks
+- [x] Logs do servidor em en-US (Q44, PR #146): `tracing::info!/warn!/error!`, `println!` e as mensagens de `stderr` do executor de sandbox (`file/mod.rs`) estavam em pt-BR
+- [x] ICU + chaves estáticas; mapa de enum→chave em objeto `as const` (Q46, PR #147): `t(\`prefixo.${var}\`)` — status de submissão, tipo de gráfico, tipo de atividade, dificuldade, modo de julgamento e módulo de permissão passaram a resolver a chave por um `Record<Enum, string>` explícito
+- [x] **Ligar os 3 checks de i18n** (Q45, PR #147): `scripts/validate-i18n.mjs`, exposto como `pnpm validate:i18n` no job `frontend-test` do `ci.yml`. Rodar o check pela primeira vez expôs três achados reais, não só chaves órfãs cosméticas: **(1)** 6 `errorCode` gerados sem chave em `api_errors` (`ERROR_SENDING_EMAIL`, `PERMISSION_DENIED`, `LAST_LOGIN_METHOD`, `UNIQUE_VIOLATION`, `FOREIGN_KEY_VIOLATION`, `NOT_FOUND`) — usuário veria o código cru na tela; **(2)** um bug em `login-form.tsx`: `t("login.errors.generic_github_error")` chamado de dentro do próprio namespace `login`, nunca resolvia; **(3)** ~40 chaves órfãs de UI que não existe mais — sidebar de backup antigo, editor de cargo legado (substituído pelo catálogo de permissões granular) e um fluxo de autoria de desafios que nunca foi finalizado (só 3 dos ~35 campos chegaram a ser usados)
+  - **Chaves genuinamente dinâmicas, isentas do check de órfãs com justificativa em `scripts/validate-i18n.mjs`**: `api_errors.*` (código vem do backend; cobertura já garantida pelo check 3), `login.errors.*` (código de erro OAuth cruzado com slug do provedor — conjunto aberto), `perm.*` (chave = `permission.key` do catálogo em runtime, já guardada com `.has()` antes do uso)
 
 #### 17 · Escrever os docs normativos
 

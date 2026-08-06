@@ -24,7 +24,10 @@ import {
   TabsTrigger,
 } from "@/components/motion/tabs";
 import { Button } from "@/components/ui/button";
-import { languageLabel } from "@/domain/challenges/display";
+import {
+  languageLabel,
+  SUBMISSION_STATUS_LABEL_KEYS,
+} from "@/domain/challenges/display";
 import { LeaderboardTable } from "@/features/notebook/components/blocks/challenge/leaderboard-table";
 import { SolveEditor } from "@/features/notebook/components/blocks/challenge/solve-editor";
 import { SubmissionResults } from "@/features/notebook/components/blocks/challenge/submission-results";
@@ -292,7 +295,7 @@ export function ChallengeSolve({
                       {new Date(s.createdAt).toLocaleString()}
                     </span>
                     <span className="text-sm font-medium">
-                      {t(`status.${s.status}`)}
+                      {t(SUBMISSION_STATUS_LABEL_KEYS[s.status])}
                       {s.status === "done" && (
                         <span className="ml-2 font-mono text-muted-foreground">
                           {s.score}/{s.maxScore}

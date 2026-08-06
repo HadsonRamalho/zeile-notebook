@@ -139,3 +139,14 @@ pub struct AcceptInviteRequest {
     #[validate(length(min = 1, message = "Token is required"))]
     pub token: String,
 }
+
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTeamPageRequest {
+    #[validate(length(
+        min = 1,
+        max = 300,
+        message = "Title must be between 1 and 300 characters"
+    ))]
+    pub title: String,
+}

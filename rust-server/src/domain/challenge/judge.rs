@@ -340,7 +340,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     }
 
     if let Err(e) = repository::insert_submission_results(&mut conn, &results).await {
-        error!("judge: falha ao gravar resultados: {}", e);
+        error!("judge: failed to write results: {}", e);
     }
 
     repository::finalize_submission(

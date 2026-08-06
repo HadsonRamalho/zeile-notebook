@@ -41,22 +41,21 @@ export function DeleteAccountDialog() {
 
       <AlertDialogContent onClick={(e) => e.stopPropagation()}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+          <AlertDialogTitle>{t("danger_card.confirm_title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta ação não pode ser desfeita. Isso excluirá permanentemente todos
-            os seus dados na plataforma.
+            {t("danger_card.confirm_description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel className="hover:cursor-pointer">
-            Cancelar
+            {t("danger_card.confirm_cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             className="bg-red-600 hover:bg-red-700 text-white border-none hover:cursor-pointer"
           >
-            Sim, deletar minha conta
+            {t("danger_card.confirm_action")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

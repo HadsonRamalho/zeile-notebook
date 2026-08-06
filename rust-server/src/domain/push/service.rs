@@ -94,7 +94,7 @@ pub async fn send_push_to_user(
                 .await
                 .ok();
         } else if let Err(e) = result {
-            tracing::warn!("Falha ao enviar push: {:?}", e);
+            tracing::warn!("Failed to send push notification: {:?}", e);
         }
     }
 }

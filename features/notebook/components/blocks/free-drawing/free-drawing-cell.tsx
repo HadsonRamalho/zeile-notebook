@@ -34,7 +34,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -84,7 +84,7 @@ import {
   exportSceneToCanvas,
   type FreeDrawingElement,
   findTopStrokeAt,
-  GEO_SHAPE_LABELS,
+  GEO_SHAPE_LABEL_KEYS,
   GEO_SHAPES,
   type GeoShape,
   geoShapePoints,
@@ -122,13 +122,13 @@ const TOOL_ICONS: Record<ToolKind, typeof Paintbrush> = {
   shapes: Shapes,
 };
 
-const TOOL_LABELS: Record<ToolKind, string> = {
-  draw: "Pincel",
-  eraser: "Borracha",
-  bucket: "Balde de tinta",
-  hand: "Mão (mover)",
-  laser: "Laser (temporário)",
-  shapes: "Formas",
+const TOOL_LABEL_KEYS: Record<ToolKind, string> = {
+  draw: "tools.draw",
+  eraser: "tools.eraser",
+  bucket: "tools.bucket",
+  hand: "tools.hand",
+  laser: "tools.laser",
+  shapes: "tools.shapes",
 };
 
 // Keyboard shortcuts by language (letter overlaid on the tool icon).
@@ -164,12 +164,12 @@ const GEO_ICONS: Record<GeoShape, typeof Square> = {
 
 type GestureAction = "none" | "undo" | "redo" | "fullscreen" | "focus";
 
-const GESTURE_ACTION_LABELS: Record<GestureAction, string> = {
-  none: "Nada",
-  undo: "Desfazer",
-  redo: "Refazer",
-  fullscreen: "Tela cheia",
-  focus: "Modo foco",
+const GESTURE_ACTION_LABEL_KEYS: Record<GestureAction, string> = {
+  none: "gestures.none",
+  undo: "gestures.undo",
+  redo: "gestures.redo",
+  fullscreen: "gestures.fullscreen",
+  focus: "gestures.focus",
 };
 
 const GESTURE_FINGERS = [2, 3, 4];
@@ -217,6 +217,7 @@ export function FreeDrawingCell({
   updateDrawingScene,
   canWrite,
 }: FreeDrawingCellProps) {
+  const t = useTranslations("free_drawing");
   const [fullscreen, setFullscreen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [elements, setElements] = useState<FreeDrawingElement[]>(() => {
@@ -224,7 +225,9 @@ export function FreeDrawingCell({
       doc,
       blockId,
     ) as unknown as FreeDrawingElement[];
-    return seeded.length > 0 ? seeded : [defaultLayer(0, "Camada 1")];
+    return seeded.length > 0
+      ? seeded
+      : [defaultLayer(0, t("default_layer_name", { n: 1 }))];
   });
   const [activeLayerId, setActiveLayerId] = useState<string | null>(
     () => elements.find(isLayer)?.id ?? null,
@@ -334,12 +337,15 @@ export function FreeDrawingCell({
     const sig = sceneSignature(remote);
     if (sig === lastSyncedSig.current) return;
     lastSyncedSig.current = sig;
-    const next = remote.length > 0 ? remote : [defaultLayer(0, "Camada 1")];
+    const next =
+      remote.length > 0
+        ? remote
+        : [defaultLayer(0, t("default_layer_name", { n: 1 }))];
     setElements(next);
     if (!next.some((e) => isLayer(e) && e.id === activeLayerId)) {
       setActiveLayerId(next.find(isLayer)?.id ?? null);
     }
-  }, [doc, blockId, activeLayerId]);
+  }, [doc, blockId, activeLayerId, t]);
 
   useEffect(() => {
     return () => {
@@ -811,7 +817,7 @@ export function FreeDrawingCell({
   const addLayer = () => {
     const layer = defaultLayer(
       orderCounter.current + 1,
-      `Camada ${layers.length + 1}`,
+      t("default_layer_name", { n: layers.length + 1 }),
     );
     orderCounter.current += 1;
     commit([...elements, layer], elements);
@@ -1068,8 +1074,8 @@ export function FreeDrawingCell({
             // com o polegar do que o canto superior.
             fullscreen && "max-md:hidden",
           )}
-          title={focusMode ? "Sair do modo foco" : "Modo foco"}
-          aria-label={focusMode ? "Sair do modo foco" : "Modo foco"}
+          title={focusMode ? t("exit_focus_mode") : t("focus_mode")}
+          aria-label={focusMode ? t("exit_focus_mode") : t("focus_mode")}
         >
           <Focus size={16} />
         </button>
@@ -1077,8 +1083,8 @@ export function FreeDrawingCell({
           type="button"
           onClick={() => setFullscreen((v) => !v)}
           className="rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
-          title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
-          aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+          title={fullscreen ? t("exit_fullscreen") : t("fullscreen")}
+          aria-label={fullscreen ? t("exit_fullscreen") : t("fullscreen")}
         >
           {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
@@ -1087,8 +1093,8 @@ export function FreeDrawingCell({
             type="button"
             onClick={exportPng}
             className="rounded-md border border-border bg-card/85 p-1.5 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
-            title="Exportar como PNG"
-            aria-label="Exportar como PNG"
+            title={t("export_png")}
+            aria-label={t("export_png")}
           >
             <Download size={16} />
           </button>
@@ -1106,8 +1112,8 @@ export function FreeDrawingCell({
               ? "bg-foreground/[0.1] text-foreground"
               : "bg-card/85 text-foreground/70",
           )}
-          title={focusMode ? "Sair do modo foco" : "Modo foco"}
-          aria-label={focusMode ? "Sair do modo foco" : "Modo foco"}
+          title={focusMode ? t("exit_focus_mode") : t("focus_mode")}
+          aria-label={focusMode ? t("exit_focus_mode") : t("focus_mode")}
         >
           <Focus size={16} />
         </button>
@@ -1163,7 +1169,7 @@ export function FreeDrawingCell({
             />
             {(tool === "draw" || tool === "eraser") && (
               <BrushSizePopover
-                label={tool === "eraser" ? "Borracha" : activeBrush.name}
+                label={tool === "eraser" ? t("tools.eraser") : activeBrush.name}
                 size={tool === "eraser" ? eraserSize : brushSize(activeBrush)}
                 onSize={(v) =>
                   tool === "eraser" ? setEraserSize(v) : setActiveBrushSize(v)
@@ -1249,13 +1255,14 @@ function GestureConfigDialog({
   gestures: Record<number, GestureAction>;
   onSet: (fingers: number, action: GestureAction) => void;
 }) {
+  const t = useTranslations("free_drawing");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-md:top-auto max-md:bottom-0 max-md:translate-y-0 max-md:rounded-b-none max-md:max-w-full sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Gestos de toque</DialogTitle>
+          <DialogTitle>{t("touch_gestures")}</DialogTitle>
           <DialogDescription>
-            Escolha a ação disparada ao tocar com cada número de dedos.
+            {t("touch_gestures_description")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
@@ -1264,25 +1271,27 @@ function GestureConfigDialog({
               key={fingers}
               className="flex items-center justify-between gap-3"
             >
-              <span className="text-sm text-foreground">{fingers} dedos</span>
+              <span className="text-sm text-foreground">
+                {t("fingers_count", { count: fingers })}
+              </span>
               <div className="flex flex-wrap justify-end gap-1">
-                {(Object.keys(GESTURE_ACTION_LABELS) as GestureAction[]).map(
-                  (action) => (
-                    <button
-                      key={action}
-                      type="button"
-                      onClick={() => onSet(fingers, action)}
-                      className={cn(
-                        "rounded-md border px-2 py-1 text-xs transition-colors",
-                        (gestures[fingers] ?? "none") === action
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                      )}
-                    >
-                      {GESTURE_ACTION_LABELS[action]}
-                    </button>
-                  ),
-                )}
+                {(
+                  Object.keys(GESTURE_ACTION_LABEL_KEYS) as GestureAction[]
+                ).map((action) => (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => onSet(fingers, action)}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-xs transition-colors",
+                      (gestures[fingers] ?? "none") === action
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    {t(GESTURE_ACTION_LABEL_KEYS[action])}
+                  </button>
+                ))}
               </div>
             </div>
           ))}
@@ -1299,6 +1308,7 @@ function GeoShapePicker({
   shape: GeoShape;
   onShape: (s: GeoShape) => void;
 }) {
+  const t = useTranslations("free_drawing");
   return (
     <div className="absolute top-3 left-16 z-10 flex items-center gap-1 rounded-full border border-border bg-card/85 px-2 py-1.5 shadow-lg backdrop-blur">
       {GEO_SHAPES.map((s) => {
@@ -1308,7 +1318,7 @@ function GeoShapePicker({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label={GEO_SHAPE_LABELS[s]}
+                aria-label={t(GEO_SHAPE_LABEL_KEYS[s])}
                 aria-pressed={s === shape}
                 onClick={() => onShape(s)}
                 className={cn(
@@ -1321,7 +1331,7 @@ function GeoShapePicker({
                 <Icon className="size-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{GEO_SHAPE_LABELS[s]}</TooltipContent>
+            <TooltipContent>{t(GEO_SHAPE_LABEL_KEYS[s])}</TooltipContent>
           </Tooltip>
         );
       })}
@@ -1340,13 +1350,14 @@ function ToolButton({
   shortcut?: string | undefined;
   onClick: (t: ToolKind) => void;
 }) {
+  const t = useTranslations("free_drawing");
   const Icon = TOOL_ICONS[id];
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={TOOL_LABELS[id]}
+          aria-label={t(TOOL_LABEL_KEYS[id])}
           aria-pressed={isActive}
           onClick={() => onClick(id)}
           className={cn(
@@ -1365,7 +1376,7 @@ function ToolButton({
         </button>
       </TooltipTrigger>
       <TooltipContent side="right">
-        {TOOL_LABELS[id]}
+        {t(TOOL_LABEL_KEYS[id])}
         {shortcut ? ` (${shortcut})` : ""}
       </TooltipContent>
     </Tooltip>
@@ -1391,6 +1402,7 @@ function BrushPalette({
   onUndo: () => void;
   onRedo: () => void;
 }) {
+  const t = useTranslations("free_drawing");
   const actions: ToolKind[] = ["bucket", "hand", "laser", "shapes"];
   const BrushIcon = TOOL_ICONS.draw;
   return (
@@ -1399,7 +1411,7 @@ function BrushPalette({
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label={`Pincéis (${activeBrush.name})`}
+            aria-label={t("brushes_aria", { name: activeBrush.name })}
             aria-pressed={tool === "draw"}
             onClick={onOpenBrushes}
             className={cn(
@@ -1418,7 +1430,7 @@ function BrushPalette({
           </button>
         </TooltipTrigger>
         <TooltipContent side="right">
-          Pincéis — {activeBrush.name}
+          {t("brushes_tooltip", { name: activeBrush.name })}
         </TooltipContent>
       </Tooltip>
       <ToolButton
@@ -1442,31 +1454,31 @@ function BrushPalette({
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Desfazer"
+            aria-label={t("undo")}
             onClick={onUndo}
             className="grid size-9 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           >
             <Undo2 className="size-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">Desfazer</TooltipContent>
+        <TooltipContent side="right">{t("undo")}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Refazer"
+            aria-label={t("redo")}
             onClick={onRedo}
             className="grid size-9 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           >
             <Redo2 className="size-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">Refazer</TooltipContent>
+        <TooltipContent side="right">{t("redo")}</TooltipContent>
       </Tooltip>
       <button
         type="button"
-        aria-label="Gestos de toque"
+        aria-label={t("touch_gestures")}
         onClick={onOpenGestures}
         className="grid size-9 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground md:hidden"
       >
@@ -1483,6 +1495,7 @@ function ColorPicker({
   color: string;
   onColor: (c: string) => void;
 }) {
+  const t = useTranslations("free_drawing");
   return (
     <div className="-translate-x-1/2 absolute top-3 left-1/2 z-10 flex items-center gap-1.5 rounded-full border border-border bg-card/85 px-3 py-1.5 shadow-lg backdrop-blur">
       <div className="hidden items-center gap-1.5 md:flex">
@@ -1490,7 +1503,7 @@ function ColorPicker({
           <button
             key={c}
             type="button"
-            aria-label={`Cor ${c}`}
+            aria-label={t("color_swatch_aria", { color: c })}
             onClick={() => onColor(c)}
             className={cn(
               "size-5 rounded-full border transition-shadow",
@@ -1508,7 +1521,7 @@ function ColorPicker({
           value={color}
           onChange={(e) => onColor(e.target.value)}
           className="absolute -inset-1 cursor-pointer"
-          aria-label="Cor customizada"
+          aria-label={t("custom_color")}
         />
       </label>
     </div>
@@ -1528,6 +1541,7 @@ function BrushSizePopover({
   size: number;
   onSize: (s: number) => void;
 }) {
+  const t = useTranslations("free_drawing");
   const [open, setOpen] = useState(false);
   const dot = Math.min(14, Math.max(3, Math.round(size / 6)));
   const controls = (
@@ -1549,7 +1563,7 @@ function BrushSizePopover({
           if (Number.isNaN(n)) return;
           onSize(Math.min(120, Math.max(1, Math.round(n))));
         }}
-        aria-label="Tamanho em pixels"
+        aria-label={t("size_in_pixels")}
         className="w-12 rounded border border-border bg-background px-1 py-0.5 text-center font-mono text-[10px] tabular-nums outline-none"
       />
     </div>
@@ -1569,7 +1583,7 @@ function BrushSizePopover({
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          aria-label={`Tamanho — ${label} (${size}px)`}
+          aria-label={t("size_popover_aria", { label, size })}
           className={cn(
             "flex items-center gap-1.5 rounded-full border border-border bg-card/85 px-2.5 py-1.5 shadow-lg backdrop-blur",
             open && "bg-foreground/[0.1]",
@@ -1607,20 +1621,21 @@ function ZoomControls({
   onOut: () => void;
   onFit: () => void;
 }) {
+  const t = useTranslations("free_drawing");
   return (
     <div className="-translate-x-1/2 absolute bottom-3 left-1/2 z-10 hidden items-center gap-0.5 rounded-full border border-border bg-card/85 p-1 shadow-lg backdrop-blur md:flex">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Diminuir zoom"
+            aria-label={t("zoom_out")}
             onClick={onOut}
             className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           >
             <ZoomOut className="size-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Diminuir zoom</TooltipContent>
+        <TooltipContent>{t("zoom_out")}</TooltipContent>
       </Tooltip>
       <span className="min-w-[42px] px-1 text-center font-mono text-foreground/80 text-xs tabular-nums">
         {Math.round(zoom * 100)}%
@@ -1629,28 +1644,28 @@ function ZoomControls({
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Aumentar zoom"
+            aria-label={t("zoom_in")}
             onClick={onIn}
             className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           >
             <ZoomIn className="size-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Aumentar zoom</TooltipContent>
+        <TooltipContent>{t("zoom_in")}</TooltipContent>
       </Tooltip>
       <div className="mx-1 h-5 w-px bg-border" />
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Ajustar ao conteúdo"
+            aria-label={t("fit_to_content")}
             onClick={onFit}
             className="grid size-7 place-items-center rounded-full text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           >
             <Scan className="size-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Ajustar ao conteúdo</TooltipContent>
+        <TooltipContent>{t("fit_to_content")}</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -1665,6 +1680,7 @@ function BackgroundControl({
   onCustom: (color: string) => void;
   onFollowTheme: () => void;
 }) {
+  const t = useTranslations("free_drawing");
   const isTheme = settings.backgroundMode === "theme";
   return (
     <div className="absolute bottom-3 left-3 z-10 hidden items-center gap-1.5 rounded-full border border-border bg-card/85 px-2 py-1.5 shadow-lg backdrop-blur md:flex">
@@ -1689,14 +1705,14 @@ function BackgroundControl({
           value={isTheme ? "#ffffff" : settings.backgroundColor}
           onChange={(e) => onCustom(e.target.value)}
           className="absolute -inset-1 cursor-pointer opacity-0"
-          aria-label="Cor de fundo customizada"
+          aria-label={t("custom_background_color")}
         />
       </label>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Seguir cor da aplicação"
+            aria-label={t("follow_app_color")}
             aria-pressed={isTheme}
             onClick={onFollowTheme}
             disabled={isTheme}
@@ -1710,7 +1726,7 @@ function BackgroundControl({
             <Palette className="size-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">Seguir cor da aplicação</TooltipContent>
+        <TooltipContent side="right">{t("follow_app_color")}</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -1747,6 +1763,7 @@ function LayersPanel({
   minimized: boolean;
   onMinimizedChange: (minimized: boolean) => void;
 }) {
+  const t = useTranslations("free_drawing");
   const visualTopToBottom = [...layers].reverse();
 
   if (minimized) {
@@ -1756,7 +1773,7 @@ function LayersPanel({
           <TooltipTrigger asChild>
             <button
               type="button"
-              aria-label="Expandir camadas"
+              aria-label={t("expand_layers")}
               aria-pressed={false}
               onClick={() => onMinimizedChange(false)}
               className="grid size-9 place-items-center rounded-xl border border-border bg-card/85 text-foreground/70 shadow-lg backdrop-blur hover:bg-foreground/[0.06] hover:text-foreground"
@@ -1764,7 +1781,7 @@ function LayersPanel({
               <Layers className="size-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left">Expandir camadas</TooltipContent>
+          <TooltipContent side="left">{t("expand_layers")}</TooltipContent>
         </Tooltip>
       </div>
     );
@@ -1774,27 +1791,27 @@ function LayersPanel({
     <div className="absolute right-3 bottom-3 z-10 w-64 overflow-hidden rounded-xl border border-border bg-card/85 shadow-lg backdrop-blur">
       <div className="flex items-center justify-between border-border border-b px-3 py-1.5">
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
-          Camadas
+          {t("layers_title")}
         </span>
         <div className="flex items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Nova camada"
+                aria-label={t("new_layer")}
                 onClick={onAdd}
                 className="grid size-6 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
               >
                 <PlusIcon className="size-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>Nova camada</TooltipContent>
+            <TooltipContent>{t("new_layer")}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Minimizar camadas"
+                aria-label={t("minimize_layers")}
                 aria-pressed={false}
                 onClick={() => onMinimizedChange(true)}
                 className="grid size-6 place-items-center rounded-md text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
@@ -1802,7 +1819,7 @@ function LayersPanel({
                 <ChevronDown className="size-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>Minimizar camadas</TooltipContent>
+            <TooltipContent>{t("minimize_layers")}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -1858,6 +1875,7 @@ function LayerRow({
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslations("free_drawing");
   const dragControls = useDragControls();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(layer.name);
@@ -1890,7 +1908,7 @@ function LayerRow({
         <button
           type="button"
           onPointerDown={(e) => dragControls.start(e)}
-          aria-label="Arrastar para reordenar"
+          aria-label={t("drag_to_reorder")}
           className="grid size-4 shrink-0 touch-none select-none place-items-center text-foreground/40 hover:cursor-grab hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="size-3" />
@@ -1901,7 +1919,7 @@ function LayerRow({
             e.stopPropagation();
             onToggleVisible(layer.id);
           }}
-          aria-label={layer.visible ? "Ocultar" : "Mostrar"}
+          aria-label={layer.visible ? t("hide") : t("show")}
           className="grid size-4 shrink-0 place-items-center text-foreground/50 hover:text-foreground"
         >
           {layer.visible ? (
@@ -1938,7 +1956,7 @@ function LayerRow({
                 startEditing();
               }
             }}
-            title="Duplo clique para renomear"
+            title={t("double_click_rename")}
           >
             {layer.name}
           </button>
@@ -1949,7 +1967,7 @@ function LayerRow({
             e.stopPropagation();
             onToggleLocked(layer.id);
           }}
-          aria-label={layer.locked ? "Destravar" : "Travar"}
+          aria-label={layer.locked ? t("unlock_action") : t("lock_action")}
           className="grid size-4 shrink-0 place-items-center text-foreground/50 hover:text-foreground"
         >
           {layer.locked ? (
@@ -1965,7 +1983,7 @@ function LayerRow({
               e.stopPropagation();
               onDelete(layer.id);
             }}
-            aria-label="Excluir camada"
+            aria-label={t("delete_layer")}
             className="grid size-4 shrink-0 place-items-center text-foreground/50 hover:text-destructive"
           >
             <Trash2 className="size-3" />

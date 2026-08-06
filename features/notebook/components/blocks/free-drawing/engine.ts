@@ -13,16 +13,16 @@ export type BrushShape =
   | "charcoal"
   | "chalk";
 
-export const BRUSH_SHAPE_LABELS: Record<BrushShape, string> = {
-  pencil: "Lápis",
-  dot: "Ponto",
-  pen: "Caneta",
-  marker: "Marcador",
-  airbrush: "Aerógrafo",
-  watercolor: "Pincel de água",
-  oil: "Óleo",
-  charcoal: "Carvão",
-  chalk: "Giz",
+export const BRUSH_SHAPE_LABEL_KEYS: Record<BrushShape, string> = {
+  pencil: "brush_shapes.pencil",
+  dot: "brush_shapes.dot",
+  pen: "brush_shapes.pen",
+  marker: "brush_shapes.marker",
+  airbrush: "brush_shapes.airbrush",
+  watercolor: "brush_shapes.watercolor",
+  oil: "brush_shapes.oil",
+  charcoal: "brush_shapes.charcoal",
+  chalk: "brush_shapes.chalk",
 };
 
 export const BRUSH_SHAPES: BrushShape[] = [
@@ -468,12 +468,12 @@ function drawShapedStroke(ctx: CanvasRenderingContext2D, s: StrokeElement) {
 
 export type GeoShape = "line" | "rectangle" | "ellipse" | "triangle" | "arrow";
 
-export const GEO_SHAPE_LABELS: Record<GeoShape, string> = {
-  line: "Linha",
-  rectangle: "Retângulo",
-  ellipse: "Elipse",
-  triangle: "Triângulo",
-  arrow: "Seta",
+export const GEO_SHAPE_LABEL_KEYS: Record<GeoShape, string> = {
+  line: "shapes.line",
+  rectangle: "shapes.rectangle",
+  ellipse: "shapes.ellipse",
+  triangle: "shapes.triangle",
+  arrow: "shapes.arrow",
 };
 
 export const GEO_SHAPES: GeoShape[] = [

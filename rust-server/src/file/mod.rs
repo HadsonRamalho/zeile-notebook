@@ -193,7 +193,7 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
         error!("ERROR: Binary does not exist: {}", binary_path);
         return RunOutcome {
             stdout: "".into(),
-            stderr: "Erro interno: Binário não encontrado.".into(),
+            stderr: "Internal error: Binary not found.".into(),
             timed_out: false,
             exit_ok: false,
             wall_ms: 0,
@@ -214,7 +214,7 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
         });
     }
 
-    info!("COMANDO: {:?}", cmd);
+    info!("COMMAND: {:?}", cmd);
 
     let stdin_cfg = if stdin.is_some() {
         Stdio::piped()
@@ -232,10 +232,10 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
     {
         Ok(c) => c,
         Err(e) => {
-            error!("ERRO FATAL ao spawnar sandbox: {}", e);
+            error!("FATAL ERROR spawning sandbox: {}", e);
             return RunOutcome {
                 stdout: "".into(),
-                stderr: format!("Erro ao iniciar execução: {}", e),
+                stderr: format!("Error starting execution: {}", e),
                 timed_out: false,
                 exit_ok: false,
                 wall_ms: 0,
@@ -250,8 +250,8 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
         sink.flush().await.ok();
     }
 
-    let pid = child.id().expect("Falha ao obter PID");
-    info!("Sandbox iniciado no Grupo de Processos PGID: {}", pid);
+    let pid = child.id().expect("Failed to obtain PID");
+    info!("Sandbox started in process group PGID: {}", pid);
 
     match timeout(
         Duration::from_millis(limits.wall_ms),
@@ -272,10 +272,10 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
             info!("EXIT STATUS: {}", exit_status);
 
             if !stdout_str.is_empty() {
-                info!("STDOUT CAPTURADO:\n{}", stdout_str);
+                info!("CAPTURED STDOUT:\n{}", stdout_str);
             }
             if !stderr_str.is_empty() {
-                error!("STDERR CAPTURADO:\n{}", stderr_str);
+                error!("CAPTURED STDERR:\n{}", stderr_str);
             }
 
             RunOutcome {
@@ -291,20 +291,17 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
                 .args(["-9", &format!("-{}", pid)])
                 .output()
                 .ok();
-            error!("ERRO de I/O no container: {}", e);
+            error!("I/O ERROR in container: {}", e);
             RunOutcome {
                 stdout: "".into(),
-                stderr: format!("Erro interno de sandbox: {}", e),
+                stderr: format!("Internal sandbox error: {}", e),
                 timed_out: false,
                 exit_ok: false,
                 wall_ms: started.elapsed().as_millis() as u64,
             }
         }
         Err(_) => {
-            error!(
-                "TIMEOUT DETECTADO! Encerrando Grupo de Processos (PGID) {}",
-                pid
-            );
+            error!("TIMEOUT DETECTED! Terminating Process Group (PGID) {}", pid);
 
             let kill_cmd = std::process::Command::new("kill")
                 .args(["-9", &format!("-{}", pid)])
@@ -316,7 +313,7 @@ pub async fn run_safe_bin(binary_path: &str, stdin: Option<&str>, limits: RunLim
 
             RunOutcome {
                 stdout: "".into(),
-                stderr: "Erro: Execução interrompida. O código demorou muito para responder (Loop Infinito ou Timeout).".into(),
+                stderr: "Error: Execution interrupted. The code took too long to respond (infinite loop or timeout).".into(),
                 timed_out: true,
                 exit_ok: false,
                 wall_ms: started.elapsed().as_millis() as u64,
