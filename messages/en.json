@@ -173,7 +173,11 @@
       "description": "Irreversible actions related to your account.",
       "delete_account": "Delete Account",
       "delete_account_description": "This will permanently delete your account and all your data.",
-      "delete_account_button": "Delete Account"
+      "delete_account_button": "Delete Account",
+      "confirm_title": "Are you sure?",
+      "confirm_description": "This action cannot be undone. It will permanently delete all your data on the platform.",
+      "confirm_cancel": "Cancel",
+      "confirm_action": "Yes, delete my account"
     },
     "connections": {
       "title": "Connections",
@@ -455,6 +459,7 @@
     "success_message": "Check your inbox. We have sent a secure link to reset your password.",
     "back_to_login": "Back to login",
     "errors": {
+      "title": "Error",
       "invalid_email": "Enter a valid email address."
     }
   },
@@ -469,6 +474,7 @@
     "success_toast": "Password updated successfully.",
     "request_new_link": "Request new link",
     "errors": {
+      "title": "Error",
       "missing_token": "Missing reset identifier.",
       "invalid_link_title": "Invalid or Expired Link",
       "invalid_link_desc": "The password reset link is no longer valid. Please request a new one.",

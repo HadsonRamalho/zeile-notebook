@@ -173,7 +173,11 @@
       "description": "Ações irreversíveis relacionadas à sua conta.",
       "delete_account": "Deletar Conta",
       "delete_account_description": "Isso excluirá permanentemente sua conta e todos os seus dados.",
-      "delete_account_button": "Deletar Conta"
+      "delete_account_button": "Deletar Conta",
+      "confirm_title": "Você tem certeza?",
+      "confirm_description": "Esta ação não pode ser desfeita. Isso excluirá permanentemente todos os seus dados na plataforma.",
+      "confirm_cancel": "Cancelar",
+      "confirm_action": "Sim, deletar minha conta"
     },
     "connections": {
       "title": "Conexões",
@@ -455,6 +459,7 @@
     "success_message": "Verifique sua caixa de entrada. Enviamos um link seguro para a redefinição da sua senha.",
     "back_to_login": "Voltar para o login",
     "errors": {
+      "title": "Erro",
       "invalid_email": "Insira um email válido."
     }
   },
@@ -469,6 +474,7 @@
     "success_toast": "Senha atualizada com sucesso.",
     "request_new_link": "Solicitar novo link",
     "errors": {
+      "title": "Erro",
       "missing_token": "Identificador de redefinição ausente.",
       "invalid_link_title": "Link Inválido ou Expirado",
       "invalid_link_desc": "O link de redefinição de senha não é mais válido. Por favor, solicite um novo.",
