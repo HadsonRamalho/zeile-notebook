@@ -2137,7 +2137,11 @@ export interface components {
       passwordHash?: string | null;
       primaryProvider: components["schemas"]["AuthProvider"];
     };
-    Notebook: {
+    /**
+     * @description Wire shape for `entity::Notebook` — the boundary the openapi-types
+     *     generator sees, kept apart from the Diesel struct on purpose (Q48).
+     */
+    NotebookDto: {
       /** Format: date-time */
       createdAt: string;
       documentData?: number[] | null;
@@ -2156,7 +2160,7 @@ export interface components {
       /** Format: uuid */
       userId?: string | null;
     };
-    NotebookResponse: components["schemas"]["Notebook"] & {
+    NotebookResponse: components["schemas"]["NotebookDto"] & {
       blocks: components["schemas"]["BlockResponse"][];
     };
     Notification: {
@@ -3305,7 +3309,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Notebook"][];
+          "application/json": components["schemas"]["NotebookDto"][];
         };
       };
       401: {
@@ -3670,7 +3674,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Notebook"];
+          "application/json": components["schemas"]["NotebookDto"];
         };
       };
       401: {
@@ -5482,7 +5486,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Notebook"][];
+          "application/json": components["schemas"]["NotebookDto"][];
         };
       };
       401: {

@@ -13,10 +13,10 @@ use crate::{
     controllers::{
         jwt::extract_claims_from_header, permissions::require_team_permission, utils::get_conn,
     },
+    domain::notebook::{NewNotebook, NotebookDto},
     models::{
         self,
         error::ApiError,
-        notebook::{NewNotebook, Notebook},
         state::AppState,
         team::{
             NewTeam, NewTeamMember, NewTeamRole, NewTeamRoleRequest, RolePermissions, Team,
@@ -88,7 +88,7 @@ pub async fn api_create_team_page(
         title: "Nova Página".to_string(),
     };
 
-    crate::models::notebook::create_notebook(conn, &new_page)
+    crate::domain::notebook::create_notebook(conn, &new_page)
         .await
         .map_err(ApiError::Database)?;
 
@@ -98,13 +98,13 @@ pub async fn api_create_team_page(
 #[utoipa::path(
     get,
     path = "/team/{id}/notebooks",
-    responses((status = OK, body = Vec<Notebook>), (status = 401, body = ApiError))
+    responses((status = OK, body = Vec<NotebookDto>), (status = 401, body = ApiError))
 )]
 pub async fn api_get_team_pages(
     State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Json<Vec<Notebook>>, ApiError> {
+) -> Result<Json<Vec<NotebookDto>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let conn = &mut get_conn(&state.pool)
         .await
@@ -112,11 +112,11 @@ pub async fn api_get_team_pages(
 
     require_team_permission(conn, user_id, team_id, "notebook.view").await?;
 
-    let pages = models::notebook::get_team_notebooks(conn, &team_id)
+    let pages = crate::domain::notebook::get_team_notebooks(conn, &team_id)
         .await
         .map_err(ApiError::Database)?;
 
-    Ok(Json(pages))
+    Ok(Json(pages.into_iter().map(NotebookDto::from).collect()))
 }
 
 #[utoipa::path(

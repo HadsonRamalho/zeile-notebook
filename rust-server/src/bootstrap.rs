@@ -200,7 +200,7 @@ pub fn spawn_background_tasks(state: &Arc<AppState>, db_url: String) {
 
     let pool = state.pool.clone();
     until_shutdown(state, async move {
-        match crate::models::notebook::backfill_search_text(&pool).await {
+        match crate::domain::notebook::backfill_search_text(&pool).await {
             Ok(n) if n > 0 => tracing::info!("search_text backfill: {n} notebooks"),
             Ok(_) => {}
             Err(e) => tracing::warn!("search_text backfill failed: {e}"),

@@ -1,303 +1,24 @@
-use crate::controllers::permissions::{NotebookCtx, TargetCtx, capabilities, resolve_capabilities};
-use crate::{models::error::ApiError, schema::blocks::dsl as blocks_dsl};
 use automerge::{AutoCommit, ObjType, ROOT, ReadDoc, ScalarValue, Value as AmValue};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    PgTextExpressionMethods, QueryDsl, QueryableByName, Selectable, SelectableHelper,
-    prelude::{Associations, Identifiable, Insertable, Queryable},
+    PgTextExpressionMethods, QueryDsl, SelectableHelper,
 };
 use diesel_async::{
     AsyncConnection, AsyncPgConnection, RunQueryDsl, pooled_connection::deadpool::Pool,
 };
-use diesel_derive_enum::DbEnum;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
-use validator::Validate;
 
+use crate::models::error::ApiError;
+use crate::schema::blocks::dsl as blocks_dsl;
 use crate::schema::{blocks, notebooks};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize, utoipa::ToSchema)]
-#[ExistingTypePath = "crate::schema::sql_types::BlockTypeEnum"]
-#[serde(rename_all = "snake_case")]
-pub enum BlockType {
-    Text,
-    Code,
-    Component,
-    Drawing,
-    FreeDrawing,
-    DatabaseSchema,
-    Latex,
-    Sql,
-    Typst,
-    Challenge,
-    NotebookRef,
-    TemplateRef,
-    Chart,
-    Mermaid,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize, utoipa::ToSchema)]
-#[ExistingTypePath = "crate::schema::sql_types::LanguageEnum"]
-#[serde(rename_all = "lowercase")]
-pub enum Language {
-    Rust,
-    Typescript,
-    Python,
-    Zig,
-    Go,
-    Cpp,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum BlockMetadata {
-    Callout {
-        props: CalloutProps,
-    },
-    Card {
-        props: CardProps,
-    },
-    GithubRepo {
-        props: GithubRepoProps,
-    },
-    Banner {
-        variant: String,
-    },
-    Generic {
-        #[serde(flatten)]
-        props: serde_json::Value,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct CalloutProps {
-    pub title: Option<String>,
-    pub icon: Option<String>,
-    #[serde(rename = "type")]
-    pub callout_type: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct CardProps {
-    pub title: String,
-    pub description: Option<String>,
-    pub href: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct GithubRepoProps {
-    pub owner: String,
-    pub repo: String,
-}
-
-#[derive(Queryable, Selectable, Identifiable, Serialize, Debug, utoipa::ToSchema)]
-#[diesel(table_name = crate::schema::notebooks)]
-#[serde(rename_all = "camelCase")]
-pub struct Notebook {
-    pub id: Uuid,
-    pub user_id: Option<Uuid>,
-    pub title: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub is_public: bool,
-    pub document_data: Option<Vec<u8>>,
-    pub team_id: Option<Uuid>,
-    pub folder_id: Option<Uuid>,
-    pub tags: Value,
-    pub public_slug: Option<String>,
-}
-
-#[derive(Queryable, Selectable, Identifiable, Associations, Serialize, Debug, Insertable)]
-#[diesel(belongs_to(Notebook))]
-#[diesel(table_name = crate::schema::blocks)]
-#[serde(rename_all = "camelCase")]
-pub struct Block {
-    pub id: Uuid,
-    pub notebook_id: Uuid,
-    pub title: String,
-    pub block_type: BlockType,
-    pub language: Option<Language>,
-    pub content: String,
-    pub metadata: Option<serde_json::Value>,
-    pub position: i32,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct NotebookResponse {
-    #[serde(flatten)]
-    pub meta: Notebook,
-    pub blocks: Vec<BlockResponse>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct BlockResponse {
-    pub id: Uuid,
-    pub title: String,
-    #[serde(rename = "type")]
-    pub block_type: BlockType,
-    pub content: String,
-    pub language: Option<Language>,
-    pub metadata: Option<BlockMetadata>,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = notebooks)]
-pub struct NewNotebook {
-    pub id: Uuid,
-    pub user_id: Option<Uuid>,
-    pub team_id: Option<Uuid>,
-    pub title: String,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = blocks)]
-pub struct NewBlock {
-    pub id: Uuid,
-    pub notebook_id: Uuid,
-    pub title: String,
-    pub block_type: BlockType,
-    pub language: Option<Language>,
-    pub content: String,
-    pub metadata: Option<Value>,
-    pub position: i32,
-}
-
-#[derive(Deserialize, Validate, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateNotebookTitle {
-    #[validate(length(
-        min = 1,
-        max = 300,
-        message = "Title must be between 1 and 300 characters"
-    ))]
-    pub title: String,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateTagsRequest {
-    pub tags: Vec<String>,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateNotebookVisibility {
-    #[serde(alias = "is_visible")]
-    pub is_visible: bool,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct SyncNotebookRequest {
-    pub title: String,
-    pub blocks: Vec<BlockRequest>,
-    pub is_public: bool,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct BlockRequest {
-    pub id: Uuid,
-    pub title: String,
-    #[serde(rename = "type")]
-    pub block_type: BlockType,
-    pub content: String,
-    pub language: Option<Language>,
-    pub metadata: Option<BlockMetadata>,
-}
-
-#[derive(Deserialize)]
-pub struct SearchQuery {
-    pub q: String,
-}
-
-#[derive(Deserialize, Default)]
-pub struct PublicSearchQuery {
-    #[serde(default)]
-    pub q: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
-pub struct SearchResult {
-    pub id: Uuid,
-    pub title: String,
-    pub content: String,
-}
-
-#[derive(Deserialize)]
-pub struct RankedSearchQuery {
-    pub q: String,
-    #[serde(default)]
-    pub limit: Option<i64>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct RankedSearchItem {
-    pub kind: String,
-    pub notebook_id: Uuid,
-    pub block_id: Option<Uuid>,
-    pub notebook_title: String,
-    pub team_id: Option<Uuid>,
-    pub team_name: Option<String>,
-    pub snippet: String,
-    pub rank: f32,
-}
-
-#[derive(QueryableByName)]
-struct NotebookHitRow {
-    #[diesel(sql_type = diesel::sql_types::Uuid)]
-    notebook_id: Uuid,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    notebook_title: String,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Uuid>)]
-    team_id: Option<Uuid>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-    team_name: Option<String>,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    snippet: String,
-    #[diesel(sql_type = diesel::sql_types::Float)]
-    rank: f32,
-}
-
-#[derive(QueryableByName)]
-struct BlockHitRow {
-    #[diesel(sql_type = diesel::sql_types::Uuid)]
-    block_id: Uuid,
-    #[diesel(sql_type = diesel::sql_types::Uuid)]
-    notebook_id: Uuid,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    notebook_title: String,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Uuid>)]
-    team_id: Option<Uuid>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-    team_name: Option<String>,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    snippet: String,
-    #[diesel(sql_type = diesel::sql_types::Float)]
-    rank: f32,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NotebookPermission {
-    OwnerOrTeam,
-    Viewer,
-}
-
-#[derive(Serialize, Deserialize, Debug, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PublicNotebookResponse {
-    pub id: Uuid,
-    pub title: String,
-    pub user_id: Option<Uuid>,
-    pub team_id: Option<Uuid>,
-    pub owner_name: String,
-    pub updated_at: DateTime<Utc>,
-}
+use super::dto::{
+    BlockHitRow, NotebookDto, NotebookHitRow, NotebookResponse, PublicNotebookDoc,
+    PublicNotebookResponse, RankedSearchItem, SearchResult,
+};
+use super::entity::{Block, NewBlock, NewNotebook, Notebook};
 
 pub async fn create_notebook(
     conn: &mut AsyncPgConnection,
@@ -405,7 +126,7 @@ pub async fn update_notebook_visibility(
     Ok(())
 }
 
-pub fn slugify(input: &str) -> String {
+fn slugify(input: &str) -> String {
     let mut out = String::new();
     let mut prev_dash = false;
     for ch in input.chars().flat_map(char::to_lowercase) {
@@ -467,17 +188,6 @@ pub async fn ensure_public_slug(
     Err(ApiError::Database("slug unavailable".to_string()))
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PublicNotebookDoc {
-    pub id: Uuid,
-    pub title: String,
-    pub owner_name: Option<String>,
-    pub updated_at: DateTime<Utc>,
-    pub public_slug: Option<String>,
-    pub document_data: Option<Vec<u8>>,
-}
-
 pub async fn get_public_notebook_by_slug(
     conn: &mut AsyncPgConnection,
     slug: &str,
@@ -500,7 +210,7 @@ pub async fn get_public_notebook_by_slug(
             Uuid,
             String,
             Option<String>,
-            DateTime<Utc>,
+            chrono::DateTime<Utc>,
             Option<String>,
             Option<Vec<u8>>,
         )>(conn)
@@ -618,10 +328,10 @@ pub async fn get_notebook_with_blocks(
         Err(e) => return Err(format!("Erro ao buscar blocos: {}", e)),
     };
 
-    let api_blocks: Vec<BlockResponse> = db_blocks
+    let api_blocks: Vec<super::dto::BlockResponse> = db_blocks
         .into_iter()
         .map(|b| {
-            let parsed_metadata: Option<BlockMetadata> =
+            let parsed_metadata =
                 b.metadata
                     .and_then(|json_val| match serde_json::from_value(json_val) {
                         Ok(meta) => Some(meta),
@@ -631,7 +341,7 @@ pub async fn get_notebook_with_blocks(
                         }
                     });
 
-            BlockResponse {
+            super::dto::BlockResponse {
                 id: b.id,
                 title: b.title,
                 block_type: b.block_type,
@@ -643,7 +353,7 @@ pub async fn get_notebook_with_blocks(
         .collect();
 
     Ok(NotebookResponse {
-        meta: notebook,
+        meta: NotebookDto::from(notebook),
         blocks: api_blocks,
     })
 }
@@ -864,39 +574,12 @@ pub async fn load_notebook_data(
         .unwrap_or(None)
 }
 
-pub async fn save_notebook_data(
+pub async fn write_notebook_data(
     conn: &mut AsyncPgConnection,
-    user_id_param: Uuid,
     notebook_id_param: Uuid,
     data: Vec<u8>,
 ) {
     use crate::schema::notebooks::dsl::*;
-
-    let notebook: Notebook = match notebooks
-        .filter(id.eq(notebook_id_param))
-        .select(Notebook::as_select())
-        .get_result(conn)
-        .await
-    {
-        Ok(n) => n,
-        Err(_) => return,
-    };
-
-    let ctx = NotebookCtx {
-        notebook_id: notebook_id_param,
-        team_id: notebook.team_id,
-        owner_user_id: notebook.user_id,
-        is_public: notebook.is_public,
-    };
-
-    let caps = match resolve_capabilities(conn, ctx, Some(user_id_param)).await {
-        Ok(caps) => caps,
-        Err(_) => return,
-    };
-
-    if !caps.can("notebook.edit", &TargetCtx::default()) {
-        return;
-    }
 
     diesel::update(notebooks)
         .filter(id.eq(notebook_id_param))
@@ -1003,54 +686,6 @@ pub async fn backfill_search_text(pool: &Pool<AsyncPgConnection>) -> Result<usiz
     Ok(updated)
 }
 
-pub async fn check_permission(
-    pool: &Pool<AsyncPgConnection>,
-    user_id: Option<Uuid>,
-    notebook_id: Uuid,
-) -> Result<NotebookPermission, ApiError> {
-    if user_id.is_none() {
-        return Ok(NotebookPermission::Viewer);
-    }
-
-    let caps = match capabilities(pool, user_id, notebook_id).await {
-        Ok(caps) => caps,
-        Err(_) => return Ok(NotebookPermission::Viewer),
-    };
-
-    if caps.can("notebook.edit", &TargetCtx::default()) {
-        return Ok(NotebookPermission::OwnerOrTeam);
-    }
-
-    Ok(NotebookPermission::Viewer)
-}
-
-pub const MAX_TAGS: usize = 6;
-pub const MAX_TAG_LEN: usize = 32;
-
-pub fn normalize_tags(raw: &[String]) -> Result<Vec<String>, ApiError> {
-    let mut out: Vec<String> = Vec::new();
-    for tag in raw {
-        let trimmed = tag.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        if trimmed.chars().count() > MAX_TAG_LEN {
-            return Err(ApiError::Request(format!(
-                "Tag excede {MAX_TAG_LEN} caracteres"
-            )));
-        }
-        if !out.iter().any(|t| t.eq_ignore_ascii_case(trimmed)) {
-            out.push(trimmed.to_string());
-        }
-    }
-    if out.len() > MAX_TAGS {
-        return Err(ApiError::Request(format!(
-            "Máximo de {MAX_TAGS} tags por item"
-        )));
-    }
-    Ok(out)
-}
-
 pub async fn set_notebook_tags(
     conn: &mut AsyncPgConnection,
     notebook_id: Uuid,
@@ -1126,7 +761,7 @@ pub async fn get_public_notebooks(
             Option<Uuid>,
             Option<String>,
             Option<String>,
-            DateTime<Utc>,
+            chrono::DateTime<Utc>,
         )>(conn)
         .await
     {
@@ -1161,40 +796,6 @@ pub async fn get_public_notebooks(
 mod tests {
     use super::*;
     use automerge::transaction::Transactable;
-
-    #[test]
-    fn block_type_serializes_multi_word_variants_as_snake_case() {
-        assert_eq!(
-            serde_json::to_string(&BlockType::FreeDrawing).unwrap(),
-            "\"free_drawing\""
-        );
-        assert_eq!(
-            serde_json::to_string(&BlockType::DatabaseSchema).unwrap(),
-            "\"database_schema\""
-        );
-        assert_eq!(
-            serde_json::to_string(&BlockType::NotebookRef).unwrap(),
-            "\"notebook_ref\""
-        );
-        assert_eq!(
-            serde_json::to_string(&BlockType::TemplateRef).unwrap(),
-            "\"template_ref\""
-        );
-    }
-
-    #[test]
-    fn block_type_serializes_single_word_variants_unchanged() {
-        assert_eq!(serde_json::to_string(&BlockType::Text).unwrap(), "\"text\"");
-        assert_eq!(serde_json::to_string(&BlockType::Code).unwrap(), "\"code\"");
-        assert_eq!(
-            serde_json::to_string(&BlockType::Component).unwrap(),
-            "\"component\""
-        );
-        assert_eq!(
-            serde_json::to_string(&BlockType::Drawing).unwrap(),
-            "\"drawing\""
-        );
-    }
 
     fn doc_with_blocks(blocks_in: &[(&str, &str)]) -> AutoCommit {
         let mut doc = AutoCommit::new();
@@ -1334,67 +935,5 @@ mod tests {
 
         assert!(!slug.starts_with('-'), "slug: {slug}");
         assert!(!slug.ends_with('-'), "slug: {slug}");
-    }
-
-    #[test]
-    fn normalize_tags_removes_empty_and_trims_whitespace() {
-        let tags = vec![
-            "  rust  ".to_string(),
-            "".to_string(),
-            "   ".to_string(),
-            "web".to_string(),
-        ];
-
-        assert_eq!(normalize_tags(&tags).unwrap(), vec!["rust", "web"]);
-    }
-
-    #[test]
-    fn normalize_tags_deduplicates_case_insensitively_and_keeps_the_first() {
-        let tags = vec!["Rust".to_string(), "rust".to_string(), "RUST".to_string()];
-
-        assert_eq!(normalize_tags(&tags).unwrap(), vec!["Rust"]);
-    }
-
-    #[test]
-    fn normalize_tags_accepts_an_empty_list() {
-        assert_eq!(normalize_tags(&[]).unwrap(), Vec::<String>::new());
-    }
-
-    #[test]
-    fn normalize_tags_rejects_a_tag_above_the_limit() {
-        let long = "a".repeat(MAX_TAG_LEN + 1);
-
-        assert!(normalize_tags(&[long]).is_err());
-    }
-
-    #[test]
-    fn normalize_tags_accepts_a_tag_exactly_at_the_limit() {
-        let at_limit = "a".repeat(MAX_TAG_LEN);
-
-        assert_eq!(
-            normalize_tags(std::slice::from_ref(&at_limit)).unwrap(),
-            vec![at_limit]
-        );
-    }
-
-    #[test]
-    fn normalize_tags_counts_characters_not_bytes() {
-        let accented = "á".repeat(MAX_TAG_LEN);
-
-        assert!(normalize_tags(&[accented]).is_ok());
-    }
-
-    #[test]
-    fn normalize_tags_rejects_above_the_max_number_of_tags() {
-        let many: Vec<String> = (0..=MAX_TAGS).map(|i| format!("tag{i}")).collect();
-
-        assert!(normalize_tags(&many).is_err());
-    }
-
-    #[test]
-    fn normalize_tags_accepts_exactly_the_max_number_of_tags() {
-        let at_limit: Vec<String> = (0..MAX_TAGS).map(|i| format!("tag{i}")).collect();
-
-        assert_eq!(normalize_tags(&at_limit).unwrap().len(), MAX_TAGS);
     }
 }

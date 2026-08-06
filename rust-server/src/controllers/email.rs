@@ -168,7 +168,7 @@ pub async fn send_team_invitation_email(
             </body>
             </html>
         "#,
-        nome = &user.name,
+        nome = user.name,
         link = magic_link,
         nome_time = team_name,
         nome_remetente = invited_by
@@ -237,7 +237,7 @@ pub async fn send_password_reset_email(
             </body>
             </html>
             "#,
-            nome = &user.name,
+            nome = user.name,
             link = reset_link,
         ))
         .unwrap();

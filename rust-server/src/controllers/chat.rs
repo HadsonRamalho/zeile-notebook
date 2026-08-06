@@ -160,7 +160,8 @@ pub async fn api_send_notebook_message(
             let Ok(mut conn) = get_conn(&state.pool).await else {
                 return;
             };
-            let Ok(notebook) = models::notebook::find_notebook_by_id(&mut conn, &notebook_id).await
+            let Ok(notebook) =
+                crate::domain::notebook::find_notebook_by_id(&mut conn, &notebook_id).await
             else {
                 return;
             };
