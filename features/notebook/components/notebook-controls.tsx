@@ -47,9 +47,9 @@ export function NotebookControls() {
   useEffect(() => {
     if (!notebook?.id) return;
     let active = true;
-    getNotebookMeta(notebook.id)
-      .then((m) => active && setMeta(m))
-      .catch(() => {});
+    getNotebookMeta(notebook.id).then(
+      (result) => active && result.isOk() && setMeta(result.data),
+    );
     return () => {
       active = false;
     };

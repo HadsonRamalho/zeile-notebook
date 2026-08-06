@@ -120,13 +120,13 @@ export function ChallengeSolve({
   );
 
   const refreshMeta = useCallback(() => {
-    getLeaderboard(challenge.id)
-      .then(setLeaderboard)
-      .catch(() => setLeaderboard([]));
+    getLeaderboard(challenge.id).then((result) =>
+      setLeaderboard(result.isOk() ? result.data : []),
+    );
     if (currentUserId) {
-      listMySubmissions(challenge.id)
-        .then(setSubmissions)
-        .catch(() => setSubmissions([]));
+      listMySubmissions(challenge.id).then((result) =>
+        setSubmissions(result.isOk() ? result.data : []),
+      );
     }
   }, [challenge.id, currentUserId]);
 
@@ -161,18 +161,17 @@ export function ChallengeSolve({
     if (busy) return;
     setRunning(true);
     setResult(null);
-    try {
-      const res = await runSamples(challenge.id, { language, code });
+    const result = await runSamples(challenge.id, { language, code });
+    if (result.isErr()) {
+      toast.error(t("login_required"));
+    } else {
       setResult({
         kind: "samples",
-        data: res.results,
-        compileError: res.compileError,
+        data: result.data.results,
+        compileError: result.data.compileError,
       });
-    } catch {
-      toast.error(t("login_required"));
-    } finally {
-      setRunning(false);
     }
+    setRunning(false);
   }, [busy, challenge.id, language, code, t]);
 
   const handleSubmit = useCallback(async () => {
@@ -182,28 +181,32 @@ export function ChallengeSolve({
       return;
     }
     setSubmitting(true);
-    try {
-      const queued = await submitSolution(challenge.id, { language, code });
-      setResult({ kind: "submission", data: queued });
-      const final = await pollSubmission(queued.id, (s) =>
-        setResult({ kind: "submission", data: s }),
-      );
-      setResult({ kind: "submission", data: final });
-      refreshMeta();
-    } catch {
+    const queuedResult = await submitSolution(challenge.id, { language, code });
+    if (queuedResult.isErr()) {
       toast.error(t("login_required"));
-    } finally {
       setSubmitting(false);
+      return;
     }
+    setResult({ kind: "submission", data: queuedResult.data });
+    const finalResult = await pollSubmission(queuedResult.data.id, (s) =>
+      setResult({ kind: "submission", data: s }),
+    );
+    if (finalResult.isErr()) {
+      toast.error(t("login_required"));
+    } else {
+      setResult({ kind: "submission", data: finalResult.data });
+      refreshMeta();
+    }
+    setSubmitting(false);
   }, [busy, currentUserId, challenge.id, language, code, refreshMeta, t]);
 
   const openSubmission = useCallback(
     async (id: string) => {
-      try {
-        const data = await getSubmission(id);
-        setResult({ kind: "submission", data, showCode: true });
-      } catch {
+      const result = await getSubmission(id);
+      if (result.isErr()) {
         toast.error(t("login_required"));
+      } else {
+        setResult({ kind: "submission", data: result.data, showCode: true });
       }
     },
     [t],

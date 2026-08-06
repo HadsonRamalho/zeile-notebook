@@ -1,7 +1,7 @@
 import type { Activity } from "@/types/activity-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("activity");
+const api = createResultApi("activity");
 
 export async function listActivity(notebookId: string) {
   return api.get<Activity[]>(`/notebook/${notebookId}/activity`);

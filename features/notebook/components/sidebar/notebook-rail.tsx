@@ -304,25 +304,25 @@ export function NotebookRail() {
   };
 
   useEffect(() => {
-    fetchFolders()
-      .then((f) => setFolders(f ?? []))
-      .catch(() => setFolders([]));
+    fetchFolders().then((result) =>
+      setFolders(result.isOk() ? result.data : []),
+    );
   }, []);
 
   useEffect(() => {
-    fetchUserTeams()
-      .then((data) => {
-        setTeams(data);
-        for (const [team] of data) {
-          refreshTeamPages(team.id);
-          fetchTeamFolders(team.id)
-            .then((f) =>
-              setTeamFolders((prev) => ({ ...prev, [team.id]: f ?? [] })),
-            )
-            .catch(() => {});
-        }
-      })
-      .catch(() => setTeams([]));
+    fetchUserTeams().then((result) => {
+      const data = result.isOk() ? result.data : [];
+      setTeams(data);
+      for (const [team] of data) {
+        refreshTeamPages(team.id);
+        fetchTeamFolders(team.id).then((foldersResult) =>
+          setTeamFolders((prev) => ({
+            ...prev,
+            [team.id]: foldersResult.isOk() ? foldersResult.data : [],
+          })),
+        );
+      }
+    });
   }, [refreshTeamPages]);
 
   useEffect(() => {

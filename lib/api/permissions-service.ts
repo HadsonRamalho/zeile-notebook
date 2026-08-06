@@ -4,9 +4,9 @@ import type {
   PermissionCatalog,
   TeamGrant,
 } from "@/types/permission-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("grants");
+const api = createResultApi("grants");
 
 export async function getNotebookCapabilities(id: string) {
   return await api.get<CapabilitySnapshot>(`/notebook/${id}/capabilities`);

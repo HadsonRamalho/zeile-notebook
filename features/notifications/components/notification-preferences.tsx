@@ -54,8 +54,10 @@ export function NotificationPreferences() {
 
   useEffect(() => {
     fetchNotificationPreferences()
-      .then((rows) => {
-        const global = rows?.find((r) => r.scopeKind === "global");
+      .then((result) => {
+        const global = result.isOk()
+          ? result.data.find((r) => r.scopeKind === "global")
+          : undefined;
         if (global) {
           setPrefs({
             pushEnabled: global.pushEnabled,
@@ -64,16 +66,13 @@ export function NotificationPreferences() {
           });
         }
       })
-      .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
 
   const update = (key: keyof Prefs, value: boolean) => {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
-    saveNotificationPreference({ scopeKind: "global", ...next }).catch(
-      () => {},
-    );
+    saveNotificationPreference({ scopeKind: "global", ...next });
   };
 
   return (

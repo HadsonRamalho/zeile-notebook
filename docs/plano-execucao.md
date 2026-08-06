@@ -365,19 +365,31 @@ Incremental, arquivo por arquivo — sem prazo de tolerância para `try/catch` c
 mutirão em ondas, não uma exceção permanente como `components/vendor/*` (Q21).
 
 - [x] `lib/api/base.ts` primeiro — é onde `fetch` é envolvido à mão hoje; vira a borda que
-  devolve `Result<T, ApiClientError>` para todo `lib/api/*-service.ts`. `createApi` (lançando)
-  continua existindo, agora implementado por cima de `createResultApi` via `.unwrap()` — os 18
-  consumidores atuais (15 `*-service.ts` + `auth-context.tsx` + os 2 formulários de senha) não
-  mudam nesta PR; é `createResultApi` que o próximo bullet vai migrar para consumir, serviço a
-  serviço
-- [ ] `lib/api/*-service.ts` (auth, notebook, teams, admin, user, run-rust) — cada chamada
-  passa a devolver `Result`, chamador decide `isOk()`/`isErr()` em vez de `try/catch`
-- [ ] `lib/api/handle-api-error.ts` — passa a consumir o lado `Err` do `Result` em vez de
-  receber uma exceção capturada
+  devolve `Result<T, ApiClientError>` para todo `lib/api/*-service.ts`. Entrou como dois
+  fachadas sobre o mesmo `Result` (`createApi` lançando, via `.unwrap()`, e `createResultApi`
+  devolvendo o `Result` direto), para migrar serviço a serviço sem quebrar quem ainda não
+  tinha migrado — `createApi` foi removido no bullet seguinte, quando deixou de ter consumidor
+- [x] `lib/api/*-service.ts` (todos os 17: activity, admin, auth, capabilities, challenge,
+  chat, comments, folders, notebook, notifications, permissions, push, run-rust, snapshots,
+  teams, template, user) — cada chamada passa a devolver `Result`, chamador decide
+  `isOk()`/`isErr()` em vez de `try/catch`. Cobriu também os 3 consumidores que chamavam
+  `createApi` direto sem passar por um `*-service.ts` (`auth-context.tsx` e os 2 formulários de
+  senha) — `createApi` ficou sem consumidor e foi removido de `base.ts`. Onde o `Result` cruza
+  com um serviço ainda não migrado no mesmo trecho (ex.: um `Promise.all` misturando
+  `permissions-service` com `teams-service` antes de este último migrar), o ponto de mistura
+  ficou registrado com `.unwrap()`/checagem explícita — resolvido à medida que cada serviço
+  entrou
+- [x] `lib/api/handle-api-error.ts` — passa a aceitar um `Result` diretamente (`{ result, t,
+  setError }`), além do formato antigo (`{ err, t, setError }`) que o código ainda não
+  migrado continua usando; um `Result` `Ok` é no-op, então o chamador não precisa guardar com
+  `isErr()` antes de chamar
 - [ ] Pontos que hoje reimplementam o padrão Q38 manualmente (`runTsxInSandbox` e afins) —
   ver se `catchErrorSync`/`catchError` substitui o `ApiClientError` construído à mão
 - [ ] Levantar todo `try/catch` restante em `hooks/` e `components/notebook/`, mesmo fora do
-  escopo de outras etapas, e migrar em onda própria — não fica pendente indefinidamente
+  escopo de outras etapas, e migrar em onda própria — não fica pendente indefinidamente. Boa
+  parte já foi resolvida de carona na migração acima (todo `try/catch` que envolvia uma chamada
+  de `*-service.ts` foi removido ou convertido); o que resta é `try/catch` sobre operação que
+  não é chamada de API (parse local, `FileReader`, etc.) — não levantado nesta entrega
 
 #### 20 · Migração para os tipos gerados
 

@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("notifications");
+const api = createResultApi("notifications");
 
 export interface NotificationDTO {
   id: string;

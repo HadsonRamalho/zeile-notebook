@@ -81,19 +81,17 @@ export function ProfileForm() {
 
   async function onSubmit(data: ProfileFormValues) {
     setIsSaving(true);
-    try {
-      await updateProfile(data);
-
-      toast.success(t("profile_card.profile_updated"));
-    } catch (error: unknown) {
+    const result = await updateProfile(data);
+    if (result.isErr()) {
       toast.error(
-        error instanceof Error
-          ? error.message
+        result.error instanceof Error
+          ? result.error.message
           : t("profile_card.profile_update_error"),
       );
-    } finally {
-      setIsSaving(false);
+    } else {
+      toast.success(t("profile_card.profile_updated"));
     }
+    setIsSaving(false);
   }
 
   if (isAuthLoading) {

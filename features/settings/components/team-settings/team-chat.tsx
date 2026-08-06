@@ -60,11 +60,9 @@ export function TeamChat({ teamId }: { teamId: string }) {
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      fetchTeamMessages(teamId)
-        .then((data) => {
-          if (!cancelled && Array.isArray(data)) setMessages(data);
-        })
-        .catch(() => {});
+      fetchTeamMessages(teamId).then((result) => {
+        if (!cancelled && result.isOk()) setMessages(result.data);
+      });
     };
     load();
     const id = setInterval(load, POLL_INTERVAL_MS);
@@ -76,16 +74,12 @@ export function TeamChat({ teamId }: { teamId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    getTeamCapabilities(teamId)
-      .then((c) => {
-        if (!cancelled) setCaps(c);
-      })
-      .catch(() => {});
-    getPermissionCatalog()
-      .then((c) => {
-        if (!cancelled) setCatalog(c);
-      })
-      .catch(() => {});
+    getTeamCapabilities(teamId).then((result) => {
+      if (!cancelled && result.isOk()) setCaps(result.data);
+    });
+    getPermissionCatalog().then((result) => {
+      if (!cancelled && result.isOk()) setCatalog(result.data);
+    });
     return () => {
       cancelled = true;
     };
@@ -136,21 +130,21 @@ export function TeamChat({ teamId }: { teamId: string }) {
             content: text,
             parentId: opts?.parentId ?? null,
             quotedMessageId: opts?.quotedMessageId ?? null,
-          })
-            .then(apply)
-            .catch(() => {})
+          }).then((result) => apply(result.isOk() ? result.data : undefined))
         }
         onEdit={(id, text) =>
-          void editTeamMessage(teamId, id, text)
-            .then(apply)
-            .catch(() => {})
+          void editTeamMessage(teamId, id, text).then((result) =>
+            apply(result.isOk() ? result.data : undefined),
+          )
         }
         onDelete={(id) =>
-          void deleteTeamMessage(teamId, id)
-            .then(apply)
-            .catch(() => {})
+          void deleteTeamMessage(teamId, id).then((result) =>
+            apply(result.isOk() ? result.data : undefined),
+          )
         }
-        loadVersions={(id) => fetchTeamMessageVersions(teamId, id)}
+        loadVersions={(id) =>
+          fetchTeamMessageVersions(teamId, id).then((r) => r.unwrap())
+        }
         emptyHint={t("empty_hint")}
       />
     </div>

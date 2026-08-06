@@ -46,19 +46,17 @@ export function ProfileSecurityForm() {
 
   async function onSubmit(data: ProfileSecurityFormValues) {
     setIsSaving(true);
-    try {
-      await updatePassword(data);
-
-      toast.success(t("security_card.password_updated"));
-    } catch (error: unknown) {
+    const result = await updatePassword(data);
+    if (result.isErr()) {
       toast.error(
-        error instanceof Error
-          ? error.message
+        result.error instanceof Error
+          ? result.error.message
           : t("security_card.password_update_error"),
       );
-    } finally {
-      setIsSaving(false);
+    } else {
+      toast.success(t("security_card.password_updated"));
     }
+    setIsSaving(false);
   }
 
   return (

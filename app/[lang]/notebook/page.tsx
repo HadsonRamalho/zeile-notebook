@@ -68,15 +68,18 @@ export default function NotebookHomePage() {
   const [teamFolders, setTeamFolders] = useState<Record<string, Folder[]>>({});
 
   const refreshFolders = useCallback(() => {
-    fetchFolders()
-      .then((f) => setFolders(f ?? []))
-      .catch(() => {});
+    fetchFolders().then((result) =>
+      setFolders(result.isOk() ? result.data : []),
+    );
   }, []);
 
   const refreshTeamFolders = useCallback((teamId: string) => {
-    fetchTeamFolders(teamId)
-      .then((f) => setTeamFolders((prev) => ({ ...prev, [teamId]: f ?? [] })))
-      .catch(() => {});
+    fetchTeamFolders(teamId).then((result) =>
+      setTeamFolders((prev) => ({
+        ...prev,
+        [teamId]: result.isOk() ? result.data : [],
+      })),
+    );
   }, []);
 
   useEffect(() => {
@@ -84,15 +87,14 @@ export default function NotebookHomePage() {
   }, [refreshFolders]);
 
   useEffect(() => {
-    fetchUserTeams()
-      .then((data) => {
-        setTeams(data);
-        for (const [team] of data) {
-          refreshTeamPages(team.id);
-          refreshTeamFolders(team.id);
-        }
-      })
-      .catch(() => setTeams([]));
+    fetchUserTeams().then((result) => {
+      const data = result.isOk() ? result.data : [];
+      setTeams(data);
+      for (const [team] of data) {
+        refreshTeamPages(team.id);
+        refreshTeamFolders(team.id);
+      }
+    });
   }, [refreshTeamPages, refreshTeamFolders]);
 
   if (pages.length === 0 && teams.length === 0) {

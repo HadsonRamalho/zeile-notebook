@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("exec-compiled");
+const api = createResultApi("exec-compiled");
 
 export interface LanguageCapability {
   language: string;

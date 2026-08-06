@@ -45,12 +45,14 @@ export function CreateTeamDialog({
     if (!newTeamName.trim()) return;
 
     setIsCreating(true);
-    try {
-      const newTeam = await createTeamApi({
-        name: newTeamName,
-        description: newTeamDesc || undefined,
-      });
-
+    const result = await createTeamApi({
+      name: newTeamName,
+      description: newTeamDesc || undefined,
+    });
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
+      const newTeam = result.data;
       const newRole: TeamRole = {
         id: "1",
         teamId: newTeam.id,
@@ -68,11 +70,8 @@ export function CreateTeamDialog({
       onCreated([newTeam, newRole]);
       reset();
       onOpenChange(false);
-    } catch (err) {
-      handleApiError({ err, t });
-    } finally {
-      setIsCreating(false);
     }
+    setIsCreating(false);
   };
 
   return (

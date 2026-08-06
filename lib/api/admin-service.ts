@@ -5,43 +5,30 @@ import type {
   AdminUserView,
   PaginatedResponse,
 } from "@/types/admin-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("admin");
+const api = createResultApi("admin");
 
-export async function fetchAdminStats(): Promise<AdminSystemStats> {
-  const response = await api.get<AdminSystemStats>("/admin/stats");
-  return response;
+export function fetchAdminStats() {
+  return api.get<AdminSystemStats>("/admin/stats");
 }
 
-export async function fetchAdminUsers(
-  page: number,
-  limit: number,
-): Promise<PaginatedResponse<AdminUserView>> {
-  const response = await api.get<PaginatedResponse<AdminUserView>>(
+export function fetchAdminUsers(page: number, limit: number) {
+  return api.get<PaginatedResponse<AdminUserView>>(
     `/admin/users?page=${page}&limit=${limit}`,
   );
-  return response;
 }
 
-export async function fetchAdminTeams(
-  page: number,
-  limit: number,
-): Promise<PaginatedResponse<AdminTeamView>> {
-  const response = await api.get<PaginatedResponse<AdminTeamView>>(
+export function fetchAdminTeams(page: number, limit: number) {
+  return api.get<PaginatedResponse<AdminTeamView>>(
     `/admin/teams?page=${page}&limit=${limit}`,
   );
-  return response;
 }
 
-export async function fetchAdminNotebooks(
-  page: number,
-  limit: number,
-): Promise<PaginatedResponse<AdminNotebookView>> {
-  const response = await api.get<PaginatedResponse<AdminNotebookView>>(
+export function fetchAdminNotebooks(page: number, limit: number) {
+  return api.get<PaginatedResponse<AdminNotebookView>>(
     `/admin/notebooks?page=${page}&limit=${limit}`,
   );
-  return response;
 }
 
 export type AdminSearchKind = "users" | "teams" | "notebooks";

@@ -37,10 +37,12 @@ function readRef(block: Block): { templateId?: string; version?: number } {
 }
 
 async function loadPickerEntries(): Promise<PickerEntry[]> {
-  const [mine, published] = await Promise.all([
-    listMyTemplates().catch(() => [] as Template[]),
-    listPublicTemplates("typst").catch(() => []),
+  const [mineResult, publishedResult] = await Promise.all([
+    listMyTemplates(),
+    listPublicTemplates("typst"),
   ]);
+  const mine = mineResult.isOk() ? mineResult.data : ([] as Template[]);
+  const published = publishedResult.isOk() ? publishedResult.data : [];
 
   const byId = new Map<string, PickerEntry>();
   for (const t of mine) {
@@ -177,32 +179,35 @@ export function TemplateReferenceBlock({
 
     let active = true;
     setResolution({ status: "loading" });
-    getTemplate(templateId, version)
-      .then(async (resolved) => {
-        if (!active) return;
-        if (!resolved.version) {
-          setResolution({ status: "empty", name: resolved.name });
-          return;
-        }
-        const paths = await registerTypstSources(
-          resolved.id,
-          resolved.version.namedSources,
-        );
-        if (!active) return;
-        setResolution({
-          status: "ready",
-          name: resolved.name,
-          version: resolved.version.version,
-          paths,
-        });
-      })
-      .catch((err) => {
-        if (!active) return;
+    getTemplate(templateId, version).then(async (result) => {
+      if (!active) return;
+      if (result.isErr()) {
         setResolution({
           status: "error",
-          message: err instanceof Error ? err.message : "Template indisponível",
+          message:
+            result.error instanceof Error
+              ? result.error.message
+              : "Template indisponível",
         });
+        return;
+      }
+      const resolved = result.data;
+      if (!resolved.version) {
+        setResolution({ status: "empty", name: resolved.name });
+        return;
+      }
+      const paths = await registerTypstSources(
+        resolved.id,
+        resolved.version.namedSources,
+      );
+      if (!active) return;
+      setResolution({
+        status: "ready",
+        name: resolved.name,
+        version: resolved.version.version,
+        paths,
       });
+    });
     return () => {
       active = false;
     };

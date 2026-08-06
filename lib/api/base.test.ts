@@ -10,7 +10,7 @@ vi.mock("@/lib/runtime/router", () => ({
   resolve: () => ({ baseUrl: "https://api.test/api", token: "tok" }),
 }));
 
-const { ApiClientError, createApi, createResultApi } = await import("./base");
+const { ApiClientError, createResultApi } = await import("./base");
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -88,40 +88,5 @@ describe("createResultApi", () => {
     expect(queueRequest).toHaveBeenCalledTimes(1);
     expect(result.isErr()).toBe(true);
     expect(result.error).toBe(networkError);
-  });
-});
-
-describe("createApi (throwing facade)", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-    renewSession.mockReset();
-    queueRequest.mockReset().mockResolvedValue(undefined);
-  });
-
-  it("still throws ApiClientError on a non-2xx response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          jsonResponse(404, { code: "NOT_FOUND", message: "sem notebook" }),
-        ),
-    );
-
-    await expect(
-      createApi("notebook-crud").get("/notebooks/x"),
-    ).rejects.toBeInstanceOf(ApiClientError);
-  });
-
-  it("still resolves the data on a successful response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(jsonResponse(200, { ok: true })),
-    );
-
-    await expect(createApi("notebook-crud").get("/ping")).resolves.toEqual({
-      ok: true,
-    });
   });
 });

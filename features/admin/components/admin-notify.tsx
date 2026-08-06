@@ -50,8 +50,7 @@ export function AdminNotify() {
     setSearching(true);
     debounce.current = setTimeout(() => {
       adminSearch(kind, q)
-        .then((r) => setResults(r ?? []))
-        .catch(() => setResults([]))
+        .then((result) => setResults(result.isOk() ? (result.data ?? []) : []))
         .finally(() => setSearching(false));
     }, 300);
     return () => {
@@ -62,25 +61,24 @@ export function AdminNotify() {
   const send = async () => {
     if (!selected || !title.trim() || !body.trim() || sending) return;
     setSending(true);
-    try {
-      await adminNotify({
-        targetKind: TARGET_KIND[kind],
-        targetId: selected.id,
-        title: title.trim(),
-        body: body.trim(),
-        url: url.trim() || undefined,
-      });
+    const result = await adminNotify({
+      targetKind: TARGET_KIND[kind],
+      targetId: selected.id,
+      title: title.trim(),
+      body: body.trim(),
+      url: url.trim() || undefined,
+    });
+    if (result.isErr()) {
+      toast.error(t("sent_error"));
+    } else {
       toast.success(t("sent_success"));
       setTitle("");
       setBody("");
       setUrl("");
       setSelected(null);
       setQuery("");
-    } catch {
-      toast.error(t("sent_error"));
-    } finally {
-      setSending(false);
     }
+    setSending(false);
   };
 
   return (

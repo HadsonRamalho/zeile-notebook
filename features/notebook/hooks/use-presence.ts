@@ -276,13 +276,11 @@ export function usePresence(
 
   useEffect(() => {
     let cancelled = false;
-    fetchNotebookMessages(pageId)
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) {
-          setMessages(data.map(mapChatMessage));
-        }
-      })
-      .catch(() => {});
+    fetchNotebookMessages(pageId).then((result) => {
+      if (!cancelled && result.isOk()) {
+        setMessages(result.data.map(mapChatMessage));
+      }
+    });
     return () => {
       cancelled = true;
     };
@@ -302,12 +300,12 @@ export function usePresence(
         content: trimmed,
         parentId: parentId ?? null,
         quotedMessageId: quotedMessageId ?? null,
-      })
-        .then((dto) => {
-          if (dto)
-            setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
-        })
-        .catch(() => {});
+      }).then((result) => {
+        if (result.isOk())
+          setMessages((prev) =>
+            upsertMessage(prev, mapChatMessage(result.data)),
+          );
+      });
     },
     [pageId],
   );
@@ -316,24 +314,24 @@ export function usePresence(
     (messageId: string, content: string) => {
       const trimmed = content.trim();
       if (!trimmed) return;
-      editNotebookMessage(pageId, messageId, trimmed)
-        .then((dto) => {
-          if (dto)
-            setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
-        })
-        .catch(() => {});
+      editNotebookMessage(pageId, messageId, trimmed).then((result) => {
+        if (result.isOk())
+          setMessages((prev) =>
+            upsertMessage(prev, mapChatMessage(result.data)),
+          );
+      });
     },
     [pageId],
   );
 
   const deleteMessage = useCallback(
     (messageId: string) => {
-      deleteNotebookMessage(pageId, messageId)
-        .then((dto) => {
-          if (dto)
-            setMessages((prev) => upsertMessage(prev, mapChatMessage(dto)));
-        })
-        .catch(() => {});
+      deleteNotebookMessage(pageId, messageId).then((result) => {
+        if (result.isOk())
+          setMessages((prev) =>
+            upsertMessage(prev, mapChatMessage(result.data)),
+          );
+      });
     },
     [pageId],
   );

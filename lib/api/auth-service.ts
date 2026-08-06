@@ -4,9 +4,9 @@ import type {
   RegisterUser,
   User,
 } from "@/types/user-types";
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("auth");
+const api = createResultApi("auth");
 
 export async function login(data: LoginUser) {
   return api.post<string>("/user/login", data);

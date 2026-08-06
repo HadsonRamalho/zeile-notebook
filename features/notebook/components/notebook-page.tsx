@@ -143,7 +143,7 @@ export default function RustInteractivePage({
     const now = Date.now();
     if (now - lastEditPingRef.current < 30000) return;
     lastEditPingRef.current = now;
-    recordEditActivity(pageId).catch(() => {});
+    recordEditActivity(pageId);
   }, [pageId, userPermissions]);
 
   const trackedUpdateBlock = useCallback(

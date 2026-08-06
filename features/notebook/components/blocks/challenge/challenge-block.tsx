@@ -59,9 +59,7 @@ export function ChallengeBlock({
   const creatingRef = useRef(false);
 
   useEffect(() => {
-    getProfile()
-      .then(setUser)
-      .catch(() => setUser(null));
+    getProfile().then((result) => setUser(result.isOk() ? result.data : null));
   }, []);
 
   useEffect(() => {
@@ -76,26 +74,27 @@ export function ChallengeBlock({
       statementMd: DEFAULT_STATEMENT,
       languages: ["rust"],
       judgeMode: "io",
-    })
-      .then((created) => {
-        updateBlockMetadata(block.id, {
-          type: "challenge",
-          props: { challengeId: created.id },
-        });
-        setMode("config");
-      })
-      .catch(() => {
+    }).then((result) => {
+      if (result.isErr()) {
         creatingRef.current = false;
         toast.error(t("authoring.error_generic"));
+        return;
+      }
+      updateBlockMetadata(block.id, {
+        type: "challenge",
+        props: { challengeId: result.data.id },
       });
+      setMode("config");
+    });
   }, [challengeId, canWrite, notebookId, block.id, updateBlockMetadata, t]);
 
   useEffect(() => {
     if (!challengeId) return;
     let active = true;
-    getChallengeById(challengeId)
-      .then((d) => active && setDetail(d))
-      .catch(() => active && setDetail("error"));
+    getChallengeById(challengeId).then((result) => {
+      if (!active) return;
+      setDetail(result.isOk() ? result.data : "error");
+    });
     return () => {
       active = false;
     };

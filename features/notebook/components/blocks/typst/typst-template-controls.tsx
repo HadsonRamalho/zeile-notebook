@@ -82,20 +82,23 @@ export function TypstTemplateControls({
 
   const loadDetails = (templateId: string) => {
     setDetails({ status: "loading" });
-    getTemplate(templateId)
-      .then((t) =>
-        setDetails({
-          status: "ready",
-          latestVersion: t.latestVersion,
-          isPublic: t.isPublic,
-        }),
-      )
-      .catch((err) =>
+    getTemplate(templateId).then((result) => {
+      if (result.isErr()) {
         setDetails({
           status: "error",
-          message: err instanceof Error ? err.message : "Template indisponível",
-        }),
-      );
+          message:
+            result.error instanceof Error
+              ? result.error.message
+              : "Template indisponível",
+        });
+        return;
+      }
+      setDetails({
+        status: "ready",
+        latestVersion: result.data.latestVersion,
+        isPublic: result.data.isPublic,
+      });
+    });
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -105,9 +108,11 @@ export function TypstTemplateControls({
     if (mark) {
       loadDetails(mark.templateId);
     } else if (mine === null) {
-      listMyTemplates()
-        .then((t) => setMine(t.filter((x) => x.kind === "typst")))
-        .catch(() => setMine([]));
+      listMyTemplates().then((result) =>
+        setMine(
+          result.isOk() ? result.data.filter((x) => x.kind === "typst") : [],
+        ),
+      );
     }
   };
 
@@ -122,19 +127,22 @@ export function TypstTemplateControls({
     const trimmed = name.trim();
     if (!trimmed || busy) return;
     setBusy(true);
-    try {
-      const created = await createTemplate({
-        kind: "typst",
-        name: trimmed,
-        sourceNotebookId: notebookId,
-      });
-      linkTo(created.id, created.name);
+    const result = await createTemplate({
+      kind: "typst",
+      name: trimmed,
+      sourceNotebookId: notebookId,
+    });
+    if (result.isErr()) {
+      setFlash(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao criar template",
+      );
+    } else {
+      linkTo(result.data.id, result.data.name);
       setName("");
-    } catch (err) {
-      setFlash(err instanceof Error ? err.message : "Erro ao criar template");
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
 
   const handlePublish = async () => {
@@ -142,31 +150,37 @@ export function TypstTemplateControls({
     const sources = collectSources(pageBlocks, mark.templateId);
     if (Object.keys(sources).length === 0) return;
     setBusy(true);
-    try {
-      const version = await publishTemplateVersion(mark.templateId, sources);
-      setFlash(`Versão v${version.version} publicada`);
+    const result = await publishTemplateVersion(mark.templateId, sources);
+    if (result.isErr()) {
+      setFlash(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao publicar",
+      );
+    } else {
+      setFlash(`Versão v${result.data.version} publicada`);
       loadDetails(mark.templateId);
-    } catch (err) {
-      setFlash(err instanceof Error ? err.message : "Erro ao publicar");
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
 
   const handleToggleVisibility = async () => {
     if (!mark || busy || details?.status !== "ready") return;
     setBusy(true);
-    try {
-      const updated = await setTemplateVisibility(
-        mark.templateId,
-        !details.isPublic,
+    const result = await setTemplateVisibility(
+      mark.templateId,
+      !details.isPublic,
+    );
+    if (result.isErr()) {
+      setFlash(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao alterar acesso",
       );
-      setDetails((d) => (d ? { ...d, isPublic: updated.isPublic } : d));
-    } catch (err) {
-      setFlash(err instanceof Error ? err.message : "Erro ao alterar acesso");
-    } finally {
-      setBusy(false);
+    } else {
+      setDetails((d) => (d ? { ...d, isPublic: result.data.isPublic } : d));
     }
+    setBusy(false);
   };
 
   const unlink = () => {

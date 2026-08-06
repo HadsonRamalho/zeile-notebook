@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("folders");
+const api = createResultApi("folders");
 
 export interface Folder {
   id: string;

@@ -91,10 +91,10 @@ export function NotebookProvider({
 
   useEffect(() => {
     if (pageId) {
-      getCurrentNotebookWithBlocks(pageId).then((data) => {
-        if (data) {
-          setVisibility(data.isPublic);
-          setNotebook(data);
+      getCurrentNotebookWithBlocks(pageId).then((result) => {
+        if (result.isOk()) {
+          setVisibility(result.data.isPublic);
+          setNotebook(result.data);
         }
       });
     }

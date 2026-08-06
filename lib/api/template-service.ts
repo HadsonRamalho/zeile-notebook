@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("templates");
+const api = createResultApi("templates");
 
 export type TemplateKind = "typst";
 

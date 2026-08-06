@@ -1,6 +1,6 @@
-import { createApi } from "./base";
+import { createResultApi } from "./base";
 
-const api = createApi("push");
+const api = createResultApi("push");
 
 export interface PushSubscriptionPayload {
   endpoint: string;

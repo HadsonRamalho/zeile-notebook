@@ -103,12 +103,12 @@ export function TeamMembers({
   const canManageRoles = !!userPermissions?.canManagePermissions;
 
   const handleChangeRole = async (userId: string, roleId: string) => {
-    try {
-      await updateMemberRole(teamId, { userId, roleId });
+    const result = await updateMemberRole(teamId, { userId, roleId });
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
       toast.success(a("role_updated"));
       onUpdate();
-    } catch (err) {
-      handleApiError({ err, t });
     }
   };
 
@@ -128,40 +128,36 @@ export function TeamMembers({
     if (!inviteEmail.trim() || !inviteRoleId) return;
 
     setIsInviting(true);
-    try {
-      await inviteTeamMember(teamId, {
-        email: inviteEmail,
-        roleId: inviteRoleId,
-      });
-
+    const result = await inviteTeamMember(teamId, {
+      email: inviteEmail,
+      roleId: inviteRoleId,
+    });
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
       toast.success(a("invited_member"));
       onUpdate();
 
       setInviteEmail("");
       setInviteRoleId("");
       setIsInviteDialogOpen(false);
-    } catch (err) {
-      handleApiError({ err, t });
-    } finally {
-      setIsInviting(false);
     }
+    setIsInviting(false);
   };
 
   const confirmRemoveMember = async () => {
     if (!memberToRemove) return;
 
     setIsRemoving(true);
-    try {
-      await removeMember(teamId, memberToRemove.id);
-
+    const result = await removeMember(teamId, memberToRemove.id);
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
       toast.success(a("remove_member_success"));
       onUpdate();
       setMemberToRemove(null);
-    } catch (err) {
-      handleApiError({ err, t });
-    } finally {
-      setIsRemoving(false);
     }
+    setIsRemoving(false);
   };
 
   if (!user) {

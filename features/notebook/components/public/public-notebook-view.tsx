@@ -32,11 +32,13 @@ export function PublicNotebookView({ slug }: PublicNotebookViewProps) {
     let cancelled = false;
     (async () => {
       try {
-        const data = await getPublicNotebookBySlug(slug);
-        if (cancelled || !data) {
-          if (!cancelled) setStatus("error");
+        const result = await getPublicNotebookBySlug(slug);
+        if (cancelled) return;
+        if (result.isErr()) {
+          setStatus("error");
           return;
         }
+        const data = result.data;
         setTitle(data.title);
         setOwnerName(data.ownerName);
         if (data.documentData && data.documentData.length > 0) {

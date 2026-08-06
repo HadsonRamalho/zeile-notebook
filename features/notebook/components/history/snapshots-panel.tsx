@@ -34,9 +34,9 @@ export function SnapshotsPanel({ notebookId }: { notebookId: string }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    listSnapshots(notebookId)
-      .then((data) => setItems(data ?? []))
-      .catch(() => {});
+    listSnapshots(notebookId).then((result) => {
+      if (result.isOk()) setItems(result.data ?? []);
+    });
   }, [notebookId]);
 
   useEffect(() => {
@@ -46,18 +46,18 @@ export function SnapshotsPanel({ notebookId }: { notebookId: string }) {
   const save = async () => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    await createSnapshot(notebookId, trimmed).catch(() => {});
+    await createSnapshot(notebookId, trimmed);
     setLabel("");
     load();
   };
 
   const restore = async (id: string) => {
     setConfirmingId(null);
-    await restoreSnapshot(notebookId, id).catch(() => {});
+    await restoreSnapshot(notebookId, id);
   };
 
   const remove = async (id: string) => {
-    await deleteSnapshot(notebookId, id).catch(() => {});
+    await deleteSnapshot(notebookId, id);
     load();
   };
 

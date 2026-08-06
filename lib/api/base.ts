@@ -147,22 +147,3 @@ export function createResultApi(capability: Capability) {
       }),
   };
 }
-
-// Two facades over the same Result: createApi throws (the contract every not-yet-migrated
-// service still relies on, Q109/etapa 19) and createResultApi returns the Result directly, so
-// services can migrate one at a time without breaking the ones that haven't yet.
-export function createApi(capability: Capability) {
-  const result = createResultApi(capability);
-  return {
-    get: <T>(path: string, config?: FetchOptions) =>
-      result.get<T>(path, config).then((r) => r.unwrap()),
-    post: <T>(path: string, body?: unknown, config?: FetchOptions) =>
-      result.post<T>(path, body, config).then((r) => r.unwrap()),
-    put: <T>(path: string, body: unknown, config?: FetchOptions) =>
-      result.put<T>(path, body, config).then((r) => r.unwrap()),
-    delete: <T>(path: string, config?: FetchOptions) =>
-      result.delete<T>(path, config).then((r) => r.unwrap()),
-    patch: <T>(path: string, body?: unknown, config?: FetchOptions) =>
-      result.patch<T>(path, body, config).then((r) => r.unwrap()),
-  };
-}

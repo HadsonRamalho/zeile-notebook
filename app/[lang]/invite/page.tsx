@@ -35,21 +35,20 @@ function InviteProcessor() {
     }
 
     const processInvite = async () => {
-      try {
-        await acceptTeamInvite(token);
-        setStatus("success");
-
-        setTimeout(() => {
-          router.push("/docs");
-        }, 3000);
-      } catch (error: unknown) {
+      const result = await acceptTeamInvite(token);
+      if (result.isErr()) {
         setStatus("error");
         setErrorMessage(
-          error instanceof Error
-            ? error.message
+          result.error instanceof Error
+            ? result.error.message
             : "Este convite é inválido ou já foi utilizado.",
         );
+        return;
       }
+      setStatus("success");
+      setTimeout(() => {
+        router.push("/docs");
+      }, 3000);
     };
 
     processInvite();

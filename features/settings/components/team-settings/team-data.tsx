@@ -81,9 +81,10 @@ export function TeamData({
 
   async function onTeamSubmit(data: TeamFormValues) {
     setIsSaving(true);
-    try {
-      await updateTeam(teamId, data);
-
+    const result = await updateTeam(teamId, data);
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
+    } else {
       toast.success(a("team_updated"));
 
       setTeam(
@@ -93,24 +94,19 @@ export function TeamData({
       );
 
       form.reset(data);
-    } catch (err) {
-      handleApiError({ err, t });
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   }
 
   async function handleDeleteTeam() {
     setIsDeleting(true);
-    try {
-      await deleteTeam(teamId);
-
-      toast.success(a("team_deleted"));
-
-      router.push("/docs");
-    } catch (err) {
-      handleApiError({ err, t });
+    const result = await deleteTeam(teamId);
+    if (result.isErr()) {
+      handleApiError({ err: result.error, t });
       setIsDeleting(false);
+    } else {
+      toast.success(a("team_deleted"));
+      router.push("/docs");
     }
   }
 
