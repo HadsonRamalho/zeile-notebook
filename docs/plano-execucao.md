@@ -299,13 +299,29 @@ Entregue como stack de 3 PRs dependentes (#145/#146/#147).
 - [x] **Ligar os 3 checks de i18n** (Q45, PR #147): `scripts/validate-i18n.mjs`, exposto como `pnpm validate:i18n` no job `frontend-test` do `ci.yml`. Rodar o check pela primeira vez expôs três achados reais, não só chaves órfãs cosméticas: **(1)** 6 `errorCode` gerados sem chave em `api_errors` (`ERROR_SENDING_EMAIL`, `PERMISSION_DENIED`, `LAST_LOGIN_METHOD`, `UNIQUE_VIOLATION`, `FOREIGN_KEY_VIOLATION`, `NOT_FOUND`) — usuário veria o código cru na tela; **(2)** um bug em `login-form.tsx`: `t("login.errors.generic_github_error")` chamado de dentro do próprio namespace `login`, nunca resolvia; **(3)** ~40 chaves órfãs de UI que não existe mais — sidebar de backup antigo, editor de cargo legado (substituído pelo catálogo de permissões granular) e um fluxo de autoria de desafios que nunca foi finalizado (só 3 dos ~35 campos chegaram a ser usados)
   - **Chaves genuinamente dinâmicas, isentas do check de órfãs com justificativa em `scripts/validate-i18n.mjs`**: `api_errors.*` (código vem do backend; cobertura já garantida pelo check 3), `login.errors.*` (código de erro OAuth cruzado com slug do provedor — conjunto aberto), `perm.*` (chave = `permission.key` do catálogo em runtime, já guardada com `.has()` antes do uso)
 
-#### 17 · Escrever os docs normativos
+#### 17 · Escrever os docs normativos — [x] concluída
 
-- [ ] `docs/README.md` com índice + regra de precedência
-- [ ] Os 13 docs de `docs/architecture/` (lista acima), cada regra com severidade 🔴/🟡/⚪ (Q91)
-- [ ] Seção "mudou X ⇒ verifique Y" em cada doc (Q92)
-- [ ] ADRs das decisões deste documento (Q8)
-- [ ] `permissions-design.md`: corrigir o status "planejamento" (Q89)
+- [x] `docs/README.md` com índice + regra de precedência (Q3), severidade (Q91) e a seção
+  "mudou X ⇒ verifique Y" (Q92) explicada
+- [x] Os 13 docs de `docs/architecture/`: `comment-guide`, `code-rules`, `frontend-rules`,
+  `rust-rules`, `contracts`, `database`, `security`, `operability`, `testing`, `i18n`,
+  `env-vars` — cada regra com severidade 🔴/🟡/⚪ (Q91) e a seção "mudou X ⇒ verifique Y" (Q92).
+  `crdt`, `sandbox`, `performance` e `a11y` ficam para a etapa 18 (áreas com decisão pendente,
+  não só redação)
+- [x] ADRs retroativas (Q8): [0002](decisions/0002-server-does-not-decide-notebook-text.md)
+  (servidor não decide texto de notebook, Q43) ·
+  [0003](decisions/0003-permission-model.md) (modelo de permissões, retroativa da seção 3 de
+  `permissions-design.md`, Q89) · [0004](decisions/0004-rust-module-organization.md)
+  (raiz por módulo, não por camada, Q47/Q48) ·
+  [0005](decisions/0005-features-boundary.md) (fronteira `features/` vs topo, Q20/Q24) ·
+  [0006](decisions/0006-sandbox-compile-symmetry.md) (compilação simétrica no `bwrap`, Q106) ·
+  [0007](decisions/0007-comment-language-reversal.md) (reversão do Q10, Q108)
+- [x] `permissions-design.md`: status corrigido de "planejamento" para "implementado" (Q89)
+
+**Achado no caminho**: `docs/padroes.md` e `docs/decisoes.md` tinham referências desatualizadas
+(catálogo dizia "Q1–Q107", já estava em Q109; a seção de fronteira `features/`×topo dizia
+"a definir" com a tabela já preenchida desde a etapa 15) — corrigidas junto, já que a etapa
+tocava exatamente esses dois documentos.
 
 #### 18 · Áreas de regra próprias
 
@@ -384,16 +400,11 @@ implementar. Ficam listados para não se perderem:
 
 | Origem | Aberto |
 |---|---|
-| Q47/Q48 | Raiz da organização do Rust: por **camada** (`services/`, `repositories/`, `dto/`) ou por **módulo** (`domain/notebook/{controller,service,repository,dto,entity}.rs`) |
-| Q20/Q24 | Linha divisória entre `features/<x>/` e as pastas de topo — ver a tabela em [decisoes.md](decisoes.md) |
 | Q21 | Se a isenção de `vendor/` cobre também `any` (Q33) |
-| Q12 | Se ADR conta como referência legítima em comentário (é versionada e perene, ao contrário de PR) |
-| Q42 | Lista final de isenções de i18n — assumi nome próprio, nome de linguagem, nome de locale e código de exemplo |
-| Q43 | Servidor devolve `title: null` ou o front manda o título traduzido; e o que fazer com notebooks já criados com pt-BR no banco |
+| Q42 | Lista final de isenções de i18n — assumi nome próprio, nome de linguagem, nome de locale e código de exemplo. Redigida em [i18n.md](architecture/i18n.md); reabrir se discordar |
 | Q60 | Confirmar que nenhum build com `NEXT_PUBLIC_GITHUB_TOKEN` foi publicado — não sendo possível, rotacionar |
 | Q70 | Se a regra de timeout cobre também o cliente (`lib/api/base.ts` faz `fetch` sem `AbortSignal.timeout`) |
 | Q59 | Volume que dispara a exigência de `CONCURRENTLY` |
-| Q89 | `permissions-design.md` está marcado "planejamento" mas o modelo está implementado (`sec/catalog/`, `permission_grants`, `engine.ts`) — atualizar status, e decidir se `§3 Decisões batidas` vira ADR retroativa |
 | Q94 | Se PWA/service worker merece doc próprio ou se Q72 basta |
 
 ---
