@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import { useSyncExternalStore } from "react";
 
 export type CellValue = string | number | boolean | null;
@@ -79,9 +80,6 @@ export function tableFromRecords(data: unknown): TableResult | null {
 export function parseInlineTable(content: string): TableResult | null {
   const trimmed = content.trim();
   if (!trimmed) return null;
-  try {
-    return tableFromRecords(JSON.parse(trimmed));
-  } catch {
-    return null;
-  }
+  const result = catchErrorSync(() => tableFromRecords(JSON.parse(trimmed)));
+  return result.isOk() ? result.data : null;
 }

@@ -1,3 +1,4 @@
+import { catchErrorSync } from "@catcherjs/core";
 import type { Edge, Node } from "@xyflow/react";
 
 export type MermaidShape = "rect" | "round" | "stadium" | "circle" | "diamond";
@@ -254,8 +255,9 @@ export function graphToMermaid(graph: MermaidGraph): string {
 
 export function loadMermaidGraph(content: string): MermaidGraph {
   if (!content.trim()) return { direction: "TD", nodes: [], edges: [] };
-  try {
-    const parsed = JSON.parse(content);
+  const result = catchErrorSync(() => JSON.parse(content));
+  if (result.isOk()) {
+    const parsed = result.data;
     if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
       return {
         direction: parsed.direction === "LR" ? "LR" : "TD",
@@ -263,7 +265,7 @@ export function loadMermaidGraph(content: string): MermaidGraph {
         edges: parsed.edges,
       };
     }
-  } catch {}
+  }
   return mermaidToGraph(content);
 }
 

@@ -358,7 +358,7 @@ Independentes entre si e do resto da ordem:
 - [ ] `wait_for_port` → `health/ready` com erro visível ao usuário em vez de tela branca
 - [ ] `unsafe { set_var }` em `embedded_pg.rs`; `dotenvy::dotenv()` em segundo lugar; `BASE_URL` residual em `lib/api/base.ts`
 
-#### 19 · Migração para Catcher (Q109)
+#### 19 · Migração para Catcher (Q109) — [x] concluída
 
 Incremental, arquivo por arquivo — sem prazo de tolerância para `try/catch` cru em código
 **novo ou tocado**; código legado intocado *também* é migrado, por estar fora do padrão —
@@ -383,13 +383,23 @@ mutirão em ondas, não uma exceção permanente como `components/vendor/*` (Q21
   setError }`), além do formato antigo (`{ err, t, setError }`) que o código ainda não
   migrado continua usando; um `Result` `Ok` é no-op, então o chamador não precisa guardar com
   `isErr()` antes de chamar
-- [ ] Pontos que hoje reimplementam o padrão Q38 manualmente (`runTsxInSandbox` e afins) —
-  ver se `catchErrorSync`/`catchError` substitui o `ApiClientError` construído à mão
-- [ ] Levantar todo `try/catch` restante em `hooks/` e `components/notebook/`, mesmo fora do
-  escopo de outras etapas, e migrar em onda própria — não fica pendente indefinidamente. Boa
-  parte já foi resolvida de carona na migração acima (todo `try/catch` que envolvia uma chamada
-  de `*-service.ts` foi removido ou convertido); o que resta é `try/catch` sobre operação que
-  não é chamada de API (parse local, `FileReader`, etc.) — não levantado nesta entrega
+- [x] Pontos que hoje reimplementam o padrão Q38 manualmente (`runTsxInSandbox` e afins) —
+  `runTsxInSandbox` (`lib/sandbox/tsx-sandbox.ts`) parava de ser `async` sem nunca dar `await`
+  em nada; passou a devolver `Result<string | null, ApiClientError | Error>` puro (sem
+  `Promise`), com `catchErrorSync` em volta do `babel.transform`. `runPythonInSandbox`
+  (`lib/sandbox/python-sandbox.ts`) reimplementava um `Result` à mão como `{output,result} |
+  {error}`; passou a devolver o `Result` real via `catchError`
+- [x] Levantar todo `try/catch` restante em `hooks/` e `features/notebook/` (nome atual da
+  árvore, pós-etapa 15) e migrar — cobriu os ~20 arquivos restantes: `JSON.parse` de conteúdo
+  local (mermaid, database-schema, cell-results-store, drafts de challenge), `localStorage`
+  (brushes, gestos do free-drawing, grupos recolhidos da sidebar, `useLocalStorage`), parse de
+  mensagem de WebSocket (presence, comments, notebook-page), `automerge.load` (cache local e
+  view pública), e chamada de biblioteca de renderização local (`katex`, `typst`, `sql.js`,
+  `navigator.clipboard`/`navigator.share`, exportação de asset). Achado no caminho: o
+  `try/catch` de `triggerClone` em `notebook-context.tsx` (`clone()` já trata o próprio erro
+  desde a migração do bullet 2) — removido junto com os imports que ficaram sem uso. Os dois
+  `try/catch` em `use-push-subscription.ts` e o `try/finally` de `tag-editor.tsx` não têm
+  `catch` de fato (só `finally`) — não são casos do Q38, ficaram como estavam
 
 #### 20 · Migração para os tipos gerados
 

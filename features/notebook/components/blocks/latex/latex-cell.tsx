@@ -1,6 +1,7 @@
 "use client";
 
 import "katex/dist/katex.min.css";
+import { catchErrorSync } from "@catcherjs/core";
 import katex from "katex";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -18,18 +19,19 @@ interface LatexCellProps {
 
 function renderLatex(source: string): { html: string; error: string | null } {
   if (!source.trim()) return { html: "", error: null };
-  try {
-    const html = katex.renderToString(source, {
-      throwOnError: true,
-      displayMode: true,
-    });
-    return { html, error: null };
-  } catch (err) {
+  const result = catchErrorSync(() =>
+    katex.renderToString(source, { throwOnError: true, displayMode: true }),
+  );
+  if (result.isErr()) {
     return {
       html: "",
-      error: err instanceof Error ? err.message : "Erro ao renderizar LaTeX",
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao renderizar LaTeX",
     };
   }
+  return { html: result.data, error: null };
 }
 
 export function LatexCell({ content, onChange, canWrite }: LatexCellProps) {

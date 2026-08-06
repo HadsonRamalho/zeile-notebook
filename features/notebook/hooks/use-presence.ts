@@ -1,3 +1,4 @@
+import { catchErrorSync } from "@catcherjs/core";
 import { getCookie } from "cookies-next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -150,87 +151,87 @@ export function usePresence(
     const token = getCookie(tokenCookieName())?.toString() || "";
     const handle = subscribeNotebookSocket(pageId, token, {
       onText: (raw) => {
-        try {
-          const data = JSON.parse(raw);
+        const parseResult = catchErrorSync(() => JSON.parse(raw));
+        if (parseResult.isErr()) {
+          console.error("Erro ao ler WebSocket:", parseResult.error);
+          return;
+        }
+        const data = parseResult.data;
 
-          if (data.type === "capabilities_updated") {
-            onCapabilitiesChangedRef.current?.();
-            return;
-          }
+        if (data.type === "capabilities_updated") {
+          onCapabilitiesChangedRef.current?.();
+          return;
+        }
 
-          // the server coalesces presence into a periodic batch (updates + gone)
-          if (data.type === "presence_batch") {
-            setCollaborators((prev) => {
-              const next = new Map(prev);
-              for (const u of data.updates || []) {
-                if (!u?.userId || u.userId === socketUserIdRef.current)
-                  continue;
-                lastSeenRef.current.set(u.userId, Date.now());
-                next.set(u.userId, {
-                  id: u.userId,
-                  name: u.name || "Visitante",
-                  color: stringToColor(u.name || u.userId),
-                  cursor: u.cursor ?? null,
-                  focusedBlockId: u.focusedBlockId ?? null,
-                  viewportBlockId: u.viewportBlockId ?? null,
-                  avatar: u.avatar ?? null,
-                  isGuest: u.isGuest ?? true,
-                });
-              }
-              for (const goneId of data.gone || []) {
-                next.delete(goneId);
-                lastSeenRef.current.delete(goneId);
-              }
-              return next;
-            });
-            return;
-          }
-
-          if (data.userId === socketUserIdRef.current) return;
-
-          if (data.type === "init") {
-            socketUserIdRef.current = data.userId;
-            setSocketUserId(data.userId);
-            broadcastPresenceWithId(data.userId);
-            return;
-          }
-
-          if (data.type === "chat_message" && data.message) {
-            setMessages((prev) =>
-              upsertMessage(prev, mapChatMessage(data.message)),
-            );
-            return;
-          }
-
-          if (data.type === "disconnect") {
-            lastSeenRef.current.delete(data.userId);
-            setCollaborators((prev) => {
-              const next = new Map(prev);
-              next.delete(data.userId);
-              return next;
-            });
-            return;
-          }
-
-          if (data.type === "presence") {
-            lastSeenRef.current.set(data.userId, Date.now());
-            setCollaborators((prev) => {
-              const next = new Map(prev);
-              next.set(data.userId, {
-                id: data.userId,
-                name: data.name || "Visitante",
-                color: stringToColor(data.name || data.userId),
-                cursor: data.cursor,
-                focusedBlockId: data.focusedBlockId,
-                viewportBlockId: data.viewportBlockId ?? null,
-                avatar: data.avatar,
-                isGuest: data.isGuest ?? true,
+        // the server coalesces presence into a periodic batch (updates + gone)
+        if (data.type === "presence_batch") {
+          setCollaborators((prev) => {
+            const next = new Map(prev);
+            for (const u of data.updates || []) {
+              if (!u?.userId || u.userId === socketUserIdRef.current) continue;
+              lastSeenRef.current.set(u.userId, Date.now());
+              next.set(u.userId, {
+                id: u.userId,
+                name: u.name || "Visitante",
+                color: stringToColor(u.name || u.userId),
+                cursor: u.cursor ?? null,
+                focusedBlockId: u.focusedBlockId ?? null,
+                viewportBlockId: u.viewportBlockId ?? null,
+                avatar: u.avatar ?? null,
+                isGuest: u.isGuest ?? true,
               });
-              return next;
+            }
+            for (const goneId of data.gone || []) {
+              next.delete(goneId);
+              lastSeenRef.current.delete(goneId);
+            }
+            return next;
+          });
+          return;
+        }
+
+        if (data.userId === socketUserIdRef.current) return;
+
+        if (data.type === "init") {
+          socketUserIdRef.current = data.userId;
+          setSocketUserId(data.userId);
+          broadcastPresenceWithId(data.userId);
+          return;
+        }
+
+        if (data.type === "chat_message" && data.message) {
+          setMessages((prev) =>
+            upsertMessage(prev, mapChatMessage(data.message)),
+          );
+          return;
+        }
+
+        if (data.type === "disconnect") {
+          lastSeenRef.current.delete(data.userId);
+          setCollaborators((prev) => {
+            const next = new Map(prev);
+            next.delete(data.userId);
+            return next;
+          });
+          return;
+        }
+
+        if (data.type === "presence") {
+          lastSeenRef.current.set(data.userId, Date.now());
+          setCollaborators((prev) => {
+            const next = new Map(prev);
+            next.set(data.userId, {
+              id: data.userId,
+              name: data.name || "Visitante",
+              color: stringToColor(data.name || data.userId),
+              cursor: data.cursor,
+              focusedBlockId: data.focusedBlockId,
+              viewportBlockId: data.viewportBlockId ?? null,
+              avatar: data.avatar,
+              isGuest: data.isGuest ?? true,
             });
-          }
-        } catch (e) {
-          console.error("Erro ao ler WebSocket:", e);
+            return next;
+          });
         }
       },
       onClose: () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import { Reorder, useDragControls } from "framer-motion";
 import {
   ArrowUpRight,
@@ -182,13 +183,12 @@ const DEFAULT_GESTURES: Record<number, GestureAction> = {
 
 function loadGestures(): Record<number, GestureAction> {
   if (typeof localStorage === "undefined") return { ...DEFAULT_GESTURES };
-  try {
+  const result = catchErrorSync(() => {
     const raw = localStorage.getItem(GESTURE_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_GESTURES };
     return { ...DEFAULT_GESTURES, ...JSON.parse(raw) };
-  } catch {
-    return { ...DEFAULT_GESTURES };
-  }
+  });
+  return result.isOk() ? result.data : { ...DEFAULT_GESTURES };
 }
 
 const MIN_ZOOM = 0.1;
@@ -964,9 +964,9 @@ export function FreeDrawingCell({
   const setGesture = (fingers: number, action: GestureAction) => {
     setGestures((prev) => {
       const next = { ...prev, [fingers]: action };
-      try {
-        localStorage.setItem(GESTURE_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
+      catchErrorSync(() =>
+        localStorage.setItem(GESTURE_STORAGE_KEY, JSON.stringify(next)),
+      );
       return next;
     });
   };

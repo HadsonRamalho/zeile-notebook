@@ -1,3 +1,4 @@
+import { catchErrorSync, err, ok, type Result } from "@catcherjs/core";
 import { ApiClientError } from "@/lib/api/base";
 import type { Block } from "@/types/block-types";
 
@@ -8,45 +9,57 @@ interface BabelGlobal {
   ) => { code: string };
 }
 
-export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
+export function runTsxInSandbox(
+  block: Block,
+  pageBlocks: Block[],
+): Result<string | null, ApiClientError | Error> {
   if (typeof window === "undefined") {
     console.error("Window is not defined");
-    return null;
+    return ok(null);
   }
 
   const babel = (window as unknown as { Babel?: BabelGlobal }).Babel;
 
   if (!babel) {
-    throw new ApiClientError(
-      "O Babel ainda está sendo carregado, aguarde alguns instantes.",
-      "BABEL_NOT_READY",
+    return err(
+      new ApiClientError(
+        "O Babel ainda está sendo carregado, aguarde alguns instantes.",
+        "BABEL_NOT_READY",
+      ),
     );
   }
 
-  const modulesData = pageBlocks
-    .filter(
-      (b) =>
-        b.type === "code" && b.id !== block.id && b.language === "typescript",
-    )
-    .reduce(
-      (acc, b) => {
-        const name = `./${b.title.replace(/[^a-zA-Z0-9]/g, "_")}`;
-        const { code: transpilado } = babel.transform(b.content, {
-          filename: "module.tsx",
-          presets: ["react", "typescript"],
-          plugins: [["transform-modules-commonjs"]],
-        });
-        acc[name] = transpilado;
-        return acc;
-      },
-      {} as Record<string, string>,
-    );
+  const transpileResult = catchErrorSync(() => {
+    const modulesData = pageBlocks
+      .filter(
+        (b) =>
+          b.type === "code" && b.id !== block.id && b.language === "typescript",
+      )
+      .reduce(
+        (acc, b) => {
+          const name = `./${b.title.replace(/[^a-zA-Z0-9]/g, "_")}`;
+          const { code: transpilado } = babel.transform(b.content, {
+            filename: "module.tsx",
+            presets: ["react", "typescript"],
+            plugins: [["transform-modules-commonjs"]],
+          });
+          acc[name] = transpilado;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
-  const { code: mainCodeTranspiled } = babel.transform(block.content, {
-    filename: "App.tsx",
-    presets: ["react", "typescript"],
-    plugins: [["transform-modules-commonjs"]],
+    const { code: mainCodeTranspiled } = babel.transform(block.content, {
+      filename: "App.tsx",
+      presets: ["react", "typescript"],
+      plugins: [["transform-modules-commonjs"]],
+    });
+
+    return { modulesData, mainCodeTranspiled };
   });
+
+  if (transpileResult.isErr()) return err(transpileResult.error);
+  const { modulesData, mainCodeTranspiled } = transpileResult.data;
 
   const iframeHtml = `
       <!DOCTYPE html>
@@ -103,5 +116,5 @@ export async function runTsxInSandbox(block: Block, pageBlocks: Block[]) {
       </html>
     `;
   const blob = new Blob([iframeHtml], { type: "text/html" });
-  return URL.createObjectURL(blob);
+  return ok(URL.createObjectURL(blob));
 }

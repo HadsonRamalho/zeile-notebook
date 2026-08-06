@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subscribeNotebookSocket } from "@/features/notebook/lib/notebook-socket";
 import {
@@ -27,10 +28,8 @@ export function useComments(notebookId: string, token: string) {
   useEffect(() => {
     const handle = subscribeNotebookSocket(notebookId, token, {
       onText: (raw) => {
-        try {
-          const data = JSON.parse(raw);
-          if (data.type === "comment_event") refresh();
-        } catch {}
+        const result = catchErrorSync(() => JSON.parse(raw));
+        if (result.isOk() && result.data.type === "comment_event") refresh();
       },
     });
     return () => handle.unsubscribe();

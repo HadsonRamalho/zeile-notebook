@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import {
   createContext,
   type ReactNode,
@@ -8,7 +7,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { handleApiError } from "@/lib/api/handle-api-error";
 import { getCurrentNotebookWithBlocks } from "@/lib/api/notebook-service";
 import type { Notebook } from "@/types/notebook-types";
 import { useNotebookManager } from "../components/notebook-manager";
@@ -48,7 +46,6 @@ export function NotebookProvider({
   children: ReactNode;
   pageId: string | null;
 }) {
-  const t = useTranslations("api_errors");
   const [saveSignal, setSaveSignal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
@@ -68,17 +65,12 @@ export function NotebookProvider({
     if (!notebook?.id && !pageId) {
       return;
     }
-    try {
-      setIsCloning(true);
-      const id = notebook?.id ?? pageId;
-      if (id) {
-        await clone(id);
-      }
-    } catch (err) {
-      handleApiError({ err, t });
-    } finally {
-      setIsCloning(false);
+    setIsCloning(true);
+    const id = notebook?.id ?? pageId;
+    if (id) {
+      await clone(id);
     }
+    setIsCloning(false);
   };
 
   const handleToggleVisibility = async (newVisibility: boolean) => {

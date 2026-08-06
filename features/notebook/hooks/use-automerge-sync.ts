@@ -1,4 +1,5 @@
 import type * as AutomergeType from "@automerge/automerge";
+import { catchErrorSync } from "@catcherjs/core";
 import diff from "fast-diff";
 import { get, set } from "idb-keyval";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -49,11 +50,17 @@ export function useAutomergeSync(notebookId: string, token: string) {
       let initialDoc: Notebook;
 
       if (cachedBinary && cachedBinary instanceof Uint8Array) {
-        try {
-          initialDoc = automergex.load<Notebook>(cachedBinary);
+        const loadResult = catchErrorSync(() =>
+          automergex.load<Notebook>(cachedBinary),
+        );
+        if (loadResult.isOk()) {
+          initialDoc = loadResult.data;
           setHasSyncedOnce(true);
-        } catch (e) {
-          console.error("Erro ao carregar notebook do cache:", e);
+        } else {
+          console.error(
+            "Erro ao carregar notebook do cache:",
+            loadResult.error,
+          );
           initialDoc = automergex.init<Notebook>();
         }
       } else {

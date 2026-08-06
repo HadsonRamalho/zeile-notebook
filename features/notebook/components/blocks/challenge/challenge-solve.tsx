@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import {
   Clock,
   Cpu,
@@ -60,8 +61,9 @@ function parseDraft(raw?: string): {
   byLang: Record<string, string>;
 } {
   if (!raw) return { byLang: {} };
-  try {
-    const d = JSON.parse(raw);
+  const result = catchErrorSync(() => JSON.parse(raw));
+  if (result.isOk()) {
+    const d = result.data;
     if (
       d &&
       typeof d === "object" &&
@@ -73,7 +75,7 @@ function parseDraft(raw?: string): {
         byLang: d.byLang as Record<string, string>,
       };
     }
-  } catch {}
+  }
   return { byLang: {} };
 }
 

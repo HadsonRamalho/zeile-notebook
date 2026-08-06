@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import { getCookie } from "cookies-next";
 import { Reorder } from "framer-motion";
 import {
@@ -286,12 +287,10 @@ export default function RustInteractivePage({
   useEffect(() => {
     const handle = subscribeNotebookSocket(pageId, token, {
       onText: (raw) => {
-        try {
-          const data = JSON.parse(raw);
-          if (data.type === "notebook_restored") {
-            window.location.reload();
-          }
-        } catch {}
+        const result = catchErrorSync(() => JSON.parse(raw));
+        if (result.isOk() && result.data.type === "notebook_restored") {
+          window.location.reload();
+        }
       },
     });
     return () => handle.unsubscribe();

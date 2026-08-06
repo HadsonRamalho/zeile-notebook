@@ -122,15 +122,17 @@ export function TsxEditor({
   };
   const editorFiles = { ...pageFiles, "/App.tsx": block.content };
 
-  const handleRunSimple = async () => {
-    try {
-      const url = await runTsxInSandbox(block, pageBlocks);
-      setSandboxUrl(url);
-    } catch (err) {
+  const handleRunSimple = () => {
+    const result = runTsxInSandbox(block, pageBlocks);
+    if (result.isErr()) {
       const message =
-        err instanceof Error ? err.message : "Erro ao executar o bloco.";
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao executar o bloco.";
       toast.error(message);
+      return;
     }
+    setSandboxUrl(result.data);
   };
 
   return (

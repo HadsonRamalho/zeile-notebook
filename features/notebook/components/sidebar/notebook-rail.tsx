@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import {
   ChevronDown,
   FileText,
@@ -277,10 +278,11 @@ export function NotebookRail() {
 
   useEffect(() => {
     setExpanded(readStorage(EXPANDED_STORAGE_KEY) === "1");
-    try {
-      const raw = readStorage(COLLAPSED_GROUPS_STORAGE_KEY);
-      if (raw) setCollapsedGroups(new Set(JSON.parse(raw) as string[]));
-    } catch {}
+    const raw = readStorage(COLLAPSED_GROUPS_STORAGE_KEY);
+    if (raw) {
+      const result = catchErrorSync(() => JSON.parse(raw) as string[]);
+      if (result.isOk()) setCollapsedGroups(new Set(result.data));
+    }
   }, []);
 
   useEffect(() => {

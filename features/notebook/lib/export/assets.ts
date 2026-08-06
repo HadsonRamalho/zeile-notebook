@@ -1,3 +1,4 @@
+import { catchError } from "@catcherjs/core";
 import {
   computeContentBounds,
   defaultCanvasSettings,
@@ -144,20 +145,21 @@ export async function renderBlockAsset(
   notebook: Notebook,
   block: Block,
 ): Promise<BlockAsset | null> {
-  try {
-    switch (block.type) {
-      case "free_drawing":
-        return await renderFreeDrawing(notebook, block);
-      case "drawing":
-        return await renderExcalidraw(notebook, block);
-      case "database_schema":
-        return await renderDiagram(block);
-      case "typst":
-        return await renderTypst(block);
-      default:
-        return null;
-    }
-  } catch {
-    return null;
-  }
+  const result = await catchError(
+    (async () => {
+      switch (block.type) {
+        case "free_drawing":
+          return await renderFreeDrawing(notebook, block);
+        case "drawing":
+          return await renderExcalidraw(notebook, block);
+        case "database_schema":
+          return await renderDiagram(block);
+        case "typst":
+          return await renderTypst(block);
+        default:
+          return null;
+      }
+    })(),
+  );
+  return result.isOk() ? result.data : null;
 }

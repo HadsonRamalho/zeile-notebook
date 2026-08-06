@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import { Check, Loader2, Plus, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -157,12 +158,12 @@ export function ChallengeConfig({
 
     let parsedSpec: unknown;
     if (judgeMode === "property") {
-      try {
-        parsedSpec = JSON.parse(propertySpec);
-      } catch {
+      const specResult = catchErrorSync(() => JSON.parse(propertySpec));
+      if (specResult.isErr()) {
         toast.error(t("invalid_json"));
         return;
       }
+      parsedSpec = specResult.data;
     }
 
     setSavingDetails(true);

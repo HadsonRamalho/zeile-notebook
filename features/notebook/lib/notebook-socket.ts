@@ -1,6 +1,7 @@
 // single websocket connection per notebook, shared by sync (binary) and presence
 // (text) via the /notebook/ws/combined/:id endpoint. Reconnection with backoff+jitter lives here.
 
+import { catchErrorSync } from "@catcherjs/core";
 import { resolve } from "@/lib/runtime/router";
 
 export type NotebookSocketHandlers = {
@@ -63,16 +64,15 @@ function connect(notebookId: string, conn: Conn) {
   const protocols =
     conn.token.length > 0 ? ["access_token", conn.token] : undefined;
 
-  let socket: WebSocket;
-  try {
-    socket = new WebSocket(url, protocols);
-  } catch (err) {
-    console.error("Falha ao abrir o WebSocket do caderno:", err);
+  const socketResult = catchErrorSync(() => new WebSocket(url, protocols));
+  if (socketResult.isErr()) {
+    console.error("Falha ao abrir o WebSocket do caderno:", socketResult.error);
     conn.socket = null;
     for (const h of conn.handlers) h.onClose?.();
     scheduleReconnect(notebookId, conn);
     return;
   }
+  const socket = socketResult.data;
 
   socket.binaryType = "arraybuffer";
   conn.socket = socket;
