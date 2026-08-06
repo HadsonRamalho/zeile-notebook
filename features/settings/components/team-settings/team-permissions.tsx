@@ -360,7 +360,7 @@ export function TeamPermissions({
           primary: m.name,
           secondary: m.email,
           badge: role ? roleLabel(role) : undefined,
-          avatarUrl: m.avatarUrl,
+          avatarUrl: m.avatarUrl ?? null,
           showAvatar: true,
           disabled: m.userId === selfUserId,
         };
