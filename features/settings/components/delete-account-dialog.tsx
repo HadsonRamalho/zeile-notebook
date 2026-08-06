@@ -41,9 +41,7 @@ export function DeleteAccountDialog() {
 
       <AlertDialogContent onClick={(e) => e.stopPropagation()}>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t("danger_card.confirm_title")}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{t("danger_card.confirm_title")}</AlertDialogTitle>
           <AlertDialogDescription>
             {t("danger_card.confirm_description")}
           </AlertDialogDescription>
