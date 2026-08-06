@@ -957,5 +957,26 @@
       "opacity_end": "Opacidade fim",
       "add_brush": "Adicionar pincel"
     }
+  },
+  "notebook_defaults": {
+    "title": "Nova Página",
+    "block_title": "Novo Bloco",
+    "block_content": "# Notas\nComece a editar...",
+    "clone_title": "Cópia de \"{title}\""
+  },
+  "open_file": {
+    "error_message": "Não foi possível abrir esse arquivo.",
+    "back_to_notebooks": "Ir para meus cadernos",
+    "opening_file": "Abrindo arquivo",
+    "importing_markdown": "Importando arquivo Markdown..."
+  },
+  "share": {
+    "nothing_shared": "Nada para compartilhar foi recebido.",
+    "create_error": "Não foi possível criar um caderno com o conteúdo compartilhado.",
+    "back_to_notebooks": "Ir para meus cadernos",
+    "importing_shared_content": "Importando conteúdo compartilhado",
+    "creating_notebook": "Criando um novo caderno...",
+    "loading": "Carregando",
+    "loading_ellipsis": "Carregando..."
   }
 }

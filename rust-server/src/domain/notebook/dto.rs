@@ -104,6 +104,39 @@ pub struct BlockResponse {
 
 #[derive(Deserialize, Validate, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct CreateNotebookRequest {
+    #[validate(length(
+        min = 1,
+        max = 300,
+        message = "Title must be between 1 and 300 characters"
+    ))]
+    pub title: String,
+    #[validate(length(
+        min = 1,
+        max = 300,
+        message = "Block title must be between 1 and 300 characters"
+    ))]
+    pub block_title: String,
+    #[validate(length(
+        max = 10000,
+        message = "Block content must be at most 10000 characters"
+    ))]
+    pub block_content: String,
+}
+
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CloneNotebookRequest {
+    #[validate(length(
+        min = 1,
+        max = 300,
+        message = "Title must be between 1 and 300 characters"
+    ))]
+    pub title: String,
+}
+
+#[derive(Deserialize, Validate, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateNotebookTitle {
     #[validate(length(
         min = 1,

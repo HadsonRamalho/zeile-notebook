@@ -957,5 +957,26 @@
       "opacity_end": "End opacity",
       "add_brush": "Add brush"
     }
+  },
+  "notebook_defaults": {
+    "title": "New Page",
+    "block_title": "New Block",
+    "block_content": "# Notes\nStart editing...",
+    "clone_title": "Copy of \"{title}\""
+  },
+  "open_file": {
+    "error_message": "Could not open this file.",
+    "back_to_notebooks": "Go to my notebooks",
+    "opening_file": "Opening file",
+    "importing_markdown": "Importing Markdown file..."
+  },
+  "share": {
+    "nothing_shared": "Nothing to share was received.",
+    "create_error": "Could not create a notebook with the shared content.",
+    "back_to_notebooks": "Go to my notebooks",
+    "importing_shared_content": "Importing shared content",
+    "creating_notebook": "Creating a new notebook...",
+    "loading": "Loading",
+    "loading_ellipsis": "Loading..."
   }
 }

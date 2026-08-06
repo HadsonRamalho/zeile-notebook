@@ -1921,6 +1921,9 @@ export interface components {
       /** Format: uuid */
       messageId: string;
     };
+    CloneNotebookRequest: {
+      title: string;
+    };
     CodeRequest: {
       code: string;
       /** Format: uuid */
@@ -1997,9 +2000,17 @@ export interface components {
       targetKind: components["schemas"]["GrantTargetKind"];
       targetValue?: string | null;
     };
+    CreateNotebookRequest: {
+      blockContent: string;
+      blockTitle: string;
+      title: string;
+    };
     CreateSnapshotRequest: {
       label: string;
       note?: string | null;
+    };
+    CreateTeamPageRequest: {
+      title: string;
     };
     CreateTemplateRequest: {
       kind: string;
@@ -3348,7 +3359,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateNotebookRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {
@@ -3937,7 +3952,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CloneNotebookRequest"];
+      };
+    };
     responses: {
       201: {
         headers: {
@@ -5498,7 +5517,11 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTeamPageRequest"];
+      };
+    };
     responses: {
       200: {
         headers: {

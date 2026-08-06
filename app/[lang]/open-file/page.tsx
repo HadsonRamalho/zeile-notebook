@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
 import { Button } from "@/components/ui/button";
@@ -31,19 +32,25 @@ export default function OpenFilePage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hasHandledLaunch = useRef(false);
+  const t = useTranslations("open_file");
+  const d = useTranslations("notebook_defaults");
 
   const importFile = useCallback(
     async (file: File) => {
       try {
         const text = await file.text();
-        const id = await createNotebook();
+        const id = await createNotebook({
+          title: d("title"),
+          blockTitle: d("block_title"),
+          blockContent: d("block_content"),
+        });
         setPendingImport(text);
         router.replace(`/notebook/${id}`);
       } catch {
-        setErrorMessage("Não foi possível abrir esse arquivo.");
+        setErrorMessage(t("error_message"));
       }
     },
-    [router],
+    [router, t, d],
   );
 
   useEffect(() => {
@@ -76,7 +83,7 @@ export default function OpenFilePage() {
       <div className="flex min-h-screen flex-col items-center justify-center space-y-4 bg-background p-4 text-center">
         <p className="text-destructive">{errorMessage}</p>
         <Button onClick={() => router.push("/notebook")}>
-          Ir para meus cadernos
+          {t("back_to_notebooks")}
         </Button>
       </div>
     );
@@ -84,9 +91,9 @@ export default function OpenFilePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center space-y-4 bg-background p-4">
-      <HelixPercentLoader label="Abrindo arquivo" />
+      <HelixPercentLoader label={t("opening_file")} />
       <p className="text-muted-foreground animate-pulse">
-        Importando arquivo Markdown...
+        {t("importing_markdown")}
       </p>
       <input
         type="file"

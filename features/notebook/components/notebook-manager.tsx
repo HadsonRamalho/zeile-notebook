@@ -45,6 +45,7 @@ export function NotebookManagerProvider({
   children: React.ReactNode;
 }) {
   const t = useTranslations("api_errors");
+  const d = useTranslations("notebook_defaults");
   const [pages, setPages] = useState<NotebookMeta[]>([]);
   const { user } = useAuth();
   const router = useRouter();
@@ -95,7 +96,11 @@ export function NotebookManagerProvider({
       return;
     }
     try {
-      const newId = await createNotebook();
+      const newId = await createNotebook({
+        title: d("title"),
+        blockTitle: d("block_title"),
+        blockContent: d("block_content"),
+      });
 
       await refreshPages();
 
@@ -103,7 +108,7 @@ export function NotebookManagerProvider({
     } catch (err) {
       handleApiError({ err, t });
     }
-  }, [user, refreshPages, router, t]);
+  }, [user, refreshPages, router, t, d]);
 
   const clone = useCallback(
     async (id: string) => {
@@ -111,7 +116,11 @@ export function NotebookManagerProvider({
         if (!user) {
           return;
         }
-        const newId = await cloneNotebook(id);
+        const original = pages.find((p) => p.id === id);
+        const title = d("clone_title", {
+          title: original?.title ?? d("title"),
+        });
+        const newId = await cloneNotebook(id, title);
 
         await refreshPages();
 
@@ -120,7 +129,7 @@ export function NotebookManagerProvider({
         handleApiError({ err, t });
       }
     },
-    [user, refreshPages, router, t],
+    [user, pages, refreshPages, router, t, d],
   );
 
   const updateVisibility = useCallback(

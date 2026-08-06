@@ -15,18 +15,24 @@ use crate::{
 };
 
 use super::dto::{
-    NotebookDto, NotebookResponse, PublicNotebookDoc, PublicNotebookResponse, PublicSearchQuery,
-    RankedSearchItem, RankedSearchQuery, SearchQuery, SearchResult, SyncNotebookRequest,
-    UpdateNotebookTitle, UpdateNotebookVisibility, UpdateTagsRequest,
+    CloneNotebookRequest, CreateNotebookRequest, NotebookDto, NotebookResponse, PublicNotebookDoc,
+    PublicNotebookResponse, PublicSearchQuery, RankedSearchItem, RankedSearchQuery, SearchQuery,
+    SearchResult, SyncNotebookRequest, UpdateNotebookTitle, UpdateNotebookVisibility,
+    UpdateTagsRequest,
 };
 use super::entity::{BlockType, NewBlock, NewNotebook};
 use super::{repository, service};
 
-#[utoipa::path(post, path = "/notebook/create", responses((status = OK, body = Uuid), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/notebook/create", request_body = CreateNotebookRequest, responses((status = OK, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_create_notebook(
     AuthUser(id): AuthUser,
     DbConn(mut conn): DbConn,
+    Json(payload): Json<CreateNotebookRequest>,
 ) -> Result<(StatusCode, Json<Uuid>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let conn = &mut conn;
 
     let notebook_id = Uuid::new_v4();
@@ -35,16 +41,16 @@ pub async fn api_create_notebook(
         id: notebook_id,
         user_id: Some(id),
         team_id: None,
-        title: "Nova Página".to_string(),
+        title: payload.title,
     };
 
     let new_block = NewBlock {
         id: Uuid::new_v4(),
-        title: "Novo Bloco".to_string(),
+        title: payload.block_title,
         notebook_id,
         block_type: BlockType::Text,
         language: None,
-        content: "# Notas\nComece a editar...".to_string(),
+        content: payload.block_content,
         metadata: None,
         position: 0,
     };
@@ -190,12 +196,17 @@ pub async fn api_save_notebook_content(
     }
 }
 
-#[utoipa::path(post, path = "/notebook/{id}/clone", responses((status = CREATED, body = Uuid), (status = 401, body = ApiError)))]
+#[utoipa::path(post, path = "/notebook/{id}/clone", request_body = CloneNotebookRequest, responses((status = CREATED, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_clone_notebook(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
     headers: HeaderMap,
+    Json(payload): Json<CloneNotebookRequest>,
 ) -> Result<(StatusCode, Json<Uuid>), ApiError> {
+    if let Err(errors) = payload.validate() {
+        return Err(ApiError::Request(errors.to_string()));
+    }
+
     let id = extract_claims_from_header(&headers).await?.1.id;
 
     let conn = &mut get_conn(&state.pool)
@@ -216,13 +227,13 @@ pub async fn api_clone_notebook(
     }
 
     let new_notebook_id = Uuid::new_v4();
-    let new_notebook_title = format!("Cópia de \"{}\"", target_notebook.title);
+    let new_notebook_title = payload.title;
 
     let new_notebook = NewNotebook {
         id: new_notebook_id,
         user_id: Some(id),
         team_id: None,
-        title: "Nova Página".to_string(),
+        title: new_notebook_title.clone(),
     };
 
     match repository::create_notebook(conn, &new_notebook).await {
