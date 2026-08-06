@@ -10,6 +10,10 @@ pub mod sql_types {
     pub struct BlockTypeEnum;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "challenge_difficulty_enum"))]
+    pub struct ChallengeDifficultyEnum;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "grant_effect"))]
     pub struct GrantEffect;
 
@@ -22,8 +26,20 @@ pub mod sql_types {
     pub struct GrantTargetKind;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "judge_mode_enum"))]
+    pub struct JudgeModeEnum;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "language_enum"))]
     pub struct LanguageEnum;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "submission_status_enum"))]
+    pub struct SubmissionStatusEnum;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "submission_verdict_enum"))]
+    pub struct SubmissionVerdictEnum;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "tsvector", schema = "pg_catalog"))]
@@ -54,12 +70,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::SubmissionVerdictEnum;
+
     challenge_submission_results (id) {
         id -> Uuid,
         submission_id -> Uuid,
         test_case_id -> Nullable<Uuid>,
-        #[max_length = 8]
-        verdict -> Varchar,
+        verdict -> SubmissionVerdictEnum,
         runtime_ms -> Int4,
         is_hidden -> Bool,
         stderr_snippet -> Nullable<Text>,
@@ -68,15 +86,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::LanguageEnum;
+    use super::sql_types::SubmissionStatusEnum;
+
     challenge_submissions (id) {
         id -> Uuid,
         challenge_id -> Uuid,
         user_id -> Nullable<Uuid>,
-        #[max_length = 16]
-        language -> Varchar,
+        language -> LanguageEnum,
         code -> Text,
-        #[max_length = 16]
-        status -> Varchar,
+        status -> SubmissionStatusEnum,
         score -> Int4,
         max_score -> Int4,
         runtime_ms -> Int4,
@@ -100,6 +120,11 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ChallengeDifficultyEnum;
+    use super::sql_types::JudgeModeEnum;
+    use super::sql_types::LanguageEnum;
+
     challenges (id) {
         id -> Uuid,
         #[max_length = 255]
@@ -107,18 +132,15 @@ diesel::table! {
         #[max_length = 255]
         title -> Varchar,
         statement_md -> Text,
-        #[max_length = 32]
-        difficulty -> Varchar,
+        difficulty -> ChallengeDifficultyEnum,
         tags -> Jsonb,
         languages -> Jsonb,
-        #[max_length = 16]
-        judge_mode -> Varchar,
+        judge_mode -> JudgeModeEnum,
         time_limit_ms -> Int4,
         mem_limit_kb -> Int4,
         starter_code -> Nullable<Jsonb>,
         reference_solution -> Nullable<Text>,
-        #[max_length = 16]
-        reference_language -> Nullable<Varchar>,
+        reference_language -> Nullable<LanguageEnum>,
         property_spec -> Nullable<Jsonb>,
         team_id -> Nullable<Uuid>,
         created_by -> Nullable<Uuid>,

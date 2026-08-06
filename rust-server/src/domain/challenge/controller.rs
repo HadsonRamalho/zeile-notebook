@@ -12,6 +12,7 @@ use validator::Validate;
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{TargetCtx, require};
 use crate::controllers::utils::get_conn;
+use crate::domain::notebook::Language;
 use crate::domain::user::UserRole;
 use crate::executor::{ExecVerdict, compile_code, run_compiled};
 use crate::models::error::ApiError;
@@ -23,10 +24,13 @@ use super::dto::{
     SetReferenceRequest, SubmissionView, SubmitRequest, TestCaseAuthoringView,
     TestCaseCreatedResponse, TestCasePublic, UpdateChallengeRequest,
 };
-use super::entity::{Challenge, NewChallenge, NewSubmission, NewTestCase, UpdateChallenge};
+use super::entity::{
+    Challenge, ChallengeDifficulty, JudgeMode, NewChallenge, NewSubmission, NewTestCase,
+    SubmissionStatus, UpdateChallenge, Verdict,
+};
 use super::judge::{judge_submission, limits_for, normalize};
 use super::repository;
-use super::service::{VALID_JUDGE_MODES, require_notebook};
+use super::service::require_notebook;
 
 async fn conn_from(
     state: &AppState,
@@ -114,10 +118,7 @@ pub async fn api_create_challenge(
     )
     .await?;
 
-    let judge_mode = payload.judge_mode.unwrap_or_else(|| "io".to_string());
-    if !VALID_JUDGE_MODES.contains(&judge_mode.as_str()) {
-        return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
-    }
+    let judge_mode = payload.judge_mode.unwrap_or(JudgeMode::Io);
     if payload.slug.trim().is_empty() || payload.title.trim().is_empty() {
         return Err(ApiError::Request(
             "slug e title são obrigatórios".to_string(),
@@ -134,7 +135,7 @@ pub async fn api_create_challenge(
         slug: payload.slug.trim().to_string(),
         title: payload.title.trim().to_string(),
         statement_md: payload.statement_md,
-        difficulty: payload.difficulty.unwrap_or_else(|| "medium".to_string()),
+        difficulty: payload.difficulty.unwrap_or(ChallengeDifficulty::Medium),
         tags: json!(payload.tags.unwrap_or_default()),
         languages: json!(payload.languages),
         judge_mode,
@@ -179,12 +180,6 @@ pub async fn api_update_challenge(
         &TargetCtx::default(),
     )
     .await?;
-
-    if let Some(mode) = &payload.judge_mode
-        && !VALID_JUDGE_MODES.contains(&mode.as_str())
-    {
-        return Err(ApiError::Request("Modo de julgamento inválido".to_string()));
-    }
 
     let changes = UpdateChallenge {
         title: payload.title,
@@ -260,7 +255,7 @@ pub async fn api_set_reference(
     .await?;
 
     let updated =
-        repository::upsert_reference(&mut conn, id, &payload.solution, &payload.language).await?;
+        repository::upsert_reference(&mut conn, id, &payload.solution, payload.language).await?;
     Ok(Json(ChallengePublic::from(updated)))
 }
 
@@ -289,7 +284,7 @@ pub async fn api_get_reference(
 #[utoipa::path(delete, path = "/challenge/{id}/reference/{language}", responses((status = OK, body = ReferenceSolutionsResponse), (status = 401, body = ApiError)))]
 pub async fn api_delete_reference(
     State(state): State<Arc<AppState>>,
-    Path((id, language)): Path<(Uuid, String)>,
+    Path((id, language)): Path<(Uuid, Language)>,
     headers: HeaderMap,
 ) -> Result<Json<ReferenceSolutionsResponse>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
@@ -303,7 +298,7 @@ pub async fn api_delete_reference(
         &TargetCtx::default(),
     )
     .await?;
-    let updated = repository::delete_reference(&mut conn, id, &language).await?;
+    let updated = repository::delete_reference(&mut conn, id, language).await?;
     Ok(Json(ReferenceSolutionsResponse {
         solutions: super::service::reference_map(&updated),
     }))
@@ -375,7 +370,7 @@ pub async fn api_submit(
                 .collect()
         })
         .unwrap_or_default();
-    if !allowed_languages.contains(&payload.language) {
+    if !allowed_languages.contains(&payload.language.to_string()) {
         return Err(ApiError::Request(
             "Linguagem não permitida para este desafio".to_string(),
         ));
@@ -391,7 +386,7 @@ pub async fn api_submit(
         &format!("notebook.blocks.{}.execute", payload.language),
         &TargetCtx {
             block_id: ch.block_id,
-            block_type: Some(payload.language.clone()),
+            block_type: Some(payload.language.to_string()),
         },
     )
     .await?;
@@ -402,7 +397,7 @@ pub async fn api_submit(
         user_id: Some(user_id),
         language: payload.language,
         code: payload.code,
-        status: "queued".to_string(),
+        status: SubmissionStatus::Queued,
         max_score: 0,
     };
     let submission = repository::create_submission(&mut conn, &new_submission).await?;
@@ -438,7 +433,7 @@ pub async fn api_run_samples(
                 .collect()
         })
         .unwrap_or_default();
-    if !allowed_languages.contains(&payload.language) {
+    if !allowed_languages.contains(&payload.language.to_string()) {
         return Err(ApiError::Request(
             "Linguagem não permitida para este desafio".to_string(),
         ));
@@ -454,7 +449,7 @@ pub async fn api_run_samples(
         &format!("notebook.blocks.{}.execute", payload.language),
         &TargetCtx {
             block_id: ch.block_id,
-            block_type: Some(payload.language.clone()),
+            block_type: Some(payload.language.to_string()),
         },
     )
     .await?;
@@ -465,7 +460,7 @@ pub async fn api_run_samples(
 
     let _permit = state.judge_semaphore.clone().acquire_owned().await;
 
-    let bin = match compile_code(&payload.language, &payload.code, &session).await {
+    let bin = match compile_code(&payload.language.to_string(), &payload.code, &session).await {
         Ok(b) => b,
         Err(msg) => {
             let trimmed: String = msg.chars().take(2000).collect();
@@ -480,13 +475,13 @@ pub async fn api_run_samples(
     for case in samples {
         let run = run_compiled(&bin, Some(&case.input), limits).await;
         let verdict = match run.verdict {
-            ExecVerdict::CompileError => "CE",
-            ExecVerdict::Timeout => "TLE",
-            ExecVerdict::RuntimeError => "RE",
+            ExecVerdict::CompileError => Verdict::Ce,
+            ExecVerdict::Timeout => Verdict::Tle,
+            ExecVerdict::RuntimeError => Verdict::Re,
             ExecVerdict::Ok => match &case.expected {
-                Some(exp) if normalize(&run.stdout) == normalize(exp) => "AC",
-                Some(_) => "WA",
-                None => "SKIP",
+                Some(exp) if normalize(&run.stdout) == normalize(exp) => Verdict::Ac,
+                Some(_) => Verdict::Wa,
+                None => Verdict::Skip,
             },
         };
         let stderr = if run.stderr.trim().is_empty() {
@@ -499,7 +494,7 @@ pub async fn api_run_samples(
             expected: case.expected,
             stdout: run.stdout.chars().take(4000).collect(),
             stderr,
-            verdict: verdict.to_string(),
+            verdict,
         });
     }
 

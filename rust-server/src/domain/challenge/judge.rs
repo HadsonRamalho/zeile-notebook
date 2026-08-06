@@ -9,7 +9,7 @@ use crate::executor::{ExecVerdict, compile_code, run_compiled};
 use crate::file::RunLimits;
 use crate::models::state::AppState;
 
-use super::entity::NewSubmissionResult;
+use super::entity::{JudgeMode, NewSubmissionResult, SubmissionStatus, Verdict};
 use super::repository;
 use super::service::pick_reference;
 
@@ -126,7 +126,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             repository::finalize_submission(
                 &mut conn,
                 submission_id,
-                "error",
+                SubmissionStatus::Error,
                 0,
                 0,
                 0,
@@ -143,7 +143,8 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         .ok();
 
     let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
-    let needs_reference = ch.judge_mode == "reference" || ch.judge_mode == "property";
+    let needs_reference =
+        ch.judge_mode == JudgeMode::Reference || ch.judge_mode == JudgeMode::Property;
 
     let stored = match repository::list_test_cases(&mut conn, ch.id).await {
         Ok(t) => t,
@@ -152,7 +153,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             repository::finalize_submission(
                 &mut conn,
                 submission_id,
-                "error",
+                SubmissionStatus::Error,
                 0,
                 0,
                 0,
@@ -175,7 +176,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         })
         .collect();
 
-    if ch.judge_mode == "property"
+    if ch.judge_mode == JudgeMode::Property
         && let Some(spec) = &ch.property_spec
     {
         for input in generate_property_inputs(spec) {
@@ -193,7 +194,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         repository::finalize_submission(
             &mut conn,
             submission_id,
-            "error",
+            SubmissionStatus::Error,
             0,
             0,
             0,
@@ -208,13 +209,19 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let user_session = format!("judge_sub_{}", submission.id);
     let mut ref_cache: HashMap<String, String> = HashMap::new();
 
-    let user_bin = match compile_code(&submission.language, &submission.code, &user_session).await {
+    let user_bin = match compile_code(
+        &submission.language.to_string(),
+        &submission.code,
+        &user_session,
+    )
+    .await
+    {
         Ok(path) => path,
         Err(msg) => {
             repository::finalize_submission(
                 &mut conn,
                 submission_id,
-                "compile_error",
+                SubmissionStatus::CompileError,
                 0,
                 0,
                 0,
@@ -231,7 +238,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             repository::finalize_submission(
                 &mut conn,
                 submission_id,
-                "error",
+                SubmissionStatus::Error,
                 0,
                 0,
                 0,
@@ -248,7 +255,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                 repository::finalize_submission(
                     &mut conn,
                     submission_id,
-                    "error",
+                    SubmissionStatus::Error,
                     0,
                     0,
                     0,
@@ -287,7 +294,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                     repository::finalize_submission(
                         &mut conn,
                         submission_id,
-                        "error",
+                        SubmissionStatus::Error,
                         0,
                         0,
                         0,
@@ -310,19 +317,19 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         total_runtime += run.wall_ms;
 
         let verdict = match run.verdict {
-            ExecVerdict::CompileError => "CE",
-            ExecVerdict::Timeout => "TLE",
-            ExecVerdict::RuntimeError => "RE",
+            ExecVerdict::CompileError => Verdict::Ce,
+            ExecVerdict::Timeout => Verdict::Tle,
+            ExecVerdict::RuntimeError => Verdict::Re,
             ExecVerdict::Ok => match &expected {
-                Some(exp) if normalize(&run.stdout) == *exp => "AC",
-                Some(_) => "WA",
-                None => "SKIP",
+                Some(exp) if normalize(&run.stdout) == *exp => Verdict::Ac,
+                Some(_) => Verdict::Wa,
+                None => Verdict::Skip,
             },
         };
 
-        if verdict != "SKIP" {
+        if verdict != Verdict::Skip {
             max_score += case.weight;
-            if verdict == "AC" {
+            if verdict == Verdict::Ac {
                 score += case.weight;
             }
         }
@@ -331,7 +338,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             id: Uuid::new_v4(),
             submission_id,
             test_case_id: case.test_case_id,
-            verdict: verdict.to_string(),
+            verdict,
             runtime_ms: run.wall_ms as i32,
             is_hidden: case.is_hidden,
             stderr_snippet: truncate(&run.stderr, STDERR_SNIPPET_LIMIT),
@@ -346,7 +353,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     repository::finalize_submission(
         &mut conn,
         submission_id,
-        "done",
+        SubmissionStatus::Done,
         score,
         max_score,
         total_runtime as i32,
