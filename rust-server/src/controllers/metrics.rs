@@ -253,7 +253,7 @@ pub async fn authorized_to_scrape(
         return false;
     };
 
-    crate::controllers::admin::check_admin_role(&mut conn, headers)
+    crate::domain::admin::check_admin_role(&mut conn, headers)
         .await
         .is_ok()
 }

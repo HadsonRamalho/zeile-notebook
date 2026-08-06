@@ -1,6 +1,7 @@
 use std::env;
 
-use crate::models::{error::ApiError, jwt::Claims, user::UserAuthInfo};
+use crate::domain::user::UserAuthInfo;
+use crate::models::{error::ApiError, jwt::Claims};
 use axum::{body::Body, extract::Request, middleware::Next, response::Response};
 use dotenvy::dotenv;
 use hyper::{HeaderMap, StatusCode};

@@ -78,10 +78,6 @@ fn block_weight(block: &BlockRequest) -> usize {
     block.title.len() + block.content.len() + metadata
 }
 
-/// The route's body ceiling blocks a giant payload, but doesn't distinguish a
-/// thousand small blocks from one huge block, and doesn't even look at
-/// metadata — which is client-supplied Jsonb and would be a side door to the
-/// same abuse.
 pub fn validate_content(payload: &SyncNotebookRequest) -> Result<(), ApiError> {
     if payload.blocks.len() > MAX_BLOCKS {
         return Err(ApiError::Request(format!(
@@ -117,8 +113,6 @@ pub fn validate_content(payload: &SyncNotebookRequest) -> Result<(), ApiError> {
     Ok(())
 }
 
-/// Checks `notebook.edit` before writing the CRDT snapshot — the repository
-/// layer only knows how to write bytes, not who is allowed to.
 pub async fn save_notebook_data(
     conn: &mut AsyncPgConnection,
     user_id_param: Uuid,

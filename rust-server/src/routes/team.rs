@@ -4,24 +4,24 @@ use axum::routing::{delete, get, patch, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
-    controllers::{
-        chat::{
+    controllers::permissions::api_get_team_capabilities,
+    domain::{
+        chat::controller::{
             api_delete_team_message, api_edit_team_message, api_list_team_message_versions,
             api_list_team_messages, api_send_team_message,
         },
-        folder::{
+        folder::controller::{
             api_create_team_folder, api_delete_team_folder, api_list_team_folders,
             api_rename_team_folder, api_update_team_folder_tags,
         },
-        grants::{api_create_team_grant, api_delete_team_grant, api_list_team_grants},
-        permissions::api_get_team_capabilities,
-        team::{
-            api_create_team, api_create_team_page, api_create_team_role, api_delete_team,
-            api_get_team, api_get_team_members, api_get_team_pages, api_get_team_roles,
-            api_get_user_team_permissions, api_get_user_teams, api_remove_user_from_team,
-            api_update_member_role, api_update_team, api_update_team_role,
+        grants::controller::{api_create_team_grant, api_delete_team_grant, api_list_team_grants},
+        team::controller::{
+            api_accept_invite, api_create_team, api_create_team_page, api_create_team_role,
+            api_delete_team, api_get_team, api_get_team_members, api_get_team_pages,
+            api_get_team_roles, api_get_user_team_permissions, api_get_user_teams,
+            api_invite_member, api_remove_user_from_team, api_update_member_role, api_update_team,
+            api_update_team_role,
         },
-        team_invitation::{api_accept_invite, api_invite_member},
     },
     models::state::AppState,
 };

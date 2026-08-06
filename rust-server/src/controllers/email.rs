@@ -7,8 +7,7 @@ use lettre::{
 use std::str::FromStr;
 
 use crate::{
-    controllers::utils::get_email_credentials,
-    models::{error::ApiError, user::User},
+    controllers::utils::get_email_credentials, domain::user::User, models::error::ApiError,
 };
 
 pub async fn send_email(transport: &SmtpTransport, email: &Message) -> Result<(), ApiError> {

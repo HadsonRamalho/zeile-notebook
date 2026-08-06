@@ -48,8 +48,6 @@ pub struct GithubRepoProps {
     pub repo: String,
 }
 
-/// Wire shape for `entity::Notebook` — the boundary the openapi-types
-/// generator sees, kept apart from the Diesel struct on purpose (Q48).
 #[derive(Serialize, Debug, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NotebookDto {

@@ -368,7 +368,7 @@ pub async fn auto_delete_refresh_tokens(
             continue;
         };
 
-        match crate::models::refresh_token::delete_expired(&mut conn).await {
+        match crate::domain::user::delete_expired_refresh_tokens(&mut conn).await {
             Ok(count) => println!("LOG: [GC] {count} expired refresh token(s) removed."),
             Err(e) => eprintln!("ERROR: [GC] failed to clean refresh tokens: {e}"),
         }

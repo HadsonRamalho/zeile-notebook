@@ -14,10 +14,10 @@ use diesel_async::pooled_connection::deadpool::Pool;
 use hyper::StatusCode;
 use uuid::Uuid;
 
+use crate::domain::user::UserRole;
 use crate::models::error::ApiError;
 use crate::models::jwt::Claims;
 use crate::models::state::AppState;
-use crate::models::user::UserRole;
 
 /// Window in which an already-validated session is accepted without going
 /// back to the database. Without this, every authenticated request would
@@ -78,7 +78,7 @@ pub async fn validate_in_db(
     conn: &mut AsyncPgConnection,
     claims: &Claims,
 ) -> Result<ValidSession, ApiError> {
-    let user = crate::models::user::find_user_by_id(conn, &claims.id)
+    let user = crate::domain::user::find_user_by_id(conn, &claims.id)
         .await
         .map_err(|_| ApiError::InvalidAuthorizationToken)?;
 
@@ -158,7 +158,7 @@ pub async fn role_in_db(
     conn: &mut AsyncPgConnection,
     user_id: &Uuid,
 ) -> Result<UserRole, ApiError> {
-    let user = crate::models::user::find_user_by_id(conn, user_id).await?;
+    let user = crate::domain::user::find_user_by_id(conn, user_id).await?;
 
     Ok(user.role)
 }

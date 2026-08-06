@@ -4,15 +4,15 @@ use axum::routing::{delete, get, patch, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
-    controllers::{
-        oauth::{
-            api_auth_methods, api_link_callback, api_link_start, api_oauth_callback,
-            api_oauth_login, api_unlink,
-        },
-        user::{
+    domain::user::{
+        controller::{
             api_delete_user, api_execute_password_reset, api_get_logged_user, api_login_user,
             api_logout, api_refresh_session, api_register_user, api_request_password_reset,
             api_update_user_data, api_update_user_password,
+        },
+        oauth::controller::{
+            api_auth_methods, api_link_callback, api_link_start, api_oauth_callback,
+            api_oauth_login, api_unlink,
         },
     },
     models::state::AppState,

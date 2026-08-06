@@ -1,5 +1,5 @@
 use crate::{
-    controllers::admin::{
+    domain::admin::controller::{
         api_admin_notify, api_admin_search, api_get_admin_notebooks, api_get_admin_stats,
         api_get_admin_teams, api_get_admin_users,
     },

@@ -40,8 +40,6 @@ pub enum Language {
     Cpp,
 }
 
-/// Diesel entity. Never serialized as an API response directly — the wire
-/// shape is `dto::NotebookDto`, built with `NotebookDto::from`.
 #[derive(Queryable, Selectable, Identifiable, Debug)]
 #[diesel(table_name = crate::schema::notebooks)]
 pub struct Notebook {
