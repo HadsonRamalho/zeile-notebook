@@ -3,7 +3,7 @@ import type {
   OAuthProviderSlug,
   ProfileSecurityFormValues,
   UpdateUser,
-} from "../types/user-types";
+} from "@/types/user-types";
 import { createApi } from "./base";
 
 const api = createApi("user");

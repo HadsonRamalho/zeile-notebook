@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { DIFFICULTY_DOT, difficultyKey } from "@/lib/challenges/display";
+import { DIFFICULTY_DOT, difficultyKey } from "@/domain/challenges/display";
 import { cn } from "@/lib/utils";
 
 export function DifficultyBadge({

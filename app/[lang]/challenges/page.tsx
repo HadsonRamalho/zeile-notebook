@@ -4,19 +4,19 @@ import { Puzzle, Search } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
-import { AmbientGlow } from "@/components/challenges/ambient-glow";
 import { DifficultyBadge } from "@/components/challenges/difficulty-badge";
-import { BackButton } from "@/components/interface/back-button";
+import { BackButton } from "@/components/layout/back-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listChallenges } from "@/lib/api/challenge-service";
 import {
   CHALLENGE_LANGUAGES,
   type DifficultyKey,
   difficultyKey,
   languageLabel,
-} from "@/lib/challenges/display";
-import type { ChallengePublic } from "@/lib/types/challenge-types";
+} from "@/domain/challenges/display";
+import { AmbientGlow } from "@/features/challenges/components/ambient-glow";
+import { listChallenges } from "@/lib/api/challenge-service";
 import { cn } from "@/lib/utils";
+import type { ChallengePublic } from "@/types/challenge-types";
 
 type DifficultyFilter = "all" | DifficultyKey;
 type LanguageFilter = "all" | string;

@@ -4,8 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Book, Shield, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { AdminNotify } from "@/components/interface/admin/admin-notify";
-import { BackButton } from "@/components/interface/back-button";
+import { BackButton } from "@/components/layout/back-button";
 import {
   Tabs,
   TabsContent,
@@ -31,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/context/auth-context";
+import { AdminNotify } from "@/features/admin/components/admin-notify";
 import {
   fetchAdminNotebooks,
   fetchAdminStats,
@@ -42,7 +42,7 @@ import type {
   AdminSystemStats,
   AdminTeamView,
   AdminUserView,
-} from "@/lib/types/admin-types";
+} from "@/types/admin-types";
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();

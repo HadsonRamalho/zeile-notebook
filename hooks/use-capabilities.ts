@@ -1,16 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { buildImpliedIndex, can as evalCan } from "@/domain/permissions/engine";
 import {
   getNotebookCapabilities,
   getPermissionCatalog,
 } from "@/lib/api/permissions-service";
-import { buildImpliedIndex, can as evalCan } from "@/lib/permissions/engine";
 import type {
   CapabilitySnapshot,
   PermissionCatalog,
   PermissionTarget,
-} from "@/lib/types/permission-types";
+} from "@/types/permission-types";
 
 let catalogCache: PermissionCatalog | null = null;
 

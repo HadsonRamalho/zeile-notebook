@@ -4,11 +4,8 @@ import { Ban, Check, Eye, EyeOff, Minus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Loader } from "@/components/motion/loader";
 import { Badge } from "@/components/ui/badge";
-import type {
-  CatalogPermission,
-  GrantEffect,
-} from "@/lib/types/permission-types";
 import { cn } from "@/lib/utils";
+import type { CatalogPermission, GrantEffect } from "@/types/permission-types";
 
 export type Effect = GrantEffect | "none";
 

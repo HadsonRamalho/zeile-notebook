@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/auth-context";
-import { useNotifications } from "@/hooks/use-notifications";
+import { useNotifications } from "@/features/notifications/hooks/use-notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export function UserNav({ compact = false }: { compact?: boolean } = {}) {

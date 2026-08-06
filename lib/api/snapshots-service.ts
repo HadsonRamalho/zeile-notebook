@@ -1,4 +1,4 @@
-import type { SnapshotMeta } from "../types/snapshot-types";
+import type { SnapshotMeta } from "@/types/snapshot-types";
 import { createApi } from "./base";
 
 const api = createApi("snapshots");

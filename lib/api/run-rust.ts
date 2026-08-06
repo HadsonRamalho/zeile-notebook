@@ -1,4 +1,4 @@
-import type { Language, RunStatus } from "../types";
+import type { Language, RunStatus } from "@/types/block-types";
 import { createApi } from "./base";
 
 const api = createApi("exec-compiled");

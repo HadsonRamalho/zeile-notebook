@@ -1,5 +1,5 @@
 import { renewSession } from "@/lib/api/session";
-import { queueRequest } from "@/lib/backgroundSync";
+import { queueRequest } from "@/lib/background-sync";
 import { type Capability, resolve } from "@/lib/runtime/router";
 
 interface FetchOptions extends RequestInit {

@@ -3,7 +3,7 @@ import type {
   CreateGrantRequest,
   PermissionCatalog,
   TeamGrant,
-} from "../types/permission-types";
+} from "@/types/permission-types";
 import { createApi } from "./base";
 
 const api = createApi("grants");

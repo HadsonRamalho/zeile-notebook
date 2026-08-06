@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider, useMessages } from "next-intl";
-import { ForgotPasswordForm } from "@/components/interface/forgot-password/forgot-password-form";
+import { ForgotPasswordForm } from "@/features/auth/components/forgot-password/forgot-password-form";
 
 export const metadata: Metadata = {
   title: "Esqueci a Senha",

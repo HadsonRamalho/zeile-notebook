@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PublicNotebookView } from "@/components/notebook/public/public-notebook-view";
+import { PublicNotebookView } from "@/features/notebook/components/public/public-notebook-view";
 
 async function fetchPublicMeta(slug: string) {
   const base = process.env.NEXT_PUBLIC_API || "http://localhost:3099/api";

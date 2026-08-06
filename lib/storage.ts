@@ -1,6 +1,6 @@
 "use client";
 
-import type { Notebook, NotebookMeta } from "./types";
+import type { Notebook, NotebookMeta } from "@/types/notebook-types";
 
 const INDEX_KEY = "my-notebook-pages";
 const NOTEBOOK_PREFIX = "rust-notebook-";

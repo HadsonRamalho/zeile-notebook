@@ -5,8 +5,8 @@ import { Suspense, useEffect, useState } from "react";
 import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
+import { setPendingImport } from "@/features/notebook/lib/pending-import";
 import { createNotebook } from "@/lib/api/notebook-service";
-import { setPendingImport } from "@/lib/pendingImport";
 
 function buildSharedContent(
   title: string | null,

@@ -3,7 +3,7 @@ import type {
   OAuthProviderSlug,
   RegisterUser,
   User,
-} from "../types/user-types";
+} from "@/types/user-types";
 import { createApi } from "./base";
 
 const api = createApi("auth");

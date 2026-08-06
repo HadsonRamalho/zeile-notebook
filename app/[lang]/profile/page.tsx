@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider, useMessages } from "next-intl";
-import { ProfileForm } from "@/components/profile-form";
+import { ProfileForm } from "@/features/settings/components/profile-form";
 
 export const metadata: Metadata = {
   title: "Perfil",

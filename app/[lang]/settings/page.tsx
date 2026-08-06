@@ -1,5 +1,5 @@
 import { NextIntlClientProvider, useMessages } from "next-intl";
-import { SettingsForm } from "@/components/interface/settings/settings-form";
+import { SettingsForm } from "@/features/settings/components/settings/settings-form";
 
 export default function SettingsPage() {
   const messages = useMessages();

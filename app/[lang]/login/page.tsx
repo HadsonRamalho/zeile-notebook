@@ -5,8 +5,8 @@ import {
   useTranslations,
 } from "next-intl";
 import { Suspense } from "react";
-import { LoginForm } from "@/components/login-form";
 import { HelixPercentLoader } from "@/components/motion/helix-percent-loader";
+import { LoginForm } from "@/features/auth/components/login-form";
 
 function LoginContent() {
   const t = useTranslations("docs");

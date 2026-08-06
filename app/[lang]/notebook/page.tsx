@@ -3,11 +3,11 @@
 import { NotebookPen, Plus, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
-import { FolderedNotebooks } from "@/components/notebook/folders/foldered-notebooks";
-import { useNotebookManager } from "@/components/notebook/notebook-manager";
-import { OnboardingChecklist } from "@/components/notebook/onboarding-checklist";
-import { useTeamNotebookManager } from "@/components/notebook/team/team-notebook-manager";
 import { Button } from "@/components/ui/button";
+import { FolderedNotebooks } from "@/features/notebook/components/folders/foldered-notebooks";
+import { useNotebookManager } from "@/features/notebook/components/notebook-manager";
+import { OnboardingChecklist } from "@/features/notebook/components/onboarding-checklist";
+import { useTeamNotebookManager } from "@/features/notebook/components/team/team-notebook-manager";
 import {
   createFolder,
   createTeamFolder,
@@ -24,7 +24,7 @@ import {
   setTeamFolderTags,
 } from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
-import type { Team, TeamRole } from "@/lib/types/team-types";
+import type { Team, TeamRole } from "@/types/team-types";
 
 function AmbientGlow() {
   return (

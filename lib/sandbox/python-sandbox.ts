@@ -1,4 +1,4 @@
-import { getSharedPyodide } from "@/lib/pyodideStore";
+import { getSharedPyodide } from "@/stores/pyodide-store";
 
 export async function runPythonInSandbox(code: string) {
   try {

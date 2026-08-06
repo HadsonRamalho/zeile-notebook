@@ -2,9 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { NotebookManagerProvider } from "@/components/notebook/notebook-manager";
-import { NotebookRail } from "@/components/notebook/sidebar/notebook-rail";
-import { TeamNotebookManagerProvider } from "@/components/notebook/team/team-notebook-manager";
+import { NotebookManagerProvider } from "@/features/notebook/components/notebook-manager";
+import { NotebookRail } from "@/features/notebook/components/sidebar/notebook-rail";
+import { TeamNotebookManagerProvider } from "@/features/notebook/components/team/team-notebook-manager";
 import { cn } from "@/lib/utils";
 
 const BARE_PREFIXES = [

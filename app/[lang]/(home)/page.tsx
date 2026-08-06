@@ -2,15 +2,15 @@ import { BookSearch, Code, Lock, Puzzle, Sparkles, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useBaseOptions } from "@/components/docs/layout-shared";
+import { AppShell } from "@/components/layout/app-shell";
+import { RetroGrid } from "@/components/ui/retro-grid";
 import {
   HomeMarquee,
   LanguageShowcaseGrid,
-} from "@/components/interface/home/languages";
-import { NotebooksCta } from "@/components/interface/home/notebooks-cta";
-import { VideoShowcase } from "@/components/interface/home/video-showcase";
-import { AppShell } from "@/components/layout/app-shell";
-import { RetroGrid } from "@/components/ui/retro-grid";
-import { useBaseOptions } from "@/lib/layout.shared";
+} from "@/features/home/components/languages";
+import { NotebooksCta } from "@/features/home/components/notebooks-cta";
+import { VideoShowcase } from "@/features/home/components/video-showcase";
 
 export default function HomePage() {
   const t = useTranslations("homepage");

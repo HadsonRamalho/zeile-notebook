@@ -2,7 +2,7 @@ import type {
   Comment,
   CommentThread,
   CommentThreadStatus,
-} from "../types/comment-types";
+} from "@/types/comment-types";
 import { createApi } from "./base";
 
 const api = createApi("comments");

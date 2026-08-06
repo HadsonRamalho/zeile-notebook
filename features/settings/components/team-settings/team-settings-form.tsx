@@ -1,0 +1,260 @@
+"use client";
+
+import { Home, MessageSquare, Settings, Shield, Users } from "lucide-react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { BackButton } from "@/components/layout/back-button";
+import { Loader } from "@/components/motion/loader";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/motion/tabs";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { buildImpliedIndex, can as evalCan } from "@/domain/permissions/engine";
+import { handleApiError } from "@/lib/api/handle-api-error";
+import {
+  getPermissionCatalog,
+  getTeamCapabilities,
+} from "@/lib/api/permissions-service";
+import {
+  fetchTeam,
+  fetchTeamMembers,
+  fetchTeamRoles,
+} from "@/lib/api/teams-service";
+import type {
+  Team,
+  TeamMemberWithUserData,
+  TeamRole,
+} from "@/types/team-types";
+import { TeamChat } from "./team-chat";
+import { TeamData } from "./team-data";
+import { TeamMembers } from "./team-members";
+import { TeamPermissions } from "./team-permissions";
+
+interface TeamSettingsFormProps {
+  teamId: string;
+}
+
+export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
+  const t = useTranslations("team_settings.team_form");
+
+  const [activeTab, setActiveTab] = useState<
+    "general" | "members" | "roles" | "chat"
+  >("general");
+
+  const [team, setTeam] = useState<Team | null>(null);
+  const [roles, setRoles] = useState<TeamRole[]>([]);
+  const [members, setMembers] = useState<[TeamMemberWithUserData, TeamRole][]>(
+    [],
+  );
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [userPermissions, setUserPermissions] = useState<TeamRole | undefined>(
+    undefined,
+  );
+  const [permInitial, setPermInitial] = useState<{
+    kind: "role" | "user";
+    id: string;
+  } | null>(null);
+
+  const goToRolePerms = (roleId: string) => {
+    setPermInitial({ kind: "role", id: roleId });
+    setActiveTab("roles");
+  };
+
+  const goToMemberPerms = (userId: string) => {
+    setPermInitial({ kind: "user", id: userId });
+    setActiveTab("roles");
+  };
+
+  const reloadTeamRoles = async () => {
+    try {
+      const tempRoles = await fetchTeamRoles(teamId);
+      setRoles(tempRoles);
+    } catch (err) {
+      handleApiError({ err, t });
+    }
+  };
+
+  const reloadTeamMembers = async () => {
+    try {
+      const tempMembers = await fetchTeamMembers(teamId);
+      setMembers(tempMembers);
+    } catch (err) {
+      handleApiError({ err, t });
+    }
+  };
+
+  useEffect(() => {
+    setIsLoading(true);
+    Promise.all([
+      getTeamCapabilities(teamId),
+      getPermissionCatalog(),
+      fetchTeam(teamId),
+      fetchTeamMembers(teamId),
+    ])
+      .then(async ([snapshot, catalog, teamData, m]) => {
+        const implied = buildImpliedIndex(catalog);
+        const teamCan = (key: string) =>
+          evalCan(snapshot, implied, key, { notebookId: "" });
+
+        const perms: TeamRole = {
+          id: "",
+          teamId: teamId,
+          name: "",
+          canRead: teamCan("notebook.view"),
+          canWrite: teamCan("notebook.edit"),
+          canManagePrivacy: teamCan("notebook.manage_privacy"),
+          canManageClones: teamCan("notebook.manage_clones"),
+          canInviteUsers: teamCan("team.invite_users"),
+          canRemoveUsers: teamCan("team.remove_users"),
+          canManagePermissions: teamCan("team.roles.edit_role_permissions"),
+          canManageTeam: teamCan("team.edit_name"),
+        };
+
+        setUserPermissions(perms);
+        setTeam(teamData);
+        setMembers(m);
+
+        if (perms.canManagePermissions) {
+          const r = await fetchTeamRoles(teamId);
+          setRoles(r);
+        } else {
+          setRoles([]);
+        }
+      })
+      .catch(() => {
+        toast.error(t("load_error"));
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [teamId, t]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader variant="spinner" size={32} className="text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!team) {
+    return (
+      <div className="flex h-[50vh] flex-col gap-4 items-center justify-center text-muted-foreground">
+        <span> {t("team_not_found")}</span>
+        <Button asChild className="flex">
+          <Link href="/docs">
+            <Home className="size-4" />
+            {t("back_to_home")}
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-6">
+      <div className="flex flex-col space-y-2 text-center sm:text-left">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">{team.name}</h2>
+          <p className="text-muted-foreground">{t("description")}</p>
+        </div>
+        <div className="flex justify-start">
+          <BackButton />
+        </div>
+      </div>
+
+      <Separator />
+
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+        variant="pill"
+        className="w-full"
+      >
+        <TabsList className="w-fit">
+          <TabsTrigger
+            value="general"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
+            <Settings size={16} />
+            {t("general_tab")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="members"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
+            <Users size={16} />
+            {t("member_tab")}
+          </TabsTrigger>
+          {roles.length > 0 && (
+            <TabsTrigger
+              value="roles"
+              className="gap-2"
+              indicatorClassName="bg-primary"
+            >
+              <Shield size={16} />
+              {t("role_tab")}
+            </TabsTrigger>
+          )}
+          <TabsTrigger
+            value="chat"
+            className="gap-2"
+            indicatorClassName="bg-primary"
+          >
+            <MessageSquare size={16} />
+            {t("chat_tab")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="w-full">
+          <TeamData
+            isSaving={isSaving}
+            setIsSaving={setIsSaving}
+            teamId={teamId}
+            setTeam={setTeam}
+            team={team}
+            userPermissions={userPermissions}
+          />
+        </TabsContent>
+
+        <TabsContent value="members" className="w-full">
+          <TeamMembers
+            teamId={teamId}
+            userPermissions={userPermissions}
+            roles={roles}
+            members={members}
+            onUpdate={reloadTeamMembers}
+            onEditRolePermissions={goToRolePerms}
+            onEditMemberPermissions={goToMemberPerms}
+          />
+        </TabsContent>
+
+        {roles.length > 0 && (
+          <TabsContent value="roles" className="w-full">
+            <TeamPermissions
+              teamId={teamId}
+              roles={roles}
+              onRolesChanged={reloadTeamRoles}
+              initialTarget={permInitial}
+            />
+          </TabsContent>
+        )}
+
+        <TabsContent value="chat" className="w-full">
+          <TeamChat teamId={teamId} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
