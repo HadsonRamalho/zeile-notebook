@@ -1,3 +1,10 @@
+import type { components } from "@/lib/api/generated/openapi-types";
+
+type Schemas = components["schemas"];
+
+// O Rust monomorfiza PaginatedResponse<T> por tipo (PaginatedResponse_AdminUserView etc, um
+// schema por instanciação) — não existe um genérico gerado equivalente. A forma do envelope
+// (data/total/page/limit/totalPages) é idêntica nos três, então mantém o genérico local.
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -6,46 +13,12 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-export interface AdminChartData {
-  name: string;
-  users: number;
-  notebooks: number;
-}
+export type AdminChartData = Schemas["AdminChartData"];
 
-export interface AdminSystemStats {
-  totalUsers: number;
-  totalActiveUsers: number;
-  totalNotebooks: number;
-  totalPublicNotebooks: number;
-  totalTeams: number;
-  totalTeamMembers: number;
-  chartData: AdminChartData[];
-}
+export type AdminSystemStats = Schemas["AdminSystemStats"];
 
-export interface AdminUserView {
-  id: string;
-  name: string;
-  email: string;
-  primaryProvider: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export type AdminUserView = Schemas["AdminUserView"];
 
-export interface AdminTeamView {
-  id: string;
-  name: string;
-  description: string | null;
-  createdAt: string;
-  memberCount: number;
-}
+export type AdminTeamView = Schemas["AdminTeamView"];
 
-export interface AdminNotebookView {
-  id: string;
-  userId: string | null;
-  teamId: string | null;
-  title: string;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export type AdminNotebookView = Schemas["AdminNotebookView"];
