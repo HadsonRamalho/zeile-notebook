@@ -1,200 +1,13 @@
+use crate::models::error::ApiError;
 use crate::schema::users::dsl::*;
-use crate::{controllers::utils::Sanitize, models::error::ApiError, schema::users};
-use chrono::{DateTime, Utc};
-use diesel::{
-    ExpressionMethods, QueryDsl,
-    prelude::{AsChangeset, Insertable, Queryable},
-};
+use chrono::{DateTime, Duration, Utc};
+use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, prelude::Insertable};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use diesel_derive_enum::DbEnum;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use rand::RngCore;
 use uuid::Uuid;
-use validator::Validate;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize, ToSchema)]
-#[ExistingTypePath = "crate::schema::sql_types::UserRole"]
-pub enum UserRole {
-    Admin,
-    User,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize, ToSchema)]
-#[ExistingTypePath = "crate::schema::sql_types::AuthProvider"]
-pub enum AuthProvider {
-    Email,
-    Google,
-    Github,
-}
-
-#[derive(
-    Queryable, Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone, utoipa::ToSchema,
-)]
-#[diesel(table_name = users)]
-#[serde(rename_all = "camelCase")]
-pub struct User {
-    pub id: Uuid,
-    pub public_id: i32,
-    pub name: String,
-    pub email: String,
-    pub avatar_url: Option<String>,
-    #[serde(skip_serializing)]
-    pub password_hash: Option<String>,
-    pub primary_provider: AuthProvider,
-    #[serde(skip_serializing)]
-    pub github_id: Option<String>,
-    #[serde(skip_serializing)]
-    pub google_id: Option<String>,
-    pub role: UserRole,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub deleted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing)]
-    pub password_changed_at: DateTime<Utc>,
-}
-
-impl User {
-    pub fn provider_linked(&self, provider: AuthProvider) -> bool {
-        match provider {
-            AuthProvider::Github => self.github_id.is_some(),
-            AuthProvider::Google => self.google_id.is_some(),
-            AuthProvider::Email => self.password_hash.is_some(),
-        }
-    }
-
-    pub fn login_methods(&self) -> usize {
-        [
-            self.password_hash.is_some(),
-            self.github_id.is_some(),
-            self.google_id.is_some(),
-        ]
-        .iter()
-        .filter(|has| **has)
-        .count()
-    }
-
-    pub fn can_unlink(&self, provider: AuthProvider) -> bool {
-        self.provider_linked(provider) && self.login_methods() > 1
-    }
-}
-
-#[derive(Clone)]
-pub struct UserAuthInfo {
-    pub id: Uuid,
-    pub public_id: i32,
-    pub email: String,
-    pub role: UserRole,
-}
-
-impl From<User> for UserAuthInfo {
-    fn from(input: User) -> Self {
-        Self {
-            id: input.id,
-            public_id: input.public_id,
-            email: input.email,
-            role: input.role,
-        }
-    }
-}
-
-#[derive(Insertable, Validate, Debug, ToSchema, Deserialize)]
-#[diesel(table_name = users)]
-#[serde(rename_all = "camelCase")]
-pub struct NewUser {
-    #[validate(length(min = 1, message = "Name is required"))]
-    pub name: String,
-
-    #[validate(email(message = "Invalid email format"))]
-    pub email: String,
-
-    #[serde(alias = "password_hash")]
-    pub password_hash: Option<String>,
-
-    #[serde(alias = "primary_provider")]
-    pub primary_provider: AuthProvider,
-    #[serde(alias = "github_id")]
-    pub github_id: Option<String>,
-    #[serde(alias = "google_id")]
-    pub google_id: Option<String>,
-    #[serde(alias = "avatar_url")]
-    pub avatar_url: Option<String>,
-}
-
-impl Sanitize for LoginUser {
-    fn sanitize(&mut self) {
-        self.email = self.email.trim().to_lowercase();
-    }
-}
-
-impl Sanitize for NewUser {
-    fn sanitize(&mut self) {
-        self.name = self.name.trim().to_string();
-        self.email = self.email.trim().to_lowercase();
-    }
-}
-
-#[derive(Deserialize, Validate, Debug, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginUser {
-    #[validate(email(message = "Invalid email format"))]
-    pub email: String,
-
-    #[validate(length(min = 1, message = "Password is required"))]
-    pub password: String,
-}
-
-#[derive(Deserialize, Validate, AsChangeset, utoipa::ToSchema)]
-#[diesel(table_name = users)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateUser {
-    #[validate(length(min = 1))]
-    pub name: String,
-
-    #[validate(email)]
-    pub email: String,
-}
-
-#[derive(Deserialize, Validate, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateUserPassword {
-    #[validate(length(min = 1, message = "The current password is required"))]
-    pub current_password: String,
-    #[validate(length(min = 1, message = "The new password is required"))]
-    pub new_password: String,
-    #[validate(length(min = 1, message = "The confirmation password is required"))]
-    pub confirm_password: String,
-}
-
-impl Sanitize for UpdateUser {
-    fn sanitize(&mut self) {
-        self.email = self.email.trim().to_lowercase();
-        self.name = self.name.trim().to_string();
-    }
-}
-
-#[derive(Validate, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UserEmail {
-    #[validate(email)]
-    pub email: String,
-}
-
-impl Sanitize for UserEmail {
-    fn sanitize(&mut self) {
-        self.email = self.email.trim().to_lowercase();
-    }
-}
-
-#[derive(Deserialize, Validate, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ResetPasswordPayload {
-    #[validate(length(min = 1, message = "Token is required"))]
-    pub token: String,
-    #[serde(alias = "new_password")]
-    #[validate(length(min = 1, message = "The new password is required"))]
-    pub new_password: String,
-}
+use super::dto::UpdateUser;
+use super::entity::{AuthProvider, NewUser, RefreshToken, User};
 
 pub async fn register_user(conn: &mut AsyncPgConnection, user: &NewUser) -> Result<User, String> {
     match diesel::insert_into(users)
@@ -372,9 +185,6 @@ pub async fn update_user_password(
     }
 }
 
-/// Rewrites only the hash, without touching `password_changed_at`. The
-/// password didn't change — this is the algorithm migration on login — so
-/// the user's pending reset links must not be invalidated by it.
 pub async fn rehash_user_password(
     conn: &mut AsyncPgConnection,
     id_param: &Uuid,
@@ -399,6 +209,189 @@ pub async fn delete_user(conn: &mut AsyncPgConnection, id_param: &Uuid) -> Resul
     {
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::from(e)),
+    }
+}
+
+pub const REFRESH_TOKEN_VALIDITY_DAYS: i64 = 30;
+
+const TOKEN_BYTES: usize = 32;
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::refresh_tokens)]
+struct NewRefreshToken {
+    id: Uuid,
+    user_id: Uuid,
+    token_hash: String,
+    expires_at: DateTime<Utc>,
+}
+
+pub fn generate_token() -> String {
+    let mut bytes = [0u8; TOKEN_BYTES];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    hex::encode(bytes)
+}
+
+pub fn token_hash(token: &str) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+pub async fn issue(conn: &mut AsyncPgConnection, user: Uuid) -> Result<(Uuid, String), ApiError> {
+    let token = generate_token();
+    let token_id = Uuid::new_v4();
+
+    let new_token = NewRefreshToken {
+        id: token_id,
+        user_id: user,
+        token_hash: token_hash(&token),
+        expires_at: Utc::now() + Duration::days(REFRESH_TOKEN_VALIDITY_DAYS),
+    };
+
+    diesel::insert_into(crate::schema::refresh_tokens::table)
+        .values(&new_token)
+        .execute(conn)
+        .await
+        .map_err(ApiError::from)?;
+
+    Ok((token_id, token))
+}
+
+pub async fn find_by_token(
+    conn: &mut AsyncPgConnection,
+    token: &str,
+) -> Result<RefreshToken, ApiError> {
+    use crate::schema::refresh_tokens::dsl as rt;
+
+    rt::refresh_tokens
+        .filter(rt::token_hash.eq(token_hash(token)))
+        .select(RefreshToken::as_select())
+        .first(conn)
+        .await
+        .map_err(|_| ApiError::InvalidAuthorizationToken)
+}
+
+pub async fn revoke(conn: &mut AsyncPgConnection, token_id: Uuid) -> Result<(), ApiError> {
+    use crate::schema::refresh_tokens::dsl as rt;
+
+    diesel::update(rt::refresh_tokens.filter(rt::id.eq(token_id)))
+        .set(rt::revoked_at.eq(Utc::now()))
+        .execute(conn)
+        .await
+        .map_err(ApiError::from)?;
+
+    Ok(())
+}
+
+pub async fn rotate(
+    conn: &mut AsyncPgConnection,
+    previous: &RefreshToken,
+) -> Result<(Uuid, String), ApiError> {
+    use crate::schema::refresh_tokens::dsl as rt;
+
+    let (new_id, token) = issue(conn, previous.user_id).await?;
+
+    diesel::update(rt::refresh_tokens.filter(rt::id.eq(previous.id)))
+        .set((
+            rt::revoked_at.eq(Utc::now()),
+            rt::replaced_by.eq(Some(new_id)),
+        ))
+        .execute(conn)
+        .await
+        .map_err(ApiError::from)?;
+
+    Ok((new_id, token))
+}
+
+pub async fn revoke_for_user(conn: &mut AsyncPgConnection, user: Uuid) -> Result<usize, ApiError> {
+    use crate::schema::refresh_tokens::dsl as rt;
+
+    diesel::update(
+        rt::refresh_tokens
+            .filter(rt::user_id.eq(user))
+            .filter(rt::revoked_at.is_null()),
+    )
+    .set(rt::revoked_at.eq(Utc::now()))
+    .execute(conn)
+    .await
+    .map_err(ApiError::from)
+}
+
+pub async fn delete_expired_refresh_tokens(
+    conn: &mut AsyncPgConnection,
+) -> Result<usize, ApiError> {
+    use crate::schema::refresh_tokens::dsl as rt;
+
+    diesel::delete(rt::refresh_tokens.filter(rt::expires_at.lt(Utc::now())))
+        .execute(conn)
+        .await
+        .map_err(ApiError::from)
+}
+
+#[cfg(test)]
+mod refresh_token_tests {
+    use super::*;
+
+    #[test]
+    fn token_has_32_bytes_of_entropy_in_hex() {
+        let token = generate_token();
+
+        assert_eq!(token.len(), TOKEN_BYTES * 2);
+        assert!(token.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn two_tokens_never_come_out_equal() {
+        let a = generate_token();
+        let b = generate_token();
+
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn hash_is_stable_and_does_not_return_the_token() {
+        let token = generate_token();
+        let hash = token_hash(&token);
+
+        assert_eq!(hash, token_hash(&token), "hash must be deterministic");
+        assert_ne!(hash, token, "the database cannot store the plain secret");
+        assert_eq!(hash.len(), 64);
+        assert!(!hash.contains(&token[..8]));
+    }
+
+    fn test_token(revoked_at: Option<DateTime<Utc>>, expires_in: Duration) -> RefreshToken {
+        RefreshToken {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            token_hash: "hash".to_string(),
+            expires_at: Utc::now() + expires_in,
+            created_at: Utc::now(),
+            revoked_at,
+            replaced_by: None,
+        }
+    }
+
+    #[test]
+    fn valid_token_is_usable() {
+        let token = test_token(None, Duration::days(1));
+
+        assert!(token.usable(Utc::now()));
+    }
+
+    #[test]
+    fn revoked_token_is_not_usable() {
+        let token = test_token(Some(Utc::now()), Duration::days(1));
+
+        assert!(!token.usable(Utc::now()));
+    }
+
+    #[test]
+    fn expired_token_is_not_usable() {
+        let token = test_token(None, Duration::days(-1));
+
+        assert!(!token.usable(Utc::now()));
     }
 }
 
@@ -451,6 +444,8 @@ mod tests {
 
     #[test]
     fn reset_password_payload_accepts_camel_case_and_the_legacy_snake_case_alias() {
+        use super::super::dto::ResetPasswordPayload;
+
         let camel: ResetPasswordPayload =
             serde_json::from_str(r#"{"token":"t","newPassword":"p"}"#).unwrap();
         let snake: ResetPasswordPayload =
@@ -470,7 +465,7 @@ mod tests {
             primary_provider: AuthProvider::Email,
             github_id: github.then(|| "1".to_string()),
             google_id: google.then(|| "2".to_string()),
-            role: UserRole::User,
+            role: super::super::entity::UserRole::User,
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -510,5 +505,125 @@ mod tests {
 
         assert!(u.can_unlink(AuthProvider::Github));
         assert!(u.can_unlink(AuthProvider::Google));
+    }
+}
+
+#[cfg(test)]
+mod refresh_token_tests_with_database {
+    use super::*;
+    use diesel_async::AsyncConnection;
+
+    async fn connection() -> Option<AsyncPgConnection> {
+        let url = std::env::var("TEST_MIGRATION_DATABASE_URL").ok()?;
+        crate::db_migrations::ensure_test_database_migrated(&url);
+
+        AsyncPgConnection::establish(&url).await.ok()
+    }
+
+    async fn test_user(conn: &mut AsyncPgConnection) -> Uuid {
+        let user_id = Uuid::new_v4();
+
+        diesel::sql_query(format!(
+            "INSERT INTO users (id, public_id, name, email, primary_provider, role, is_active) \
+             VALUES ('{user_id}', {}, 'Test', 'test_{user_id}@example.test', 'email', 'user', true)",
+            rand::random::<u16>() as i32 + 1_000_000
+        ))
+        .execute(conn)
+        .await
+        .expect("insert test user");
+
+        user_id
+    }
+
+    #[tokio::test]
+    async fn issue_finds_the_token_by_its_secret() {
+        let Some(mut conn) = connection().await else {
+            eprintln!("TEST_MIGRATION_DATABASE_URL missing; test skipped");
+            return;
+        };
+
+        let user = test_user(&mut conn).await;
+        let (token_id, token) = issue(&mut conn, user).await.expect("issue");
+
+        let found = find_by_token(&mut conn, &token).await.expect("find");
+
+        assert_eq!(found.id, token_id);
+        assert_eq!(found.user_id, user);
+        assert!(found.usable(Utc::now()));
+        assert_ne!(
+            found.token_hash, token,
+            "the database stored the plain secret"
+        );
+    }
+
+    #[tokio::test]
+    async fn rotate_revokes_the_previous_token_and_points_to_the_replacement() {
+        let Some(mut conn) = connection().await else {
+            return;
+        };
+
+        let user = test_user(&mut conn).await;
+        let (old_id, old) = issue(&mut conn, user).await.expect("issue");
+        let current = find_by_token(&mut conn, &old).await.expect("find");
+
+        let (new_id, new_token) = rotate(&mut conn, &current).await.expect("rotate");
+
+        let spent = find_by_token(&mut conn, &old).await.expect("find");
+
+        assert!(
+            !spent.usable(Utc::now()),
+            "the previous token should be spent"
+        );
+        assert_eq!(spent.replaced_by, Some(new_id));
+        assert_ne!(old_id, new_id);
+
+        let current = find_by_token(&mut conn, &new_token).await.expect("find");
+        assert!(current.usable(Utc::now()));
+    }
+
+    #[tokio::test]
+    async fn revoke_for_user_drops_all_sessions() {
+        let Some(mut conn) = connection().await else {
+            return;
+        };
+
+        let user = test_user(&mut conn).await;
+        let (_, a) = issue(&mut conn, user).await.expect("issue a");
+        let (_, b) = issue(&mut conn, user).await.expect("issue b");
+
+        let other = test_user(&mut conn).await;
+        let (_, unrelated) = issue(&mut conn, other).await.expect("issue unrelated");
+
+        let count = revoke_for_user(&mut conn, user).await.expect("revoke");
+
+        assert_eq!(count, 2);
+        assert!(
+            !find_by_token(&mut conn, &a)
+                .await
+                .unwrap()
+                .usable(Utc::now())
+        );
+        assert!(
+            !find_by_token(&mut conn, &b)
+                .await
+                .unwrap()
+                .usable(Utc::now())
+        );
+        assert!(
+            find_by_token(&mut conn, &unrelated)
+                .await
+                .unwrap()
+                .usable(Utc::now()),
+            "revoking one user cannot drop another user's session"
+        );
+    }
+
+    #[tokio::test]
+    async fn unknown_token_is_not_found() {
+        let Some(mut conn) = connection().await else {
+            return;
+        };
+
+        assert!(find_by_token(&mut conn, &generate_token()).await.is_err());
     }
 }

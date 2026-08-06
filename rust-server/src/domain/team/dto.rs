@@ -6,7 +6,6 @@ use validator::Validate;
 
 use super::entity::TeamRole;
 
-// os oito bools do contrato publico; a fonte de verdade e permission_grants
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RolePermissions {
@@ -28,7 +27,6 @@ pub struct RolePermissions {
     pub can_manage_team: bool,
 }
 
-// mantem o formato plano que o frontend consome (`TeamRole` em lib/types/team-types.ts)
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TeamRoleView {
@@ -51,7 +49,6 @@ impl TeamRoleView {
         }
     }
 
-    // roles sinteticos: dono do notebook, notebook publico, sem acesso
     pub fn synthetic(name: &str, permissions: RolePermissions) -> Self {
         Self {
             id: Uuid::new_v4(),

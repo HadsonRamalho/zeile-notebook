@@ -24,7 +24,7 @@ use super::entity::SnapshotMeta;
 use super::repository;
 
 async fn actor_name(conn: &mut diesel_async::AsyncPgConnection, user_id: Uuid) -> String {
-    crate::models::user::find_user_by_id(conn, &user_id)
+    crate::domain::user::find_user_by_id(conn, &user_id)
         .await
         .map(|u| u.name)
         .unwrap_or_else(|_| "Usuário".to_string())

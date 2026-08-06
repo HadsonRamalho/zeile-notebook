@@ -5,102 +5,27 @@ use axum::{
     extract::{Path, State},
 };
 use hyper::{HeaderMap, StatusCode};
-use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::controllers::challenge_judge::{judge_submission, limits_for, normalize};
 use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::permissions::{TargetCtx, require};
 use crate::controllers::utils::get_conn;
+use crate::domain::user::UserRole;
 use crate::executor::{ExecVerdict, compile_code, run_compiled};
-use crate::models::challenge::{
-    self, Challenge, ChallengePublic, LeaderboardEntry, NewChallenge, NewSubmission, NewTestCase,
-    SubmissionView, TestCaseAuthoringView, TestCasePublic, UpdateChallenge,
-};
 use crate::models::error::ApiError;
 use crate::models::state::AppState;
-use crate::models::user::UserRole;
 
-#[derive(Deserialize, Validate, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateChallengeRequest {
-    pub notebook_id: Uuid,
-    pub block_id: Option<Uuid>,
-    #[validate(length(max = 100, message = "Slug must be at most 100 characters"))]
-    pub slug: String,
-    #[validate(length(max = 300, message = "Title must be at most 300 characters"))]
-    pub title: String,
-    pub statement_md: String,
-    pub difficulty: Option<String>,
-    pub tags: Option<Vec<String>>,
-    pub languages: Vec<String>,
-    pub judge_mode: Option<String>,
-    pub time_limit_ms: Option<i32>,
-    pub mem_limit_kb: Option<i32>,
-    pub starter_code: Option<Value>,
-    pub property_spec: Option<Value>,
-    pub visibility: Option<String>,
-    pub team_id: Option<Uuid>,
-}
-
-#[derive(Deserialize, Validate, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateChallengeRequest {
-    #[validate(length(max = 300, message = "Title must be at most 300 characters"))]
-    pub title: Option<String>,
-    pub statement_md: Option<String>,
-    pub difficulty: Option<String>,
-    pub judge_mode: Option<String>,
-    pub time_limit_ms: Option<i32>,
-    pub mem_limit_kb: Option<i32>,
-    pub tags: Option<Vec<String>>,
-    pub languages: Option<Vec<String>>,
-    pub starter_code: Option<Value>,
-    pub property_spec: Option<Value>,
-    pub visibility: Option<String>,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateTestCaseRequest {
-    pub input: String,
-    pub expected: Option<String>,
-    pub is_hidden: Option<bool>,
-    pub weight: Option<i32>,
-    pub ord: Option<i32>,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct SetReferenceRequest {
-    pub solution: String,
-    pub language: String,
-}
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct SubmitRequest {
-    pub language: String,
-    pub code: String,
-}
-
-#[derive(serde::Serialize, utoipa::ToSchema)]
-pub struct SampleResultView {
-    pub input: String,
-    pub expected: Option<String>,
-    pub stdout: String,
-    pub stderr: Option<String>,
-    pub verdict: String,
-}
-
-#[derive(serde::Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct RunSamplesResponse {
-    pub compile_error: Option<String>,
-    pub results: Vec<SampleResultView>,
-}
-
-const VALID_JUDGE_MODES: [&str; 3] = ["io", "reference", "property"];
+use super::dto::{
+    ChallengePublic, CreateChallengeRequest, CreateTestCaseRequest, LeaderboardEntry,
+    RunSamplesResponse, SampleResultView, SetReferenceRequest, SubmissionView, SubmitRequest,
+    TestCaseAuthoringView, TestCasePublic, UpdateChallengeRequest,
+};
+use super::entity::{Challenge, NewChallenge, NewSubmission, NewTestCase, UpdateChallenge};
+use super::judge::{judge_submission, limits_for, normalize};
+use super::repository;
+use super::service::{VALID_JUDGE_MODES, require_notebook};
 
 async fn conn_from(
     state: &AppState,
@@ -113,30 +38,12 @@ async fn conn_from(
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))
 }
 
-fn challenge_notebook(challenge: &Challenge) -> Result<Uuid, ApiError> {
-    challenge
-        .notebook_id
-        .ok_or_else(|| ApiError::Request("Desafio sem notebook vinculado".to_string()))
-}
-
-async fn require_notebook(
-    state: &AppState,
-    challenge: &Challenge,
-    user_id: Option<Uuid>,
-    key: &str,
-    target: &TargetCtx,
-) -> Result<(), ApiError> {
-    let notebook_id = challenge_notebook(challenge)?;
-    require(&state.pool, user_id, notebook_id, key, target).await?;
-    Ok(())
-}
-
 #[utoipa::path(get, path = "/challenge/list", responses((status = OK, body = Vec<ChallengePublic>), (status = 401, body = ApiError)))]
 pub async fn api_list_challenges(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ChallengePublic>>, ApiError> {
     let mut conn = conn_from(&state).await?;
-    let rows = challenge::list_public_challenges(&mut conn).await?;
+    let rows = repository::list_public_challenges(&mut conn).await?;
     Ok(Json(rows.into_iter().map(ChallengePublic::from).collect()))
 }
 
@@ -152,7 +59,7 @@ async fn challenge_detail(
     require_notebook(state, &ch, user_id, "notebook.view", &TargetCtx::default()).await?;
 
     let mut conn = conn_from(state).await?;
-    let samples: Vec<TestCasePublic> = challenge::list_public_test_cases(&mut conn, ch.id).await?;
+    let samples: Vec<TestCasePublic> = repository::list_public_test_cases(&mut conn, ch.id).await?;
     let public = ChallengePublic::from(ch);
     Ok(Json(json!({
         "challenge": public,
@@ -167,7 +74,7 @@ pub async fn api_get_challenge(
     headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_slug(&mut conn, &slug).await?;
+    let ch = repository::get_challenge_by_slug(&mut conn, &slug).await?;
     drop(conn);
     challenge_detail(&state, &headers, ch).await
 }
@@ -179,7 +86,7 @@ pub async fn api_get_challenge_by_id(
     headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let ch = repository::get_challenge_by_id(&mut conn, id).await?;
     drop(conn);
     challenge_detail(&state, &headers, ch).await
 }
@@ -244,7 +151,7 @@ pub async fn api_create_challenge(
     };
 
     let mut conn = conn_from(&state).await?;
-    let created = challenge::create_challenge(&mut conn, &new_challenge).await?;
+    let created = repository::create_challenge(&mut conn, &new_challenge).await?;
     Ok((StatusCode::CREATED, Json(ChallengePublic::from(created))))
 }
 
@@ -261,7 +168,7 @@ pub async fn api_update_challenge(
 
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let existing = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &existing,
@@ -292,7 +199,7 @@ pub async fn api_update_challenge(
         updated_at: Some(chrono::Utc::now()),
     };
 
-    let updated = challenge::update_challenge(&mut conn, id, &changes).await?;
+    let updated = repository::update_challenge(&mut conn, id, &changes).await?;
     Ok(Json(ChallengePublic::from(updated)))
 }
 
@@ -305,7 +212,7 @@ pub async fn api_add_test_case(
 ) -> Result<(StatusCode, Json<Value>), ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let existing = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &existing,
@@ -324,7 +231,7 @@ pub async fn api_add_test_case(
         weight: payload.weight.unwrap_or(1).max(0),
         ord: payload.ord.unwrap_or(0),
     };
-    let created = challenge::create_test_case(&mut conn, &new_case).await?;
+    let created = repository::create_test_case(&mut conn, &new_case).await?;
     Ok((StatusCode::CREATED, Json(json!({ "id": created.id }))))
 }
 
@@ -337,7 +244,7 @@ pub async fn api_set_reference(
 ) -> Result<Json<ChallengePublic>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let existing = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &existing,
@@ -348,7 +255,7 @@ pub async fn api_set_reference(
     .await?;
 
     let updated =
-        challenge::upsert_reference(&mut conn, id, &payload.solution, &payload.language).await?;
+        repository::upsert_reference(&mut conn, id, &payload.solution, &payload.language).await?;
     Ok(Json(ChallengePublic::from(updated)))
 }
 
@@ -360,7 +267,7 @@ pub async fn api_get_reference(
 ) -> Result<Json<Value>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let ch = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &ch,
@@ -370,7 +277,7 @@ pub async fn api_get_reference(
     )
     .await?;
     Ok(Json(json!({
-        "solutions": challenge::reference_map(&ch),
+        "solutions": super::service::reference_map(&ch),
     })))
 }
 
@@ -382,7 +289,7 @@ pub async fn api_delete_reference(
 ) -> Result<Json<Value>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let ch = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &ch,
@@ -391,9 +298,9 @@ pub async fn api_delete_reference(
         &TargetCtx::default(),
     )
     .await?;
-    let updated = challenge::delete_reference(&mut conn, id, &language).await?;
+    let updated = repository::delete_reference(&mut conn, id, &language).await?;
     Ok(Json(json!({
-        "solutions": challenge::reference_map(&updated),
+        "solutions": super::service::reference_map(&updated),
     })))
 }
 
@@ -405,7 +312,7 @@ pub async fn api_list_test_cases(
 ) -> Result<Json<Vec<TestCaseAuthoringView>>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let existing = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &existing,
@@ -415,7 +322,7 @@ pub async fn api_list_test_cases(
     )
     .await?;
 
-    let cases = challenge::list_test_cases(&mut conn, id).await?;
+    let cases = repository::list_test_cases(&mut conn, id).await?;
     Ok(Json(
         cases.into_iter().map(TestCaseAuthoringView::from).collect(),
     ))
@@ -429,7 +336,7 @@ pub async fn api_delete_test_case(
 ) -> Result<StatusCode, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let existing = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let existing = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(
         &state,
         &existing,
@@ -439,7 +346,7 @@ pub async fn api_delete_test_case(
     )
     .await?;
 
-    challenge::delete_test_case(&mut conn, id, case_id).await?;
+    repository::delete_test_case(&mut conn, id, case_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -452,7 +359,7 @@ pub async fn api_submit(
 ) -> Result<(StatusCode, Json<SubmissionView>), ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let ch = repository::get_challenge_by_id(&mut conn, id).await?;
 
     let allowed_languages: Vec<String> = ch
         .languages
@@ -493,7 +400,7 @@ pub async fn api_submit(
         status: "queued".to_string(),
         max_score: 0,
     };
-    let submission = challenge::create_submission(&mut conn, &new_submission).await?;
+    let submission = repository::create_submission(&mut conn, &new_submission).await?;
 
     {
         let state = state.clone();
@@ -515,7 +422,7 @@ pub async fn api_run_samples(
 ) -> Result<Json<RunSamplesResponse>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let ch = repository::get_challenge_by_id(&mut conn, id).await?;
 
     let allowed_languages: Vec<String> = ch
         .languages
@@ -547,7 +454,7 @@ pub async fn api_run_samples(
     )
     .await?;
 
-    let samples = challenge::list_public_test_cases(&mut conn, id).await?;
+    let samples = repository::list_public_test_cases(&mut conn, id).await?;
     let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
     let session = format!("run_{}", Uuid::new_v4());
 
@@ -605,13 +512,13 @@ pub async fn api_get_submission(
 ) -> Result<Json<SubmissionView>, ApiError> {
     let claims = extract_claims_from_header(&headers).await?.1;
     let mut conn = conn_from(&state).await?;
-    let submission = challenge::get_submission(&mut conn, submission_id).await?;
+    let submission = repository::get_submission(&mut conn, submission_id).await?;
 
     let is_owner = submission.user_id == Some(claims.id);
     let role = crate::controllers::session::role_in_db(&mut conn, &claims.id).await?;
 
     if !is_owner && role != UserRole::Admin {
-        let ch = challenge::get_challenge_by_id(&mut conn, submission.challenge_id).await?;
+        let ch = repository::get_challenge_by_id(&mut conn, submission.challenge_id).await?;
         require_notebook(
             &state,
             &ch,
@@ -622,7 +529,7 @@ pub async fn api_get_submission(
         .await?;
     }
 
-    let results = challenge::list_submission_results(&mut conn, submission_id)
+    let results = repository::list_submission_results(&mut conn, submission_id)
         .await?
         .into_iter()
         .map(|r| r.into_view())
@@ -639,7 +546,7 @@ pub async fn api_list_my_submissions(
 ) -> Result<Json<Vec<SubmissionView>>, ApiError> {
     let user_id = extract_claims_from_header(&headers).await?.1.id;
     let mut conn = conn_from(&state).await?;
-    let rows = challenge::list_user_submissions(&mut conn, id, user_id).await?;
+    let rows = repository::list_user_submissions(&mut conn, id, user_id).await?;
     Ok(Json(
         rows.into_iter().map(|s| s.into_view(Vec::new())).collect(),
     ))
@@ -656,9 +563,9 @@ pub async fn api_leaderboard(
         .ok()
         .map(|c| c.1.id);
     let mut conn = conn_from(&state).await?;
-    let ch = challenge::get_challenge_by_id(&mut conn, id).await?;
+    let ch = repository::get_challenge_by_id(&mut conn, id).await?;
     require_notebook(&state, &ch, user_id, "notebook.view", &TargetCtx::default()).await?;
-    let done = challenge::list_done_submissions(&mut conn, id).await?;
+    let done = repository::list_done_submissions(&mut conn, id).await?;
 
     let mut seen: std::collections::HashSet<Uuid> = std::collections::HashSet::new();
     let mut entries: Vec<LeaderboardEntry> = Vec::new();
@@ -669,7 +576,7 @@ pub async fn api_leaderboard(
         if !seen.insert(uid) {
             continue;
         }
-        let author_name = crate::models::user::find_user_by_id(&mut conn, &uid)
+        let author_name = crate::domain::user::find_user_by_id(&mut conn, &uid)
             .await
             .map(|u| u.name)
             .unwrap_or_else(|_| "Usuário".to_string());

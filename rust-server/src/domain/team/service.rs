@@ -103,7 +103,6 @@ impl RolePermissions {
         keys
     }
 
-    // inverso de grant_keys: le a chave representativa de cada bool
     pub fn from_grant_keys(keys: &HashSet<String>) -> Self {
         let has = |key: &str| keys.contains(key);
         Self {
@@ -120,7 +119,6 @@ impl RolePermissions {
 }
 
 impl UpdateTeamRole {
-    // aplica so os campos enviados sobre as permissoes vigentes
     pub fn apply(&self, current: RolePermissions) -> RolePermissions {
         RolePermissions {
             can_read: self.can_read.unwrap_or(current.can_read),
@@ -139,10 +137,6 @@ impl UpdateTeamRole {
     }
 }
 
-/// The invite is addressed to an email. Without this comparison, any
-/// authenticated account that gets hold of the link would join the team with
-/// the granted role — and the link travels through forwarded email, push,
-/// and browser history.
 pub fn email_matches(invited: &str, user: &str) -> bool {
     invited.trim().eq_ignore_ascii_case(user.trim())
 }

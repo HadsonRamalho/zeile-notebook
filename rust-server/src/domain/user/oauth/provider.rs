@@ -1,4 +1,5 @@
-use crate::{controllers::utils::get_var_from_env, models::user::AuthProvider};
+use crate::controllers::utils::get_var_from_env;
+use crate::domain::user::entity::AuthProvider;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Provider {

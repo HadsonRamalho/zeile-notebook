@@ -431,7 +431,7 @@ pub async fn api_invite_member(
 
     require_team_permission(conn, id, team_id, "team.invite_users").await?;
 
-    let invited_by = crate::models::user::find_user_by_id(conn, &id).await?;
+    let invited_by = crate::domain::user::find_user_by_id(conn, &id).await?;
 
     let token: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
@@ -455,7 +455,7 @@ pub async fn api_invite_member(
         return Err(ApiError::Database(e));
     }
 
-    let invited_user = crate::models::user::find_user_by_email(conn, &payload.email).await?;
+    let invited_user = crate::domain::user::find_user_by_email(conn, &payload.email).await?;
 
     let magic_link = format!(
         "{}/invite?token={}",
@@ -501,11 +501,8 @@ pub async fn api_accept_invite(
         .await
         .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
 
-    let user = crate::models::user::find_user_by_id(conn, &id).await?;
+    let user = crate::domain::user::find_user_by_id(conn, &id).await?;
 
-    // The invite is found, but not consumed on the way in: if it were consumed
-    // first, whoever has the link would burn the invite for the person who
-    // was actually invited.
     let invitation = match repository::find_invitation_by_token(conn, payload.token.trim()).await {
         Ok(inv) => inv,
         Err(_) => return Err(ApiError::InvalidData),
@@ -536,8 +533,6 @@ pub async fn api_accept_invite(
 
     repository::add_user_to_team(conn, &new_member).await?;
 
-    // Only consumed after joining the team: if the insert fails, the invite
-    // is still valid for a new attempt.
     repository::delete_invitation(conn, invitation.id)
         .await
         .ok();

@@ -1,15 +1,11 @@
-pub mod challenge;
-pub mod challenge_judge;
 pub mod email;
 pub mod execution_capabilities;
 pub mod health;
 pub mod jwt;
 pub mod metrics;
-pub mod oauth;
 pub mod permissions;
 pub mod session;
 pub mod shutdown;
 pub mod sync;
-pub mod user;
 pub mod utils;
 pub mod websocket;

@@ -7,8 +7,11 @@ use uuid::Uuid;
 
 use crate::executor::{ExecVerdict, compile_code, run_compiled};
 use crate::file::RunLimits;
-use crate::models::challenge::{self, NewSubmissionResult};
 use crate::models::state::AppState;
+
+use super::entity::NewSubmissionResult;
+use super::repository;
+use super::service::pick_reference;
 
 const STDERR_SNIPPET_LIMIT: usize = 500;
 
@@ -108,7 +111,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         }
     };
 
-    let submission = match challenge::get_submission(&mut conn, submission_id).await {
+    let submission = match repository::get_submission(&mut conn, submission_id).await {
         Ok(s) => s,
         Err(e) => {
             error!("judge: submission not found: {}", e);
@@ -116,11 +119,11 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         }
     };
 
-    let ch = match challenge::get_challenge_by_id(&mut conn, submission.challenge_id).await {
+    let ch = match repository::get_challenge_by_id(&mut conn, submission.challenge_id).await {
         Ok(c) => c,
         Err(e) => {
             error!("judge: challenge not found: {}", e);
-            challenge::finalize_submission(
+            repository::finalize_submission(
                 &mut conn,
                 submission_id,
                 "error",
@@ -135,18 +138,18 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         }
     };
 
-    challenge::set_submission_running(&mut conn, submission_id)
+    repository::set_submission_running(&mut conn, submission_id)
         .await
         .ok();
 
     let limits = limits_for(ch.time_limit_ms, ch.mem_limit_kb);
     let needs_reference = ch.judge_mode == "reference" || ch.judge_mode == "property";
 
-    let stored = match challenge::list_test_cases(&mut conn, ch.id).await {
+    let stored = match repository::list_test_cases(&mut conn, ch.id).await {
         Ok(t) => t,
         Err(e) => {
             error!("judge: failed to load cases: {}", e);
-            challenge::finalize_submission(
+            repository::finalize_submission(
                 &mut conn,
                 submission_id,
                 "error",
@@ -187,7 +190,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     }
 
     if cases.is_empty() {
-        challenge::finalize_submission(
+        repository::finalize_submission(
             &mut conn,
             submission_id,
             "error",
@@ -208,7 +211,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     let user_bin = match compile_code(&submission.language, &submission.code, &user_session).await {
         Ok(path) => path,
         Err(msg) => {
-            challenge::finalize_submission(
+            repository::finalize_submission(
                 &mut conn,
                 submission_id,
                 "compile_error",
@@ -224,8 +227,8 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
     };
 
     let ref_bin = if needs_reference {
-        let Some((ref_lang, ref_sol)) = challenge::pick_reference(&ch) else {
-            challenge::finalize_submission(
+        let Some((ref_lang, ref_sol)) = pick_reference(&ch) else {
+            repository::finalize_submission(
                 &mut conn,
                 submission_id,
                 "error",
@@ -242,7 +245,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
             Ok(path) => Some(path),
             Err(_) => {
                 error!("judge: reference solution does not compile");
-                challenge::finalize_submission(
+                repository::finalize_submission(
                     &mut conn,
                     submission_id,
                     "error",
@@ -281,7 +284,7 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
                         idx + 1,
                         detail
                     );
-                    challenge::finalize_submission(
+                    repository::finalize_submission(
                         &mut conn,
                         submission_id,
                         "error",
@@ -336,11 +339,11 @@ pub async fn judge_submission(state: Arc<AppState>, submission_id: Uuid) {
         });
     }
 
-    if let Err(e) = challenge::insert_submission_results(&mut conn, &results).await {
+    if let Err(e) = repository::insert_submission_results(&mut conn, &results).await {
         error!("judge: falha ao gravar resultados: {}", e);
     }
 
-    challenge::finalize_submission(
+    repository::finalize_submission(
         &mut conn,
         submission_id,
         "done",

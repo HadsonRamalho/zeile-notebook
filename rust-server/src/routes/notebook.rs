@@ -7,7 +7,6 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::{
     controllers::{
         permissions::{api_get_notebook_capabilities, require_permission},
-        user::api_get_user_notebook_permissions,
         websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
     },
     domain::{
@@ -38,6 +37,7 @@ use crate::{
         snapshots::controller::{
             api_create_snapshot, api_delete_snapshot, api_list_snapshots, api_restore_snapshot,
         },
+        user::controller::api_get_user_notebook_permissions,
     },
     models::state::AppState,
 };

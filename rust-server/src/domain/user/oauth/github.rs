@@ -1,10 +1,8 @@
 use reqwest::Client as ReqwestClient;
 use tracing::error;
 
-use crate::{
-    controllers::oauth::provider::{OAuthError, OAuthIdentity},
-    models::oauth::{GithubEmail, GithubUser},
-};
+use super::entity::{GithubEmail, GithubUser};
+use super::provider::{OAuthError, OAuthIdentity};
 
 const USER_AGENT: &str = "rust-notebook-app";
 

@@ -216,7 +216,7 @@ pub async fn get_paginated_users(
             uuid::Uuid,
             String,
             String,
-            crate::models::user::AuthProvider,
+            crate::domain::user::AuthProvider,
             bool,
             chrono::DateTime<chrono::Utc>,
             chrono::DateTime<chrono::Utc>,

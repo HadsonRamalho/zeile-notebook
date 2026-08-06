@@ -39,7 +39,6 @@ pub async fn delete_grant_in_team(
     .map_err(ApiError::from)
 }
 
-// chaves de grant `allow` de cada role, agrupadas por role
 pub async fn grant_keys_by_role(
     conn: &mut AsyncPgConnection,
     role_ids: &[Uuid],
@@ -70,7 +69,6 @@ pub async fn grant_keys_by_role(
     Ok(out)
 }
 
-// troca o conjunto de grants do role de uma vez, sem deixar estado intermediario visivel
 pub async fn replace_team_role_grants(
     conn: &mut AsyncPgConnection,
     role_id: Uuid,

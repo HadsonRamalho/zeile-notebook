@@ -31,7 +31,7 @@ fn comment_signal(notebook_id: Uuid) -> String {
 }
 
 async fn author_name(conn: &mut diesel_async::AsyncPgConnection, user_id: Uuid) -> String {
-    crate::models::user::find_user_by_id(conn, &user_id)
+    crate::domain::user::find_user_by_id(conn, &user_id)
         .await
         .map(|u| u.name)
         .unwrap_or_else(|_| "Usuário".to_string())
@@ -58,7 +58,7 @@ fn notify_mentions(
 
         let mut candidates: Vec<(Uuid, String)> = Vec::new();
         if let Some(owner_id) = notebook.user_id
-            && let Ok(owner) = crate::models::user::find_user_by_id(&mut conn, &owner_id).await
+            && let Ok(owner) = crate::domain::user::find_user_by_id(&mut conn, &owner_id).await
         {
             candidates.push((owner_id, owner.name));
         }

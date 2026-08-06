@@ -82,7 +82,7 @@ pub async fn api_record_edit(
     )
     .await?;
 
-    let name = crate::models::user::find_user_by_id(&mut conn, &user_id)
+    let name = crate::domain::user::find_user_by_id(&mut conn, &user_id)
         .await
         .map(|u| u.name)
         .unwrap_or_else(|_| "Usuário".to_string());

@@ -1585,10 +1585,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Exchanges a refresh token for a new pair. The used token is revoked and
-     *     points to its replacement, so reuse of an already-rotated token is detectable.
-     */
     post: operations["api_refresh_session"];
     delete?: never;
     options?: never;
@@ -2137,10 +2133,6 @@ export interface components {
       passwordHash?: string | null;
       primaryProvider: components["schemas"]["AuthProvider"];
     };
-    /**
-     * @description Wire shape for `entity::Notebook` — the boundary the openapi-types
-     *     generator sees, kept apart from the Diesel struct on purpose (Q48).
-     */
     NotebookDto: {
       /** Format: date-time */
       createdAt: string;

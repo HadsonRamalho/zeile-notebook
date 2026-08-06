@@ -4,7 +4,7 @@ use axum::routing::{delete, get, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
-    controllers::challenge::{
+    domain::challenge::controller::{
         api_add_test_case, api_create_challenge, api_delete_reference, api_delete_test_case,
         api_get_challenge, api_get_challenge_by_id, api_get_reference, api_get_submission,
         api_leaderboard, api_list_challenges, api_list_my_submissions, api_list_test_cases,

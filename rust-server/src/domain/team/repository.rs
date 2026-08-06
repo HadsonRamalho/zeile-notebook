@@ -87,7 +87,6 @@ pub async fn create_team_role(
     Ok(role)
 }
 
-// resolve os bools de cada role a partir dos grants, numa consulta so
 pub async fn load_role_permissions(
     conn: &mut AsyncPgConnection,
     role_ids: &[Uuid],
@@ -376,7 +375,6 @@ mod tests_with_database {
             .expect("remove team");
     }
 
-    /// Real team and role: foreign keys reject a loose UUID.
     async fn team_with_role(conn: &mut AsyncPgConnection) -> (Uuid, Uuid) {
         let team_id = Uuid::new_v4();
         let role_id = Uuid::new_v4();

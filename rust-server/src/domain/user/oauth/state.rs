@@ -4,11 +4,9 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::controllers::{
-    jwt::get_jwt_secret_from_env,
-    oauth::provider::{OAuthError, Provider},
-    utils::get_var_from_env,
-};
+use crate::controllers::{jwt::get_jwt_secret_from_env, utils::get_var_from_env};
+
+use super::provider::{OAuthError, Provider};
 
 const COOKIE: &str = "zeile_oauth_state";
 const TTL_SECS: i64 = 600;

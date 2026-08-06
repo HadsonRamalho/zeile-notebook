@@ -1,10 +1,8 @@
 use reqwest::Client as ReqwestClient;
 use tracing::error;
 
-use crate::{
-    controllers::oauth::provider::{OAuthError, OAuthIdentity},
-    models::oauth::GoogleUser,
-};
+use super::entity::GoogleUser;
+use super::provider::{OAuthError, OAuthIdentity};
 
 const USERINFO_URL: &str = "https://openidconnect.googleapis.com/v1/userinfo";
 
