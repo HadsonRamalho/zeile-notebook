@@ -1,5 +1,6 @@
 "use client";
 
+import { catchError } from "@catcherjs/core";
 import { Download, FileImage, Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -47,13 +48,21 @@ export function TypstCell({
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const renderPreview = useCallback(async () => {
-    try {
-      const typst = await getTypst();
-      const html = await typst.svg({ mainContent: content });
-      setSvgHtml(html);
+    const result = await catchError(
+      (async () => {
+        const typst = await getTypst();
+        return typst.svg({ mainContent: content });
+      })(),
+    );
+    if (result.isErr()) {
+      setError(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao renderizar Typst",
+      );
+    } else {
+      setSvgHtml(result.data);
       setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao renderizar Typst");
     }
   }, [content]);
 
@@ -72,20 +81,25 @@ export function TypstCell({
 
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
-    try {
-      const typst = await getTypst();
-      const bytes = await typst.pdf({ mainContent: content });
-      if (bytes) {
-        downloadBlob(
-          new Blob([bytes as BlobPart], { type: "application/pdf" }),
-          "documento.pdf",
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao exportar PDF");
-    } finally {
-      setIsExportingPdf(false);
+    const result = await catchError(
+      (async () => {
+        const typst = await getTypst();
+        return typst.pdf({ mainContent: content });
+      })(),
+    );
+    if (result.isErr()) {
+      setError(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao exportar PDF",
+      );
+    } else if (result.data) {
+      downloadBlob(
+        new Blob([result.data as BlobPart], { type: "application/pdf" }),
+        "documento.pdf",
+      );
     }
+    setIsExportingPdf(false);
   };
 
   const handleExportPng = async () => {
@@ -94,24 +108,30 @@ export function TypstCell({
     container.style.position = "fixed";
     container.style.left = "-9999px";
     document.body.appendChild(container);
-    try {
-      const typst = await getTypst();
-      await typst.canvas(container, { mainContent: content });
-      const canvas = container.querySelector("canvas");
-      if (canvas) {
-        await new Promise<void>((resolve) => {
-          canvas.toBlob((blob) => {
-            if (blob) downloadBlob(blob, "documento.png");
-            resolve();
-          }, "image/png");
-        });
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao exportar PNG");
-    } finally {
-      document.body.removeChild(container);
-      setIsExportingPng(false);
+    const result = await catchError(
+      (async () => {
+        const typst = await getTypst();
+        await typst.canvas(container, { mainContent: content });
+        const canvas = container.querySelector("canvas");
+        if (canvas) {
+          await new Promise<void>((resolve) => {
+            canvas.toBlob((blob) => {
+              if (blob) downloadBlob(blob, "documento.png");
+              resolve();
+            }, "image/png");
+          });
+        }
+      })(),
+    );
+    if (result.isErr()) {
+      setError(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao exportar PNG",
+      );
     }
+    document.body.removeChild(container);
+    setIsExportingPng(false);
   };
 
   return (

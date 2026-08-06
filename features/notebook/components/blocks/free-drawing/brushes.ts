@@ -1,3 +1,4 @@
+import { catchErrorSync } from "@catcherjs/core";
 import { type BrushShape, nextElementId } from "./engine";
 
 export interface Brush {
@@ -121,26 +122,25 @@ const STORAGE_KEY = "free-drawing-custom-brushes";
 
 export function loadCustomBrushes(): Brush[] {
   if (typeof localStorage === "undefined") return [];
-  try {
+  const result = catchErrorSync(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Brush[];
     return Array.isArray(parsed)
       ? parsed.map((b) => ({ ...b, builtin: false }))
       : [];
-  } catch {
-    return [];
-  }
+  });
+  return result.isOk() ? result.data : [];
 }
 
 export function saveCustomBrushes(brushes: Brush[]): void {
   if (typeof localStorage === "undefined") return;
-  try {
+  catchErrorSync(() =>
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(brushes.filter((b) => !b.builtin)),
-    );
-  } catch {}
+    ),
+  );
 }
 
 export function makeCustomBrush(init: Omit<Brush, "id" | "builtin">): Brush {

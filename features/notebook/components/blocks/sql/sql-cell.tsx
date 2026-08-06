@@ -1,5 +1,6 @@
 "use client";
 
+import { catchError } from "@catcherjs/core";
 import { sql } from "@codemirror/lang-sql";
 import { EditorView } from "@codemirror/view";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
@@ -79,9 +80,22 @@ export function SqlCell({
   const handleRun = useCallback(async () => {
     setIsRunning(true);
     setError(null);
-    try {
-      const db = await getNotebookDatabase(notebookId);
-      const execResults = db.exec(localContentRef.current);
+    const result = await catchError(
+      (async () => {
+        const db = await getNotebookDatabase(notebookId);
+        return db.exec(localContentRef.current);
+      })(),
+    );
+    if (result.isErr()) {
+      setResults(null);
+      setError(
+        result.error instanceof Error
+          ? result.error.message
+          : "Erro ao executar SQL",
+      );
+      if (blockId) clearCellResult(blockId);
+    } else {
+      const execResults = result.data;
       setResults(execResults);
       if (blockId) {
         const first = execResults[0];
@@ -94,13 +108,8 @@ export function SqlCell({
           clearCellResult(blockId);
         }
       }
-    } catch (err) {
-      setResults(null);
-      setError(err instanceof Error ? err.message : "Erro ao executar SQL");
-      if (blockId) clearCellResult(blockId);
-    } finally {
-      setIsRunning(false);
     }
+    setIsRunning(false);
   }, [notebookId, blockId]);
 
   return (

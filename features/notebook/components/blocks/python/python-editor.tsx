@@ -32,14 +32,18 @@ export default function PythonSandbox({
   async function handleRun() {
     setIsRunning(true);
     const { runPythonInSandbox } = await import("@/lib/sandbox/python-sandbox");
-    const res = await runPythonInSandbox(block.content);
+    const result = await runPythonInSandbox(block.content);
 
-    if (res.error) {
-      setOutput(t("error_prefix", { error: res.error }));
+    if (result.isErr()) {
+      const message =
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error);
+      setOutput(t("error_prefix", { error: message }));
       setStatus("error");
       clearCellResult(block.id);
     } else {
-      const text = res.output || res.result || "";
+      const text = result.data.output || result.data.result || "";
       setOutput(text);
       setStatus("success");
       const table = parseInlineTable(text);

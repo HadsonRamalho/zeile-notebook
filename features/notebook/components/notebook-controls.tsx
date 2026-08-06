@@ -1,5 +1,6 @@
 "use client";
 
+import { catchError } from "@catcherjs/core";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -69,25 +70,18 @@ export function NotebookControls() {
       );
 
     const copyToClipboard = async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copiado para a área de transferência!");
-      } catch (_err) {
+      const result = await catchError(navigator.clipboard.writeText(url));
+      if (result.isErr()) {
         toast.error("Não foi possível copiar o link.");
+      } else {
+        toast.success("Link copiado para a área de transferência!");
       }
     };
 
     if (isMobile && navigator.share) {
-      try {
-        await navigator.share({
-          title,
-          text,
-          url,
-        });
-      } catch (error) {
-        if ((error as Error).name !== "AbortError") {
-          await copyToClipboard();
-        }
+      const result = await catchError(navigator.share({ title, text, url }));
+      if (result.isErr() && result.error.name !== "AbortError") {
+        await copyToClipboard();
       }
     } else {
       await copyToClipboard();
@@ -113,14 +107,13 @@ export function NotebookControls() {
     if (!exportSource || isExporting) return;
     setIsExporting(true);
     const toastId = toast.loading(t("exporting"));
-    try {
-      await exportNotebook(exportSource, format);
-      toast.success(t("export_done"), { id: toastId });
-    } catch {
+    const result = await catchError(exportNotebook(exportSource, format));
+    if (result.isErr()) {
       toast.error(t("export_error"), { id: toastId });
-    } finally {
-      setIsExporting(false);
+    } else {
+      toast.success(t("export_done"), { id: toastId });
     }
+    setIsExporting(false);
   };
 
   const rules: ControlRules = {

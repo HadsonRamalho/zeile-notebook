@@ -1,5 +1,6 @@
 "use client";
 
+import { catchErrorSync } from "@catcherjs/core";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { CapabilitiesController } from "@/hooks/use-capabilities";
@@ -31,27 +32,29 @@ export function PublicNotebookView({ slug }: PublicNotebookViewProps) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const result = await getPublicNotebookBySlug(slug);
+      const result = await getPublicNotebookBySlug(slug);
+      if (cancelled) return;
+      if (result.isErr()) {
+        setStatus("error");
+        return;
+      }
+      const data = result.data;
+      setTitle(data.title);
+      setOwnerName(data.ownerName);
+      const documentData = data.documentData;
+      if (documentData && documentData.length > 0) {
+        const automerge = await import("@automerge/automerge");
+        const loadResult = catchErrorSync(() =>
+          automerge.load<Notebook>(new Uint8Array(documentData)),
+        );
         if (cancelled) return;
-        if (result.isErr()) {
+        if (loadResult.isErr()) {
           setStatus("error");
           return;
         }
-        const data = result.data;
-        setTitle(data.title);
-        setOwnerName(data.ownerName);
-        if (data.documentData && data.documentData.length > 0) {
-          const automerge = await import("@automerge/automerge");
-          const loaded = automerge.load<Notebook>(
-            new Uint8Array(data.documentData),
-          );
-          if (!cancelled) setDoc(loaded);
-        }
-        if (!cancelled) setStatus("ready");
-      } catch {
-        if (!cancelled) setStatus("error");
+        setDoc(loadResult.data);
       }
+      setStatus("ready");
     })();
     return () => {
       cancelled = true;

@@ -1,6 +1,7 @@
 "use client";
 
 import "@xyflow/react/dist/style.css";
+import { catchErrorSync } from "@catcherjs/core";
 import {
   addEdge,
   applyEdgeChanges,
@@ -109,13 +110,13 @@ function withStableFieldIds(graph: DatabaseSchemaGraph): DatabaseSchemaGraph {
 
 function parseGraph(content: string): DatabaseSchemaGraph {
   if (!content) return emptyGraph;
-  try {
-    const parsed = JSON.parse(content);
+  // old/invalid content: start from an empty schema
+  const result = catchErrorSync(() => JSON.parse(content));
+  if (result.isOk()) {
+    const parsed = result.data;
     if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
       return withStableFieldIds(parsed);
     }
-  } catch {
-    // old/invalid content: start from an empty schema
   }
   return emptyGraph;
 }
