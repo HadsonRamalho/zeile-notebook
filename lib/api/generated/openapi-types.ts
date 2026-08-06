@@ -1870,15 +1870,17 @@ export interface components {
       challenge: components["schemas"]["ChallengePublic"];
       sampleTests: components["schemas"]["TestCasePublic"][];
     };
+    /** @enum {string} */
+    ChallengeDifficulty: "easy" | "medium" | "hard";
     ChallengePublic: {
       /** Format: uuid */
       blockId?: string | null;
       /** Format: date-time */
       createdAt: string;
-      difficulty: string;
+      difficulty: components["schemas"]["ChallengeDifficulty"];
       /** Format: uuid */
       id: string;
-      judgeMode: string;
+      judgeMode: components["schemas"]["JudgeMode"];
       languages: unknown;
       /** Format: int32 */
       memLimitKb: number;
@@ -1977,8 +1979,8 @@ export interface components {
     CreateChallengeRequest: {
       /** Format: uuid */
       blockId?: string | null;
-      difficulty?: string | null;
-      judgeMode?: string | null;
+      difficulty?: null | components["schemas"]["ChallengeDifficulty"];
+      judgeMode?: null | components["schemas"]["JudgeMode"];
       languages: string[];
       /** Format: int32 */
       memLimitKb?: number | null;
@@ -2104,6 +2106,8 @@ export interface components {
       /** Format: uuid */
       roleId: string;
     };
+    /** @enum {string} */
+    JudgeMode: "io" | "reference" | "property";
     /** @enum {string} */
     Language: "rust" | "typescript" | "python" | "zig" | "go" | "cpp";
     LanguageCapability: {
@@ -2416,7 +2420,7 @@ export interface components {
       input: string;
       stderr?: string | null;
       stdout: string;
-      verdict: string;
+      verdict: components["schemas"]["Verdict"];
     };
     SearchResult: {
       content: string;
@@ -2438,7 +2442,7 @@ export interface components {
       refreshToken: string;
     };
     SetReferenceRequest: {
-      language: string;
+      language: components["schemas"]["Language"];
       solution: string;
     };
     SnapshotMeta: {
@@ -2463,8 +2467,10 @@ export interface components {
       stderrSnippet?: string | null;
       /** Format: uuid */
       testCaseId?: string | null;
-      verdict: string;
+      verdict: components["schemas"]["Verdict"];
     };
+    /** @enum {string} */
+    SubmissionStatus: "queued" | "running" | "done" | "compile_error" | "error";
     SubmissionView: {
       /** Format: uuid */
       challengeId: string;
@@ -2476,7 +2482,7 @@ export interface components {
       id: string;
       /** Format: date-time */
       judgedAt?: string | null;
-      language: string;
+      language: components["schemas"]["Language"];
       /** Format: int32 */
       maxScore: number;
       results: components["schemas"]["SubmissionResultView"][];
@@ -2484,13 +2490,13 @@ export interface components {
       runtimeMs: number;
       /** Format: int32 */
       score: number;
-      status: string;
+      status: components["schemas"]["SubmissionStatus"];
       /** Format: uuid */
       userId?: string | null;
     };
     SubmitRequest: {
       code: string;
-      language: string;
+      language: components["schemas"]["Language"];
     };
     SyncNotebookRequest: {
       blocks: components["schemas"]["BlockRequest"][];
@@ -2622,8 +2628,8 @@ export interface components {
     /** @enum {string} */
     Tier: "general" | "granular";
     UpdateChallengeRequest: {
-      difficulty?: string | null;
-      judgeMode?: string | null;
+      difficulty?: null | components["schemas"]["ChallengeDifficulty"];
+      judgeMode?: null | components["schemas"]["JudgeMode"];
       languages?: string[] | null;
       /** Format: int32 */
       memLimitKb?: number | null;
@@ -2716,6 +2722,8 @@ export interface components {
       member: components["schemas"]["TeamMember"];
       role: components["schemas"]["TeamRoleView"];
     };
+    /** @enum {string} */
+    Verdict: "AC" | "WA" | "TLE" | "RE" | "CE" | "SKIP";
     /** @enum {string} */
     ViewSensitivity: "cosmetic" | "confidential";
     VisibilityRequest: {

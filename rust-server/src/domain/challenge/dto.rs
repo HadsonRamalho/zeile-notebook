@@ -4,7 +4,11 @@ use serde_json::Value;
 use uuid::Uuid;
 use validator::Validate;
 
-use super::entity::{Challenge, Submission, SubmissionResult, TestCase};
+use crate::domain::notebook::Language;
+
+use super::entity::{
+    Challenge, ChallengeDifficulty, JudgeMode, Submission, SubmissionResult, TestCase,
+};
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -13,10 +17,10 @@ pub struct ChallengePublic {
     pub slug: String,
     pub title: String,
     pub statement_md: String,
-    pub difficulty: String,
+    pub difficulty: ChallengeDifficulty,
     pub tags: Value,
     pub languages: Value,
-    pub judge_mode: String,
+    pub judge_mode: JudgeMode,
     pub time_limit_ms: i32,
     pub mem_limit_kb: i32,
     pub starter_code: Option<Value>,
@@ -108,9 +112,9 @@ pub struct SubmissionView {
     pub id: Uuid,
     pub challenge_id: Uuid,
     pub user_id: Option<Uuid>,
-    pub language: String,
+    pub language: Language,
     pub code: String,
-    pub status: String,
+    pub status: super::entity::SubmissionStatus,
     pub score: i32,
     pub max_score: i32,
     pub runtime_ms: i32,
@@ -144,7 +148,7 @@ impl Submission {
 #[serde(rename_all = "camelCase")]
 pub struct SubmissionResultView {
     pub test_case_id: Option<Uuid>,
-    pub verdict: String,
+    pub verdict: super::entity::Verdict,
     pub runtime_ms: i32,
     pub is_hidden: bool,
     pub stderr_snippet: Option<String>,
@@ -195,10 +199,10 @@ pub struct CreateChallengeRequest {
     #[validate(length(max = 300, message = "Title must be at most 300 characters"))]
     pub title: String,
     pub statement_md: String,
-    pub difficulty: Option<String>,
+    pub difficulty: Option<ChallengeDifficulty>,
     pub tags: Option<Vec<String>>,
     pub languages: Vec<String>,
-    pub judge_mode: Option<String>,
+    pub judge_mode: Option<JudgeMode>,
     pub time_limit_ms: Option<i32>,
     pub mem_limit_kb: Option<i32>,
     pub starter_code: Option<Value>,
@@ -213,8 +217,8 @@ pub struct UpdateChallengeRequest {
     #[validate(length(max = 300, message = "Title must be at most 300 characters"))]
     pub title: Option<String>,
     pub statement_md: Option<String>,
-    pub difficulty: Option<String>,
-    pub judge_mode: Option<String>,
+    pub difficulty: Option<ChallengeDifficulty>,
+    pub judge_mode: Option<JudgeMode>,
     pub time_limit_ms: Option<i32>,
     pub mem_limit_kb: Option<i32>,
     pub tags: Option<Vec<String>>,
@@ -237,12 +241,12 @@ pub struct CreateTestCaseRequest {
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct SetReferenceRequest {
     pub solution: String,
-    pub language: String,
+    pub language: Language,
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct SubmitRequest {
-    pub language: String,
+    pub language: Language,
     pub code: String,
 }
 
@@ -252,7 +256,7 @@ pub struct SampleResultView {
     pub expected: Option<String>,
     pub stdout: String,
     pub stderr: Option<String>,
-    pub verdict: String,
+    pub verdict: super::entity::Verdict,
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]

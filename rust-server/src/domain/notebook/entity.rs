@@ -40,6 +40,20 @@ pub enum Language {
     Cpp,
 }
 
+impl std::fmt::Display for Language {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Language::Rust => "rust",
+            Language::Typescript => "typescript",
+            Language::Python => "python",
+            Language::Zig => "zig",
+            Language::Go => "go",
+            Language::Cpp => "cpp",
+        };
+        f.write_str(s)
+    }
+}
+
 #[derive(Queryable, Selectable, Identifiable, Debug)]
 #[diesel(table_name = crate::schema::notebooks)]
 pub struct Notebook {

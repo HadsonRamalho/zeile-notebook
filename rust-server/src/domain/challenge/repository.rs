@@ -10,9 +10,11 @@ use crate::schema::{
     notebooks,
 };
 
+use crate::domain::notebook::Language;
+
 use super::entity::{
     Challenge, NewChallenge, NewSubmission, NewSubmissionResult, NewTestCase, Submission,
-    SubmissionResult, TestCase, UpdateChallenge,
+    SubmissionResult, SubmissionStatus, TestCase, UpdateChallenge,
 };
 
 pub async fn create_challenge(
@@ -77,7 +79,7 @@ pub async fn upsert_reference(
     conn: &mut AsyncPgConnection,
     id: Uuid,
     solution: &str,
-    language: &str,
+    language: Language,
 ) -> Result<Challenge, ApiError> {
     let current = get_challenge_by_id(conn, id).await?;
     let mut map = match current.reference_solutions {
@@ -101,14 +103,14 @@ pub async fn upsert_reference(
 pub async fn delete_reference(
     conn: &mut AsyncPgConnection,
     id: Uuid,
-    language: &str,
+    language: Language,
 ) -> Result<Challenge, ApiError> {
     let current = get_challenge_by_id(conn, id).await?;
     let mut map = match current.reference_solutions {
         Some(Value::Object(m)) => m,
         _ => serde_json::Map::new(),
     };
-    map.remove(language);
+    map.remove(&language.to_string());
 
     diesel::update(challenges::table.find(id))
         .set((
@@ -209,7 +211,7 @@ pub async fn set_submission_running(
     id: Uuid,
 ) -> Result<(), ApiError> {
     diesel::update(challenge_submissions::table.find(id))
-        .set(challenge_submissions::status.eq("running"))
+        .set(challenge_submissions::status.eq(SubmissionStatus::Running))
         .execute(conn)
         .await
         .map(|_| ())
@@ -219,7 +221,7 @@ pub async fn set_submission_running(
 pub async fn finalize_submission(
     conn: &mut AsyncPgConnection,
     id: Uuid,
-    status: &str,
+    status: SubmissionStatus,
     score: i32,
     max_score: i32,
     runtime_ms: i32,
@@ -288,7 +290,7 @@ pub async fn list_done_submissions(
 ) -> Result<Vec<Submission>, ApiError> {
     challenge_submissions::table
         .filter(challenge_submissions::challenge_id.eq(challenge_id))
-        .filter(challenge_submissions::status.eq("done"))
+        .filter(challenge_submissions::status.eq(SubmissionStatus::Done))
         .order((
             challenge_submissions::score.desc(),
             challenge_submissions::runtime_ms.asc(),

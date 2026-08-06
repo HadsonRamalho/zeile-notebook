@@ -6,8 +6,6 @@ use crate::models::state::AppState;
 
 use super::entity::Challenge;
 
-pub const VALID_JUDGE_MODES: [&str; 3] = ["io", "reference", "property"];
-
 pub fn challenge_notebook(challenge: &Challenge) -> Result<Uuid, ApiError> {
     challenge
         .notebook_id
@@ -38,7 +36,7 @@ pub fn reference_map(challenge: &Challenge) -> std::collections::HashMap<String,
                 (&challenge.reference_language, &challenge.reference_solution)
                 && !code.trim().is_empty()
             {
-                m.insert(lang.clone(), code.clone());
+                m.insert(lang.to_string(), code.clone());
             }
             m
         }
