@@ -11,6 +11,7 @@ pub mod db_migrations;
 #[cfg(feature = "embedded-pg")]
 pub mod embedded_pg;
 pub mod executor;
+pub mod extractors;
 pub mod file;
 pub mod http;
 pub mod middleware;

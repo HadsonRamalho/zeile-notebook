@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 
+use axum::Json;
 use axum::extract::{Path, State};
-use axum::{Json, http::HeaderMap};
 use dashmap::DashMap;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, pooled_connection::deadpool::Pool};
@@ -14,9 +14,9 @@ use rustls_platform_verifier::ConfigVerifierExt;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::controllers::jwt::extract_claims_from_header;
 use crate::controllers::sync::PresenceRegistry;
 use crate::controllers::utils::get_conn;
+use crate::extractors::{DbConn, OptionalAuthUser};
 use crate::models::error::ApiError;
 use crate::models::permission_grant::{
     GrantEffect, GrantSubjectKind, GrantTargetKind, PermissionGrant,
@@ -534,26 +534,17 @@ pub async fn api_get_permission_catalog()
 
 #[utoipa::path(get, path = "/team/{id}/capabilities", responses((status = OK, body = CapabilitySnapshot), (status = 401, body = ApiError)))]
 pub async fn api_get_team_capabilities(
-    State(state): State<Arc<AppState>>,
     Path(team_id): Path<Uuid>,
-    headers: HeaderMap,
+    OptionalAuthUser(user_id): OptionalAuthUser,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<CapabilitySnapshot>), ApiError> {
-    let user_id = match extract_claims_from_header(&headers).await {
-        Ok(data) => Some(data.1.id),
-        Err(_) => None,
-    };
-
-    let conn = &mut get_conn(&state.pool)
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
-
     let ctx = NotebookCtx {
         notebook_id: Uuid::nil(),
         team_id: Some(team_id),
         owner_user_id: None,
         is_public: false,
     };
-    let caps = resolve_capabilities(conn, ctx, user_id).await?;
+    let caps = resolve_capabilities(&mut conn, ctx, user_id).await?;
 
     Ok((StatusCode::OK, Json(caps.snapshot())))
 }
@@ -562,13 +553,8 @@ pub async fn api_get_team_capabilities(
 pub async fn api_get_notebook_capabilities(
     State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    OptionalAuthUser(user_id): OptionalAuthUser,
 ) -> Result<(StatusCode, Json<CapabilitySnapshot>), ApiError> {
-    let user_id = match extract_claims_from_header(&headers).await {
-        Ok(data) => Some(data.1.id),
-        Err(_) => None,
-    };
-
     let caps = capabilities(&state.pool, user_id, notebook_id).await?;
 
     Ok((StatusCode::OK, Json(caps.snapshot())))

@@ -10,6 +10,7 @@ use validator::Validate;
 
 use crate::{
     controllers::{jwt::extract_claims_from_header, utils::get_conn},
+    extractors::{AuthUser, DbConn},
     models::{
         self,
         error::ApiError,
@@ -25,14 +26,10 @@ use crate::{
 
 #[utoipa::path(post, path = "/notebook/create", responses((status = OK, body = Uuid), (status = 401, body = ApiError)))]
 pub async fn api_create_notebook(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
+    AuthUser(id): AuthUser,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<Uuid>), ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
-    let conn = &mut get_conn(&state.pool)
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
+    let conn = &mut conn;
 
     let notebook_id = Uuid::new_v4();
 
@@ -68,16 +65,10 @@ pub async fn api_create_notebook(
 
 #[utoipa::path(get, path = "/notebook/all", responses((status = OK, body = Vec<Notebook>), (status = 401, body = ApiError)))]
 pub async fn api_get_notebooks(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
+    AuthUser(id): AuthUser,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<Vec<Notebook>>), ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
-    let conn = &mut get_conn(&state.pool)
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
-
-    match models::notebook::get_all_notebooks(conn, &id).await {
+    match models::notebook::get_all_notebooks(&mut conn, &id).await {
         Ok(notebooks) => Ok((StatusCode::OK, Json(notebooks))),
         Err(e) => Err(ApiError::Database(e)),
     }
@@ -434,21 +425,13 @@ pub async fn api_clone_notebook(
 
 #[utoipa::path(get, path = "/notebook/search/", responses((status = OK, body = Vec<SearchResult>), (status = 401, body = ApiError)))]
 pub async fn api_search_notebooks(
-    State(state): State<Arc<AppState>>,
+    AuthUser(id): AuthUser,
     Query(params): Query<SearchQuery>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<Vec<SearchResult>>), ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
     if params.q.trim().is_empty() {
         return Ok((StatusCode::OK, Json(Vec::<SearchResult>::new())));
     }
-
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     let search_term = format!("%{}%", params.q);
 
@@ -459,24 +442,16 @@ pub async fn api_search_notebooks(
 
 #[utoipa::path(get, path = "/notebook/search/ranked/", responses((status = OK, body = Vec<RankedSearchItem>), (status = 401, body = ApiError)))]
 pub async fn api_search_notebooks_ranked(
-    State(state): State<Arc<AppState>>,
+    AuthUser(id): AuthUser,
     Query(params): Query<RankedSearchQuery>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<Vec<RankedSearchItem>>), ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
     let term = params.q.trim();
     if term.is_empty() {
         return Ok((StatusCode::OK, Json(Vec::<RankedSearchItem>::new())));
     }
 
     let limit = params.limit.unwrap_or(16).clamp(1, 50);
-
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     let results = models::notebook::search_notebooks_ranked(&mut conn, id, term, limit).await?;
 
@@ -485,30 +460,18 @@ pub async fn api_search_notebooks_ranked(
 
 #[utoipa::path(get, path = "/notebook/public/{slug}", responses((status = OK, body = PublicNotebookDoc), (status = 401, body = ApiError)))]
 pub async fn api_get_public_notebook_by_slug(
-    State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<PublicNotebookDoc>), ApiError> {
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
-
     let doc = models::notebook::get_public_notebook_by_slug(&mut conn, &slug).await?;
     Ok((StatusCode::OK, Json(doc)))
 }
 
 #[utoipa::path(get, path = "/notebook/all/public", responses((status = OK, body = Vec<PublicNotebookResponse>), (status = 401, body = ApiError)))]
 pub async fn api_get_public_notebooks(
-    State(state): State<Arc<AppState>>,
     Query(params): Query<PublicSearchQuery>,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<Vec<PublicNotebookResponse>>), ApiError> {
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
-
     let q = params.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
 
     Ok((
