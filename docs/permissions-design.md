@@ -1,8 +1,11 @@
 # Modelo de permissões do Zeile — Design
 
-Status: **planejamento** (aberto a revisão). Este documento descreve o redesenho do
-modelo de permissões: catálogo atômico versionado, grants por recurso, avaliação em
-tempo real e coesão front/back.
+Status: **implementado** — fases 1 a 6 da seção 11 concluídas; a fase 7 (projeção
+server-side para permissão confidencial) está deliberadamente adiada até surgir um caso real
+de sigilo. Este documento descreve o modelo de permissões como ele existe hoje: catálogo
+atômico versionado, grants por recurso, avaliação em tempo real e coesão front/back. As
+decisões da seção 3 têm ADR retroativa em
+[0003-permission-model](decisions/0003-permission-model.md).
 
 ## 1. Motivação e estado atual
 
