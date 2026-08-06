@@ -59,13 +59,16 @@ import {
   removeMember,
   updateMemberRole,
 } from "@/lib/api/teams-service";
-import type { TeamMemberWithUserData, TeamRole } from "@/types/team-types";
+import type {
+  TeamMemberWithRoleAndUserData,
+  TeamRole,
+} from "@/types/team-types";
 
 interface TeamMembersProps {
   teamId: string;
   userPermissions: TeamRole | undefined;
   roles: TeamRole[];
-  members: [TeamMemberWithUserData, TeamRole][];
+  members: TeamMemberWithRoleAndUserData[];
   onUpdate: () => void;
   onEditRolePermissions: (roleId: string) => void;
   onEditMemberPermissions: (userId: string) => void;
@@ -256,38 +259,35 @@ export function TeamMembers({
 
         <CardContent>
           <div className="divide-y divide-border border rounded-md">
-            {members.map((member) => (
+            {members.map(({ member: m, role }) => (
               <div
-                key={member[0].id}
+                key={m.id}
                 className="flex flex-wrap items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
               >
                 <Avatar className="size-9 shrink-0">
-                  {member[0].avatarUrl && (
-                    <AvatarImage
-                      src={member[0].avatarUrl}
-                      alt={member[0].name}
-                    />
+                  {m.avatarUrl && (
+                    <AvatarImage src={m.avatarUrl} alt={m.name} />
                   )}
                   <AvatarFallback className="text-xs">
-                    {getInitials(member[0].name)}
+                    {getInitials(m.name)}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-sm font-medium">
-                    {member[0].name}
-                    {member[0].userId === user.id && (
+                    {m.name}
+                    {m.userId === user.id && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         ({a("you")})
                       </span>
                     )}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {member[0].email}
+                    {m.email}
                   </span>
                   <span className="text-xs text-muted-foreground opacity-75">
                     {a("joined_on")}{" "}
-                    {new Date(member[0].joinedAt).toLocaleDateString(locale, {
+                    {new Date(m.joinedAt).toLocaleDateString(locale, {
                       day: "2-digit",
                       month: "2-digit",
                       year: "numeric",
@@ -299,23 +299,23 @@ export function TeamMembers({
                   {canManageRoles ? (
                     <button
                       type="button"
-                      onClick={() => onEditRolePermissions(member[1].id)}
+                      onClick={() => onEditRolePermissions(role.id)}
                       title={rt("notebook_permissions")}
                     >
                       <Badge
                         variant="secondary"
                         className="cursor-pointer hover:bg-secondary/70"
                       >
-                        {roleDisplayName(member[1], rt)}
+                        {roleDisplayName(role, rt)}
                       </Badge>
                     </button>
                   ) : (
                     <Badge variant="secondary">
-                      {roleDisplayName(member[1], rt)}
+                      {roleDisplayName(role, rt)}
                     </Badge>
                   )}
 
-                  {canManageRoles && member[0].userId !== user.id && (
+                  {canManageRoles && m.userId !== user.id && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -331,9 +331,9 @@ export function TeamMembers({
                           {a("change_role")}
                         </DropdownMenuLabel>
                         <DropdownMenuRadioGroup
-                          value={member[0].roleId}
+                          value={m.roleId}
                           onValueChange={(rid) =>
-                            handleChangeRole(member[0].userId, rid)
+                            handleChangeRole(m.userId, rid)
                           }
                         >
                           {roles.map((role) => (
@@ -347,15 +347,13 @@ export function TeamMembers({
                         </DropdownMenuRadioGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() =>
-                            onEditMemberPermissions(member[0].userId)
-                          }
+                          onClick={() => onEditMemberPermissions(m.userId)}
                         >
                           <KeyRound size={16} />
                           {a("edit_member_permissions")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => onEditRolePermissions(member[1].id)}
+                          onClick={() => onEditRolePermissions(role.id)}
                         >
                           <Shield size={16} />
                           {a("edit_role_permissions")}
@@ -364,7 +362,7 @@ export function TeamMembers({
                     </DropdownMenu>
                   )}
 
-                  {!member[1].canManageTeam &&
+                  {!role.canManageTeam &&
                     (userPermissions?.canManageTeam ||
                       userPermissions?.canRemoveUsers) && (
                       <Button
@@ -374,8 +372,8 @@ export function TeamMembers({
                         title={a("remove_member_button")}
                         onClick={() =>
                           setMemberToRemove({
-                            id: member[0].userId,
-                            name: member[0].name,
+                            id: m.userId,
+                            name: m.name,
                           })
                         }
                       >

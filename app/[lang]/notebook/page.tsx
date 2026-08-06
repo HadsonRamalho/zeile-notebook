@@ -24,7 +24,7 @@ import {
   setTeamFolderTags,
 } from "@/lib/api/folders-service";
 import { fetchUserTeams } from "@/lib/api/teams-service";
-import type { Team, TeamRole } from "@/types/team-types";
+import type { TeamWithUserRole } from "@/types/team-types";
 
 function AmbientGlow() {
   return (
@@ -63,7 +63,7 @@ export default function NotebookHomePage() {
   const t = useTranslations("sidebar");
   const { pages, createPage, refreshPages } = useNotebookManager();
   const { teamPages, refreshTeamPages } = useTeamNotebookManager();
-  const [teams, setTeams] = useState<[Team, TeamRole][]>([]);
+  const [teams, setTeams] = useState<TeamWithUserRole[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [teamFolders, setTeamFolders] = useState<Record<string, Folder[]>>({});
 
@@ -90,7 +90,7 @@ export default function NotebookHomePage() {
     fetchUserTeams().then((result) => {
       const data = result.isOk() ? result.data : [];
       setTeams(data);
-      for (const [team] of data) {
+      for (const { team } of data) {
         refreshTeamPages(team.id);
         refreshTeamFolders(team.id);
       }
@@ -174,7 +174,7 @@ export default function NotebookHomePage() {
           </h2>
 
           <div className="flex flex-col gap-8">
-            {teams.map(([team, role]) => {
+            {teams.map(({ team, role }) => {
               const pagesOfTeam = teamPages[team.id] ?? [];
               const foldersOfTeam = teamFolders[team.id] ?? [];
               const canManage = role.canWrite;

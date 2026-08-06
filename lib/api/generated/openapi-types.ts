@@ -1863,6 +1863,13 @@ export interface components {
       href?: string | null;
       title: string;
     };
+    Catalog: {
+      permissions: components["schemas"]["Permission"][];
+    };
+    ChallengeDetail: {
+      challenge: components["schemas"]["ChallengePublic"];
+      sampleTests: components["schemas"]["TestCasePublic"][];
+    };
     ChallengePublic: {
       /** Format: uuid */
       blockId?: string | null;
@@ -2119,6 +2126,9 @@ export interface components {
       /** Format: uuid */
       userId: string;
     };
+    LinkStartResponse: {
+      url: string;
+    };
     LoginUser: {
       email: string;
       password: string;
@@ -2271,6 +2281,14 @@ export interface components {
       /** Format: int64 */
       totalPages: number;
     };
+    Permission: {
+      impliedBy: string[];
+      key: string;
+      label: string;
+      targets: components["schemas"]["TargetKind"][];
+      tier: components["schemas"]["Tier"];
+      view?: null | components["schemas"]["ViewSensitivity"];
+    };
     PermissionGrant: {
       /** Format: date-time */
       createdAt: string;
@@ -2360,6 +2378,11 @@ export interface components {
     };
     RecordEditRequest: {
       blockId?: string | null;
+    };
+    ReferenceSolutionsResponse: {
+      solutions: {
+        [key: string]: string;
+      };
     };
     RefreshPayload: {
       refreshToken: string;
@@ -2474,6 +2497,14 @@ export interface components {
       isPublic: boolean;
       title: string;
     };
+    /** @enum {string} */
+    TargetKind:
+      | "team"
+      | "notebook"
+      | "block"
+      | "block_type"
+      | "chat"
+      | "global";
     Team: {
       /** Format: date-time */
       createdAt: string;
@@ -2485,6 +2516,37 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    TeamMember: {
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      joinedAt: string;
+      /** Format: uuid */
+      roleId: string;
+      /** Format: uuid */
+      teamId: string;
+      /** Format: uuid */
+      userId: string;
+    };
+    TeamMemberResponse: {
+      avatarUrl?: string | null;
+      email: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      joinedAt: string;
+      name: string;
+      /** Format: uuid */
+      roleId: string;
+      /** Format: uuid */
+      teamId: string;
+      /** Format: uuid */
+      userId: string;
+    };
+    TeamMemberWithRoleView: {
+      member: components["schemas"]["TeamMemberResponse"];
+      role: components["schemas"]["TeamRoleView"];
+    };
     TeamRoleView: components["schemas"]["RolePermissions"] & {
       /** Format: date-time */
       createdAt: string;
@@ -2493,6 +2555,10 @@ export interface components {
       name: string;
       /** Format: uuid */
       teamId: string;
+    };
+    TeamWithUserRoleView: {
+      role: components["schemas"]["TeamRoleView"];
+      team: components["schemas"]["Team"];
     };
     Template: {
       /** Format: date-time */
@@ -2536,9 +2602,25 @@ export interface components {
       /** Format: int32 */
       weight: number;
     };
+    TestCaseCreatedResponse: {
+      /** Format: uuid */
+      id: string;
+    };
+    TestCasePublic: {
+      expected?: string | null;
+      /** Format: uuid */
+      id: string;
+      input: string;
+      /** Format: int32 */
+      ord: number;
+      /** Format: int32 */
+      weight: number;
+    };
     ThreadWithComments: components["schemas"]["CommentThread"] & {
       comments: components["schemas"]["Comment"][];
     };
+    /** @enum {string} */
+    Tier: "general" | "granular";
     UpdateChallengeRequest: {
       difficulty?: string | null;
       judgeMode?: string | null;
@@ -2630,6 +2712,12 @@ export interface components {
     };
     /** @enum {string} */
     UserRole: "Admin" | "User";
+    UserTeamMemberWithRoleView: {
+      member: components["schemas"]["TeamMember"];
+      role: components["schemas"]["TeamRoleView"];
+    };
+    /** @enum {string} */
+    ViewSensitivity: "cosmetic" | "confidential";
     VisibilityRequest: {
       isPublic: boolean;
     };
@@ -2916,7 +3004,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["ChallengeDetail"];
         };
       };
       401: {
@@ -2970,7 +3058,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["ChallengeDetail"];
         };
       };
       401: {
@@ -3055,7 +3143,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["ReferenceSolutionsResponse"];
         };
       };
       401: {
@@ -3113,7 +3201,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["ReferenceSolutionsResponse"];
         };
       };
       401: {
@@ -3260,7 +3348,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["TestCaseCreatedResponse"];
         };
       };
       401: {
@@ -4686,7 +4774,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Catalog"];
+        };
       };
     };
   };
@@ -4795,7 +4885,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["TeamWithUserRoleView"][];
+        };
       };
       401: {
         headers: {
@@ -5388,7 +5480,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["TeamMemberWithRoleView"][];
+        };
       };
       401: {
         headers: {
@@ -5471,7 +5565,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["UserTeamMemberWithRoleView"];
+        };
       };
       401: {
         headers: {
@@ -5936,7 +6032,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["LinkStartResponse"];
+        };
       };
       401: {
         headers: {

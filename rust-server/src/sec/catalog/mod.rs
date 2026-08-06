@@ -9,14 +9,14 @@ use std::sync::OnceLock;
 
 use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Tier {
     General,
     Granular,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TargetKind {
     Team,
@@ -27,14 +27,14 @@ pub enum TargetKind {
     Global,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ViewSensitivity {
     Cosmetic,
     Confidential,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Permission {
     pub key: String,
@@ -69,12 +69,14 @@ macro_rules! perm {
 
 pub(crate) use perm;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct Catalog {
     permissions: Vec<Permission>,
     #[serde(skip)]
+    #[schema(ignore)]
     index: HashMap<String, usize>,
     #[serde(skip)]
+    #[schema(ignore)]
     expansions: HashMap<String, Vec<String>>,
 }
 

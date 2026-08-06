@@ -84,8 +84,17 @@ export interface InviteTeamMember {
   roleId: string;
 }
 
-export type TeamMemberWithRole = [TeamMember, TeamRole];
-export type TeamWithUserRole = [Team, TeamRole];
-export type TeamMemberWithRoleAndUserData = [TeamMemberWithUserData, TeamRole];
+export interface TeamMemberWithRole {
+  member: TeamMember;
+  role: TeamRole;
+}
+export interface TeamWithUserRole {
+  team: Team;
+  role: TeamRole;
+}
+export interface TeamMemberWithRoleAndUserData {
+  member: TeamMemberWithUserData;
+  role: TeamRole;
+}
 
 export type TeamFormValues = z.infer<ReturnType<typeof getTeamFormSchema>>;

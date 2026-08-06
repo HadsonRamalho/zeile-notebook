@@ -28,7 +28,7 @@ import {
 } from "@/lib/api/teams-service";
 import type {
   Team,
-  TeamMemberWithUserData,
+  TeamMemberWithRoleAndUserData,
   TeamRole,
 } from "@/types/team-types";
 import { TeamChat } from "./team-chat";
@@ -49,9 +49,7 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
 
   const [team, setTeam] = useState<Team | null>(null);
   const [roles, setRoles] = useState<TeamRole[]>([]);
-  const [members, setMembers] = useState<[TeamMemberWithUserData, TeamRole][]>(
-    [],
-  );
+  const [members, setMembers] = useState<TeamMemberWithRoleAndUserData[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
