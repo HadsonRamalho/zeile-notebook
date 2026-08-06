@@ -324,6 +324,38 @@ mutirão em ondas, não uma exceção permanente como `components/vendor/*` (Q21
 - [ ] Levantar todo `try/catch` restante em `hooks/` e `components/notebook/`, mesmo fora do
   escopo de outras etapas, e migrar em onda própria — não fica pendente indefinidamente
 
+#### 20 · Migração para os tipos gerados
+
+A etapa 11 fechou o regime de geração (`lib/api/generated/`) e o guard de CI, mas só
+`error-codes.ts` ganhou consumidor real (`routeError()` em `lib/api/route-error.ts`, via Q32).
+`openapi-types.ts` e `ws-message.ts` existem, são regenerados a cada mudança de rota/mensagem
+do backend (inclusive pela etapa 14, que já regenerou `openapi-types.ts` ao migrar `notebook`
+para DTO), mas nenhum consumidor do frontend os importa — os `lib/api/*-service.ts` e os hooks
+de WebSocket ainda tipam request/response à mão.
+
+- [ ] `lib/api/*-service.ts` (auth, notebook, teams, admin, user, run-rust) — substituir os
+  tipos de request/response escritos à mão por `components["schemas"]["<Nome>"]` de
+  `openapi-types.ts`; usar `operations["<operationId>"]` onde o service já referencia o
+  `operationId` do handler
+- [ ] `hooks/use-presence.ts` e `components/notebook/collaboration/` — tipar o payload de texto
+  das conexões `/notebook/ws/presence/{id}` e `/notebook/ws/combined/{notebook_id}` com
+  `WsServerMessage`/`WsClientMessage` de `ws-message.ts`, no lugar do shape ad-hoc atual
+- [ ] Onde a resposta hoje é `unknown`/`any` por a rota Rust não declarar `body` no
+  `#[utoipa::path]` (limitação documentada no `README.md` de `lib/api/generated/`), decidir
+  caso a caso: declarar o `body` que falta no lado Rust, ou manter `unknown` com comentário
+  apontando a limitação — não inventar tipo TS solto sem origem gerada
+- [ ] Depois da migração, `lib/schemas/*` (Zod) deixa de ser a única fonte de shape no
+  frontend para os DTOs cobertos por `openapi-types.ts` — auditar sobreposição e decidir se o
+  Zod schema deriva do tipo gerado ou se os dois continuam paralelos (validação em runtime vs.
+  tipo estático) com a decisão registrada
+- [ ] Atualizar `lib/api/generated/README.md`: remover a limitação "não consumido por
+  `handle-api-error.ts` nem `app/api/*/route.ts`" (Q32, já resolvida) e substituir pela
+  descrição do novo estado de consumo desta etapa
+
+Como Q32/etapa 11, essa é migração de tipagem, não de comportamento em runtime — feita por
+domínio (mesmo agrupamento da etapa 10) para manter os PRs revisáveis, não um PR único
+trocando todos os services de uma vez.
+
 ### Questões ainda abertas
 
 Não são pendências de decisão sua — são pontos que só fecham ao redigir cada doc ou ao
