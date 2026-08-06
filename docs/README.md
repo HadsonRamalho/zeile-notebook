@@ -42,9 +42,11 @@ Toda regra nasce com um nível:
 | [architecture/testing.md](architecture/testing.md) | Quando uma suíte é obrigatória e como ela deve ser escrita |
 | [architecture/i18n.md](architecture/i18n.md) | Tradução: ICU, chaves estáticas, isenções, os três checks de CI |
 | [architecture/env-vars.md](architecture/env-vars.md) | Toda variável de ambiente do projeto, pública/secreta, obrigatória/opcional |
-
-**Ainda não escritos** (etapa 18 do plano de execução, áreas com decisão pendente, não só
-redação): `crdt.md`, `sandbox.md`, `performance.md`, `a11y.md`, `desktop.md`.
+| [architecture/crdt.md](architecture/crdt.md) | Automerge: checkpoint × snapshot × history, migração de shape, conflito concorrente |
+| [architecture/sandbox.md](architecture/sandbox.md) | Isolamento de execução não confiável, cliente e servidor, e a paridade entre os dois |
+| [architecture/performance.md](architecture/performance.md) | O que medir em canvas/render, budget e onde a métrica vive |
+| [architecture/a11y.md](architecture/a11y.md) | Foco, navegação por teclado, contraste, aria — e onde a regra deliberadamente não se aplica |
+| [architecture/desktop.md](architecture/desktop.md) | Capacidade como fonte única, empacotamento, assinatura, versionamento do desktop |
 
 ## "Mudou X ⇒ verifique Y"
 

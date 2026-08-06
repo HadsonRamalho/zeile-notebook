@@ -323,13 +323,27 @@ Entregue como stack de 3 PRs dependentes (#145/#146/#147).
 "a definir" com a tabela já preenchida desde a etapa 15) — corrigidas junto, já que a etapa
 tocava exatamente esses dois documentos.
 
-#### 18 · Áreas de regra próprias
+#### 18 · Áreas de regra próprias — [x] concluída
 
-- [ ] `crdt.md` — versionamento do shape do doc, resolução de conflito, migração de doc persistido, e as três noções de "versão" (checkpoint × snapshot × history)
-- [ ] `sandbox.md` — isolamento do iframe, Pyodide, sql.js, e limites de tempo/memória/rede do judge
-- [ ] `performance.md` — o que medir em canvas/render, e como
-- [ ] `a11y.md` — foco, navegação por teclado num editor, contraste, aria
-- [ ] `desktop.md` — matriz de capacidades como fonte única, plataforma como eixo, empacotamento, versionamento, assinatura de código, dependência por distro
+Decisões fechadas por pergunta sequencial com alternativas (Q110–Q124), depois redigidas nos 5
+docs. Nenhuma delas exige implementação nesta etapa — a regra está escrita; onde havia código a
+mudar (Web Worker no sandbox de cliente, lint de contraste, teste de guarda do iframe, teste de
+regressão de performance, função de upgrade de `schema_version`), fica registrado como trabalho
+de implementação a entrar em etapa própria, não coberto por este PR de documentação.
+
+- [x] `crdt.md` — versionamento do shape do doc (Q110), resolução de conflito via presence sem
+  lock (Q111), compressão automática de history (Q112), e as três noções de "versão" (checkpoint
+  × snapshot × history)
+- [x] `sandbox.md` — Web Worker + timeout para TSX/Pyodide no cliente (Q113), `allow-same-origin`
+  proibido no iframe com teste de guarda (Q114), paridade cliente↔servidor com gaps explícitos
+  (Q115)
+- [x] `performance.md` — métrica por operação via `performance.mark`/`measure` (Q116), budget com
+  teste de regressão no CI (Q117), dashboard permanente além do comentário pontual (Q118)
+- [x] `a11y.md` — canvas de desenho fora do escopo de teclado, toolbar navegável (Q119),
+  reordenação de blocos com botões acessíveis — já implementado em `reorder-item.tsx`, só
+  formalizado (Q120), WCAG AA obrigatório com lint de contraste (Q121)
+- [x] `desktop.md` — sem assinatura de código, risco aceito (Q122), AppImage como referência de
+  dependência por distro (Q123), semver + build number sem canal beta (Q124)
 
 ### Encaixáveis a qualquer momento após a etapa 3
 

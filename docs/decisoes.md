@@ -1,4 +1,4 @@
-# Zeile — Catálogo de decisões (Q1–Q109)
+# Zeile — Catálogo de decisões (Q1–Q124)
 
 Registro incremental das decisões de padrão do Zeile. Cada entrada é citável por número em
 review (`Q64`), e é a origem dos docs normativos de `docs/architecture/` — a redação final,
@@ -264,4 +264,49 @@ As duas são 🔴 e entram na etapa 6.
 | # | Decisão | Consequência |
 |---|---|---|
 | **Q109** | **Adotar [`@catcherjs/core`](https://github.com/AfranioCaires/catcher) como padrão único de tratamento de erro no frontend**, via o tipo `Result<T, E>` (`ok`/`err`) e os wrappers `catchError`/`catchErrorSync`. Substitui o padrão ad-hoc `ApiClientError` + `try/catch` estabelecido em Q38. Skill `catcher` instalado em `.agents/skills/catcher` (symlink em `.claude/skills/catcher`) para consulta de API durante a implementação. | Formaliza Q38 em vez de reabri-lo: já era regra "sem `throw` raw", agora o mecanismo de captura passa a ser único e importado, não reimplementado por chamador. `lib/api/base.ts` é o ponto de maior retorno — é onde `fetch` hoje é envolvido à mão. Migração é incremental, arquivo por arquivo (ver plano de execução), mas cobre também o legado intocado — em onda própria (etapa 19), não como exceção permanente ao estilo `components/vendor/*` (Q21). Código novo já nasce usando `catchError`/`Result`, sem prazo de tolerância para `try/catch` cru. Dependência nova de terceiro: pacote pequeno (zero deps, ~35 kB, mantenedor único, publicado há 2 meses) — reavaliar se o projeto ficar sem manutenção. |
+
+## Decisões da etapa 18 — áreas de regra próprias (Q96/Q97)
+
+Fecham os gaps de design que Q96/Q97 tinha deixado abertos ao criar as 5 áreas — não é redação,
+é decisão nova. Uma sessão por área, cada Q com severidade.
+
+### CRDT
+
+| # | Decisão | Consequência |
+|---|---|---|
+| **Q110** 🔴 | **`schema_version` dentro do doc Automerge, com upgrade automático no load.** Todo doc persistido carrega a versão do shape em que foi escrito; ao carregar, uma função de upgrade aplica as transformações necessárias até a versão atual antes de o doc ser usado. | Fecha o único ponto do Q92 marcado como "sem guard": `Automerge::load` hoje falha silenciosamente (`continue`) se o shape não bater — um doc antigo simplesmente para de sincronizar, sem erro visível. Toda mudança de shape do doc passa a exigir a função de upgrade correspondente, não só o campo novo. |
+| **Q111** 🟡 | **Edição concorrente no mesmo bloco é sinalizada via presence, não bloqueada.** O merge de texto continua 100% automático (Automerge + diff), mas a UI mostra que outro usuário está/esteve editando o mesmo bloco. | Não introduz lock otimista — a colaboração em tempo real continua sem fricção. O ganho é só de visibilidade: o usuário entende por que o texto mudou sob ele, em vez de o merge parecer mágico ou, no pior caso, uma perda de edição. |
+| **Q112** 🟡 | **History é comprimida automaticamente em snapshot**, após N changes ou X tempo (limiar a calibrar na implementação), em vez de crescer sem limite via `getAllChanges`. | Sem isso, o log de changes do Automerge cresce para sempre — e `use-automerge-sync.ts:279` já documenta o custo de `getHistory()` nativo ser O(n²) por entrada. Compressão automática é o que mantém checkpoint/snapshot/history como três noções distintas e finitas, em vez de history acumulando indefinidamente entre snapshots manuais. |
+
+### Sandbox de execução
+
+| # | Decisão | Consequência |
+|---|---|---|
+| **Q113** 🔴 | **TSX e Pyodide passam a rodar em Web Worker com timeout**, espelhando o `wall_ms` que o servidor já aplica via `prlimit` (Q107). `terminate()` do worker é o mecanismo de corte. | Hoje nenhum dos dois tem limite de tempo/memória/rede no cliente — só o iframe do TSX tem `sandbox="allow-scripts"` (`tsx-editor.tsx:51`). Sem isso, o modelo de isolamento do Zeile é assimétrico: rigoroso no servidor (bwrap/prlimit, Q106/Q107), artesanal no cliente. |
+| **Q114** 🔴 | **`allow-same-origin` é proibido no `sandbox` do iframe TSX, para sempre, com teste de guarda.** Um teste falha se a combinação `allow-scripts allow-same-origin` aparecer no atributo. | `allow-scripts` + `allow-same-origin` juntos anulam o isolamento do iframe (o conteúdo pode acessar o DOM do pai). É a única regra desta área que vale como blocklist testável — as outras dependem de arquitetura (Worker), não de um atributo. |
+| **Q115** 🟡 | **Paridade cliente↔servidor declarada com gaps explícitos.** `sandbox.md` lista, lado a lado, o que o servidor garante (bwrap, prlimit, `env_clear`) e o equivalente do cliente — nomeando cada gap e por que é aceito (ex.: "servidor limita CPU via prlimit; cliente não limita CPU do worker, aceito porque o dano fica local ao navegador do próprio usuário"). | Evita que a assimetria fique implícita. Toda garantia nova do lado servidor (ex.: um novo campo de `RunLimits`) obriga a decidir e registrar o equivalente do cliente, mesmo que a resposta seja "não se aplica". |
+
+### Performance de canvas/render
+
+| # | Decisão | Consequência |
+|---|---|---|
+| **Q116** 🟡 | **Métrica por operação discreta**, via `performance.mark`/`performance.measure` em torno de cada ação do canvas de desenho (add stroke, undo, zoom) — não FPS contínuo. | Mais barato de coletar que frame time contínuo, e já é o suficiente para justificar o trade-off medido que Q11 categoria 2 exige em `free-drawing/engine.ts`. Não captura jank entre operações, mas é o que dá número sem instrumentar o loop de render inteiro. |
+| **Q117** 🔴 | **Budget declarado por operação, com teste de regressão de performance no CI.** O número-alvo (a calibrar na implementação) vira benchmark determinístico que falha o PR se excedido. | É o único item desta etapa que vira gate automático — reflete que performance de canvas é a área com "2899 linhas de decisões implícitas" (Q97) e maior risco de regressão silenciosa sem teste. |
+| **Q118** 🟡 | **Métrica vive em dashboard/log estruturado permanente**, além do comentário de trade-off no ponto da decisão (categoria 2 do Q11, que continua obrigatório). | O comentário no código explica a decisão pontual; o dashboard é o que permite comparar ao longo do tempo e detectar regressão que nenhum PR isolado introduziu sozinho (efeito cumulativo). |
+
+### Acessibilidade
+
+| # | Decisão | Consequência |
+|---|---|---|
+| **Q119** 🟡 | **Canvas de free-drawing fica fora do escopo de navegação por teclado; a toolbar em volta é 100% navegável.** Documentado como limitação conhecida, não como omissão. | Desenho à mão livre não tem equivalente discreto de teclado sem reinventar a ferramenta. Delimitar o escopo (toolbar sim, superfície de desenho não) evita que a regra fique vaga o suficiente para nunca ser cumprida nem verificada. |
+| **Q120** 🟡 | **Reordenação de blocos ganha botões "mover para cima/baixo" acessíveis**, paralelos ao drag-and-drop existente, navegáveis e operáveis por teclado. | Hoje reordenar é só drag-and-drop — sem equivalente de teclado, a operação é impossível para quem não usa mouse/touch. Diferente do canvas (Q119), aqui existe equivalente discreto natural, então fica dentro do escopo. |
+| **Q121** 🔴 | **WCAG AA como piso obrigatório, com lint de contraste no design system bloqueando PR.** | Fecha a lacuna que Q97 apontou: o único caso de a11y tratado até aqui (`chart-svg.tsx`) só foi corrigido porque Q42 decidiu não isentá-lo, não por haver regra de contraste. Cor nova (token de tema, variante de botão) passa a ser checada automaticamente, não por revisão humana lembrando de olhar. |
+
+### Desktop
+
+| # | Decisão | Consequência |
+|---|---|---|
+| **Q122** ⚪ | **Sem assinatura de código nesta etapa, risco aceito e documentado.** Nenhum instalador (`.deb`/`.rpm`/`.dmg`/`.msi`/`.nsis`) é assinado; `desktop.md` registra isso como dívida, não como decisão silenciosa. | Evita o custo de certificado (especialmente Apple notarization) antes de o produto ter usuário externo real. Reabrir quando houver distribuição fora do círculo de quem já confia na fonte. |
+| **Q123** 🟡 | **AppImage como formato de referência para dependência de sistema no Linux.** O bundle `deb`/`rpm`/`appimage` (`src-tauri/tauri.conf.json:20`) continua com os três, mas o AppImage é o que se assume funcionar em qualquer distro sem depender de biblioteca de sistema além do essencial — é o que se testa primeiro quando o caveat de `libxml2`/glibc aparecer de novo. | Não introduz Flatpak/Snap (canal de distribuição adicional a manter) nem restringe a matriz de distros suportados formalmente — usa o que o `tauri-action` já produz, só declara qual dos três é a resposta padrão para "não funciona na minha distro". |
+| **Q124** ⚪ | **Semver + build number, canal único (sem beta formal).** `package.json`/`src-tauri/Cargo.toml` continuam com uma única versão semver; um número de build incremental é adicionado para rastrear artefatos do mesmo commit, sem introduzir canal `beta` separado do `stable`. | Mantém o esquema simples enquanto há um único mantenedor e nenhuma base de usuário segmentada por estabilidade. Reabrir se/quando houver demanda real por testar release antes do público geral. |
 
