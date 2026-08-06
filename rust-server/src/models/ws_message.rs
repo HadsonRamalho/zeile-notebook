@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::models::chat::ChatMessage;
+use crate::domain::chat::ChatMessage;
 
 #[derive(Serialize, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]

@@ -6,34 +6,38 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     controllers::{
-        activity::{api_list_activity, api_record_edit},
-        chat::{
+        permissions::{api_get_notebook_capabilities, require_permission},
+        user::api_get_user_notebook_permissions,
+        websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
+    },
+    domain::{
+        activity::controller::{api_list_activity, api_record_edit},
+        chat::controller::{
             api_delete_notebook_message, api_edit_notebook_message,
             api_list_notebook_message_versions, api_list_notebook_messages,
             api_send_notebook_message,
         },
-        comments::{
+        comments::controller::{
             api_create_thread, api_delete_comment, api_list_comments, api_reply, api_update_thread,
         },
-        folder::{
+        folder::controller::{
             api_create_folder, api_delete_folder, api_list_folders, api_move_notebook_to_folder,
             api_rename_folder, api_update_folder_tags,
         },
-        grants::{api_create_public_grant, api_delete_public_grant, api_list_public_grants},
-        permissions::{api_get_notebook_capabilities, require_permission},
-        push::{api_subscribe_push, api_unsubscribe_push},
-        snapshots::{
+        grants::controller::{
+            api_create_public_grant, api_delete_public_grant, api_list_public_grants,
+        },
+        notebook::controller::{
+            api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
+            api_get_public_notebook_by_slug, api_get_public_notebooks, api_get_single_notebook,
+            api_get_single_notebook_with_blocks, api_rename_notebook, api_save_notebook_content,
+            api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
+            api_update_notebook_visibility,
+        },
+        push::controller::{api_subscribe_push, api_unsubscribe_push},
+        snapshots::controller::{
             api_create_snapshot, api_delete_snapshot, api_list_snapshots, api_restore_snapshot,
         },
-        user::api_get_user_notebook_permissions,
-        websocket::{websocket_combined_handler, websocket_handler, websocket_presence_handler},
-    },
-    domain::notebook::controller::{
-        api_clone_notebook, api_create_notebook, api_delete_notebook, api_get_notebooks,
-        api_get_public_notebook_by_slug, api_get_public_notebooks, api_get_single_notebook,
-        api_get_single_notebook_with_blocks, api_rename_notebook, api_save_notebook_content,
-        api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
-        api_update_notebook_visibility,
     },
     models::state::AppState,
 };

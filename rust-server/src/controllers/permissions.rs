@@ -16,13 +16,11 @@ use uuid::Uuid;
 
 use crate::controllers::sync::PresenceRegistry;
 use crate::controllers::utils::get_conn;
+use crate::domain::grants::{GrantEffect, GrantSubjectKind, GrantTargetKind, PermissionGrant};
+use crate::domain::team::find_team_member_with_role;
 use crate::extractors::{DbConn, OptionalAuthUser};
 use crate::models::error::ApiError;
-use crate::models::permission_grant::{
-    GrantEffect, GrantSubjectKind, GrantTargetKind, PermissionGrant,
-};
 use crate::models::state::AppState;
-use crate::models::team::find_team_member_with_role;
 use crate::schema::notebooks;
 use crate::schema::permission_grants;
 use crate::sec::catalog::catalog;
@@ -346,7 +344,7 @@ pub async fn caller_role_in_team(
     team_id: Uuid,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    crate::models::team::find_team_member_with_role(conn, team_id, user_id)
+    crate::domain::team::find_team_member_with_role(conn, team_id, user_id)
         .await
         .ok()
         .map(|(_, role)| role.id)
@@ -357,7 +355,7 @@ pub async fn ensure_team_not_locked(
     team_id: Uuid,
     exclude_user: Option<Uuid>,
 ) -> Result<(), ApiError> {
-    let members = crate::models::team::find_team_members_with_roles(conn, team_id).await?;
+    let members = crate::domain::team::find_team_members_with_roles(conn, team_id).await?;
     for key in CRITICAL_TEAM_KEYS {
         let mut covered = false;
         for (member, _) in &members {

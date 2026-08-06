@@ -4,7 +4,7 @@ use axum::routing::{delete, get, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
-    controllers::notifications::{
+    domain::notifications::controller::{
         api_delete_notification, api_list_notifications, api_list_preferences, api_mark_all_read,
         api_mark_notification_read, api_upsert_preference,
     },

@@ -611,7 +611,7 @@ async fn handle_presence_socket(
                                 let body = chat_text.to_string();
                                 let url = format!("/notebook/{}", notebook_id);
                                 tokio::spawn(async move {
-                                    crate::controllers::push::send_push_to_user(
+                                    crate::domain::push::send_push_to_user(
                                         &state_for_push,
                                         mentioned_user_id,
                                         &title,
@@ -769,7 +769,7 @@ pub fn broadcast_chat_and_notify(
                     let body = content.to_string();
                     let url = format!("/notebook/{}", notebook_id);
                     tokio::spawn(async move {
-                        crate::controllers::push::send_push_to_user(
+                        crate::domain::push::send_push_to_user(
                             &state_for_push,
                             uid,
                             &title,
@@ -866,7 +866,7 @@ async fn handle_presence_text(
                         let body = chat_text.to_string();
                         let url = format!("/notebook/{}", notebook_id);
                         tokio::spawn(async move {
-                            crate::controllers::push::send_push_to_user(
+                            crate::domain::push::send_push_to_user(
                                 &state_for_push,
                                 mentioned_user_id,
                                 &title,

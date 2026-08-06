@@ -15,11 +15,11 @@ use crate::{
         jwt::{extract_claims_from_header, generate_jwt},
         utils::{Sanitize, get_conn, hash_needs_migration, password_hash, password_verify},
     },
+    domain::team::{RolePermissions, TeamRoleView, build_role_view, find_team_member_with_role},
     models::{
         self,
         error::ApiError,
         state::AppState,
-        team::{RolePermissions, TeamRoleView},
         user::{
             AuthProvider, LoginUser, NewUser, ResetPasswordPayload, UpdateUser, UpdateUserPassword,
             User, UserAuthInfo, UserEmail,
@@ -357,7 +357,7 @@ pub async fn get_user_notebook_permissions(
         return Ok(Json(TeamRoleView::all_false()));
     };
 
-    let role = match models::team::find_team_member_with_role(conn, team_id, id).await {
+    let role = match find_team_member_with_role(conn, team_id, id).await {
         Ok((_, role)) => role,
         Err(e) => {
             if notebook.is_public {
@@ -367,7 +367,7 @@ pub async fn get_user_notebook_permissions(
         }
     };
 
-    Ok(Json(models::team::build_role_view(conn, &role).await?))
+    Ok(Json(build_role_view(conn, &role).await?))
 }
 
 #[utoipa::path(get, path = "/notebook/{id}/permissions", responses((status = OK, body = TeamRoleView), (status = 401, body = ApiError)))]

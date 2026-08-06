@@ -4,7 +4,7 @@ use axum::routing::{get, patch, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
-    controllers::template::{
+    domain::template::controller::{
         api_create_template, api_delete_template, api_get_template, api_list_my_templates,
         api_list_public_templates, api_publish_version, api_update_template_visibility,
     },
