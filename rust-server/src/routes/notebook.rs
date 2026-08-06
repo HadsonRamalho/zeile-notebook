@@ -27,7 +27,7 @@ use crate::{
             api_search_notebooks, api_search_notebooks_ranked, api_update_notebook_tags,
             api_update_notebook_visibility,
         },
-        permissions::api_get_notebook_capabilities,
+        permissions::{api_get_notebook_capabilities, require_permission},
         push::{api_subscribe_push, api_unsubscribe_push},
         snapshots::{
             api_create_snapshot, api_delete_snapshot, api_list_snapshots, api_restore_snapshot,
@@ -38,7 +38,7 @@ use crate::{
     models::state::AppState,
 };
 
-pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
+pub async fn notebook_routes(app_state: Arc<AppState>) -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::<Arc<AppState>>::new()
         .route("/create", post(api_create_notebook))
         .route("/folders", get(api_list_folders).post(api_create_folder))
@@ -48,18 +48,62 @@ pub async fn notebook_routes() -> OpenApiRouter<Arc<AppState>> {
         )
         .route("/folders/{folder_id}/tags", patch(api_update_folder_tags))
         .route("/{id}/folder", patch(api_move_notebook_to_folder))
-        .route("/{id}/tags", patch(api_update_notebook_tags))
-        .route("/{id}/title", patch(api_rename_notebook))
-        .route("/{id}", delete(api_delete_notebook))
-        .route("/{id}", get(api_get_single_notebook))
-        .route("/{id}/full", get(api_get_single_notebook_with_blocks))
+        .route(
+            "/{id}/tags",
+            patch(api_update_notebook_tags).route_layer(axum::middleware::from_fn_with_state(
+                app_state.clone(),
+                require_permission("notebook.tags.edit"),
+            )),
+        )
+        .route(
+            "/{id}/title",
+            patch(api_rename_notebook).route_layer(axum::middleware::from_fn_with_state(
+                app_state.clone(),
+                require_permission("notebook.edit_name"),
+            )),
+        )
+        .route(
+            "/{id}",
+            delete(api_delete_notebook).route_layer(axum::middleware::from_fn_with_state(
+                app_state.clone(),
+                require_permission("notebook.delete"),
+            )),
+        )
+        .route(
+            "/{id}",
+            get(api_get_single_notebook).route_layer(axum::middleware::from_fn_with_state(
+                app_state.clone(),
+                require_permission("notebook.view"),
+            )),
+        )
+        .route(
+            "/{id}/full",
+            get(api_get_single_notebook_with_blocks).route_layer(
+                axum::middleware::from_fn_with_state(
+                    app_state.clone(),
+                    require_permission("notebook.view"),
+                ),
+            ),
+        )
         .route(
             "/{id}/content",
             put(api_save_notebook_content)
-                .route_layer(DefaultBodyLimit::max(crate::routes::BODY_LIMIT_CONTEUDO)),
+                .route_layer(DefaultBodyLimit::max(crate::routes::BODY_LIMIT_CONTEUDO))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    app_state.clone(),
+                    require_permission("notebook.edit"),
+                )),
         )
         .route("/{id}/clone", post(api_clone_notebook))
-        .route("/{id}/visibility", patch(api_update_notebook_visibility))
+        .route(
+            "/{id}/visibility",
+            patch(api_update_notebook_visibility).route_layer(
+                axum::middleware::from_fn_with_state(
+                    app_state.clone(),
+                    require_permission("notebook.manage_privacy"),
+                ),
+            ),
+        )
         .route("/{id}/permissions", get(api_get_user_notebook_permissions))
         .route("/{id}/capabilities", get(api_get_notebook_capabilities))
         .route(

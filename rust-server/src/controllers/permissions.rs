@@ -264,6 +264,40 @@ pub async fn require(
     }
 }
 
+/// Layer that checks a fixed permission `key` against the `{id}` path param,
+/// before the handler runs — so a route wired through this can't repeat the
+/// bug of Q51 (fetching the resource, then checking access to it).
+pub fn require_permission(
+    key: &'static str,
+) -> impl Fn(
+    State<Arc<AppState>>,
+    Path<Uuid>,
+    OptionalAuthUser,
+    axum::extract::Request,
+    axum::middleware::Next,
+) -> futures_util::future::BoxFuture<'static, axum::response::Response>
++ Clone
++ Send
++ Sync
++ 'static {
+    move |State(state), Path(notebook_id), OptionalAuthUser(user_id), request, next| {
+        Box::pin(async move {
+            match require(
+                &state.pool,
+                user_id,
+                notebook_id,
+                key,
+                &TargetCtx::default(),
+            )
+            .await
+            {
+                Ok(_) => next.run(request).await,
+                Err(e) => axum::response::IntoResponse::into_response(e),
+            }
+        })
+    }
+}
+
 pub async fn require_team_permission(
     conn: &mut AsyncPgConnection,
     user_id: Uuid,

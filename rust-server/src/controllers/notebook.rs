@@ -76,60 +76,23 @@ pub async fn api_get_notebooks(
 
 #[utoipa::path(get, path = "/notebook/{id}", responses((status = OK, body = Notebook), (status = 401, body = ApiError)))]
 pub async fn api_get_single_notebook(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<Notebook>), ApiError> {
-    let id: Option<Uuid> = match extract_claims_from_header(&headers).await {
-        Ok(data) => Some(data.1.id),
-        Err(_) => None,
-    };
-
-    let conn = &mut get_conn(&state.pool)
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
-
-    let notebook = models::notebook::find_notebook_by_id(conn, &notebook_id).await?;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        id,
-        notebook_id,
-        "notebook.view",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
+    let notebook = models::notebook::find_notebook_by_id(&mut conn, &notebook_id).await?;
 
     Ok((StatusCode::OK, Json(notebook)))
 }
 
 #[utoipa::path(patch, path = "/notebook/{id}/title", request_body = UpdateNotebookTitle, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_rename_notebook(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
     Json(payload): Json<UpdateNotebookTitle>,
 ) -> Result<StatusCode, ApiError> {
     if let Err(errors) = payload.validate() {
         return Err(ApiError::Request(errors.to_string()));
     }
-
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        Some(id),
-        notebook_id,
-        "notebook.edit_name",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
-
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     match update_notebook_title(&mut conn, notebook_id, payload.title).await {
         Ok(_) => Ok(StatusCode::OK),
@@ -139,56 +102,22 @@ pub async fn api_rename_notebook(
 
 #[utoipa::path(patch, path = "/notebook/{id}/tags", request_body = models::notebook::UpdateTagsRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_notebook_tags(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
     Json(payload): Json<models::notebook::UpdateTagsRequest>,
 ) -> Result<StatusCode, ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        Some(id),
-        notebook_id,
-        "notebook.tags.edit",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
-
     let tags = models::notebook::normalize_tags(&payload.tags)?;
 
-    let conn = &mut get_conn(&state.pool)
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
-
-    models::notebook::set_notebook_tags(conn, notebook_id, &tags).await?;
+    models::notebook::set_notebook_tags(&mut conn, notebook_id, &tags).await?;
     Ok(StatusCode::OK)
 }
 
 #[utoipa::path(patch, path = "/notebook/{id}/visibility", request_body = UpdateNotebookVisibility, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_update_notebook_visibility(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
     Json(payload): Json<UpdateNotebookVisibility>,
 ) -> Result<StatusCode, ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        Some(id),
-        notebook_id,
-        "notebook.manage_privacy",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
-
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
-
     match models::notebook::update_notebook_visibility(&mut conn, notebook_id, payload.is_visible)
         .await
     {
@@ -199,27 +128,9 @@ pub async fn api_update_notebook_visibility(
 
 #[utoipa::path(delete, path = "/notebook/{id}", responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_delete_notebook(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
 ) -> Result<StatusCode, ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        Some(id),
-        notebook_id,
-        "notebook.delete",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
-
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
-
     match delete_notebook(&mut conn, &notebook_id).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(ApiError::Database(e)),
@@ -228,31 +139,12 @@ pub async fn api_delete_notebook(
 
 #[utoipa::path(get, path = "/notebook/{id}/full", responses((status = OK, body = NotebookResponse), (status = 401, body = ApiError)))]
 pub async fn api_get_single_notebook_with_blocks(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
 ) -> Result<(StatusCode, Json<NotebookResponse>), ApiError> {
-    let id: Option<Uuid> = match extract_claims_from_header(&headers).await {
-        Ok(data) => Some(data.1.id),
-        Err(_) => None,
-    };
-
-    let conn = &mut get_conn(&state.pool)
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.1.0.to_string()))?;
-
-    let notebook = models::notebook::get_notebook_with_blocks(conn, &notebook_id)
+    let notebook = models::notebook::get_notebook_with_blocks(&mut conn, &notebook_id)
         .await
         .map_err(ApiError::Database)?;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        id,
-        notebook_id,
-        "notebook.view",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
 
     Ok((StatusCode::OK, Json(notebook)))
 }
@@ -315,29 +207,11 @@ pub fn validate_content(payload: &SyncNotebookRequest) -> Result<(), ApiError> {
 
 #[utoipa::path(put, path = "/notebook/{id}/content", request_body = SyncNotebookRequest, responses((status = OK), (status = 401, body = ApiError)))]
 pub async fn api_save_notebook_content(
-    State(state): State<Arc<AppState>>,
     Path(notebook_id): Path<Uuid>,
-    headers: HeaderMap,
+    DbConn(mut conn): DbConn,
     Json(payload): Json<SyncNotebookRequest>,
 ) -> Result<StatusCode, ApiError> {
-    let id = extract_claims_from_header(&headers).await?.1.id;
-
     validate_content(&payload)?;
-
-    crate::controllers::permissions::require(
-        &state.pool,
-        Some(id),
-        notebook_id,
-        "notebook.edit",
-        &crate::controllers::permissions::TargetCtx::default(),
-    )
-    .await?;
-
-    let mut conn = state
-        .pool
-        .get()
-        .await
-        .map_err(|e| ApiError::DatabaseConnection(e.to_string()))?;
 
     let blocks_to_insert: Vec<NewBlock> = payload
         .blocks

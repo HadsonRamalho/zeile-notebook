@@ -121,7 +121,10 @@ pub async fn build_router(app_state: Arc<AppState>) -> Router {
         .nest("/api", run_rust_routes().await.into())
         .nest("/api/user", user_routes().await.into())
         .nest("/api/auth", auth_routes().await.into())
-        .nest("/api/notebook", notebook_routes().await.into())
+        .nest(
+            "/api/notebook",
+            notebook_routes(app_state.clone()).await.into(),
+        )
         .nest("/api/team", team_routes().await.into())
         .nest(
             "/api/template",
