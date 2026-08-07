@@ -1,3 +1,4 @@
+import type { components } from "@/lib/api/generated/openapi-types";
 import type {
   AdminNotebookView,
   AdminSystemStats,
@@ -6,6 +7,8 @@ import type {
   PaginatedResponse,
 } from "@/types/admin-types";
 import { createResultApi } from "./base";
+
+type Schemas = components["schemas"];
 
 const api = createResultApi("admin");
 
@@ -33,11 +36,7 @@ export function fetchAdminNotebooks(page: number, limit: number) {
 
 export type AdminSearchKind = "users" | "teams" | "notebooks";
 
-export interface AdminSearchResult {
-  id: string;
-  label: string;
-  sublabel: string | null;
-}
+export type AdminSearchResult = Schemas["AdminSearchResult"];
 
 export async function adminSearch(kind: AdminSearchKind, q: string) {
   return api.get<AdminSearchResult[]>(
@@ -45,13 +44,12 @@ export async function adminSearch(kind: AdminSearchKind, q: string) {
   );
 }
 
-export interface AdminNotifyPayload {
+export type AdminNotifyPayload = Omit<
+  Schemas["AdminNotifyRequest"],
+  "targetKind"
+> & {
   targetKind: "user" | "team" | "notebook";
-  targetId: string;
-  title: string;
-  body: string;
-  url?: string | undefined;
-}
+};
 
 export async function adminNotify(payload: AdminNotifyPayload) {
   return api.post<void>("/admin/notify", payload);

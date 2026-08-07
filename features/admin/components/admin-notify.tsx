@@ -66,7 +66,7 @@ export function AdminNotify() {
       targetId: selected.id,
       title: title.trim(),
       body: body.trim(),
-      url: url.trim() || undefined,
+      url: url.trim() || null,
     });
     if (result.isErr()) {
       toast.error(t("sent_error"));
