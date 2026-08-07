@@ -259,130 +259,132 @@ export function TeamMembers({
 
         <CardContent>
           <div className="divide-y divide-border border rounded-md">
-            {members.map(({ member: m, role }) => (
-              <div
-                key={m.id}
-                className="flex flex-wrap items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
-              >
-                <Avatar className="size-9 shrink-0">
-                  {m.avatarUrl && (
-                    <AvatarImage src={m.avatarUrl} alt={m.name} />
-                  )}
-                  <AvatarFallback className="text-xs">
-                    {getInitials(m.name)}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-sm font-medium">
-                    {m.name}
-                    {m.userId === user.id && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        ({a("you")})
-                      </span>
+            {members
+              .filter((entry) => Boolean(entry.member))
+              .map(({ member: m, role }) => (
+                <div
+                  key={m.id}
+                  className="flex flex-wrap items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
+                >
+                  <Avatar className="size-9 shrink-0">
+                    {m.avatarUrl && (
+                      <AvatarImage src={m.avatarUrl} alt={m.name} />
                     )}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {m.email}
-                  </span>
-                  <span className="text-xs text-muted-foreground opacity-75">
-                    {a("joined_on")}{" "}
-                    {new Date(m.joinedAt).toLocaleDateString(locale, {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </span>
-                </div>
+                    <AvatarFallback className="text-xs">
+                      {getInitials(m.name)}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="flex shrink-0 items-center gap-2">
-                  {canManageRoles ? (
-                    <button
-                      type="button"
-                      onClick={() => onEditRolePermissions(role.id)}
-                      title={rt("notebook_permissions")}
-                    >
-                      <Badge
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-secondary/70"
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">
+                      {m.name}
+                      {m.userId === user.id && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({a("you")})
+                        </span>
+                      )}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {m.email}
+                    </span>
+                    <span className="text-xs text-muted-foreground opacity-75">
+                      {a("joined_on")}{" "}
+                      {new Date(m.joinedAt).toLocaleDateString(locale, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    {canManageRoles ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditRolePermissions(role.id)}
+                        title={rt("notebook_permissions")}
                       >
+                        <Badge
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-secondary/70"
+                        >
+                          {roleDisplayName(role, rt)}
+                        </Badge>
+                      </button>
+                    ) : (
+                      <Badge variant="secondary">
                         {roleDisplayName(role, rt)}
                       </Badge>
-                    </button>
-                  ) : (
-                    <Badge variant="secondary">
-                      {roleDisplayName(role, rt)}
-                    </Badge>
-                  )}
+                    )}
 
-                  {canManageRoles && m.userId !== user.id && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    {canManageRoles && m.userId !== user.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={a("member_actions")}
+                          >
+                            <MoreVertical size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>
+                            {a("change_role")}
+                          </DropdownMenuLabel>
+                          <DropdownMenuRadioGroup
+                            value={m.roleId}
+                            onValueChange={(rid) =>
+                              handleChangeRole(m.userId, rid)
+                            }
+                          >
+                            {roles.map((role) => (
+                              <DropdownMenuRadioItem
+                                key={role.id}
+                                value={role.id}
+                              >
+                                {roleDisplayName(role, rt)}
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onEditMemberPermissions(m.userId)}
+                          >
+                            <KeyRound size={16} />
+                            {a("edit_member_permissions")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => onEditRolePermissions(role.id)}
+                          >
+                            <Shield size={16} />
+                            {a("edit_role_permissions")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+
+                    {!role.canManageTeam &&
+                      (userPermissions?.canManageTeam ||
+                        userPermissions?.canRemoveUsers) && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label={a("member_actions")}
-                        >
-                          <MoreVertical size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel>
-                          {a("change_role")}
-                        </DropdownMenuLabel>
-                        <DropdownMenuRadioGroup
-                          value={m.roleId}
-                          onValueChange={(rid) =>
-                            handleChangeRole(m.userId, rid)
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title={a("remove_member_button")}
+                          onClick={() =>
+                            setMemberToRemove({
+                              id: m.userId,
+                              name: m.name,
+                            })
                           }
                         >
-                          {roles.map((role) => (
-                            <DropdownMenuRadioItem
-                              key={role.id}
-                              value={role.id}
-                            >
-                              {roleDisplayName(role, rt)}
-                            </DropdownMenuRadioItem>
-                          ))}
-                        </DropdownMenuRadioGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => onEditMemberPermissions(m.userId)}
-                        >
-                          <KeyRound size={16} />
-                          {a("edit_member_permissions")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => onEditRolePermissions(role.id)}
-                        >
-                          <Shield size={16} />
-                          {a("edit_role_permissions")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-
-                  {!role.canManageTeam &&
-                    (userPermissions?.canManageTeam ||
-                      userPermissions?.canRemoveUsers) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        title={a("remove_member_button")}
-                        onClick={() =>
-                          setMemberToRemove({
-                            id: m.userId,
-                            name: m.name,
-                          })
-                        }
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    )}
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             {members.length === 0 && (
               <div className="p-8 text-sm text-center text-muted-foreground">
                 {a("no_members_found")}

@@ -86,7 +86,7 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
     if (result.isErr()) {
       handleApiError({ err: result.error, t });
     } else {
-      setMembers(result.data);
+      setMembers(result.data.filter((entry) => Boolean(entry?.member)));
     }
   };
 
@@ -105,7 +105,9 @@ export default function TeamSettingsForm({ teamId }: TeamSettingsFormProps) {
           if (teamResult.isErr()) throw teamResult.error;
           if (membersResult.isErr()) throw membersResult.error;
           const teamData = teamResult.data;
-          const m = membersResult.data;
+          const m = membersResult.data.filter((entry) =>
+            Boolean(entry?.member),
+          );
           const implied = buildImpliedIndex(catalogResult.data);
           const teamCan = (key: string) =>
             evalCan(snapshotResult.data, implied, key, { notebookId: "" });
