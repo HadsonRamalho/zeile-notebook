@@ -313,7 +313,9 @@ export function NotebookRail() {
 
   useEffect(() => {
     fetchUserTeams().then((result) => {
-      const data = result.isOk() ? result.data : [];
+      const data = (result.isOk() ? result.data : []).filter(
+        (entry): entry is TeamWithUserRole => Boolean(entry?.team),
+      );
       setTeams(data);
       for (const { team } of data) {
         refreshTeamPages(team.id);
@@ -479,6 +481,7 @@ export function NotebookRail() {
           })()}
 
         {teams.map(({ team }) => {
+          if (!team) return null;
           const pagesOfTeam = teamPages[team.id] ?? [];
           if (!isExpanded) {
             return pagesOfTeam.map((page) => (

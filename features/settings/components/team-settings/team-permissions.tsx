@@ -142,7 +142,9 @@ export function TeamPermissions({
         if (pagesResult.isErr()) throw pagesResult.error;
         setCatalog(catResult.data);
         setGrants(grantsResult.data);
-        setMembers(membersResult.data);
+        setMembers(
+          membersResult.data.filter((entry) => Boolean(entry?.member)),
+        );
         setNotebooks(pagesResult.data);
       })
       .catch((err) => handleApiError({ err, t: te }))

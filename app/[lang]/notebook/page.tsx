@@ -88,7 +88,9 @@ export default function NotebookHomePage() {
 
   useEffect(() => {
     fetchUserTeams().then((result) => {
-      const data = result.isOk() ? result.data : [];
+      const data = (result.isOk() ? result.data : []).filter(
+        (entry): entry is TeamWithUserRole => Boolean(entry?.team),
+      );
       setTeams(data);
       for (const { team } of data) {
         refreshTeamPages(team.id);
@@ -175,6 +177,7 @@ export default function NotebookHomePage() {
 
           <div className="flex flex-col gap-8">
             {teams.map(({ team, role }) => {
+              if (!team) return null;
               const pagesOfTeam = teamPages[team.id] ?? [];
               const foldersOfTeam = teamFolders[team.id] ?? [];
               const canManage = role.canWrite;
