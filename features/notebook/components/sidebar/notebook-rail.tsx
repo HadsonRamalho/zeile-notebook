@@ -484,6 +484,18 @@ export function NotebookRail() {
           if (!team) return null;
           const pagesOfTeam = teamPages[team.id] ?? [];
           if (!isExpanded) {
+            if (pagesOfTeam.length === 0) {
+              return (
+                <RailButton
+                  key={team.id}
+                  href={`/teams/${team.id}/settings`}
+                  label={team.name}
+                  expanded={false}
+                >
+                  <Users size={17} className="shrink-0" />
+                </RailButton>
+              );
+            }
             return pagesOfTeam.map((page) => (
               <PageRow
                 key={page.id}
