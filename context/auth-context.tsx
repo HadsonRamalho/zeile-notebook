@@ -16,6 +16,7 @@ import { handleApiError } from "@/lib/api/handle-api-error";
 import {
   clearSession,
   endSessionOnServer,
+  renewSession,
   type Session,
   storeSession,
 } from "@/lib/api/session";
@@ -62,7 +63,11 @@ export function AuthProvider({
     async function loadUserFromSession() {
       const current = getActiveAccount();
       setAccount(current);
-      const token = getCookie(tokenCookieName(current));
+      let token = getCookie(tokenCookieName(current));
+
+      if (!token) {
+        token = (await renewSession(current)) ?? undefined;
+      }
 
       if (!token) {
         setIsLoading(false);
