@@ -71,8 +71,16 @@ export async function fetchTeamRoles(teamId: string) {
   return await api.get<TeamRole[]>(`/team/${teamId}/roles`);
 }
 
+function toTeamWithUserRole(
+  entry: TeamWithUserRole | [Team, TeamRole],
+): TeamWithUserRole {
+  return Array.isArray(entry) ? { team: entry[0], role: entry[1] } : entry;
+}
+
 export async function fetchUserTeams() {
-  return await api.get<TeamWithUserRole[]>(`/team`);
+  return (
+    await api.get<Array<TeamWithUserRole | [Team, TeamRole]>>(`/team`)
+  ).map((entries) => entries.map(toTeamWithUserRole));
 }
 
 export async function acceptTeamInvite(token: string) {
