@@ -40,7 +40,7 @@ export function PublicNotebookView({ slug }: PublicNotebookViewProps) {
       }
       const data = result.data;
       setTitle(data.title);
-      setOwnerName(data.ownerName);
+      setOwnerName(data.ownerName ?? null);
       const documentData = data.documentData;
       if (documentData && documentData.length > 0) {
         const automerge = await import("@automerge/automerge");

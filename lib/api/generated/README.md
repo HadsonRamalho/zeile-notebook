@@ -108,7 +108,11 @@ wildcard sobre todas as variantes: adicionar uma variante nova sem atualizar o t
   `all_error_codes_matches_every_variant` força isso, mas é o autor do PR que escreve o código
   estável (`SCREAMING_SNAKE_CASE`), nunca o gerador.
 
-### Limitações conhecidas
+### Estado de consumo
 
-- `ErrorCode` ainda não é consumido por `lib/api/handle-api-error.ts` nem pelas rotas
-  `app/api/*/route.ts` — isso é o Q32 (etapa 11, item 5), não deste gerador.
+- `app/api/*/route.ts` consome `ErrorCode` via `routeError()` (`lib/api/route-error.ts`) desde o
+  Q32 (etapa 11).
+- `lib/api/handle-api-error.ts` **não** importa `ErrorCode`: `ApiClientError.code` é `string`
+  porque cobre também `"UNKNOWN_ERROR"` (erro de rede, parse, ou qualquer código fora do catálogo)
+  e é usado como chave de tradução — tipar como `ErrorCode` exigiria um cast no ponto de uso sem
+  ganho de segurança real.

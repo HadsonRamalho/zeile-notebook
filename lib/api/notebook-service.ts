@@ -1,3 +1,4 @@
+import type { components } from "@/lib/api/generated/openapi-types";
 import type { Block } from "@/types/block-types";
 import type {
   Notebook,
@@ -8,6 +9,8 @@ import type {
 } from "@/types/notebook-types";
 import type { TeamRole } from "@/types/team-types";
 import { createResultApi } from "./base";
+
+type Schemas = components["schemas"];
 
 const api = createResultApi("notebook-crud");
 const publicApi = createResultApi("public");
@@ -21,11 +24,7 @@ export async function getPublicNotebookBySlug(slug: string) {
   return publicApi.get<PublicNotebookDoc>(`/notebook/public/${slug}`);
 }
 
-export interface CreateNotebookPayload {
-  title: string;
-  blockTitle: string;
-  blockContent: string;
-}
+export type CreateNotebookPayload = Schemas["CreateNotebookRequest"];
 
 export async function createNotebook(payload: CreateNotebookPayload) {
   return api.post<string>("/notebook/create", payload);
@@ -36,13 +35,13 @@ export async function getMyNotebooks() {
 }
 
 export async function updateNotebookTitle(id: string, newTitle: string) {
-  return api.patch<void>(`/notebook/${id}/title`, { title: newTitle });
+  const payload: Schemas["UpdateNotebookTitle"] = { title: newTitle };
+  return api.patch<void>(`/notebook/${id}/title`, payload);
 }
 
 export async function updateNotebookVisibility(id: string, isVisible: boolean) {
-  return api.patch<void>(`/notebook/${id}/visibility`, {
-    isVisible,
-  });
+  const payload: Schemas["UpdateNotebookVisibility"] = { isVisible };
+  return api.patch<void>(`/notebook/${id}/visibility`, payload);
 }
 
 export async function getCurrentNotebook(id: string) {
@@ -62,8 +61,13 @@ export async function deleteNotebook(id: string) {
 }
 
 export async function cloneNotebook(id: string, title: string) {
-  return api.post<string>(`/notebook/${id}/clone`, { title });
+  const payload: Schemas["CloneNotebookRequest"] = { title };
+  return api.post<string>(`/notebook/${id}/clone`, payload);
 }
+
+type SaveNotebookPayload = Omit<Schemas["SyncNotebookRequest"], "blocks"> & {
+  blocks: Block[];
+};
 
 export async function saveNotebookData(
   id: string,
@@ -71,11 +75,8 @@ export async function saveNotebookData(
   blocks: Block[],
   isPublic: boolean,
 ) {
-  return api.put<void>(`/notebook/${id}/content`, {
-    title,
-    blocks,
-    isPublic,
-  });
+  const payload: SaveNotebookPayload = { title, blocks, isPublic };
+  return api.put<void>(`/notebook/${id}/content`, payload);
 }
 
 export async function getUserNotebookPermissions(id: string) {
