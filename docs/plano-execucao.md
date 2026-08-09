@@ -401,37 +401,46 @@ mutirão em ondas, não uma exceção permanente como `components/vendor/*` (Q21
   `try/catch` em `use-push-subscription.ts` e o `try/finally` de `tag-editor.tsx` não têm
   `catch` de fato (só `finally`) — não são casos do Q38, ficaram como estavam
 
-#### 20 · Migração para os tipos gerados
+#### 20 · Migração para os tipos gerados — [x] concluída
 
 A etapa 11 fechou o regime de geração (`lib/api/generated/`) e o guard de CI, mas só
-`error-codes.ts` ganhou consumidor real (`routeError()` em `lib/api/route-error.ts`, via Q32).
-`openapi-types.ts` e `ws-message.ts` existem, são regenerados a cada mudança de rota/mensagem
-do backend (inclusive pela etapa 14, que já regenerou `openapi-types.ts` ao migrar `notebook`
-para DTO), mas nenhum consumidor do frontend os importa — os `lib/api/*-service.ts` e os hooks
-de WebSocket ainda tipam request/response à mão.
+`error-codes.ts` tinha consumidor real (`routeError()` em `lib/api/route-error.ts`, via Q32).
+`openapi-types.ts` e `ws-message.ts` existiam, eram regenerados a cada mudança de rota/mensagem
+do backend, mas nenhum consumidor do frontend os importava — os `lib/api/*-service.ts` e os
+hooks de WebSocket tipavam request/response à mão.
 
-- [ ] `lib/api/*-service.ts` (auth, notebook, teams, admin, user, run-rust) — substituir os
-  tipos de request/response escritos à mão por `components["schemas"]["<Nome>"]` de
-  `openapi-types.ts`; usar `operations["<operationId>"]` onde o service já referencia o
-  `operationId` do handler
-- [ ] `hooks/use-presence.ts` e `components/notebook/collaboration/` — tipar o payload de texto
-  das conexões `/notebook/ws/presence/{id}` e `/notebook/ws/combined/{notebook_id}` com
-  `WsServerMessage`/`WsClientMessage` de `ws-message.ts`, no lugar do shape ad-hoc atual
-- [ ] Onde a resposta hoje é `unknown`/`any` por a rota Rust não declarar `body` no
-  `#[utoipa::path]` (limitação documentada no `README.md` de `lib/api/generated/`), decidir
-  caso a caso: declarar o `body` que falta no lado Rust, ou manter `unknown` com comentário
-  apontando a limitação — não inventar tipo TS solto sem origem gerada
-- [ ] Depois da migração, `lib/schemas/*` (Zod) deixa de ser a única fonte de shape no
-  frontend para os DTOs cobertos por `openapi-types.ts` — auditar sobreposição e decidir se o
-  Zod schema deriva do tipo gerado ou se os dois continuam paralelos (validação em runtime vs.
-  tipo estático) com a decisão registrada
-- [ ] Atualizar `lib/api/generated/README.md`: remover a limitação "não consumido por
-  `handle-api-error.ts` nem `app/api/*/route.ts`" (Q32, já resolvida) e substituir pela
-  descrição do novo estado de consumo desta etapa
+Entregue em ondas por domínio (PRs #154–#160, mais esta entrega final): `run-rust.ts` primeiro,
+depois `user-types.ts`/`session.ts`, `challenge-types.ts`, `team-types.ts`, `admin-types.ts`, e
+por fim `notebook-types.ts`/`notebook-service.ts` + `auth-service.ts` + os hooks de WebSocket.
 
-Como Q32/etapa 11, essa é migração de tipagem, não de comportamento em runtime — feita por
-domínio (mesmo agrupamento da etapa 10) para manter os PRs revisáveis, não um PR único
-trocando todos os services de uma vez.
+- [x] `lib/api/*-service.ts` (auth, notebook, teams, admin, user, run-rust) — tipos de
+  request/response escritos à mão substituídos por `components["schemas"]["<Nome>"]` de
+  `openapi-types.ts`. `notebook-types.ts` (`NotebookMeta`, `Notebook`, `PublicNotebookResponse`,
+  `PublicNotebookDoc`, `RankedSearchItem`) e `auth-service.ts` (`getAuthProviders`) eram os dois
+  pontos que faltavam; o resto já tinha migrado nas ondas anteriores. `Block`/`BlockRequest`
+  ficaram de fora deliberadamente — `Block` é o tipo de cliente (mais rico: aceita `language:
+  "generic"` e o campo `scene` do free-drawing, que o servidor ignora), não o DTO de fio; virar
+  `BlockRequest` puro quebraria os blocos client-only
+- [x] `hooks/use-presence.ts` e `hooks/use-comments.ts` — payload de texto das conexões
+  `/notebook/ws/presence/{id}` e `/notebook/ws/combined/{notebook_id}` tipado com
+  `WsServerMessage`/`WsClientMessage` de `ws-message.ts`, no lugar do shape ad-hoc (`any`
+  implícito do `JSON.parse`). **Achado no caminho**: os ramos `data.type === "presence"` e
+  `"disconnect"` em `use-presence.ts` eram código morto — o servidor nunca manda essas duas
+  mensagens (só `presence_batch`, que já é o que o comentário do código descrevia); tipar contra
+  `WsServerMessage` expôs isso porque nenhuma das duas é membro da union. Removidos
+- [x] Nenhum `unknown`/`any` de `body` faltante encontrado nos seis services desta etapa — a
+  limitação documentada no `README.md` de `lib/api/generated/` não se aplicou aqui
+- [x] Zod (`schemas/*`) auditado contra os DTOs gerados: `auth-schemas.ts`, `user-schemas.ts` e
+  `team-schemas.ts` continuam paralelos, deliberadamente — validam formulário (mensagem
+  localizada, `confirmPassword` que não existe no servidor, mínimos de UX que não são regra de
+  negócio do backend), não espelham contrato de rede. Onde o formulário e o DTO coincidem campo a
+  campo (`ProfileSecurityFormValues` ↔ `UpdateUserPassword`), a coincidência já é estrutural via
+  `z.infer`, sem necessidade de um `satisfies` a mais
+- [x] `lib/api/generated/README.md` atualizado: a limitação "não consumido por
+  `handle-api-error.ts` nem `app/api/*/route.ts`" (Q32) estava desatualizada — `route-error.ts`
+  já consome `ErrorCode` desde a etapa 11. `handle-api-error.ts` continua com `code: string` por
+  decisão (cobre `"UNKNOWN_ERROR"` e qualquer código fora do catálogo, usado só como chave de
+  tradução), registrada no lugar da limitação removida
 
 ### Questões ainda abertas
 

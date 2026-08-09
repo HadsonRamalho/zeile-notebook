@@ -1,48 +1,20 @@
+import type { components } from "@/lib/api/generated/openapi-types";
 import type { Block } from "./block-types";
 
-export interface NotebookMeta {
-  id: string;
-  title: string;
-  userId: string | null;
-  teamId: string | null;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  folderId?: string | null;
-  tags?: string[];
-  publicSlug?: string | null;
-}
+type Schemas = components["schemas"];
+
+export type NotebookMeta = Omit<Schemas["NotebookDto"], "tags"> & {
+  tags: string[];
+};
 
 export interface Notebook extends NotebookMeta {
   blocks: Block[];
 }
 
-export interface PublicNotebookResponse {
-  id: string;
-  title: string;
-  userId: string | null;
-  teamId: string | null;
-  ownerName: string;
-  description: string | null;
-  updatedAt: string;
-}
+export type PublicNotebookResponse = Schemas["PublicNotebookResponse"];
 
-export interface PublicNotebookDoc {
-  id: string;
-  title: string;
-  ownerName: string | null;
-  updatedAt: string;
-  publicSlug: string | null;
-  documentData: number[] | null;
-}
+export type PublicNotebookDoc = Schemas["PublicNotebookDoc"];
 
-export interface RankedSearchItem {
+export type RankedSearchItem = Omit<Schemas["RankedSearchItem"], "kind"> & {
   kind: "notebook" | "block";
-  notebookId: string;
-  blockId: string | null;
-  notebookTitle: string;
-  teamId: string | null;
-  teamName: string | null;
-  snippet: string;
-  rank: number;
-}
+};

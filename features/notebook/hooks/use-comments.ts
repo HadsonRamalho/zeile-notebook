@@ -3,6 +3,7 @@
 import { catchErrorSync } from "@catcherjs/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subscribeNotebookSocket } from "@/features/notebook/lib/notebook-socket";
+import type { WsServerMessage } from "@/lib/api/generated/ws-message";
 import {
   createCommentThread,
   deleteComment,
@@ -28,7 +29,9 @@ export function useComments(notebookId: string, token: string) {
   useEffect(() => {
     const handle = subscribeNotebookSocket(notebookId, token, {
       onText: (raw) => {
-        const result = catchErrorSync(() => JSON.parse(raw));
+        const result = catchErrorSync(
+          () => JSON.parse(raw) as WsServerMessage,
+        );
         if (result.isOk() && result.data.type === "comment_event") refresh();
       },
     });

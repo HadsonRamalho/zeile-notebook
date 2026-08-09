@@ -5,6 +5,10 @@ import {
   type NotebookSocketHandle,
   subscribeNotebookSocket,
 } from "@/features/notebook/lib/notebook-socket";
+import type {
+  WsClientMessage,
+  WsServerMessage,
+} from "@/lib/api/generated/ws-message";
 import {
   type ChatMessageDTO,
   deleteNotebookMessage,
@@ -14,6 +18,16 @@ import {
 } from "@/lib/api/chat-service";
 import { tokenCookieName } from "@/lib/runtime/router";
 import type { User } from "@/types/user-types";
+
+type PresenceUpdate = {
+  userId?: string;
+  name?: string | null;
+  avatar?: string | null;
+  isGuest?: boolean;
+  cursor?: { x: number; y: number } | null;
+  focusedBlockId?: string | null;
+  viewportBlockId?: string | null;
+};
 
 export type Collaborator = {
   id: string;
@@ -108,42 +122,34 @@ export function usePresence(
     viewportBlockId: null as string | null,
   });
 
+  const presenceMessage = useCallback(
+    (myId: string): WsClientMessage => ({
+      type: "presence",
+      userId: myId,
+      name: currentUser?.name || "Visitante",
+      avatar: currentUser?.avatarUrl || null,
+      isGuest: !currentUser,
+      cursor: myState.current.cursor,
+      focusedBlockId: myState.current.focusedBlockId,
+      viewportBlockId: myState.current.viewportBlockId,
+    }),
+    [currentUser],
+  );
+
   const broadcastPresence = useCallback(() => {
     const myId = socketUserIdRef.current;
     if (handleRef.current?.isOpen() && myId) {
-      handleRef.current.sendText(
-        JSON.stringify({
-          type: "presence",
-          userId: myId,
-          name: currentUser?.name || "Visitante",
-          avatar: currentUser?.avatarUrl || null,
-          isGuest: !currentUser,
-          cursor: myState.current.cursor,
-          focusedBlockId: myState.current.focusedBlockId,
-          viewportBlockId: myState.current.viewportBlockId,
-        }),
-      );
+      handleRef.current.sendText(JSON.stringify(presenceMessage(myId)));
     }
-  }, [currentUser]);
+  }, [presenceMessage]);
 
   const broadcastPresenceWithId = useCallback(
     (myId: string) => {
       if (handleRef.current?.isOpen()) {
-        handleRef.current.sendText(
-          JSON.stringify({
-            type: "presence",
-            userId: myId,
-            name: currentUser?.name || "Visitante",
-            avatar: currentUser?.avatarUrl || null,
-            isGuest: !currentUser,
-            cursor: myState.current.cursor,
-            focusedBlockId: myState.current.focusedBlockId,
-            viewportBlockId: myState.current.viewportBlockId,
-          }),
-        );
+        handleRef.current.sendText(JSON.stringify(presenceMessage(myId)));
       }
     },
-    [currentUser],
+    [presenceMessage],
   );
 
   useEffect(() => {
@@ -151,7 +157,9 @@ export function usePresence(
     const token = getCookie(tokenCookieName())?.toString() || "";
     const handle = subscribeNotebookSocket(pageId, token, {
       onText: (raw) => {
-        const parseResult = catchErrorSync(() => JSON.parse(raw));
+        const parseResult = catchErrorSync(
+          () => JSON.parse(raw) as WsServerMessage,
+        );
         if (parseResult.isErr()) {
           console.error("Erro ao ler WebSocket:", parseResult.error);
           return;
@@ -163,11 +171,11 @@ export function usePresence(
           return;
         }
 
-        // the server coalesces presence into a periodic batch (updates + gone)
         if (data.type === "presence_batch") {
           setCollaborators((prev) => {
             const next = new Map(prev);
-            for (const u of data.updates || []) {
+            for (const raw of data.updates || []) {
+              const u = raw as PresenceUpdate;
               if (!u?.userId || u.userId === socketUserIdRef.current) continue;
               lastSeenRef.current.set(u.userId, Date.now());
               next.set(u.userId, {
@@ -190,9 +198,8 @@ export function usePresence(
           return;
         }
 
-        if (data.userId === socketUserIdRef.current) return;
-
         if (data.type === "init") {
+          if (data.userId === socketUserIdRef.current) return;
           socketUserIdRef.current = data.userId;
           setSocketUserId(data.userId);
           broadcastPresenceWithId(data.userId);
@@ -203,35 +210,6 @@ export function usePresence(
           setMessages((prev) =>
             upsertMessage(prev, mapChatMessage(data.message)),
           );
-          return;
-        }
-
-        if (data.type === "disconnect") {
-          lastSeenRef.current.delete(data.userId);
-          setCollaborators((prev) => {
-            const next = new Map(prev);
-            next.delete(data.userId);
-            return next;
-          });
-          return;
-        }
-
-        if (data.type === "presence") {
-          lastSeenRef.current.set(data.userId, Date.now());
-          setCollaborators((prev) => {
-            const next = new Map(prev);
-            next.set(data.userId, {
-              id: data.userId,
-              name: data.name || "Visitante",
-              color: stringToColor(data.name || data.userId),
-              cursor: data.cursor,
-              focusedBlockId: data.focusedBlockId,
-              viewportBlockId: data.viewportBlockId ?? null,
-              avatar: data.avatar,
-              isGuest: data.isGuest ?? true,
-            });
-            return next;
-          });
         }
       },
       onClose: () => {

@@ -32,6 +32,7 @@ function notebook(blocks: Block[]): Notebook {
     isPublic: false,
     createdAt: "2026-07-29T00:00:00Z",
     updatedAt: "2026-07-29T00:00:00Z",
+    tags: [],
     blocks,
   };
 }
