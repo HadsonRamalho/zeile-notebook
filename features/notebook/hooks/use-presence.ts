@@ -5,10 +5,6 @@ import {
   type NotebookSocketHandle,
   subscribeNotebookSocket,
 } from "@/features/notebook/lib/notebook-socket";
-import type {
-  WsClientMessage,
-  WsServerMessage,
-} from "@/lib/api/generated/ws-message";
 import {
   type ChatMessageDTO,
   deleteNotebookMessage,
@@ -16,6 +12,10 @@ import {
   fetchNotebookMessages,
   sendNotebookMessage,
 } from "@/lib/api/chat-service";
+import type {
+  WsClientMessage,
+  WsServerMessage,
+} from "@/lib/api/generated/ws-message";
 import { tokenCookieName } from "@/lib/runtime/router";
 import type { User } from "@/types/user-types";
 
