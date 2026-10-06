@@ -372,7 +372,9 @@ function firstLine(body) {
 
 function decisionRefs(text) {
   return [
-    ...new Set([...(text ?? "").matchAll(/\bQ(\d{1,3})\b/g)].map((m) => `Q${m[1]}`)),
+    ...new Set(
+      [...(text ?? "").matchAll(/\bQ(\d{1,3})\b/g)].map((m) => `Q${m[1]}`),
+    ),
   ];
 }
 
@@ -656,7 +658,9 @@ function buildPr(node, mergeInfo, state, login, warnings) {
     threadTotal: node.reviewThreads?.totalCount ?? threads.length,
     unresolved: open.length,
     checks: summarizeChecks(commitNode, warnings, node.number),
-    stages: stagesFrom(`${node.title}\n${node.headRefName}\n${node.body ?? ""}`),
+    stages: stagesFrom(
+      `${node.title}\n${node.headRefName}\n${node.body ?? ""}`,
+    ),
     decisions: decisionRefs(`${node.title}\n${node.body ?? ""}`),
     live,
     triage,
@@ -736,7 +740,8 @@ function renderTable(report) {
     const numbers = report.prs
       .filter((pr) => pr.state === state)
       .map((pr) => pr.number);
-    if (numbers.length) lines.push(`  ${state.padEnd(15)} ${numbers.join(", ")}`);
+    if (numbers.length)
+      lines.push(`  ${state.padEnd(15)} ${numbers.join(", ")}`);
   }
   const withLive = report.prs.filter(
     (pr) => pr.live.length > 0 || pr.topLevelLive.length > 0,
@@ -805,7 +810,8 @@ function main() {
     warnings.push({
       kind: "search-truncated",
       detail: `${issueCount} PRs in scope, ${nodes.length} collected (cap ${searchN})`,
-      impact: "an actionable PR may be outside the batch; raise --limit or narrow the scope",
+      impact:
+        "an actionable PR may be outside the batch; raise --limit or narrow the scope",
     });
   }
   const mergeInfo = fetchMergeState(
@@ -849,7 +855,11 @@ function main() {
     repo: repo.slug,
     login,
     baseBranch: BASE_BRANCH,
-    scope: opts.mine ? "mine" : opts.author ? `author:${opts.author}` : "others",
+    scope: opts.mine
+      ? "mine"
+      : opts.author
+        ? `author:${opts.author}`
+        : "others",
     stateSources: state.sources,
     stateVersion: state.version,
     workDir,
