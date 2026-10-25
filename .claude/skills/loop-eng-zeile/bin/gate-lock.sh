@@ -14,8 +14,44 @@
 #
 # kind: lint | build | test | gate (grant for a whole sequence)
 # Exit 75 (EX_TEMPFAIL) = not admitted before the timeout; the caller yields the tick.
+#
+# When the Hades gate queue is installed on the machine, this wrapper hands the call over to it
+# (same arguments, same exit codes), so every project shares one queue and one memory budget. The
+# local queue below stays as the fallback. ZEILE_GATE_LOCAL=1 forces the local queue; ZEILE_GATE_HADES
+# points to a specific Hades gate-lock.sh. The Hades queue is machine-wide (HADES_GATE_SCOPE=maquina)
+# unless HADES_GATE_SCOPE is already set.
 
 set -uo pipefail
+
+# Path of the Hades gate-lock.sh, or nothing when it is not installed.
+hades_gate_lock() {
+  local c d
+  d=$(head -1 "$HOME/.claude/hades/instance" 2>/dev/null)
+  for c in "${ZEILE_GATE_HADES:-}" "${HADES_DATA:+$HADES_DATA/gate/gate-lock.sh}" \
+    "${d:+$d/gate/gate-lock.sh}" "$HOME/.claude/skills/hades/kit/gate/gate-lock.sh"; do
+    [[ -n "$c" && -x "$c" ]] && { printf '%s' "$c"; return 0; }
+  done
+  return 1
+}
+
+# The ZEILE_GATE_* tuning knobs keep working: they become the Hades equivalents unless those are set.
+delegate_to_hades() {
+  local hades
+  [[ "${ZEILE_GATE_LOCAL:-0}" == 1 ]] && return 1
+  hades=$(hades_gate_lock) || return 1
+  export HADES_GATE_SCOPE=${HADES_GATE_SCOPE:-maquina}
+  export HADES_GATE_BUDGET_GB=${HADES_GATE_BUDGET_GB:-${ZEILE_GATE_BUDGET_GB:-}}
+  export HADES_GATE_RESERVE_GB=${HADES_GATE_RESERVE_GB:-${ZEILE_GATE_RESERVE_GB:-}}
+  export HADES_GATE_HEADROOM_GB=${HADES_GATE_HEADROOM_GB:-${ZEILE_GATE_HEADROOM_GB:-}}
+  export HADES_GATE_SWAPCAP_GB=${HADES_GATE_SWAPCAP_GB:-${ZEILE_GATE_SWAPCAP_GB:-}}
+  export HADES_GATE_PSI_MAX=${HADES_GATE_PSI_MAX:-${ZEILE_GATE_PSI_MAX:-}}
+  export HADES_GATE_MEMCAP=${HADES_GATE_MEMCAP:-${ZEILE_GATE_MEMCAP:-}}
+  local v
+  for v in BUDGET_GB RESERVE_GB HEADROOM_GB SWAPCAP_GB PSI_MAX MEMCAP; do
+    [[ -z "$(printenv "HADES_GATE_$v")" ]] && unset "HADES_GATE_$v"
+  done
+  exec "$hades" "$@"
+}
 
 EX_USAGE=2
 EX_TEMPFAIL=75
@@ -273,6 +309,7 @@ main() {
   TICKET=''
   CHILD=''
   [[ -n "$cmd" ]] || usage
+  delegate_to_hades "$@"
   shift
   DIR=${ZEILE_GATE_QUEUE_DIR:-$HOME/.claude/loop-eng-zeile/gate}
   QUEUE="$DIR/queue"
