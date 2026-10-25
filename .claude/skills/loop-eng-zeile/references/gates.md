@@ -209,6 +209,14 @@ shell novo). Variáveis de ajuste, todas opcionais:
 Outra ferramenta da máquina que também roda gates pesados pode compartilhar a fila apontando para o
 mesmo diretório; sem isso, as duas filas não se enxergam e podem somar mais memória que a máquina tem.
 
+**Fila do Hades.** Com o Hades instalado na máquina (`$HADES_DATA/gate/gate-lock.sh`, a instância em
+`~/.claude/hades/instance` ou `~/.claude/skills/hades/kit/gate/gate-lock.sh`), o wrapper repassa a
+chamada a ele (mesmos argumentos e códigos de saída) com `HADES_GATE_SCOPE=maquina`: uma fila e um
+orçamento de memória só para todos os projetos. As variáveis `ZEILE_GATE_*` acima viram as `HADES_GATE_*`
+equivalentes quando estas não estão definidas; `ZEILE_GATE_QUEUE_DIR` só vale na fila local.
+`ZEILE_GATE_LOCAL=1` força a fila local deste script; `ZEILE_GATE_HADES=<caminho>` escolhe outro
+`gate-lock.sh` do Hades. Sem o Hades, nada muda.
+
 | `kind`  | Custo default | Pesado | Uso no Zeile                                                 |
 | ------- | ------------- | ------ | ------------------------------------------------------------ |
 | `lint`  | 2 GB          | não    | (faixa 0 roda fora da fila)                                  |
